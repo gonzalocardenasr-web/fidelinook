@@ -295,6 +295,50 @@ export default function AdminPage() {
       <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow">
         <h1 className="text-2xl font-bold text-neutral-900">Panel local</h1>
 
+        {/* REGISTRO NUEVO CLIENTE */}
+          <div className="mt-6 rounded-lg border border-neutral-200 p-4">
+            <h2 className="text-lg font-semibold">Registro nuevo cliente</h2>
+
+            <p className="text-sm text-neutral-600 mt-1">
+              Escanea para registrar cliente
+            </p>
+
+            <div className="mt-4 flex gap-6 items-center">
+              <div className="bg-white p-4 border rounded">
+                <QRCode
+                  value={`${window.location.origin}/registro`}
+                  size={160}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <a
+                  href="/registro"
+                  target="_blank"
+                  className="block bg-black text-white px-4 py-3 rounded"
+                >
+                  Abrir formulario
+                </a>
+
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `${window.location.origin}/registro`
+                    );
+                    setMensaje("Link de registro copiado");
+                  }}
+                  className="bg-neutral-200 px-4 py-3 rounded"
+                >
+                  Copiar link
+                </button>
+              </div>
+            </div>
+          </div>
+        
+        {/* GESTIÓN CLIENTES */}
+        <div className="mt-6 rounded-lg border border-neutral-200 p-4">
+        <h2 className="text-lg font-semibold mb-4">Gestión de clientes</h2>
+
         {cargando ? (
           <div className="mt-6">
             <p className="text-neutral-600">Cargando clientes...</p>
@@ -475,6 +519,7 @@ export default function AdminPage() {
                 {mensaje}
               </div>
             )}
+          
           </>
         )}
       </div>
