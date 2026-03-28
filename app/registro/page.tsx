@@ -15,7 +15,11 @@ export default function RegistroPage() {
   const handleRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!nombre || !correo || !telefono) {
+    const nombreLimpio = nombre.trim();
+    const correoLimpio = correo.trim().toLowerCase();
+    const telefonoLimpio = telefono.trim();
+
+    if (!nombreLimpio || !correoLimpio || !telefonoLimpio) {
       alert("Completa todos los campos");
       return;
     }
@@ -23,13 +27,49 @@ export default function RegistroPage() {
     try {
       setCargando(true);
 
+      const { data: existente, error: errorBusqueda } = await supabase
+        .from("clientes")
+        .select("id, nombre, correo, telefono")
+        .or(`correo.eq.${correoLimpio},telefono.eq.${telefonoLimpio}`);
+
+      if (errorBusqueda) {
+        console.error("Error al validar duplicados:", errorBusqueda);
+        alert("No se pudo validar si el cliente ya existe");
+        return;
+      }
+
+      if (existente && existente.length > 0) {
+        const correoDuplicado = existente.some(
+          (cliente) => cliente.correo?.trim().toLowerCase() === correoLimpio
+        );
+
+        const telefonoDuplicado = existente.some(
+          (cliente) => cliente.telefono?.trim() === telefonoLimpio
+        );
+
+        if (correoDuplicado && telefonoDuplicado) {
+          alert("Ya existe un cliente registrado con ese correo y teléfono");
+          return;
+        }
+
+        if (correoDuplicado) {
+          alert("Ya existe un cliente registrado con ese correo");
+          return;
+        }
+
+        if (telefonoDuplicado) {
+          alert("Ya existe un cliente registrado con ese teléfono");
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from("clientes")
         .insert([
           {
-            nombre,
-            correo,
-            telefono,
+            nombre: nombreLimpio,
+            correo: correoLimpio,
+            telefono: telefonoLimpio,
             sellos: 0,
             premios: [],
           },
