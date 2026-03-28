@@ -79,6 +79,24 @@ export default function RegistroPage() {
 
       if (error) {
         console.error("Error al registrar cliente:", error);
+
+        if (error.code === "23505") {
+          const detalle = error.message?.toLowerCase() || "";
+
+          if (detalle.includes("correo")) {
+            alert("Ya existe un cliente registrado con ese correo");
+            return;
+          }
+
+          if (detalle.includes("telefono")) {
+            alert("Ya existe un cliente registrado con ese teléfono");
+            return;
+          }
+
+          alert("Ese cliente ya está registrado");
+          return;
+        }
+
         alert("Hubo un error al registrar el cliente");
         return;
       }
