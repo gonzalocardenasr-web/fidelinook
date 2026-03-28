@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import QRCode from "react-qr-code";
 
 type Premio = {
   id: number;
@@ -425,6 +426,16 @@ export default function AdminPage() {
                   >
                     Copiar link
                   </button>
+                </div>
+                <div className="mt-4">
+                  <p className="mb-2 font-semibold">QR tarjeta</p>
+
+                  <div className="bg-white p-4 inline-block">
+                    <QRCode
+                      value={`${window.location.origin}/t/${cliente.id}`}
+                      size={140}
+                    />
+                  </div>
                 </div>
               </div>
             )}
