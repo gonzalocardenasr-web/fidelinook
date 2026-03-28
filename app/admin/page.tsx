@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 type Premio = {
@@ -19,9 +19,13 @@ type Cliente = {
   premios: Premio[] | number | null;
 };
 
+const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
 export default function AdminPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState<string>("");
+  const [busqueda, setBusqueda] = useState("");
+  const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(true);
   const [procesandoCompra, setProcesandoCompra] = useState(false);
@@ -36,7 +40,10 @@ export default function AdminPage() {
     try {
       setCargando(true);
 
-      const { data, error } = await supabase.from("clientes").select("*");
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .order("nombre", { ascending: true });
 
       if (error) {
         console.error("Error cargando clientes:", error);
@@ -54,7 +61,9 @@ export default function AdminPage() {
         return;
       }
 
-      const seleccionadoGuardado = localStorage.getItem("adminClienteSeleccionadoId");
+      const seleccionadoGuardado = localStorage.getItem(
+        "adminClienteSeleccionadoId"
+      );
 
       if (mantenerSeleccion && seleccionadoGuardado) {
         const existeSeleccionado = listaClientes.some(
@@ -79,10 +88,58 @@ export default function AdminPage() {
     }
   };
 
+  const clientesFiltrados = useMemo(() => {
+    let resultado = [...clientes];
+
+    if (letraActiva !== "TODOS") {
+      resultado = resultado.filter((cliente) => {
+        const nombre = (cliente.nombre || "").trim().toLowerCase();
+        return nombre.startsWith(letraActiva.toLowerCase());
+      });
+    }
+
+    const texto = busqueda.trim().toLowerCase();
+
+    if (!texto) return resultado;
+
+    return resultado.filter((cliente) => {
+      const nombre = (cliente.nombre || "").toLowerCase();
+      const telefono = (cliente.telefono || "").toLowerCase();
+      const correo = (cliente.correo || "").toLowerCase();
+
+      return (
+        nombre.includes(texto) ||
+        telefono.includes(texto) ||
+        correo.includes(texto)
+      );
+    });
+  }, [clientes, busqueda, letraActiva]);
+
   const cambiarCliente = (id: string) => {
     setClienteSeleccionadoId(id);
     localStorage.setItem("adminClienteSeleccionadoId", id);
     setMensaje("Cliente seleccionado correctamente.");
+  };
+
+  const seleccionarLetra = (letra: string) => {
+    setLetraActiva(letra);
+    setMensaje("");
+
+    const listaFiltrada =
+      letra === "TODOS"
+        ? clientes
+        : clientes.filter((cliente) =>
+            (cliente.nombre || "")
+              .trim()
+              .toLowerCase()
+              .startsWith(letra.toLowerCase())
+          );
+
+    if (listaFiltrada.length > 0) {
+      const primerId = String(listaFiltrada[0].id);
+      setClienteSeleccionadoId(primerId);
+      localStorage.setItem("adminClienteSeleccionadoId", primerId);
+    }
   };
 
   const cliente =
@@ -162,7 +219,9 @@ export default function AdminPage() {
       setProcesandoCanje(true);
       setMensaje("");
 
-      const premiosActuales = Array.isArray(cliente.premios) ? [...cliente.premios] : [];
+      const premiosActuales = Array.isArray(cliente.premios)
+        ? [...cliente.premios]
+        : [];
 
       const indexPremioActivo = premiosActuales.findIndex(
         (premio: Premio) => premio.estado === "activo"
@@ -206,10 +265,7 @@ export default function AdminPage() {
       setReiniciando(true);
       setMensaje("");
 
-      const { error } = await supabase
-        .from("clientes")
-        .delete()
-        .neq("id", 0);
+      const { error } = await supabase.from("clientes").delete().neq("id", 0);
 
       if (error) {
         console.error("Error al reiniciar datos:", error);
@@ -222,6 +278,8 @@ export default function AdminPage() {
 
       setClientes([]);
       setClienteSeleccionadoId("");
+      setBusqueda("");
+      setLetraActiva("TODOS");
       setMensaje("Datos reiniciados correctamente.");
     } catch (err) {
       console.error("Error inesperado al reiniciar datos:", err);
@@ -233,7 +291,7 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-neutral-100 p-8">
-      <div className="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow">
+      <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow">
         <h1 className="text-2xl font-bold text-neutral-900">Panel local</h1>
 
         {cargando ? (
@@ -254,6 +312,54 @@ export default function AdminPage() {
           <>
             <div className="mt-6">
               <label className="block text-sm font-medium text-neutral-700">
+                Buscar cliente por nombre, teléfono o correo
+              </label>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Ej: María, 569..., correo..."
+                className="mt-1 w-full rounded-lg border border-neutral-300 p-3"
+              />
+            </div>
+
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-medium text-neutral-700">
+                Filtrar por letra inicial
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => seleccionarLetra("TODOS")}
+                  className={`rounded-md px-3 py-2 text-sm border ${
+                    letraActiva === "TODOS"
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-neutral-700 border-neutral-300"
+                  }`}
+                >
+                  Todos
+                </button>
+
+                {LETRAS.map((letra) => (
+                  <button
+                    key={letra}
+                    type="button"
+                    onClick={() => seleccionarLetra(letra)}
+                    className={`rounded-md px-3 py-2 text-sm border ${
+                      letraActiva === letra
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-neutral-700 border-neutral-300"
+                    }`}
+                  >
+                    {letra}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-neutral-700">
                 Seleccionar cliente
               </label>
 
@@ -262,16 +368,24 @@ export default function AdminPage() {
                 onChange={(e) => cambiarCliente(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-neutral-300 p-3"
               >
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre} - {c.correo}
-                  </option>
-                ))}
+                {clientesFiltrados.length === 0 ? (
+                  <option value="">No hay resultados</option>
+                ) : (
+                  clientesFiltrados.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre} - {c.telefono} - {c.correo}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
+            <p className="mt-3 text-sm text-neutral-500">
+              Resultados encontrados: {clientesFiltrados.length}
+            </p>
+
             {cliente && (
-              <div className="mt-6 space-y-2">
+              <div className="mt-6 space-y-2 rounded-lg border border-neutral-200 p-4">
                 <p>
                   <span className="font-semibold">Cliente:</span> {cliente.nombre}
                 </p>
@@ -289,13 +403,26 @@ export default function AdminPage() {
                   <span className="font-semibold">Premios activos:</span>{" "}
                   {premiosActivos.length}
                 </p>
+                <p>
+                  <span className="font-semibold">Link tarjeta:</span>{" "}
+                  <a
+                    href={`/t/${cliente.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    /t/{cliente.id}
+                  </a>
+                </p>
               </div>
             )}
 
             <div className="mt-6 flex flex-wrap gap-4">
               <button
                 onClick={validarCompra}
-                disabled={procesandoCompra || procesandoCanje || reiniciando}
+                disabled={
+                  procesandoCompra || procesandoCanje || reiniciando || !cliente
+                }
                 className="rounded-lg bg-black px-4 py-3 text-white disabled:opacity-60"
               >
                 {procesandoCompra ? "Validando..." : "Validar compra"}
@@ -303,7 +430,9 @@ export default function AdminPage() {
 
               <button
                 onClick={canjearPrimerPremio}
-                disabled={procesandoCanje || procesandoCompra || reiniciando}
+                disabled={
+                  procesandoCanje || procesandoCompra || reiniciando || !cliente
+                }
                 className="rounded-lg bg-neutral-700 px-4 py-3 text-white disabled:opacity-60"
               >
                 {procesandoCanje ? "Canjeando..." : "Canjear premio"}
