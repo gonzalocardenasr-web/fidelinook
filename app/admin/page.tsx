@@ -403,17 +403,29 @@ export default function AdminPage() {
                   <span className="font-semibold">Premios activos:</span>{" "}
                   {premiosActivos.length}
                 </p>
-                <p>
-                  <span className="font-semibold">Link tarjeta:</span>{" "}
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold">Tarjeta:</span>
+
                   <a
                     href={`/t/${cliente.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-blue-600 underline"
                   >
-                    /t/{cliente.id}
+                    Abrir
                   </a>
-                </p>
+
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/t/${cliente.id}`;
+                      navigator.clipboard.writeText(url);
+                      setMensaje("Link copiado al portapapeles");
+                    }}
+                    className="rounded-md bg-neutral-200 px-3 py-1 text-sm"
+                  >
+                    Copiar link
+                  </button>
+                </div>
               </div>
             )}
 
