@@ -51,7 +51,7 @@ export default function RegistroPage() {
       setCorreo("");
       setTelefono("");
 
-      router.push("/tarjeta");
+      router.push(`/t/${data.id}`);
     } catch (err) {
       console.error("Error inesperado:", err);
       alert("Ocurrió un error inesperado");
