@@ -306,7 +306,7 @@ export default function AdminPage() {
             <div className="mt-4 flex gap-6 items-center">
               <div className="bg-white p-4 border rounded">
                 <QRCode
-                  value={`${window.location.origin}/registro`}
+                  value="/registro"
                   size={160}
                 />
               </div>
