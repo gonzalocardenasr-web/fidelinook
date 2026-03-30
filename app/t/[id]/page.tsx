@@ -24,6 +24,8 @@ type Props = {
   }>;
 };
 
+const META_SELLOS = 7;
+
 export default async function TarjetaPublicaPage({ params }: Props) {
   const { id } = await params;
 
@@ -68,8 +70,8 @@ export default async function TarjetaPublicaPage({ params }: Props) {
             <div className="flex items-center gap-3">
               <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/10">
                 <Image
-                  src="/Nook-logo-vertical-blnc.png"
-                  alt="Nook Heladería de Autora"
+                  src="/nook-logo.png"
+                  alt="Nook"
                   width={56}
                   height={56}
                   className="h-auto w-auto"
@@ -119,20 +121,20 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                     Progreso actual
                   </p>
                   <p className="mt-1 text-2xl font-bold text-[#4C00F7]">
-                    {sellos} de 6 sellos
+                    {sellos} de {META_SELLOS} sellos
                   </p>
                 </div>
 
                 <div className="rounded-full bg-[#4C00F7] px-4 py-2 text-sm font-semibold text-white">
-                  {6 - sellos} para tu premio
+                  {META_SELLOS - sellos} para tu premio
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-6 gap-2">
-                {[...Array(6)].map((_, i) => (
+              <div className="mt-5 grid grid-cols-7 gap-2">
+                {[...Array(META_SELLOS)].map((_, i) => (
                   <div
                     key={i}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full border text-sm font-bold ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold ${
                       i < sellos
                         ? "border-[#4C00F7] bg-[#4C00F7] text-white"
                         : "border-[#4C00F7]/25 bg-[#FFDBEF] text-[#4C00F7]"

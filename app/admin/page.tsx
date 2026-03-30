@@ -21,6 +21,7 @@ type Cliente = {
 };
 
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const META_SELLOS = 7;
 
 export default function AdminPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -168,14 +169,23 @@ export default function AdminPage() {
       const premiosActuales = Array.isArray(cliente.premios)
         ? cliente.premios
         : [];
+
       const sellosActuales = cliente.sellos ?? 0;
-      const nuevosSellos = sellosActuales + 1;
+
+      const esPrimeraCompraHistorica =
+        sellosActuales === 0 && premiosActuales.length === 0;
+
+      const sellosAAgregar = esPrimeraCompraHistorica ? 2 : 1;
+      const nuevosSellos = sellosActuales + sellosAAgregar;
 
       let sellosFinales = nuevosSellos;
       let premiosFinales = [...premiosActuales];
-      let mensajeFinal = "Compra validada correctamente. Se sumó 1 sello.";
 
-      if (nuevosSellos >= 6) {
+      let mensajeFinal = esPrimeraCompraHistorica
+        ? "Primera compra registrada. Se sumaron 2 sellos."
+        : "Compra validada correctamente. Se sumó 1 sello.";
+
+      if (nuevosSellos >= META_SELLOS) {
         const nuevoPremio: Premio = {
           id: Date.now(),
           nombre: "Helado simple gratis",
@@ -187,8 +197,7 @@ export default function AdminPage() {
 
         premiosFinales.push(nuevoPremio);
         sellosFinales = 0;
-        mensajeFinal =
-          "¡Cliente completó 6 sellos! Premio generado automáticamente.";
+        mensajeFinal = `¡Cliente completó ${META_SELLOS} sellos! Premio generado automáticamente.`;
       }
 
       const { error } = await supabase
@@ -474,7 +483,7 @@ export default function AdminPage() {
                       </p>
                       <p>
                         <span className="font-semibold">Sellos actuales:</span>{" "}
-                        {cliente.sellos ?? 0}
+                        {cliente.sellos ?? 0} de {META_SELLOS}
                       </p>
                       <p>
                         <span className="font-semibold">Premios activos:</span>{" "}
