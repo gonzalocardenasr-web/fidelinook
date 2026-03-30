@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { sendWelcomeEmail } from "../../lib/email/sendWelcome";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -102,12 +101,19 @@ export default function RegistroPage() {
         return;
       }
 
-      // Guardar cliente
       localStorage.setItem("clienteId", String(data.id));
 
-      // Enviar correo bienvenida
       try {
-        await sendWelcomeEmail(correoLimpio, nombreLimpio);
+        await fetch("/api/send-welcome", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: correoLimpio,
+            nombre: nombreLimpio,
+          }),
+        });
       } catch (emailError) {
         console.error("Error enviando correo:", emailError);
       }
