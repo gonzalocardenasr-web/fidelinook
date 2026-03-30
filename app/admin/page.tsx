@@ -556,64 +556,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="mt-4">
-                    <p className="mb-2 text-sm font-medium text-neutral-700">
-                      Filtrar por letra inicial
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => seleccionarLetra("TODOS")}
-                        className={`rounded-md px-3 py-2 text-sm border ${
-                          letraActiva === "TODOS"
-                            ? "bg-black text-white border-black"
-                            : "bg-white text-neutral-700 border-neutral-300"
-                        }`}
-                      >
-                        Todos
-                      </button>
-
-                      {LETRAS.map((letra) => (
-                        <button
-                          key={letra}
-                          type="button"
-                          onClick={() => seleccionarLetra(letra)}
-                          className={`rounded-md px-3 py-2 text-sm border ${
-                            letraActiva === letra
-                              ? "bg-black text-white border-black"
-                              : "bg-white text-neutral-700 border-neutral-300"
-                          }`}
-                        >
-                          {letra}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-neutral-700">
-                      Seleccionar cliente
-                    </label>
-
-                    <select
-                      value={clienteSeleccionadoId}
-                      onChange={(e) => cambiarCliente(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-neutral-300 p-3"
-                    >
-                      {clientesFiltrados.length === 0 ? (
-                        <option value="">No hay resultados</option>
-                      ) : (
-                        clientesFiltrados.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nombre} - {c.telefono} - {c.correo}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
-
+                                    
                   <p className="mt-3 text-sm text-neutral-500">
                     Resultados encontrados: {clientesFiltrados.length}
                   </p>
