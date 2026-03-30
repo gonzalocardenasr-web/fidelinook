@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 
 export default function RegistroPage() {
@@ -79,24 +80,6 @@ export default function RegistroPage() {
 
       if (error) {
         console.error("Error al registrar cliente:", error);
-
-        if (error.code === "23505") {
-          const detalle = error.message?.toLowerCase() || "";
-
-          if (detalle.includes("correo")) {
-            alert("Ya existe un cliente registrado con ese correo");
-            return;
-          }
-
-          if (detalle.includes("telefono")) {
-            alert("Ya existe un cliente registrado con ese teléfono");
-            return;
-          }
-
-          alert("Ese cliente ya está registrado");
-          return;
-        }
-
         alert("Hubo un error al registrar el cliente");
         return;
       }
@@ -134,57 +117,93 @@ export default function RegistroPage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-100 p-8">
-      <div className="mx-auto mt-16 max-w-xl rounded-xl bg-white p-6 shadow">
-        <h1 className="text-2xl font-bold text-neutral-900">
-          Registro Fideli-NooK
-        </h1>
+    <main className="min-h-screen bg-neutral-100 px-6 py-10">
+      <div className="mx-auto max-w-2xl">
 
-        <form onSubmit={handleRegistro} className="mt-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-neutral-800">
-              Nombre
-            </label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 p-3 outline-none focus:border-black"
-            />
+        {/* Logo */}
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/logo-nook-vertical.png"
+            alt="Nook"
+            width={180}
+            height={180}
+            priority
+          />
+        </div>
+
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <span className="inline-flex rounded-full bg-neutral-200 px-3 py-1 text-sm font-medium text-neutral-700">
+            Registro cliente
+          </span>
+
+          <h1 className="mt-4 text-3xl font-bold text-neutral-900">
+            Crea tu tarjeta Fideli-NooK
+          </h1>
+
+          <p className="mt-2 text-neutral-600">
+            Regístrate y comienza a acumular sellos en cada compra.
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-2xl bg-white p-8 shadow-sm">
+
+          <form onSubmit={handleRegistro} className="space-y-5">
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-800">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-300 p-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-800">
+                Correo
+              </label>
+              <input
+                type="email"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-300 p-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-800">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-300 p-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="mt-4 w-full rounded-xl bg-black p-3 text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+              {cargando ? "Registrando..." : "Crear tarjeta"}
+            </button>
+
+          </form>
+
+          {/* Info */}
+          <div className="mt-6 rounded-xl bg-neutral-100 p-4 text-sm text-neutral-600">
+            El cliente comienza a acumular sellos desde su primera compra.
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-800">
-              Correo
-            </label>
-            <input
-              type="email"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 p-3 outline-none focus:border-black"
-            />
-          </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-800">
-              Teléfono
-            </label>
-            <input
-              type="text"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 p-3 outline-none focus:border-black"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full rounded-lg bg-black p-3 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {cargando ? "Registrando..." : "Crear tarjeta"}
-          </button>
-        </form>
       </div>
     </main>
   );
