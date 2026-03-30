@@ -393,7 +393,7 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-lg border border-neutral-200">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
           <button
             type="button"
             onClick={() => setMostrarRegistro(!mostrarRegistro)}
@@ -451,7 +451,7 @@ export default function AdminPage() {
             onClick={() => setMostrarGestion(!mostrarGestion)}
             className="flex w-full items-center justify-between p-4 text-left"
           >
-            <span className="text-lg font-semibold">Gestión de clientes</span>
+            <span className="text-lg font-semibold text-violet-800">Gestión de clientes</span>
             <span className="text-2xl leading-none">
               {mostrarGestion ? "−" : "+"}
             </span>
@@ -477,17 +477,84 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  <div className="mt-2">
-                    <label className="block text-sm font-medium text-neutral-700">
-                      Buscar cliente por nombre, teléfono o correo
-                    </label>
-                    <input
-                      type="text"
-                      value={busqueda}
-                      onChange={(e) => setBusqueda(e.target.value)}
-                      placeholder="Ej: María, 569..., correo..."
-                      className="mt-1 w-full rounded-lg border border-neutral-300 p-3"
-                    />
+                  <div className="mt-2 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+                    <div className="grid gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-violet-700">
+                          Buscar cliente
+                        </label>
+                        <input
+                          type="text"
+                          value={busqueda}
+                          onChange={(e) => setBusqueda(e.target.value)}
+                          placeholder="Nombre, teléfono o correo"
+                          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-violet-700">
+                            Filtrar por letra
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            {clientesFiltrados.length} resultado
+                            {clientesFiltrados.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => seleccionarLetra("TODOS")}
+                            className={`rounded-lg px-3 py-2 text-xs font-medium border transition ${
+                              letraActiva === "TODOS"
+                                ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent"
+                                : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
+                            }`}
+                          >
+                            Todos
+                          </button>
+
+                          {LETRAS.map((letra) => (
+                            <button
+                              key={letra}
+                              type="button"
+                              onClick={() => seleccionarLetra(letra)}
+                              className={`min-w-[36px] rounded-lg px-3 py-2 text-xs font-medium border transition ${
+                                letraActiva === letra
+                                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent"
+                                  : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
+                              }`}
+                            >
+                              {letra}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-violet-700">
+                          Seleccionar cliente
+                        </label>
+
+                        <select
+                          value={clienteSeleccionadoId}
+                          onChange={(e) => cambiarCliente(e.target.value)}
+                          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                        >
+                          {clientesFiltrados.length === 0 ? (
+                            <option value="">No hay resultados</option>
+                          ) : (
+                            clientesFiltrados.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.nombre} · {c.telefono} · {c.correo}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-4">
