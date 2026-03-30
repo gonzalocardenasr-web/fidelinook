@@ -551,38 +551,54 @@ export default function AdminPage() {
                     Resultados encontrados: {clientesFiltrados.length}
                   </p>
 
+                                   
                   {cliente && (
-                    <div className="mt-6 space-y-2 rounded-lg border border-neutral-200 p-4">
-                      <p>
-                        <span className="font-semibold">Cliente:</span>{" "}
-                        {cliente.nombre}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Correo:</span>{" "}
-                        {cliente.correo}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Teléfono:</span>{" "}
-                        {cliente.telefono}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Sellos actuales:</span>{" "}
-                        {cliente.sellos ?? 0} de {META_SELLOS}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Premios activos:</span>{" "}
-                        {premiosActivos.length}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold">Tarjeta:</span>
+                    <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-violet-600">
+                            Cliente seleccionado
+                          </p>
 
+                          <h2 className="mt-1 text-2xl font-bold text-neutral-900">
+                            {cliente.nombre}
+                          </h2>
+
+                          <div className="mt-2 space-y-1 text-sm text-neutral-600">
+                            <p>{cliente.correo}</p>
+                            <p>{cliente.telefono}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 md:min-w-[220px]">
+                          <div className="rounded-xl bg-violet-50 px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+                              Sellos
+                            </p>
+                            <p className="mt-1 text-xl font-bold text-violet-700">
+                              {cliente.sellos ?? 0} / {META_SELLOS}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-pink-50 px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">
+                              Premios
+                            </p>
+                            <p className="mt-1 text-xl font-bold text-pink-700">
+                              {premiosActivos.length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
                         <a
                           href={`/t/${cliente.id}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 underline"
+                          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:opacity-90"
                         >
-                          Abrir
+                          Abrir tarjeta
                         </a>
 
                         <button
@@ -591,38 +607,22 @@ export default function AdminPage() {
                             navigator.clipboard.writeText(url);
                             setMensaje("Link copiado al portapapeles");
                           }}
-                          className="rounded-md bg-neutral-200 px-3 py-1 text-sm"
+                          className="rounded-lg bg-neutral-100 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200"
                         >
                           Copiar link
                         </button>
                       </div>
 
-                      <div className="mt-4">
-                        <p className="mb-2 font-semibold">QR tarjeta</p>
+                      <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                        <p className="mb-3 text-sm font-medium text-neutral-700">QR tarjeta</p>
 
-                        <div className="bg-white p-4 inline-block">
+                        <div className="inline-block rounded-lg bg-white p-3 shadow-sm">
                           <QRCode
                             value={`${window.location.origin}/t/${cliente.id}`}
-                            size={140}
+                            size={120}
                           />
                         </div>
                       </div>
-                    </div>
-                  )}
-                  
-                  {cliente && (
-                    <div className="rounded-xl bg-white p-5 shadow-sm border border-violet-100">
-                      <p className="text-sm text-violet-600 font-semibold">
-                        Cliente seleccionado
-                      </p>
-
-                      <h2 className="text-xl font-bold">
-                        {cliente.nombre}
-                      </h2>
-
-                      <p className="text-sm text-gray-500">
-                        {cliente.correo}
-                      </p>
                     </div>
                   )}
 
