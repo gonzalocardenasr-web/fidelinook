@@ -339,9 +339,14 @@ export default function AdminPage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-100 p-8">
-      <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow">
-        <h1 className="text-2xl font-bold text-neutral-900">Panel local</h1>
+    <main className="min-h-screen bg-[#F6F3FF] p-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+          <h1 className="text-2xl font-bold">Panel Local Nook</h1>
+          <p className="text-sm opacity-90">
+            Gestiona clientes, valida compras y administra premios
+          </p>
+        </div>
 
         <div className="mt-6 rounded-lg border border-neutral-200">
           <button
@@ -559,6 +564,22 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
+                  
+                  {cliente && (
+                    <div className="rounded-xl bg-white p-5 shadow-sm border border-violet-100">
+                      <p className="text-sm text-violet-600 font-semibold">
+                        Cliente seleccionado
+                      </p>
+
+                      <h2 className="text-xl font-bold">
+                        {cliente.nombre}
+                      </h2>
+
+                      <p className="text-sm text-gray-500">
+                        {cliente.correo}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-6 flex flex-wrap gap-4">
                     <button
@@ -569,7 +590,7 @@ export default function AdminPage() {
                         reiniciando ||
                         !cliente
                       }
-                      className="rounded-lg bg-black px-4 py-3 text-white disabled:opacity-60"
+                      className="rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90"
                     >
                       {procesandoCompra ? "Validando..." : "Validar compra"}
                     </button>
@@ -582,7 +603,7 @@ export default function AdminPage() {
                         reiniciando ||
                         !cliente
                       }
-                      className="rounded-lg bg-neutral-700 px-4 py-3 text-white disabled:opacity-60"
+                      className="rounded-lg bg-violet-500 px-4 py-3 text-white disabled:opacity-60"
                     >
                       {procesandoCanje ? "Canjeando..." : "Canjear premio"}
                     </button>
