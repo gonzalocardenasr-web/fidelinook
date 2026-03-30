@@ -185,8 +185,10 @@ export default function AdminPage() {
         ? "Primera compra registrada. Se sumaron 2 sellos."
         : "Compra validada correctamente. Se sumó 1 sello.";
 
+      let premioGenerado: Premio | null = null;
+
       if (nuevosSellos >= META_SELLOS) {
-        const nuevoPremio: Premio = {
+        premioGenerado = {
           id: Date.now(),
           nombre: "Helado simple gratis",
           estado: "activo",
@@ -195,7 +197,7 @@ export default function AdminPage() {
           ).toLocaleDateString(),
         };
 
-        premiosFinales.push(nuevoPremio);
+        premiosFinales.push(premioGenerado);
         sellosFinales = 0;
         mensajeFinal = `¡Cliente completó ${META_SELLOS} sellos! Premio generado automáticamente.`;
       }
@@ -212,6 +214,38 @@ export default function AdminPage() {
         console.error("Error al validar compra:", error);
         setMensaje("Hubo un error al validar la compra.");
         return;
+      }
+
+      try {
+        if (premioGenerado) {
+          await fetch("/api/send-prize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: cliente.correo,
+              nombre: cliente.nombre,
+              premioNombre: premioGenerado.nombre,
+              vencimiento: premioGenerado.vencimiento,
+            }),
+          });
+        } else {
+          await fetch("/api/send-stamp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: cliente.correo,
+              nombre: cliente.nombre,
+              sellosActuales: nuevosSellos,
+              metaSellos: META_SELLOS,
+            }),
+          });
+        }
+      } catch (emailError) {
+        console.error("Error enviando correo:", emailError);
       }
 
       await cargarDatos(true);
