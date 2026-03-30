@@ -68,8 +68,8 @@ export default async function TarjetaPublicaPage({ params }: Props) {
             <div className="flex items-center gap-3">
               <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/10">
                 <Image
-                  src="/nook-logo.png"
-                  alt="Nook"
+                  src="/Nook-logo-vertical-blnc.png"
+                  alt="Nook Heladería de Autora"
                   width={56}
                   height={56}
                   className="h-auto w-auto"
