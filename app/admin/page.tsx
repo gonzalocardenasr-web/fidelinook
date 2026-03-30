@@ -309,7 +309,52 @@ export default function AdminPage() {
     }
   };
 
+  const eliminarClienteSeleccionado = async () => {
+    if (!cliente) {
+      setMensaje("Debes seleccionar un cliente.");
+      return;
+    }
+
+    const confirmado = window.confirm(
+      `¿Seguro que quieres eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setReiniciando(true);
+      setMensaje("");
+
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", cliente.id);
+
+      if (error) {
+        console.error("Error al eliminar cliente:", error);
+        setMensaje("Hubo un error al eliminar el cliente.");
+        return;
+      }
+
+      localStorage.removeItem("clienteId");
+
+      await cargarDatos(false);
+      setMensaje("Cliente eliminado correctamente.");
+    } catch (err) {
+      console.error("Error inesperado al eliminar cliente:", err);
+      setMensaje("Ocurrió un error inesperado al eliminar el cliente.");
+    } finally {
+      setReiniciando(false);
+    }
+  };
+
   const reiniciarDatos = async () => {
+    const confirmado = window.confirm(
+      "¿Seguro que quieres eliminar TODOS los clientes? Esta acción no se puede deshacer."
+    );
+
+    if (!confirmado) return;
+
     try {
       setReiniciando(true);
       setMensaje("");
@@ -329,9 +374,9 @@ export default function AdminPage() {
       setClienteSeleccionadoId("");
       setBusqueda("");
       setLetraActiva("TODOS");
-      setMensaje("Datos reiniciados correctamente.");
+      setMensaje("Todos los clientes fueron eliminados correctamente.");
     } catch (err) {
-      console.error("Error inesperado al reiniciar datos:", err);
+      console.error("Error inesperado al reiniciar los datos:", err);
       setMensaje("Ocurrió un error inesperado al reiniciar los datos.");
     } finally {
       setReiniciando(false);
@@ -590,7 +635,7 @@ export default function AdminPage() {
                         reiniciando ||
                         !cliente
                       }
-                      className="rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90"
+                      className="rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90 disabled:opacity-60"
                     >
                       {procesandoCompra ? "Validando..." : "Validar compra"}
                     </button>
@@ -603,19 +648,27 @@ export default function AdminPage() {
                         reiniciando ||
                         !cliente
                       }
-                      className="rounded-lg bg-violet-500 px-4 py-3 text-white disabled:opacity-60"
+                      className="rounded-lg bg-violet-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
                     >
                       {procesandoCanje ? "Canjeando..." : "Canjear premio"}
                     </button>
 
                     <button
-                      onClick={reiniciarDatos}
+                      onClick={eliminarClienteSeleccionado}
                       disabled={
-                        reiniciando || procesandoCompra || procesandoCanje
+                        reiniciando || procesandoCompra || procesandoCanje || !cliente
                       }
-                      className="rounded-lg bg-red-600 px-4 py-3 text-white disabled:opacity-60"
+                      className="rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
                     >
-                      {reiniciando ? "Reiniciando..." : "Reiniciar datos"}
+                      {reiniciando ? "Procesando..." : "Eliminar cliente"}
+                    </button>
+
+                    <button
+                      onClick={reiniciarDatos}
+                      disabled={reiniciando || procesandoCompra || procesandoCanje}
+                      className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                    >
+                      {reiniciando ? "Procesando..." : "Eliminar todos"}
                     </button>
                   </div>
 
