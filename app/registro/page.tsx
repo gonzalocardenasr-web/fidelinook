@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { sendWelcomeEmail } from "../../lib/email/sendWelcome";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -101,7 +102,15 @@ export default function RegistroPage() {
         return;
       }
 
+      // Guardar cliente
       localStorage.setItem("clienteId", String(data.id));
+
+      // Enviar correo bienvenida
+      try {
+        await sendWelcomeEmail(correoLimpio, nombreLimpio);
+      } catch (emailError) {
+        console.error("Error enviando correo:", emailError);
+      }
 
       alert("Cliente registrado correctamente");
 
