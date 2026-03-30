@@ -306,7 +306,7 @@ export default function AdminPage() {
             <div className="mt-4 flex gap-6 items-center">
               <div className="bg-white p-4 border rounded">
                 <QRCode
-                  value="/registro"
+                  value="https://fidelinook.vercel.app/registro"
                   size={160}
                 />
               </div>
