@@ -16,6 +16,7 @@ type Cliente = {
   telefono: string;
   sellos: number;
   premios: Premio[] | null;
+  public_token: string;
 };
 
 type Props = {
@@ -32,10 +33,10 @@ export default async function TarjetaPublicaPage({ params }: Props) {
   const { data, error } = await supabase
     .from("clientes")
     .select("*")
-    .eq("public_token", params.id)
+    .eq("public_token", id)
     .single();
 
-  if (error || !cliente) {
+  if (error || !data) {
     return (
       <main className="min-h-screen bg-[#FFDBEF] p-6">
         <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
@@ -46,7 +47,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
     );
   }
 
-  const clienteTyped = cliente as Cliente;
+  const clienteTyped = data as Cliente;
   const premiosArray = Array.isArray(clienteTyped.premios)
     ? clienteTyped.premios
     : [];
@@ -60,7 +61,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
   );
 
   const sellos = clienteTyped.sellos ?? 0;
-  const urlTarjeta = `https://fidelinook.vercel.app/t/${clienteTyped.id}`;
+  const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${clienteTyped.public_token}`;
 
   return (
     <main className="min-h-screen bg-[#FFDBEF] p-6">
@@ -96,8 +97,12 @@ export default async function TarjetaPublicaPage({ params }: Props) {
               <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
                 {clienteTyped.nombre}
               </h2>
-              <p className="mt-2 text-sm text-neutral-600">{clienteTyped.correo}</p>
-              <p className="text-sm text-neutral-600">{clienteTyped.telefono}</p>
+              <p className="mt-2 text-sm text-neutral-600">
+                {clienteTyped.correo}
+              </p>
+              <p className="text-sm text-neutral-600">
+                {clienteTyped.telefono}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
@@ -176,7 +181,9 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                     key={premio.id}
                     className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/35 p-4"
                   >
-                    <p className="font-semibold text-[#4C00F7]">{premio.nombre}</p>
+                    <p className="font-semibold text-[#4C00F7]">
+                      {premio.nombre}
+                    </p>
                     <p className="mt-1 text-sm text-neutral-600">
                       Estado: {premio.estado}
                     </p>
@@ -197,7 +204,9 @@ export default async function TarjetaPublicaPage({ params }: Props) {
 
           <div className="border-t border-neutral-200 px-6 py-5">
             {premiosUsados.length === 0 ? (
-              <p className="text-neutral-600">Todavía no has canjeado premios.</p>
+              <p className="text-neutral-600">
+                Todavía no has canjeado premios.
+              </p>
             ) : (
               <div className="space-y-3">
                 {premiosUsados.map((premio: Premio) => (
@@ -205,7 +214,9 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                     key={premio.id}
                     className="rounded-2xl border border-neutral-200 p-4"
                   >
-                    <p className="font-semibold text-[#4C00F7]">{premio.nombre}</p>
+                    <p className="font-semibold text-[#4C00F7]">
+                      {premio.nombre}
+                    </p>
                     <p className="mt-1 text-sm text-neutral-600">
                       Estado: {premio.estado}
                     </p>
