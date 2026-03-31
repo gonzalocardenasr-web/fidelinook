@@ -4,16 +4,28 @@ import { sendStampEmail } from "../../../lib/email/sendStampEmail";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, nombre, sellosActuales, metaSellos } = body;
+    const { email, nombre, sellosActuales, metaSellos, publicToken } = body;
 
-    if (!email || !nombre || sellosActuales == null || !metaSellos) {
+    if (
+      !email ||
+      !nombre ||
+      sellosActuales == null ||
+      !metaSellos ||
+      !publicToken
+    ) {
       return NextResponse.json(
         { error: "Faltan datos para enviar correo de sello" },
         { status: 400 }
       );
     }
 
-    await sendStampEmail(email, nombre, sellosActuales, metaSellos);
+    await sendStampEmail(
+      email,
+      nombre,
+      sellosActuales,
+      metaSellos,
+      publicToken
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {

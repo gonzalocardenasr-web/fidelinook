@@ -8,9 +8,12 @@ export async function sendPrizeEmail(
   email: string,
   nombre: string,
   premioNombre: string,
-  vencimiento?: string
+  vencimiento: string | undefined,
+  publicToken: string
 ) {
   try {
+    const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+
     const html = baseTemplate({
       titulo: `¡Felicitaciones ${nombre}! 🎉`,
       mensaje: `
@@ -23,6 +26,8 @@ export async function sendPrizeEmail(
         
         Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
       `,
+      botonTexto: "Ver mi tarjeta",
+      botonUrl: tarjetaUrl,
     });
 
     await resend.emails.send({
@@ -37,6 +42,9 @@ Completaste tu tarjeta en Fideli-NooK y ya tienes un premio disponible.
 
 Premio: ${premioNombre}
 Vencimiento: ${vencimiento || "Sin definir"}
+
+Ver tu tarjeta:
+${tarjetaUrl}
 
 Puedes canjearlo en Tomás Moro 695, Local 4, Las Condes
 

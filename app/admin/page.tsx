@@ -265,6 +265,7 @@ export default function AdminPage() {
               nombre: cliente.nombre,
               premioNombre: premioGenerado.nombre,
               vencimiento: premioGenerado.vencimiento,
+              publicToken: cliente.public_token,
             }),
           });
         } else {
@@ -278,6 +279,7 @@ export default function AdminPage() {
               nombre: cliente.nombre,
               sellosActuales: nuevosSellos,
               metaSellos: META_SELLOS,
+              publicToken: cliente.public_token,
             }),
           });
         }
@@ -356,6 +358,7 @@ export default function AdminPage() {
             email: cliente.correo,
             nombre: cliente.nombre,
             premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
+            publicToken: cliente.public_token,
           }),
         });
       } catch (emailError) {

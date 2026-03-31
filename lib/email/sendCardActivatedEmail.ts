@@ -4,7 +4,13 @@ import { baseTemplate } from "./baseTemplate";
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
 
-export async function sendCardActivatedEmail(email: string, nombre: string) {
+export async function sendCardActivatedEmail(
+  email: string,
+  nombre: string,
+  publicToken: string
+) {
+  const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+
   const html = baseTemplate({
     titulo: `¡Hola ${nombre}!`,
     mensaje: `
@@ -16,6 +22,8 @@ export async function sendCardActivatedEmail(email: string, nombre: string) {
       • Obtén tu premio automáticamente 🍦<br/><br/>
       Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong>.
     `,
+    botonTexto: "Ver mi tarjeta",
+    botonUrl: tarjetaUrl,
   });
 
   const result = await resend.emails.send({
@@ -34,6 +42,9 @@ Desde ahora puedes comenzar a acumular sellos con tus compras presenciales en No
 - Acumulas sellos en cada compra presencial
 - Completa tu ciclo
 - Obtén tu premio automáticamente
+
+Ver tu tarjeta:
+${tarjetaUrl}
 
 Te esperamos en Tomás Moro 695, Local 4, Las Condes.
 

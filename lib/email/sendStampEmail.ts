@@ -8,10 +8,12 @@ export async function sendStampEmail(
   email: string,
   nombre: string,
   sellosActuales: number,
-  metaSellos: number
+  metaSellos: number,
+  publicToken: string
 ) {
   try {
     const sellosRestantes = Math.max(metaSellos - sellosActuales, 0);
+    const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
 
     const html = baseTemplate({
       titulo: `¡Hola ${nombre}! 🍦`,
@@ -26,6 +28,8 @@ export async function sendStampEmail(
         
         Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
       `,
+      botonTexto: "Ver mi tarjeta",
+      botonUrl: tarjetaUrl,
     });
 
     await resend.emails.send({
@@ -41,6 +45,9 @@ Acabas de sumar un nuevo sello en Fideli-NooK.
 Actualmente tienes ${sellosActuales} de ${metaSellos} sellos.
 
 Te faltan ${sellosRestantes} para ganar tu premio.
+
+Ver tu tarjeta:
+${tarjetaUrl}
 
 Te esperamos en Tomás Moro 695, Local 4, Las Condes
 

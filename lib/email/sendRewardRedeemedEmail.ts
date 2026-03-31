@@ -7,8 +7,11 @@ const FROM_EMAIL =
 export async function sendRewardRedeemedEmail(
   email: string,
   nombre: string,
-  premioNombre: string
+  premioNombre: string,
+  publicToken: string
 ) {
+  const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+
   const html = baseTemplate({
     titulo: `¡Hola ${nombre}!`,
     mensaje: `
@@ -17,6 +20,8 @@ export async function sendRewardRedeemedEmail(
       Gracias por visitarnos. Te esperamos pronto para que sigas acumulando sellos.<br/><br/>
       Ven a vernos a <strong>Tomás Moro 695, Local 4, Las Condes</strong>.
     `,
+    botonTexto: "Ver mi tarjeta",
+    botonUrl: tarjetaUrl,
   });
 
   const result = await resend.emails.send({
@@ -30,6 +35,9 @@ Hola ${nombre},
 Confirmamos que tu premio de Fideli-NooK fue canjeado correctamente.
 
 Premio canjeado: ${premioNombre}
+
+Ver tu tarjeta:
+${tarjetaUrl}
 
 Gracias por visitarnos. Te esperamos pronto para que sigas acumulando sellos.
 

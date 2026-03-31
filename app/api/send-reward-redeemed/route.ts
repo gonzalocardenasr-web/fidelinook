@@ -4,16 +4,21 @@ import { sendRewardRedeemedEmail } from "../../../lib/email/sendRewardRedeemedEm
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, nombre, premioNombre } = body;
+    const { email, nombre, premioNombre, publicToken } = body;
 
-    if (!email || !nombre || !premioNombre) {
+    if (!email || !nombre || !premioNombre || !publicToken) {
       return NextResponse.json(
         { error: "Faltan datos para enviar confirmación de canje" },
         { status: 400 }
       );
     }
 
-    const result = await sendRewardRedeemedEmail(email, nombre, premioNombre);
+    const result = await sendRewardRedeemedEmail(
+      email,
+      nombre,
+      premioNombre,
+      publicToken
+    );
 
     return NextResponse.json({ ok: true, result });
   } catch (error) {

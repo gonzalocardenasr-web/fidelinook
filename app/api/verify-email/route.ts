@@ -55,7 +55,11 @@ export async function GET(req: Request) {
     }
 
     try {
-      await sendCardActivatedEmail(cliente.correo, cliente.nombre);
+      await sendCardActivatedEmail(
+        cliente.correo,
+        cliente.nombre,
+        cliente.public_token
+      );
     } catch (emailError) {
       console.error("Error enviando correo de tarjeta activa:", emailError);
     }
