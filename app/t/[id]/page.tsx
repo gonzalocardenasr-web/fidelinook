@@ -17,6 +17,8 @@ type Cliente = {
   sellos: number;
   premios: Premio[] | null;
   public_token: string;
+  tarjeta_activa?: boolean;
+  email_verificado?: boolean;
 };
 
 type Props = {
@@ -48,6 +50,27 @@ export default async function TarjetaPublicaPage({ params }: Props) {
   }
 
   const clienteTyped = data as Cliente;
+  if (!clienteTyped.tarjeta_activa) {
+    return (
+      <main className="min-h-screen bg-[#FFDBEF] p-6">
+        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+          <h1 className="text-2xl font-bold text-[#4C00F7]">
+            Tarjeta pendiente de activación
+          </h1>
+
+          <p className="mt-4 text-neutral-600">
+            Debes verificar tu correo electrónico para activar tu tarjeta Fideli-NooK.
+          </p>
+
+          <p className="mt-2 text-neutral-500 text-sm">
+            Revisa tu bandeja de entrada y haz clic en el enlace de verificación.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+
   const premiosArray = Array.isArray(clienteTyped.premios)
     ? clienteTyped.premios
     : [];
