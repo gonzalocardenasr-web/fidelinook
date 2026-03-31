@@ -33,13 +33,39 @@ export default function AdminPage() {
   const [procesandoCompra, setProcesandoCompra] = useState(false);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [reiniciando, setReiniciando] = useState(false);
+  const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+  const [cargandoRol, setCargandoRol] = useState(true);
 
   const [mostrarRegistro, setMostrarRegistro] = useState(true);
   const [mostrarGestion, setMostrarGestion] = useState(false);
 
   useEffect(() => {
     cargarDatos();
+    cargarSesion();
   }, []);
+
+  const cargarSesion = async () => {
+    try {
+      setCargandoRol(true);
+
+      const res = await fetch("/api/session", {
+        method: "GET",
+      });
+
+      if (!res.ok) {
+        setRol(null);
+        return;
+      }
+
+      const data = await res.json();
+      setRol(data.role || null);
+    } catch (error) {
+      console.error("Error cargando sesión:", error);
+      setRol(null);
+    } finally {
+      setCargandoRol(false);
+    }
+  };
 
   const cargarDatos = async (mantenerSeleccion = true) => {
     try {
@@ -387,11 +413,15 @@ export default function AdminPage() {
     <main className="min-h-screen bg-[#F6F3FF] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <h1 className="text-2xl font-bold">Panel Local Nook</h1>
-          <p className="text-sm opacity-90">
-            Gestiona clientes, valida compras y administra premios
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold">Panel Local Nook</h1>
+        <p className="text-sm opacity-90">
+          Gestiona clientes, valida compras y administra premios
+        </p>
+
+        <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+          {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+        </p>
+      </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
           <button
@@ -663,23 +693,27 @@ export default function AdminPage() {
                       {procesandoCanje ? "Canjeando..." : "Canjear premio"}
                     </button>
 
-                    <button
-                      onClick={eliminarClienteSeleccionado}
-                      disabled={
-                        reiniciando || procesandoCompra || procesandoCanje || !cliente
-                      }
-                      className="rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
-                    >
-                      {reiniciando ? "Procesando..." : "Eliminar cliente"}
-                    </button>
+                    {rol === "superadmin" && (
+                      <>
+                        <button
+                          onClick={eliminarClienteSeleccionado}
+                          disabled={
+                            reiniciando || procesandoCompra || procesandoCanje || !cliente
+                          }
+                          className="rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
+                        >
+                          {reiniciando ? "Procesando..." : "Eliminar cliente"}
+                        </button>
 
-                    <button
-                      onClick={reiniciarDatos}
-                      disabled={reiniciando || procesandoCompra || procesandoCanje}
-                      className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
-                    >
-                      {reiniciando ? "Procesando..." : "Eliminar todos"}
-                    </button>
+                        <button
+                          onClick={reiniciarDatos}
+                          disabled={reiniciando || procesandoCompra || procesandoCanje}
+                          className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {reiniciando ? "Procesando..." : "Eliminar todos"}
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {mensaje && (
