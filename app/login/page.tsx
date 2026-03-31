@@ -9,10 +9,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Por ahora solo dejamos el formulario listo.
-    console.log("Login submit:", { usuario, password });
-    alert("Pantalla de login creada. En el siguiente paso conectaremos la validación.");
-  };
+    try {
+        const res = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            usuario,
+            password,
+        }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        alert(data.message || "Credenciales inválidas");
+        return;
+        }
+
+        alert(`Login correcto. Rol detectado: ${data.role}`);
+    } catch (error) {
+        console.error("Error conectando login:", error);
+        alert("Ocurrió un error al intentar iniciar sesión.");
+    }
+    };
 
   return (
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
