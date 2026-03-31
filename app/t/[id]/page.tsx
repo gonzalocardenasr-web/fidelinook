@@ -29,10 +29,10 @@ const META_SELLOS = 7;
 export default async function TarjetaPublicaPage({ params }: Props) {
   const { id } = await params;
 
-  const { data: cliente, error } = await supabase
+  const { data, error } = await supabase
     .from("clientes")
     .select("*")
-    .eq("id", id)
+    .eq("public_token", params.id)
     .single();
 
   if (error || !cliente) {
