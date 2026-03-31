@@ -13,7 +13,7 @@ export async function sendPrizeEmail(
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: "🎉 ¡Ganaste un helado gratis en Nook!",
+      subject: "¡Ganaste un helado gratis en Nook! 🎉 ",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <h2>¡Felicitaciones ${nombre}! 🎉</h2>
