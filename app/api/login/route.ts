@@ -15,7 +15,6 @@ export async function POST(req: Request) {
 
     const adminUsername = process.env.ADMIN_USERNAME;
     const adminPassword = process.env.ADMIN_PASSWORD;
-
     const superadminUsername = process.env.SUPERADMIN_USERNAME;
     const superadminPassword = process.env.SUPERADMIN_PASSWORD;
 
@@ -31,24 +30,43 @@ export async function POST(req: Request) {
       );
     }
 
+    let role: "admin" | "superadmin" | null = null;
+
     if (usuario === superadminUsername && password === superadminPassword) {
-      return NextResponse.json({
-        ok: true,
-        role: "superadmin",
-      });
+      role = "superadmin";
+    } else if (usuario === adminUsername && password === adminPassword) {
+      role = "admin";
     }
 
-    if (usuario === adminUsername && password === adminPassword) {
-      return NextResponse.json({
-        ok: true,
-        role: "admin",
-      });
+    if (!role) {
+      return NextResponse.json(
+        { ok: false, message: "Credenciales inválidas." },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json(
-      { ok: false, message: "Credenciales inválidas." },
-      { status: 401 }
-    );
+    const response = NextResponse.json({
+      ok: true,
+      role,
+    });
+
+    response.cookies.set("fidelinook_role", role, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 12,
+    });
+
+    response.cookies.set("fidelinook_auth", "ok", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 12,
+    });
+
+    return response;
   } catch (error) {
     console.error("Error en login:", error);
 

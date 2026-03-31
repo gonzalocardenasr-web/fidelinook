@@ -28,7 +28,7 @@ export default function LoginPage() {
         return;
         }
 
-        alert(`Login correcto. Rol detectado: ${data.role}`);
+        window.location.href = "/";
     } catch (error) {
         console.error("Error conectando login:", error);
         alert("Ocurrió un error al intentar iniciar sesión.");
