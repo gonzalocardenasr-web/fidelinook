@@ -18,6 +18,7 @@ type Cliente = {
   telefono: string;
   sellos: number;
   premios: Premio[] | number | null;
+  public_token: string;
 };
 
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -660,7 +661,7 @@ export default function AdminPage() {
 
                       <div className="mt-4 flex flex-wrap items-center gap-3">
                         <a
-                          href={`/t/${cliente.id}`}
+                          href={`/t/${cliente.public_token}`}
                           target="_blank"
                           rel="noreferrer"
                           className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:opacity-90"
@@ -670,7 +671,7 @@ export default function AdminPage() {
 
                         <button
                           onClick={() => {
-                            const url = `${window.location.origin}/t/${cliente.id}`;
+                            const url = `${window.location.origin}/t/${cliente.public_token}`;
                             navigator.clipboard.writeText(url);
                             setMensaje("Link copiado al portapapeles");
                           }}
@@ -685,7 +686,7 @@ export default function AdminPage() {
 
                         <div className="inline-block rounded-lg bg-white p-3 shadow-sm">
                           <QRCode
-                            value={`${window.location.origin}/t/${cliente.id}`}
+                            value={`${window.location.origin}/t/${cliente.public_token}`}
                             size={120}
                           />
                         </div>

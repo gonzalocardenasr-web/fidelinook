@@ -110,7 +110,7 @@ export default function RegistroPage() {
       setCorreo("");
       setTelefono("");
 
-      router.push(`/t/${data.id}`);
+      router.push(`/t/${data.public_token}`);
     } catch (err) {
       console.error("Error inesperado:", err);
       alert("Ocurrió un error inesperado");
