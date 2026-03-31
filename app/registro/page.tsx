@@ -64,17 +64,20 @@ export default function RegistroPage() {
         }
       }
 
+      const public_token = crypto.randomUUID();
+
       const { data, error } = await supabase
         .from("clientes")
         .insert([
           {
-            nombre: nombreLimpio,
-            correo: correoLimpio,
-            telefono: telefonoLimpio,
+            nombre,
+            correo,
+            telefono,
             sellos: 0,
             premios: [],
+            public_token,
           },
-        ])
+        ]);
         .select()
         .single();
 

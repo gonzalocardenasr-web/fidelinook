@@ -471,7 +471,7 @@ export default function AdminPage() {
               <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
                 <div className="w-fit bg-white p-4 border rounded">
                   <QRCode
-                    value="https://fidelinook.vercel.app/registro"
+                    value="https://fidelidad.nookheladeria.cl/registro"
                     size={160}
                   />
                 </div>
@@ -488,7 +488,7 @@ export default function AdminPage() {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        "https://fidelinook.vercel.app/registro"
+                        "https://fidelidad.nookheladeria.cl/registro"
                       );
                       setMensaje("Link de registro copiado");
                     }}
