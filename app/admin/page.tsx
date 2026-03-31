@@ -28,7 +28,8 @@ const META_SELLOS = 7;
 
 export default function AdminPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState<string>("");
+  const [clienteSeleccionadoId, setClienteSeleccionadoId] =
+    useState<string>("");
   const [busqueda, setBusqueda] = useState("");
   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
@@ -192,10 +193,12 @@ export default function AdminPage() {
     }
 
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setMensaje("El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.");
+      setMensaje(
+        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero."
+      );
       return;
     }
-    
+
     try {
       setProcesandoCompra(true);
       setMensaje("");
@@ -292,55 +295,82 @@ export default function AdminPage() {
     }
   };
 
-  const premiosActuales = Array.isArray(cliente.premios)
-    ? [...cliente.premios]
-    : [];
+  const canjearPrimerPremio = async () => {
+    if (!cliente) {
+      setMensaje("Debes seleccionar un cliente.");
+      return;
+    }
 
-  const indexPremioActivo = premiosActuales.findIndex(
-    (premio: Premio) => premio.estado === "activo"
-  );
+    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
+      setMensaje(
+        "El cliente aún no ha activado su tarjeta. No es posible canjear premios."
+      );
+      return;
+    }
 
-  if (indexPremioActivo === -1) {
-    setMensaje("No hay premios activos para canjear.");
-    return;
-  }
+    try {
+      setProcesandoCanje(true);
+      setMensaje("");
 
-  const premioActivo = premiosActuales[indexPremioActivo];
+      const premiosActuales = Array.isArray(cliente.premios)
+        ? [...cliente.premios]
+        : [];
 
-  premiosActuales[indexPremioActivo] = {
-    ...premiosActuales[indexPremioActivo],
-    estado: "usado",
+      const indexPremioActivo = premiosActuales.findIndex(
+        (premio: Premio) => premio.estado === "activo"
+      );
+
+      if (indexPremioActivo === -1) {
+        setMensaje("No hay premios activos para canjear.");
+        return;
+      }
+
+      const premioActivo = premiosActuales[indexPremioActivo];
+
+      premiosActuales[indexPremioActivo] = {
+        ...premiosActuales[indexPremioActivo],
+        estado: "usado",
+      };
+
+      const { error } = await supabase
+        .from("clientes")
+        .update({
+          premios: premiosActuales,
+          fecha_ultimo_canje: new Date().toISOString(),
+        })
+        .eq("id", cliente.id);
+
+      if (error) {
+        console.error("Error al canjear premio:", error);
+        setMensaje("Hubo un error al canjear el premio.");
+        return;
+      }
+
+      try {
+        await fetch("/api/send-reward-redeemed", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: cliente.correo,
+            nombre: cliente.nombre,
+            premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
+          }),
+        });
+      } catch (emailError) {
+        console.error("Error enviando correo de canje:", emailError);
+      }
+
+      await cargarDatos(true);
+      setMensaje("Premio canjeado correctamente.");
+    } catch (err) {
+      console.error("Error inesperado al canjear premio:", err);
+      setMensaje("Ocurrió un error inesperado al canjear el premio.");
+    } finally {
+      setProcesandoCanje(false);
+    }
   };
-
-  const { error } = await supabase
-    .from("clientes")
-    .update({
-      premios: premiosActuales,
-      fecha_ultimo_canje: new Date().toISOString(),
-    })
-    .eq("id", cliente.id);
-
-  if (error) {
-    console.error("Error al canjear premio:", error);
-    setMensaje("Hubo un error al canjear el premio.");
-    return;
-  }
-
-  try {
-    await fetch("/api/send-reward-redeemed", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: cliente.correo,
-        nombre: cliente.nombre,
-        premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
-      }),
-    });
-  } catch (emailError) {
-    console.error("Error enviando correo de canje:", emailError);
-  }
 
   const eliminarClienteSeleccionado = async () => {
     if (!cliente) {
@@ -429,7 +459,6 @@ export default function AdminPage() {
     }
   };
 
-
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -471,12 +500,12 @@ export default function AdminPage() {
 
           {mostrarRegistro && (
             <div className="border-t border-neutral-200 p-4 pt-4">
-              <p className="text-sm text-neutral-600 mt-1">
+              <p className="mt-1 text-sm text-neutral-600">
                 Escanea para registrar cliente
               </p>
 
               <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-                <div className="w-fit bg-white p-4 border rounded">
+                <div className="w-fit rounded border bg-white p-4">
                   <QRCode
                     value="https://fidelidad.nookheladeria.cl/registro"
                     size={160}
@@ -515,7 +544,9 @@ export default function AdminPage() {
             onClick={() => setMostrarGestion(!mostrarGestion)}
             className="flex w-full items-center justify-between p-4 text-left"
           >
-            <span className="text-lg font-semibold text-violet-800">Gestión de clientes</span>
+            <span className="text-lg font-semibold text-violet-800">
+              Gestión de clientes
+            </span>
             <span className="text-2xl leading-none">
               {mostrarGestion ? "−" : "+"}
             </span>
@@ -571,10 +602,10 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => seleccionarLetra("TODOS")}
-                            className={`rounded-lg px-3 py-2 text-xs font-medium border transition ${
+                            className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
                               letraActiva === "TODOS"
-                                ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent"
-                                : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
+                                ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                                : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                             }`}
                           >
                             Todos
@@ -585,10 +616,10 @@ export default function AdminPage() {
                               key={letra}
                               type="button"
                               onClick={() => seleccionarLetra(letra)}
-                              className={`min-w-[36px] rounded-lg px-3 py-2 text-xs font-medium border transition ${
+                              className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
                                 letraActiva === letra
-                                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-transparent"
-                                  : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
+                                  ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                                  : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                               }`}
                             >
                               {letra}
@@ -620,12 +651,11 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
-                                    
+
                   <p className="mt-3 text-sm text-neutral-500">
                     Resultados encontrados: {clientesFiltrados.length}
                   </p>
 
-                                   
                   {cliente && (
                     <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -651,7 +681,9 @@ export default function AdminPage() {
                                   : "bg-yellow-100 text-yellow-700"
                               }`}
                             >
-                              {cliente.tarjeta_activa ? "Tarjeta activa" : "Pendiente de activación"}
+                              {cliente.tarjeta_activa
+                                ? "Tarjeta activa"
+                                : "Pendiente de activación"}
                             </span>
 
                             <span
@@ -661,11 +693,11 @@ export default function AdminPage() {
                                   : "bg-red-100 text-red-700"
                               }`}
                             >
-                              {cliente.email_verificado ? "Correo verificado" : "Correo no verificado"}
+                              {cliente.email_verificado
+                                ? "Correo verificado"
+                                : "Correo no verificado"}
                             </span>
                           </div>
-
-
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 md:min-w-[220px]">
@@ -712,7 +744,9 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-                        <p className="mb-3 text-sm font-medium text-neutral-700">QR tarjeta</p>
+                        <p className="mb-3 text-sm font-medium text-neutral-700">
+                          QR tarjeta
+                        </p>
 
                         <div className="inline-block rounded-lg bg-white p-3 shadow-sm">
                           <QRCode
@@ -756,7 +790,10 @@ export default function AdminPage() {
                         <button
                           onClick={eliminarClienteSeleccionado}
                           disabled={
-                            reiniciando || procesandoCompra || procesandoCanje || !cliente
+                            reiniciando ||
+                            procesandoCompra ||
+                            procesandoCanje ||
+                            !cliente
                           }
                           className="rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
                         >
@@ -765,15 +802,15 @@ export default function AdminPage() {
 
                         <button
                           onClick={reiniciarDatos}
-                          disabled={reiniciando || procesandoCompra || procesandoCanje}
+                          disabled={
+                            reiniciando || procesandoCompra || procesandoCanje
+                          }
                           className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
                         >
                           {reiniciando ? "Procesando..." : "Eliminar todos"}
                         </button>
                       </>
                     )}
-
-                                    
                   </div>
 
                   {mensaje && (
