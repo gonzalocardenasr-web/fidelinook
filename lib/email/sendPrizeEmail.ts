@@ -1,5 +1,8 @@
 import { resend } from "./resend";
 
+const FROM_EMAIL =
+  "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
+
 export async function sendPrizeEmail(
   email: string,
   nombre: string,
@@ -8,7 +11,7 @@ export async function sendPrizeEmail(
 ) {
   try {
     await resend.emails.send({
-      from: "Nook Heladería de Autora <nookheladeria@nookheladeria.cl>",
+      from: FROM_EMAIL,
       to: email,
       subject: "🎉 ¡Ganaste un helado gratis en Nook!",
       html: `

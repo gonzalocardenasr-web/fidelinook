@@ -1,5 +1,8 @@
 import { resend } from "./resend";
 
+const FROM_EMAIL =
+  "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
+
 export async function sendStampEmail(
   email: string,
   nombre: string,
@@ -10,7 +13,7 @@ export async function sendStampEmail(
     const sellosRestantes = Math.max(metaSellos - sellosActuales, 0);
 
     await resend.emails.send({
-      from: "Nook Heladería de Autora <nookheladeria@nookheladeria.cl>",
+      from: FROM_EMAIL,
       to: email,
       subject: "¡Sumaste un nuevo sello en Nook! 🍦",
       html: `

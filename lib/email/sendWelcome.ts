@@ -1,9 +1,12 @@
 import { resend } from "./resend";
 
+const FROM_EMAIL =
+  "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
+
 export async function sendWelcomeEmail(email: string, nombre: string) {
   try {
     await resend.emails.send({
-      from: "Nook Heladería de Autora <nookheladeria@nookheladeria.cl>",
+      from: FROM_EMAIL,
       to: email,
       subject: "Bienvenido a Fideli-Nook 🍦",
       html: `
