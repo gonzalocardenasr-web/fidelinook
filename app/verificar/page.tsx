@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function VerificarPage() {
+function VerificarContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -45,18 +45,37 @@ export default function VerificarPage() {
   }, [token, router]);
 
   return (
+    <div className="mx-auto max-w-xl rounded-[28px] bg-white p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+      <h1 className="text-3xl font-bold text-[#4c00f7]">
+        Verificación Fideli-NooK
+      </h1>
+
+      <p className="mt-4 text-base leading-7 text-[#555]">{mensaje}</p>
+
+      {cargando && (
+        <p className="mt-4 text-sm text-[#7A57F6]">Espera un momento...</p>
+      )}
+    </div>
+  );
+}
+
+export default function VerificarPage() {
+  return (
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
-      <div className="mx-auto max-w-xl rounded-[28px] bg-white p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-        <h1 className="text-3xl font-bold text-[#4c00f7]">
-          Verificación Fideli-NooK
-        </h1>
-
-        <p className="mt-4 text-base leading-7 text-[#555]">{mensaje}</p>
-
-        {cargando && (
-          <p className="mt-4 text-sm text-[#7A57F6]">Espera un momento...</p>
-        )}
-      </div>
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-xl rounded-[28px] bg-white p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <h1 className="text-3xl font-bold text-[#4c00f7]">
+              Verificación Fideli-NooK
+            </h1>
+            <p className="mt-4 text-base leading-7 text-[#555]">
+              Cargando verificación...
+            </p>
+          </div>
+        }
+      >
+        <VerificarContenido />
+      </Suspense>
     </main>
   );
 }
