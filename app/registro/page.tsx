@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "../../lib/supabase";
+import { generateVerificationToken } from "../../lib/utils/generateVerificationToken";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function RegistroPage() {
       }
 
       const public_token = crypto.randomUUID();
+      const token_verificacion = generateVerificationToken();
 
       const { data, error } = await supabase
         .from("clientes")
@@ -76,6 +78,10 @@ export default function RegistroPage() {
             sellos: 0,
             premios: [],
             public_token,
+            email_verificado: false,
+            tarjeta_activa: false,
+            token_verificacion,
+            token_verificacion_creado_en: new Date().toISOString(),
           },
         ])
         .select()
@@ -90,7 +96,8 @@ export default function RegistroPage() {
       localStorage.setItem("clienteId", String(data.id));
 
       try {
-        await fetch("/api/send-welcome", {
+       
+        await fetch("/api/send-verification", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -98,19 +105,21 @@ export default function RegistroPage() {
           body: JSON.stringify({
             email: correoLimpio,
             nombre: nombreLimpio,
+            token: token_verificacion,
           }),
         });
+      
       } catch (emailError) {
         console.error("Error enviando correo:", emailError);
       }
 
-      alert("Cliente registrado correctamente");
+      alert("Revisa tu correo para activar tu tarjeta Fideli-NooK");
 
       setNombre("");
       setCorreo("");
       setTelefono("");
 
-      router.push(`/t/${data.public_token}`);
+      
     } catch (err) {
       console.error("Error inesperado:", err);
       alert("Ocurrió un error inesperado");
