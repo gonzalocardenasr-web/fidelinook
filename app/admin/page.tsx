@@ -409,19 +409,46 @@ export default function AdminPage() {
     }
   };
 
+  const cerrarSesion = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+      });
+
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      alert("No se pudo cerrar sesión.");
+    }
+  };
+
+
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-        <h1 className="text-2xl font-bold">Panel Local Nook</h1>
-        <p className="text-sm opacity-90">
-          Gestiona clientes, valida compras y administra premios
-        </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Panel Local Nook</h1>
+              <p className="text-sm opacity-90">
+                Gestiona clientes, valida compras y administra premios
+              </p>
 
-        <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-          {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
-        </p>
-      </div>
+              <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+              </p>
+            </div>
+
+            <div>
+              <button
+                onClick={cerrarSesion}
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
           <button
@@ -714,6 +741,8 @@ export default function AdminPage() {
                         </button>
                       </>
                     )}
+
+                                    
                   </div>
 
                   {mensaje && (
