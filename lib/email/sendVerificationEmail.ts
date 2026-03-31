@@ -1,5 +1,5 @@
 import { resend } from "./resend";
-import { baseTemplate } from "./templates/baseTemplate";
+import { baseTemplate } from "./baseTemplate";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
