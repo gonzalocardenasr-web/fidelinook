@@ -35,7 +35,7 @@ export async function sendWelcomeEmail(email: string, nombre: string) {
         <hr style="margin: 20px 0;" />
 
         <p>
-          Nos vemos pronto 🍨
+          Nos vemos pronto en Tomás Moro 695, Local 4, Las Condes 🍨
         </p>
 
         <p>

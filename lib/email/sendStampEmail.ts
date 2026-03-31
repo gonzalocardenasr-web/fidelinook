@@ -39,7 +39,7 @@ export async function sendStampEmail(
           </p>
 
           <p>
-            Nos vemos pronto 🍨
+            Nos vemos pronto en Tomás Moro 695, Local 4, Las Condes 🍨
           </p>
         </div>
       `,

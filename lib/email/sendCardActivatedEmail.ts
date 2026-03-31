@@ -29,7 +29,7 @@ export async function sendCardActivatedEmail(email: string, nombre: string) {
         </ul>
 
         <p>
-          Te esperamos en <strong>Tomás Moro 695, Local 4</strong>.
+          Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong>.
         </p>
 
         <hr style="margin: 20px 0;" />

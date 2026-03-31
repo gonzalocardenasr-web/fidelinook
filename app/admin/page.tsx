@@ -292,61 +292,55 @@ export default function AdminPage() {
     }
   };
 
-  const canjearPrimerPremio = async () => {
-    if (!cliente) {
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
+  const premiosActuales = Array.isArray(cliente.premios)
+    ? [...cliente.premios]
+    : [];
 
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setMensaje("El cliente aún no ha activado su tarjeta. No es posible canjear premios.");
-      return;
-    }
-    
-    try {
-      setProcesandoCanje(true);
-      setMensaje("");
+  const indexPremioActivo = premiosActuales.findIndex(
+    (premio: Premio) => premio.estado === "activo"
+  );
 
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? [...cliente.premios]
-        : [];
+  if (indexPremioActivo === -1) {
+    setMensaje("No hay premios activos para canjear.");
+    return;
+  }
 
-      const indexPremioActivo = premiosActuales.findIndex(
-        (premio: Premio) => premio.estado === "activo"
-      );
+  const premioActivo = premiosActuales[indexPremioActivo];
 
-      if (indexPremioActivo === -1) {
-        setMensaje("No hay premios activos para canjear.");
-        return;
-      }
-
-      premiosActuales[indexPremioActivo] = {
-        ...premiosActuales[indexPremioActivo],
-        estado: "usado",
-      };
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          premios: premiosActuales,
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al canjear premio:", error);
-        setMensaje("Hubo un error al canjear el premio.");
-        return;
-      }
-
-      await cargarDatos(true);
-      setMensaje("Premio canjeado correctamente.");
-    } catch (err) {
-      console.error("Error inesperado al canjear premio:", err);
-      setMensaje("Ocurrió un error inesperado al canjear el premio.");
-    } finally {
-      setProcesandoCanje(false);
-    }
+  premiosActuales[indexPremioActivo] = {
+    ...premiosActuales[indexPremioActivo],
+    estado: "usado",
   };
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      premios: premiosActuales,
+      fecha_ultimo_canje: new Date().toISOString(),
+    })
+    .eq("id", cliente.id);
+
+  if (error) {
+    console.error("Error al canjear premio:", error);
+    setMensaje("Hubo un error al canjear el premio.");
+    return;
+  }
+
+  try {
+    await fetch("/api/send-reward-redeemed", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: cliente.correo,
+        nombre: cliente.nombre,
+        premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
+      }),
+    });
+  } catch (emailError) {
+    console.error("Error enviando correo de canje:", emailError);
+  }
 
   const eliminarClienteSeleccionado = async () => {
     if (!cliente) {

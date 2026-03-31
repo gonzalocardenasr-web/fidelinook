@@ -34,6 +34,7 @@ export async function sendPrizeEmail(
 
           <p>
             Muéstralo en el local para canjearlo.
+            Tomás Moro 695, Local 4, Las Condes
           </p>
 
           <p>
