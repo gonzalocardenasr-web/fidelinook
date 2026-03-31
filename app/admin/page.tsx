@@ -19,6 +19,8 @@ type Cliente = {
   sellos: number;
   premios: Premio[] | number | null;
   public_token: string;
+  tarjeta_activa?: boolean;
+  email_verificado?: boolean;
 };
 
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -189,6 +191,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
+      setMensaje("El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.");
+      return;
+    }
+    
     try {
       setProcesandoCompra(true);
       setMensaje("");
@@ -291,6 +298,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
+      setMensaje("El cliente aún no ha activado su tarjeta. No es posible canjear premios.");
+      return;
+    }
+    
     try {
       setProcesandoCanje(true);
       setMensaje("");
@@ -636,6 +648,30 @@ export default function AdminPage() {
                             <p>{cliente.correo}</p>
                             <p>{cliente.telefono}</p>
                           </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                cliente.tarjeta_activa
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}
+                            >
+                              {cliente.tarjeta_activa ? "Tarjeta activa" : "Pendiente de activación"}
+                            </span>
+
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                cliente.email_verificado
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {cliente.email_verificado ? "Correo verificado" : "Correo no verificado"}
+                            </span>
+                          </div>
+
+
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 md:min-w-[220px]">
