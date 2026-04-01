@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import QRCode from "react-qr-code";
 import AdminRegistroCard from "./components/AdminRegistroCard";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
+import AdminStats from "./components/AdminStats";
 
 type Premio = {
   id: number;
@@ -491,6 +492,8 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        <AdminStats clientes={clientes} />
 
         <AdminRegistroCard
           mostrarRegistro={mostrarRegistro}
