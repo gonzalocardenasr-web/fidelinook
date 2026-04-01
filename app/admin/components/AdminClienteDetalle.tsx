@@ -34,6 +34,7 @@ type Props = {
   canjearPrimerPremio: () => Promise<void>;
   eliminarClienteSeleccionado: () => Promise<void>;
   reiniciarDatos: () => Promise<void>;
+  exportarCSV: () => void;
 };
 
 const META_SELLOS = 7;
@@ -51,6 +52,7 @@ export default function AdminClienteDetalle({
   canjearPrimerPremio,
   eliminarClienteSeleccionado,
   reiniciarDatos,
+  exportarCSV,
 }: Props) {
   if (!cliente) return null;
 
@@ -256,6 +258,14 @@ export default function AdminClienteDetalle({
               className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
               {reiniciando ? "Procesando..." : "Eliminar todos"}
+            </button>
+
+            <button
+              onClick={exportarCSV}
+              disabled={reiniciando || procesandoCompra || procesandoCanje}
+              className="rounded-lg bg-neutral-900 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
+            >
+              Exportar clientes CSV
             </button>
           </>
         )}

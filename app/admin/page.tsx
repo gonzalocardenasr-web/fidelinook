@@ -6,7 +6,6 @@ import QRCode from "react-qr-code";
 import AdminRegistroCard from "./components/AdminRegistroCard";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
 import AdminStats from "./components/AdminStats";
-import AdminExport from "./components/AdminExport";
 
 
 type Premio = {
@@ -458,6 +457,102 @@ export default function AdminPage() {
     }
   };
 
+  const exportarClientesCSV = () => {
+    try {
+      if (!clientes.length) {
+        setMensaje("No hay clientes para exportar.");
+        return;
+      }
+
+      const formatearFecha = (fecha?: string | null) => {
+        if (!fecha) return "";
+
+        const date = new Date(fecha);
+
+        if (Number.isNaN(date.getTime())) return "";
+
+        return date.toLocaleString("es-CL", {
+          dateStyle: "short",
+          timeStyle: "short",
+        });
+      };
+
+      const escaparCSV = (
+        valor: string | number | boolean | null | undefined
+      ) => {
+        const texto = String(valor ?? "").replace(/"/g, '""');
+        return `"${texto}"`;
+      };
+
+      const headers = [
+        "ID",
+        "Nombre",
+        "Correo",
+        "Teléfono",
+        "Sellos actuales",
+        "Premios activos",
+        "Premios usados",
+        "Último sello",
+        "Último canje",
+        "Tarjeta activa",
+        "Correo verificado",
+        "Public token",
+      ];
+
+      const rows = clientes.map((cliente) => {
+        const premiosArray = Array.isArray(cliente.premios) ? cliente.premios : [];
+
+        const premiosActivos = premiosArray.filter(
+          (premio) => premio.estado === "activo"
+        ).length;
+
+        const premiosUsados = premiosArray.filter(
+          (premio) => premio.estado === "usado"
+        ).length;
+
+        return [
+          cliente.id,
+          cliente.nombre,
+          cliente.correo,
+          cliente.telefono,
+          cliente.sellos ?? 0,
+          premiosActivos,
+          premiosUsados,
+          formatearFecha(cliente.fecha_ultimo_sello),
+          formatearFecha(cliente.fecha_ultimo_canje),
+          cliente.tarjeta_activa ? "Sí" : "No",
+          cliente.email_verificado ? "Sí" : "No",
+          cliente.public_token,
+        ]
+          .map(escaparCSV)
+          .join(",");
+      });
+
+      const csvContent = [headers.map(escaparCSV).join(","), ...rows].join("\n");
+
+      const blob = new Blob([csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      const fecha = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.setAttribute("download", `clientes-fidelinook-${fecha}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+
+      setMensaje("Clientes exportados correctamente.");
+    } catch (error) {
+      console.error("Error exportando CSV:", error);
+      setMensaje("Ocurrió un error al exportar los clientes.");
+    }
+  };
+
   const cerrarSesion = async () => {
     try {
       await fetch("/api/logout", {
@@ -657,16 +752,14 @@ export default function AdminPage() {
                   canjearPrimerPremio={canjearPrimerPremio}
                   eliminarClienteSeleccionado={eliminarClienteSeleccionado}
                   reiniciarDatos={reiniciarDatos}
+                  exportarCSV={exportarClientesCSV}
                 />
 
                 </>
               )}
             </div>
           )}
-
-          {/* EXPORT CSV — pegar aquí */}
-          <AdminExport clientes={clientes} setMensaje={setMensaje} />
-
+        
         </div>
       </div>
     </main>
