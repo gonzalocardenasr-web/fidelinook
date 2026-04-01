@@ -31,3 +31,16 @@ export default function RootLayout({
     </html>
   );
 }
+
+export const metadata = {
+  title: "Fideli-Nook",
+  description: "Programa de fidelización Nook Heladería de Autora",
+  icons: {
+    icon: [
+      { url: "/isologo-nook.png" },
+    ],
+    apple: [
+      { url: "/isologo-nook.png" },
+    ],
+  },
+};
