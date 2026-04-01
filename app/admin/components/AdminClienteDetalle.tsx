@@ -17,6 +17,8 @@ type Cliente = {
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
+  fecha_ultimo_sello?: string | null;
+  fecha_ultimo_canje?: string | null;
 };
 
 type Props = {
