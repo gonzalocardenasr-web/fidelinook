@@ -14,6 +14,11 @@ export default function RegistroPage() {
   const [telefono, setTelefono] = useState("");
   const [cargando, setCargando] = useState(false);
 
+  const [registroExitoso, setRegistroExitoso] = useState(false);
+  const [correoPendiente, setCorreoPendiente] = useState("");
+  const [reenviando, setReenviando] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
   const handleRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -113,7 +118,8 @@ export default function RegistroPage() {
         console.error("Error enviando correo:", emailError);
       }
 
-      alert("Revisa tu correo para activar tu tarjeta Fideli-NooK");
+      setCorreoPendiente(correoLimpio);
+      setRegistroExitoso(true);
 
       setNombre("");
       setCorreo("");
@@ -125,6 +131,47 @@ export default function RegistroPage() {
       alert("Ocurrió un error inesperado");
     } finally {
       setCargando(false);
+    }
+  };
+
+  const handleReenviarCorreo = async () => {
+    if (!correoPendiente || cooldown > 0) return;
+
+    try {
+      setReenviando(true);
+
+      const res = await fetch("/api/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: correoPendiente }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "No se pudo reenviar el correo");
+        return;
+      }
+
+      alert("Correo reenviado. Revisa tu bandeja de entrada o spam.");
+      setCooldown(60);
+
+      const interval = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      console.error("Error reenviando correo:", error);
+      alert("Ocurrió un error al reenviar el correo");
+    } finally {
+      setReenviando(false);
     }
   };
 
@@ -172,54 +219,84 @@ export default function RegistroPage() {
               </p>
             </div>
 
-            <form onSubmit={handleRegistro} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ingresa tu nombre"
-                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
-                />
-              </div>
+            {!registroExitoso ? (
+              <form onSubmit={handleRegistro} className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#444]">
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Ingresa tu nombre"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
-                  Correo
-                </label>
-                <input
-                  type="email"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  placeholder="nombre@correo.com"
-                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#444]">
+                    Correo
+                  </label>
+                  <input
+                    type="email"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                    placeholder="nombre@correo.com"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="+56 9 1234 5678"
-                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#444]">
+                    Teléfono
+                  </label>
+                  <input
+                    type="text"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="+56 9 1234 5678"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={cargando}
-                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {cargando ? "Registrando..." : "Crear tarjeta"}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={cargando}
+                  className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {cargando ? "Registrando..." : "Crear tarjeta"}
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-[24px] border border-[#E8CFE0] bg-[#F8ECF3] p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A57F6]">
+                  Revisa tu correo
+                </p>
+
+                <h3 className="mt-3 text-2xl font-bold text-[#4c00f7]">
+                  Te enviamos un correo para activar tu tarjeta
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-[#555]">
+                  Enviamos un enlace de verificación a <strong>{correoPendiente}</strong>.
+                  Revisa tu bandeja de entrada, spam o promociones.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleReenviarCorreo}
+                  disabled={reenviando || cooldown > 0}
+                  className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {reenviando
+                    ? "Reenviando..."
+                    : cooldown > 0
+                    ? `Reenviar en ${cooldown}s`
+                    : "Reenviar correo"}
+                </button>
+              </div>
+            )}
 
             <div className="mt-6 rounded-[24px] border border-[#E8CFE0] bg-[#F8ECF3] p-5">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A57F6]">
