@@ -86,16 +86,16 @@ export default function AdminStats({ clientes }: Props) {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
       {stats.map((stat) => (
         <div
-          key={stat.label}
-          className={`rounded-2xl border border-neutral-200 p-4 shadow-sm ${stat.bg}`}
+            key={stat.label}
+            className={`rounded-2xl border border-neutral-200 p-3 shadow-sm ${stat.bg}`}
         >
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            {stat.label}
-          </p>
-          <p className={`mt-2 text-2xl font-bold ${stat.text}`}>{stat.value}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 sm:text-xs">
+                {stat.label}
+            </p>
+        <p className={`mt-1 text-xl font-bold sm:text-2xl ${stat.text}`}>{stat.value}</p>
         </div>
       ))}
     </div>
