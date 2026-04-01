@@ -54,6 +54,25 @@ export default function AdminClienteDetalle({
 }: Props) {
   if (!cliente) return null;
 
+  const premiosArray = Array.isArray(cliente.premios) ? cliente.premios : [];
+
+  const premiosUsados = premiosArray.filter(
+    (premio) => premio.estado === "usado"
+  ).length;
+
+  const formatearFecha = (fecha?: string | null) => {
+    if (!fecha) return "Sin registro";
+
+    const date = new Date(fecha);
+
+    if (Number.isNaN(date.getTime())) return "Sin registro";
+
+    return date.toLocaleString("es-CL", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  };
+
   return (
     <>
       <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
@@ -150,6 +169,50 @@ export default function AdminClienteDetalle({
               value={`${window.location.origin}/t/${cliente.public_token}`}
               size={120}
             />
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="mb-4 text-sm font-medium text-neutral-700">
+            Historial cliente
+          </p>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Último sello
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-800">
+                {formatearFecha(cliente.fecha_ultimo_sello)}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Último canje
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-800">
+                {formatearFecha(cliente.fecha_ultimo_canje)}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Sellos actuales
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-800">
+                {cliente.sellos ?? 0} / {META_SELLOS}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Premios usados
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-800">
+                {premiosUsados}
+              </p>
+            </div>
           </div>
         </div>
       </div>
