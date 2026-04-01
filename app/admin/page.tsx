@@ -43,6 +43,7 @@ export default function AdminPage() {
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
 
+  const [mostrarDashboard, setMostrarDashboard] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(true);
   const [mostrarGestion, setMostrarGestion] = useState(false);
 
@@ -493,7 +494,24 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <AdminStats clientes={clientes} />
+        <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMostrarDashboard(!mostrarDashboard)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <span className="text-lg font-semibold">Dashboard</span>
+            <span className="text-2xl leading-none">
+              {mostrarDashboard ? "−" : "+"}
+            </span>
+          </button>
+
+          {mostrarDashboard && (
+            <div className="border-t border-neutral-200 p-4">
+              <AdminStats clientes={clientes} />
+            </div>
+          )}
+        </div>
 
         <AdminRegistroCard
           mostrarRegistro={mostrarRegistro}
