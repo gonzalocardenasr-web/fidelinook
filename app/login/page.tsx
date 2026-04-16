@@ -1,39 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "../../lib/supabase";
 
 export default function LoginPage() {
-  const [usuario, setUsuario] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const next = searchParams.get("next") || "/mi-cuenta";
+
+  const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        router.replace(next);
+      }
+    };
+
+    checkSession();
+  }, [router, next]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    try {
-        const res = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            usuario,
-            password,
-        }),
-        });
+    setLoading(true);
 
-        const data = await res.json();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: correo.trim(),
+      password,
+    });
 
-        if (!res.ok) {
-        alert(data.message || "Credenciales inválidas");
-        return;
-        }
-
-        window.location.href = "/";
-    } catch (error) {
-        console.error("Error conectando login:", error);
-        alert("Ocurrió un error al intentar iniciar sesión.");
+    if (error) {
+      alert("Correo o contraseña incorrectos");
+      setLoading(false);
+      return;
     }
-    };
+
+    router.replace(next);
+  };
 
   return (
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
@@ -44,10 +56,10 @@ export default function LoginPage() {
               Nook
             </p>
             <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
-              Acceso interno
+              Accede a tu cuenta
             </h1>
             <p className="mt-2 text-sm text-white/85">
-              Ingresa con tus credenciales para acceder al panel de operación.
+              Ingresa con tu correo y contraseña para administrar tu cuenta.
             </p>
           </div>
 
@@ -55,13 +67,14 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[#444]">
-                  Usuario
+                  Correo
                 </label>
                 <input
-                  type="text"
-                  value={usuario}
-                  onChange={(e) => setUsuario(e.target.value)}
-                  placeholder="Ingresa tu usuario"
+                  type="email"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  placeholder="Ingresa tu correo"
+                  required
                   className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
@@ -75,25 +88,26 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Ingresa tu contraseña"
+                  required
                   className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
               <button
                 type="submit"
-                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95"
+                disabled={loading}
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
               >
-                Ingresar
+                {loading ? "Ingresando..." : "Ingresar"}
               </button>
             </form>
 
             <div className="mt-6 rounded-[24px] border border-[#E8CFE0] bg-[#F8ECF3] p-5">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A57F6]">
-                Acceso protegido
+                Acceso seguro
               </p>
               <p className="mt-3 text-sm leading-6 text-[#555]">
-                Esta pantalla será usada para ingresar al home interno y al panel
-                local de Fideli-NooK.
+                Si aún no tienes contraseña, podrás crearla desde tu tarjeta de fidelización.
               </p>
             </div>
           </div>
