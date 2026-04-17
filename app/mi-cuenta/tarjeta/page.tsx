@@ -65,12 +65,18 @@ export default function MiTarjetaPage() {
     cargarTarjeta();
   }, [router]);
 
-  const premiosActivos = useMemo(() => {
+const premiosActivos = useMemo(() => {
     if (!cliente || !Array.isArray(cliente.premios)) return [];
     return cliente.premios.filter((premio) => premio.estado === "activo");
-  }, [cliente]);
+}, [cliente]);
 
-  const premioActivo = premiosActivos[0] || null;
+const premiosUsados = useMemo(() => {
+    if (!cliente || !Array.isArray(cliente.premios)) return [];
+    return cliente.premios.filter((premio) => premio.estado === "usado");
+}, [cliente]);
+
+const premioActivo = premiosActivos[0] || null;
+
   const sellos = cliente?.sellos ?? 0;
   const faltantes = Math.max(META_SELLOS - sellos, 0);
 
