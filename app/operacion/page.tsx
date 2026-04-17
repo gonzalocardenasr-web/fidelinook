@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import QRCode from "react-qr-code";
 import AdminRegistroCard from "./components/AdminRegistroCard";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
-import AdminStats from "./components/AdminStats";
 
 type Premio = {
   id: number;
@@ -41,7 +39,6 @@ export default function AdminPage() {
   const [reiniciando, setReiniciando] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
-  const [mostrarDashboard, setMostrarDashboard] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(true);
   const [mostrarGestion, setMostrarGestion] = useState(false);
   useEffect(() => {
@@ -495,25 +492,9 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
-          <button
-            type="button"
-            onClick={() => setMostrarDashboard(!mostrarDashboard)}
-            className="flex w-full items-center justify-between p-4 text-left"
-          >
-            <span className="text-lg font-semibold">Dashboard</span>
-            <span className="text-2xl leading-none">
-              {mostrarDashboard ? "−" : "+"}
-            </span>
-          </button>
-          {mostrarDashboard && (
-            <div className="border-t border-neutral-200 p-4">
-              <AdminStats clientes={clientes} />
-            </div>
-          )}
-        </div>
+        
         {/* Registro nuevo cliente */}
-        <div className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm"></div>
+
         <AdminRegistroCard
           mostrarRegistro={mostrarRegistro}
           setMostrarRegistro={setMostrarRegistro}
