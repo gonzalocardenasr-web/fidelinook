@@ -236,33 +236,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </div>
         </details>
         
-        <div className="overflow-hidden rounded-[24px] bg-white shadow">
-          <div className="px-6 py-5">
-            <h3 className="text-xl font-bold text-[#4C00F7]">
-              Mi cuenta y suscripciones
-            </h3>
-            <p className="mt-2 text-sm text-neutral-600">
-              Ingresa para administrar tu perfil y revisar tus suscripciones.
-            </p>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <Link
-                href={perfilHref}
-                className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] px-5 py-4 text-center text-sm font-semibold text-[#4C00F7] transition hover:opacity-95"
-              >
-                Administrar mi perfil
-              </Link>
-
-              <Link
-                href={suscripcionesHref}
-                className="rounded-2xl bg-[#4C00F7] px-5 py-4 text-center text-sm font-semibold text-white transition hover:opacity-95"
-              >
-                Ver mis suscripciones
-              </Link>
-            </div>
-          </div>
-        </div>
-
         <details className="overflow-hidden rounded-[24px] bg-white shadow">
           <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
             Historial de premios usados
@@ -295,6 +268,34 @@ export default async function TarjetaPublicaPage({ params }: Props) {
             )}
           </div>
         </details>
+
+        <div className="overflow-hidden rounded-[24px] bg-white shadow">
+          <div className="px-6 py-5">
+            <h3 className="text-xl font-bold text-[#4C00F7]">
+              Mi cuenta y suscripciones
+            </h3>
+            <p className="mt-2 text-sm text-neutral-600">
+              Ingresa para administrar tu perfil y revisar tus suscripciones.
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <Link
+                href={perfilHref}
+                className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] px-5 py-4 text-center text-sm font-semibold text-[#4C00F7] transition hover:opacity-95"
+              >
+                Administrar mi perfil
+              </Link>
+
+              <Link
+                href={suscripcionesHref}
+                className="rounded-2xl bg-[#4C00F7] px-5 py-4 text-center text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                Ver mis suscripciones
+              </Link>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   );
