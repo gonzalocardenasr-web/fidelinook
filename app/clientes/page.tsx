@@ -697,19 +697,20 @@ export default function ClientesPage() {
                 </p>
 
                 <AdminClienteDetalle
-                  cliente={cliente}
-                  premiosActivos={premiosActivos}
-                  mensaje={mensaje}
-                  setMensaje={setMensaje}
-                  procesandoCompra={procesandoCompra}
-                  procesandoCanje={procesandoCanje}
-                  reiniciando={reiniciando}
-                  rol={rol}
-                  validarCompra={validarCompra}
-                  canjearPrimerPremio={canjearPrimerPremio}
-                  eliminarClienteSeleccionado={eliminarClienteSeleccionado}
-                  reiniciarDatos={reiniciarDatos}
-                  exportarCSV={exportarClientesCSV}
+                    cliente={cliente}
+                    premiosActivos={premiosActivos}
+                    mensaje={mensaje}
+                    setMensaje={setMensaje}
+                    procesandoCompra={procesandoCompra}
+                    procesandoCanje={procesandoCanje}
+                    reiniciando={reiniciando}
+                    rol={rol}
+                    validarCompra={validarCompra}
+                    canjearPrimerPremio={canjearPrimerPremio}
+                    eliminarClienteSeleccionado={eliminarClienteSeleccionado}
+                    reiniciarDatos={reiniciarDatos}
+                    exportarCSV={exportarClientesCSV}
+                    mostrarAccionesAdministrativas={true}
                 />
               </>
             )}
