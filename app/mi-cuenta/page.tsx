@@ -44,6 +44,17 @@ export default function MiCuentaPage() {
         </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
+          
+          <a
+            href="/mi-cuenta/perfil"
+            className="rounded-2xl border border-neutral-200 p-5 hover:bg-neutral-50"
+          >
+            <h2 className="text-lg font-medium text-neutral-900">Mi perfil</h2>
+            <p className="mt-2 text-sm text-neutral-600">
+              Administra tus datos de cuenta.
+            </p>
+          </a>
+
           <a
             href="/mi-cuenta/tarjeta"
             className="rounded-2xl border border-neutral-200 p-5 hover:bg-neutral-50"
@@ -65,16 +76,7 @@ export default function MiCuentaPage() {
               Activa y revisa tus suscripciones.
             </p>
           </a>
-
-          <a
-            href="/mi-cuenta/perfil"
-            className="rounded-2xl border border-neutral-200 p-5 hover:bg-neutral-50"
-          >
-            <h2 className="text-lg font-medium text-neutral-900">Mi perfil</h2>
-            <p className="mt-2 text-sm text-neutral-600">
-              Administra tus datos de cuenta.
-            </p>
-          </a>
+                    
         </div>
       </div>
     </main>
