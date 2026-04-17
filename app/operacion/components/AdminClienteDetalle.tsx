@@ -32,9 +32,10 @@ type Props = {
   rol: "admin" | "superadmin" | null;
   validarCompra: () => Promise<void>;
   canjearPrimerPremio: () => Promise<void>;
-  eliminarClienteSeleccionado: () => Promise<void>;
-  reiniciarDatos: () => Promise<void>;
-  exportarCSV: () => void;
+  eliminarClienteSeleccionado?: () => void;
+  reiniciarDatos?: () => void;
+  exportarCSV?: () => void;
+  mostrarAccionesAdministrativas: boolean;
 };
 
 const META_SELLOS = 7;
@@ -53,6 +54,7 @@ export default function AdminClienteDetalle({
   eliminarClienteSeleccionado,
   reiniciarDatos,
   exportarCSV,
+  mostrarAccionesAdministrativas,
 }: Props) {
   if (!cliente) return null;
 
@@ -240,7 +242,7 @@ export default function AdminClienteDetalle({
           {procesandoCanje ? "Canjeando..." : "Canjear premio"}
         </button>
 
-        {rol === "superadmin" && (
+        {mostrarAccionesAdministrativas && rol === "superadmin" && (
           <>
             <button
               onClick={eliminarClienteSeleccionado}
@@ -263,7 +265,7 @@ export default function AdminClienteDetalle({
             <button
               onClick={exportarCSV}
               disabled={reiniciando || procesandoCompra || procesandoCanje}
-              className="rounded-lg bg-neutral-900 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
             >
               Exportar clientes CSV
             </button>
