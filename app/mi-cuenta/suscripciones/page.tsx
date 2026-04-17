@@ -141,18 +141,47 @@ export default function MisSuscripcionesPage() {
     cargarDatos();
   }, [router]);
 
-  const handleCanjearCodigo = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCanjearCodigo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!cliente) return;
+
     if (!codigo.trim()) {
-      setMensajeCodigo("Debes ingresar un código.");
-      return;
+        setMensajeCodigo("Debes ingresar un código.");
+        return;
     }
 
-    setMensajeCodigo(
-      "La lógica real de canje por código será el siguiente paso."
-    );
+    setMensajeCodigo("");
+
+    try {
+        const res = await fetch("/api/subscriptions/redeem-code", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            code: codigo.trim().toUpperCase(),
+            clienteId: cliente.id,
+        }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setMensajeCodigo(data.message || "No se pudo canjear el código.");
+        return;
+        }
+
+        setMensajeCodigo("Código canjeado correctamente.");
+        setCodigo("");
+
+        window.location.reload();
+    } catch (error) {
+        console.error("Error canjeando código:", error);
+        setMensajeCodigo("Ocurrió un error inesperado al canjear el código.");
+    }
   };
+  
 
   const handleActivarAsignada = async (claimId: number) => {
     if (!cliente) return;
