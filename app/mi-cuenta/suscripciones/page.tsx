@@ -12,6 +12,41 @@ type Cliente = {
   auth_user_id?: string | null;
 };
 
+type PendingClaim = {
+  id: number;
+  template_id: number;
+  status: string;
+  source: string;
+  notes: string | null;
+  template: {
+    id: number;
+    name: string;
+    billing_period: string;
+    pots_per_month: number;
+    toppings_per_month: number;
+    wafer_packs_per_month: number;
+    cookie_packs_per_month: number;
+    duration_months: number;
+  };
+};
+
+type ActiveSubscription = {
+  id: number;
+  status: string;
+  start_date: string;
+  end_date: string | null;
+  next_cycle_date: string | null;
+  template: {
+    name: string;
+    billing_period: string;
+    pots_per_month: number;
+    toppings_per_month: number;
+    wafer_packs_per_month: number;
+    cookie_packs_per_month: number;
+    duration_months: number;
+  };
+};
+
 export default function MisSuscripcionesPage() {
   const router = useRouter();
 
@@ -21,10 +56,12 @@ export default function MisSuscripcionesPage() {
 
   const [codigo, setCodigo] = useState("");
   const [mensajeCodigo, setMensajeCodigo] = useState("");
-  const [mensajeActivacion, setMensajeActivacion] = useState("");
+  const [pendingClaims, setPendingClaims] = useState<PendingClaim[]>([]);
+  const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveSubscription[]>([]);
+  const [activandoId, setActivandoId] = useState<number | null>(null);
 
   useEffect(() => {
-    const cargarCliente = async () => {
+    const cargarDatos = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -36,23 +73,72 @@ export default function MisSuscripcionesPage() {
 
       const userId = session.user.id;
 
-      const { data, error } = await supabase
+      const { data: clienteData, error: clienteError } = await supabase
         .from("clientes")
         .select("id, nombre, correo, telefono, auth_user_id")
         .eq("auth_user_id", userId)
         .single();
 
-      if (error || !data) {
+      if (clienteError || !clienteData) {
         setError("No encontramos una cuenta asociada a esta sesión.");
         setLoading(false);
         return;
       }
 
-      setCliente(data as Cliente);
+      const clienteActual = clienteData as Cliente;
+      setCliente(clienteActual);
+
+      const { data: claimsData } = await supabase
+        .from("subscription_claims")
+        .select(`
+          id,
+          template_id,
+          status,
+          source,
+          notes,
+          template:subscription_templates (
+            id,
+            name,
+            billing_period,
+            pots_per_month,
+            toppings_per_month,
+            wafer_packs_per_month,
+            cookie_packs_per_month,
+            duration_months
+          )
+        `)
+        .eq("assigned_cliente_id", clienteActual.id)
+        .eq("status", "pending")
+        .eq("source", "admin_assigned");
+
+      const { data: subscriptionsData } = await supabase
+        .from("subscriptions")
+        .select(`
+          id,
+          status,
+          start_date,
+          end_date,
+          next_cycle_date,
+          template:subscription_templates (
+            name,
+            billing_period,
+            pots_per_month,
+            toppings_per_month,
+            wafer_packs_per_month,
+            cookie_packs_per_month,
+            duration_months
+          )
+        `)
+        .eq("cliente_id", clienteActual.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      setPendingClaims((claimsData as PendingClaim[]) || []);
+      setActiveSubscriptions((subscriptionsData as ActiveSubscription[]) || []);
       setLoading(false);
     };
 
-    cargarCliente();
+    cargarDatos();
   }, [router]);
 
   const handleCanjearCodigo = (e: React.FormEvent<HTMLFormElement>) => {
@@ -64,14 +150,53 @@ export default function MisSuscripcionesPage() {
     }
 
     setMensajeCodigo(
-      "Esta sección ya quedó lista visualmente. En el siguiente paso conectaremos el canje real del código."
+      "La lógica real de canje por código será el siguiente paso."
     );
   };
 
-  const handleActivarAsignada = () => {
-    setMensajeActivacion(
-      "Aquí mostraremos las suscripciones disponibles para activar cuando conectemos el modelo real."
-    );
+  const handleActivarAsignada = async (claimId: number) => {
+    if (!cliente) return;
+
+    setActivandoId(claimId);
+
+    const res = await fetch("/api/subscriptions/activate-assigned", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        claimId,
+        clienteId: cliente.id,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "No se pudo activar la suscripción.");
+      setActivandoId(null);
+      return;
+    }
+
+    const claimActivado = pendingClaims.find((claim) => claim.id === claimId);
+
+    setPendingClaims((prev) => prev.filter((claim) => claim.id !== claimId));
+
+    if (claimActivado) {
+      setActiveSubscriptions((prev) => [
+        {
+          id: Date.now(),
+          status: "active",
+          start_date: new Date().toISOString().slice(0, 10),
+          end_date: null,
+          next_cycle_date: null,
+          template: claimActivado.template,
+        },
+        ...prev,
+      ]);
+    }
+
+    setActivandoId(null);
   };
 
   if (loading) {
@@ -145,35 +270,58 @@ export default function MisSuscripcionesPage() {
               Activar suscripción
             </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-700">
-              Aquí aparecerán las suscripciones que fueron cargadas directamente
-              a tu cuenta y que están pendientes de activación.
+              Aquí aparecen las suscripciones cargadas directamente a tu cuenta.
             </p>
 
-            <div className="mt-5 rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-5">
-              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
-                Pendientes por activar
-              </p>
-              <p className="mt-2 text-lg font-semibold text-[#4C00F7]">
-                Aún no tienes suscripciones directas para activar
-              </p>
-              <p className="mt-3 text-sm leading-6 text-neutral-700">
-                Cuando compres una suscripción por caja, WhatsApp, teléfono o
-                cualquier otro canal y esta quede asociada a tu cuenta, la
-                verás aquí para activarla.
-              </p>
-
-              <button
-                type="button"
-                onClick={handleActivarAsignada}
-                className="mt-5 w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition hover:opacity-95"
-              >
-                Buscar suscripciones disponibles
-              </button>
-
-              {mensajeActivacion && (
-                <div className="mt-4 rounded-2xl border border-[#D99BE8] bg-white px-4 py-3 text-sm text-neutral-700">
-                  {mensajeActivacion}
+            <div className="mt-5 space-y-3">
+              {pendingClaims.length === 0 ? (
+                <div className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-5">
+                  <p className="text-lg font-semibold text-[#4C00F7]">
+                    Aún no tienes suscripciones directas para activar
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    Cuando compres una suscripción por caja, WhatsApp, teléfono o
+                    cualquier otro canal y esta quede asociada a tu cuenta, la
+                    verás aquí para activarla.
+                  </p>
                 </div>
+              ) : (
+                pendingClaims.map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-5"
+                  >
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                      {claim.template.name}
+                    </p>
+
+                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
+                      <p>Periodicidad: {claim.template.billing_period}</p>
+                      <p>Potes por mes: {claim.template.pots_per_month}</p>
+                      {claim.template.toppings_per_month > 0 && (
+                        <p>Toppings por mes: {claim.template.toppings_per_month}</p>
+                      )}
+                      {claim.template.wafer_packs_per_month > 0 && (
+                        <p>Pack barquillos por mes: {claim.template.wafer_packs_per_month}</p>
+                      )}
+                      {claim.template.cookie_packs_per_month > 0 && (
+                        <p>Pack galletas por mes: {claim.template.cookie_packs_per_month}</p>
+                      )}
+                      {claim.notes && <p>Nota: {claim.notes}</p>}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleActivarAsignada(claim.id)}
+                      disabled={activandoId === claim.id}
+                      className="mt-5 w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition hover:opacity-95 disabled:opacity-60"
+                    >
+                      {activandoId === claim.id
+                        ? "Activando..."
+                        : "Activar suscripción"}
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -229,18 +377,49 @@ export default function MisSuscripcionesPage() {
               la fecha de renovación del ciclo y tus beneficios vigentes.
             </p>
 
-            <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-              <p className="text-sm font-medium uppercase tracking-[0.14em] text-neutral-500">
-                Suscripciones vigentes
-              </p>
-              <p className="mt-2 text-lg font-semibold text-[#4C00F7]">
-                Aún no tienes suscripciones activas
-              </p>
-              <p className="mt-3 text-sm leading-6 text-neutral-700">
-                Cuando actives una suscripción, aquí podrás revisar su detalle,
-                el saldo del ciclo actual, lo que ya consumiste y la fecha en
-                que se renueva.
-              </p>
+            <div className="mt-5 space-y-3">
+              {activeSubscriptions.length === 0 ? (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                  <p className="text-lg font-semibold text-[#4C00F7]">
+                    Aún no tienes suscripciones activas
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    Cuando actives una suscripción, aquí podrás revisar su detalle,
+                    el saldo del ciclo actual, lo que ya consumiste y la fecha en
+                    que se renueva.
+                  </p>
+                </div>
+              ) : (
+                activeSubscriptions.map((subscription) => (
+                  <div
+                    key={subscription.id}
+                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
+                  >
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                      {subscription.template.name}
+                    </p>
+
+                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
+                      <p>Periodicidad: {subscription.template.billing_period}</p>
+                      <p>Potes por mes: {subscription.template.pots_per_month}</p>
+                      {subscription.template.toppings_per_month > 0 && (
+                        <p>Toppings por mes: {subscription.template.toppings_per_month}</p>
+                      )}
+                      {subscription.template.wafer_packs_per_month > 0 && (
+                        <p>Pack barquillos por mes: {subscription.template.wafer_packs_per_month}</p>
+                      )}
+                      {subscription.template.cookie_packs_per_month > 0 && (
+                        <p>Pack galletas por mes: {subscription.template.cookie_packs_per_month}</p>
+                      )}
+                      <p>Inicio: {subscription.start_date}</p>
+                      {subscription.end_date && <p>Término: {subscription.end_date}</p>}
+                      {subscription.next_cycle_date && (
+                        <p>Próximo ciclo: {subscription.next_cycle_date}</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
