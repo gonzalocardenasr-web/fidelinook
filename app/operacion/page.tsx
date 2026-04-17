@@ -527,20 +527,22 @@ export default function OperacionPage() {
                 </p>
 
                 <AdminClienteDetalle
-                  cliente={cliente}
-                  premiosActivos={premiosActivos}
-                  mensaje={mensaje}
-                  setMensaje={setMensaje}
-                  procesandoCompra={procesandoCompra}
-                  procesandoCanje={procesandoCanje}
-                  reiniciando={false}
-                  rol={rol}
-                  validarCompra={validarCompra}
-                  canjearPrimerPremio={canjearPrimerPremio}
-                  eliminarClienteSeleccionado={undefined}
-                  reiniciarDatos={undefined}
-                  exportarCSV={undefined}
+                    cliente={cliente}
+                    premiosActivos={premiosActivos}
+                    mensaje={mensaje}
+                    setMensaje={setMensaje}
+                    procesandoCompra={procesandoCompra}
+                    procesandoCanje={procesandoCanje}
+                    reiniciando={false}
+                    rol={rol}
+                    validarCompra={validarCompra}
+                    canjearPrimerPremio={canjearPrimerPremio}
+                    eliminarClienteSeleccionado={undefined}
+                    reiniciarDatos={undefined}
+                    exportarCSV={undefined}
+                    mostrarAccionesAdministrativas={false}
                 />
+                
               </>
             )}
           </div>
