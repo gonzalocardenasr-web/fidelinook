@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import QRCode from "react-qr-code";
 import { supabase } from "../../../lib/supabase";
 
@@ -19,6 +20,7 @@ type Cliente = {
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
+  auth_user_id?: string | null;
 };
 
 type Props = {
@@ -50,6 +52,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
   }
 
   const clienteTyped = data as Cliente;
+
   if (!clienteTyped.tarjeta_activa) {
     return (
       <main className="min-h-screen bg-[#FFDBEF] p-6">
@@ -59,7 +62,8 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </h1>
 
           <p className="mt-4 text-neutral-600">
-            Debes verificar tu correo electrónico para activar tu tarjeta Fideli-NooK.
+            Debes verificar tu correo electrónico para activar tu tarjeta
+            Fideli-NooK.
           </p>
 
           <p className="mt-2 text-neutral-500 text-sm">
@@ -69,7 +73,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
       </main>
     );
   }
-
 
   const premiosArray = Array.isArray(clienteTyped.premios)
     ? clienteTyped.premios
@@ -85,6 +88,18 @@ export default async function TarjetaPublicaPage({ params }: Props) {
 
   const sellos = clienteTyped.sellos ?? 0;
   const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${clienteTyped.public_token}`;
+
+  const perfilHref = clienteTyped.auth_user_id
+    ? `/login?next=${encodeURIComponent("/mi-cuenta")}`
+    : `/activar-cuenta?token=${encodeURIComponent(
+        clienteTyped.public_token
+      )}&next=${encodeURIComponent("/mi-cuenta")}`;
+
+  const suscripcionesHref = clienteTyped.auth_user_id
+    ? `/login?next=${encodeURIComponent("/mi-cuenta/suscripciones")}`
+    : `/activar-cuenta?token=${encodeURIComponent(
+        clienteTyped.public_token
+      )}&next=${encodeURIComponent("/mi-cuenta/suscripciones")}`;
 
   return (
     <main className="min-h-screen bg-[#FFDBEF] p-6">
@@ -186,6 +201,22 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                 </p>
               </div>
             )}
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <Link
+                href={perfilHref}
+                className="rounded-2xl border border-[#4C00F7] px-5 py-4 text-center text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+              >
+                Administrar mi perfil
+              </Link>
+
+              <Link
+                href={suscripcionesHref}
+                className="rounded-2xl bg-[#4C00F7] px-5 py-4 text-center text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                Ver mis suscripciones
+              </Link>
+            </div>
           </div>
         </div>
 
