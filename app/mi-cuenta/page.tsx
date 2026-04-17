@@ -1,15 +1,38 @@
-import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "../../lib/supabase-server";
+"use client";
 
-export default async function MiCuentaPage() {
-  const supabase = await createSupabaseServerClient();
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export default function MiCuentaPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  if (!session) {
-    redirect("/login?next=/mi-cuenta");
+  useEffect(() => {
+    const revisarSesion = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/login?next=/mi-cuenta");
+        return;
+      }
+
+      setLoading(false);
+    };
+
+    revisarSesion();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-neutral-50 px-4 py-10">
+        <div className="mx-auto max-w-5xl rounded-2xl bg-white p-6 shadow-sm border border-neutral-200">
+          <p className="text-neutral-600">Cargando tu cuenta...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -17,8 +40,7 @@ export default async function MiCuentaPage() {
       <div className="mx-auto max-w-5xl rounded-2xl bg-white p-6 shadow-sm border border-neutral-200">
         <h1 className="text-2xl font-semibold text-neutral-900">Mi cuenta</h1>
         <p className="mt-2 text-neutral-600">
-          Ya ingresaste a tu cuenta privada. En el siguiente paso conectaremos
-          la tarjeta y dejaremos lista la sección de suscripciones.
+          Ya ingresaste a tu cuenta privada.
         </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
