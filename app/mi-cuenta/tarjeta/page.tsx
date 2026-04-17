@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import QRCode from "react-qr-code";
 
 type Premio = {
   id: number;
@@ -78,6 +79,7 @@ export default function MiTarjetaPage() {
   const sellos = cliente?.sellos ?? 0;
   const faltantes = Math.max(META_SELLOS - sellos, 0);
   const premioActivo = premiosActivos[0] || null;
+  const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${cliente?.public_token ?? ""}`;
 
   if (loading) {
     return (
@@ -131,15 +133,31 @@ export default function MiTarjetaPage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
-                Cliente
-              </p>
-              <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
-                {cliente.nombre}
-              </h2>
-              <p className="mt-2 text-sm text-neutral-600">{cliente.correo}</p>
-              <p className="text-sm text-neutral-600">{cliente.telefono}</p>
+                <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                    Cliente
+                </p>
+                <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+                    {cliente.nombre}
+                </h2>
+                <p className="mt-2 text-sm text-neutral-600">{cliente.correo}</p>
+                <p className="text-sm text-neutral-600">{cliente.telefono}</p>
             </div>
+
+                <details className="mt-2 rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
+                    <summary className="cursor-pointer list-none text-center text-sm font-semibold uppercase tracking-[0.14em] text-[#4C00F7] hover:opacity-80 transition">
+                        Ver mi código QR
+                    </summary>
+
+                    <div className="mt-4">
+                        <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-sm">
+                        <QRCode value={urlTarjeta} size={180} />
+                        </div>
+
+                        <p className="mt-4 text-center text-xs text-neutral-500">
+                        Muéstralo en caja para identificar tu tarjeta
+                        </p>
+                    </div>
+                </details>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 p-5">
               <div className="flex items-center justify-between gap-4">
