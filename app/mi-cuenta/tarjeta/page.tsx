@@ -199,6 +199,69 @@ export default function MiTarjetaPage() {
           </div>
         </div>
       </div>
+      <details className="overflow-hidden rounded-[24px] bg-white shadow" open>
+        <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            Premios activos
+        </summary>
+
+        <div className="border-t border-neutral-200 px-6 py-5">
+            {premiosActivos.length === 0 ? (
+            <p className="text-neutral-600">No tienes premios activos.</p>
+            ) : (
+            <div className="space-y-3">
+                {premiosActivos.map((premio) => (
+                <div
+                    key={premio.id}
+                    className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-4"
+                >
+                    <p className="font-semibold text-[#4C00F7]">
+                    {premio.nombre}
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                    Estado: {premio.estado}
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                    Vence: {premio.vencimiento || "Sin definir"}
+                    </p>
+                </div>
+                ))}
+            </div>
+            )}
+        </div>
+        </details>
+
+        <details className="overflow-hidden rounded-[24px] bg-white shadow">
+            <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
+                Historial de premios usados
+            </summary>
+
+            <div className="border-t border-neutral-200 px-6 py-5">
+                {premiosUsados.length === 0 ? (
+                <p className="text-neutral-600">
+                    Todavía no has canjeado premios.
+                </p>
+                ) : (
+                <div className="space-y-3">
+                    {premiosUsados.map((premio) => (
+                    <div
+                        key={premio.id}
+                        className="rounded-2xl border border-neutral-200 p-4"
+                    >
+                        <p className="font-semibold text-[#4C00F7]">
+                        {premio.nombre}
+                        </p>
+                        <p className="mt-1 text-sm text-neutral-600">
+                        Estado: {premio.estado}
+                        </p>
+                        <p className="text-sm text-neutral-600">
+                        Vencía: {premio.vencimiento || "Sin definir"}
+                        </p>
+                    </div>
+                    ))}
+                </div>
+                )}
+            </div>
+        </details>
     </main>
   );
 }
