@@ -159,45 +159,62 @@ export default function MisSuscripcionesPage() {
 
     setActivandoId(claimId);
 
-    const res = await fetch("/api/subscriptions/activate-assigned", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        claimId,
-        clienteId: cliente.id,
-      }),
-    });
+    const handleActivarAsignada = async (claimId: number) => {
+        if (!cliente) return;
 
-    const data = await res.json();
+        setActivandoId(claimId);
 
-    if (!res.ok) {
-      alert(data.message || "No se pudo activar la suscripción.");
-      setActivandoId(null);
-      return;
-    }
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const claimActivado = pendingClaims.find((claim) => claim.id === claimId);
+            const res = await fetch("/api/subscriptions/activate-assigned", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                claimId,
+                clienteId: cliente.id,
+            }),
+            signal: controller.signal,
+            });
 
-    setPendingClaims((prev) => prev.filter((claim) => claim.id !== claimId));
+            clearTimeout(timeout);
 
-    if (claimActivado) {
-      setActiveSubscriptions((prev) => [
-        {
-          id: Date.now(),
-          status: "active",
-          start_date: new Date().toISOString().slice(0, 10),
-          end_date: null,
-          next_cycle_date: null,
-          template: claimActivado.template,
-        },
-        ...prev,
-      ]);
-    }
+            const data = await res.json();
 
-    setActivandoId(null);
-  };
+            if (!res.ok) {
+            alert(data.message || "No se pudo activar la suscripción.");
+            return;
+            }
+
+            const claimActivado = pendingClaims.find((claim) => claim.id === claimId);
+
+            setPendingClaims((prev) => prev.filter((claim) => claim.id !== claimId));
+
+            if (claimActivado) {
+            setActiveSubscriptions((prev) => [
+                {
+                id: Date.now(),
+                status: "active",
+                start_date: new Date().toISOString().slice(0, 10),
+                end_date: null,
+                next_cycle_date: null,
+                template: claimActivado.template,
+                },
+                ...prev,
+            ]);
+            }
+
+            alert("Suscripción activada correctamente.");
+        } catch (err) {
+            console.error("Error activando suscripción:", err);
+            alert("La activación no respondió correctamente. Revisemos el backend.");
+        } finally {
+            setActivandoId(null);
+        }
+    };
 
   if (loading) {
     return (
