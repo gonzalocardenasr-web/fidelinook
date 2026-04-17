@@ -159,11 +159,6 @@ export default function MisSuscripcionesPage() {
 
     setActivandoId(claimId);
 
-    const handleActivarAsignada = async (claimId: number) => {
-        if (!cliente) return;
-
-        setActivandoId(claimId);
-
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 15000);
@@ -214,7 +209,7 @@ export default function MisSuscripcionesPage() {
         } finally {
             setActivandoId(null);
         }
-    };
+  };
 
   if (loading) {
     return (
