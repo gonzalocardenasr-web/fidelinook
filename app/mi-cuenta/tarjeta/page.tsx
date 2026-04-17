@@ -120,6 +120,14 @@ export default function MiTarjetaPage() {
             </p>
           </div>
 
+        <div className="px-6 pt-4 md:px-8">
+          <button
+            onClick={() => router.push("/mi-cuenta")}
+            className="rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+          >
+            ← Mi cuenta
+        </button>
+        </div>
           <div className="space-y-6 px-6 py-6 md:px-8 md:py-8">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
@@ -187,22 +195,7 @@ export default function MiTarjetaPage() {
                 </p>
               </div>
             )}
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => router.push("/mi-cuenta")}
-                className="rounded-2xl border border-[#4C00F7] px-5 py-3 text-sm font-semibold text-[#4C00F7]"
-              >
-                Volver a mi cuenta
-              </button>
-
-              <button
-                onClick={() => router.push("/mi-cuenta/suscripciones")}
-                className="rounded-2xl bg-[#4C00F7] px-5 py-3 text-sm font-semibold text-white"
-              >
-                Ver mis suscripciones
-              </button>
-            </div>
+            
           </div>
         </div>
       </div>
