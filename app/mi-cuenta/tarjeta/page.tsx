@@ -65,25 +65,24 @@ export default function MiTarjetaPage() {
     cargarTarjeta();
   }, [router]);
 
-const premiosActivos = useMemo(() => {
+  const premiosActivos = useMemo(() => {
     if (!cliente || !Array.isArray(cliente.premios)) return [];
     return cliente.premios.filter((premio) => premio.estado === "activo");
-}, [cliente]);
+  }, [cliente]);
 
-const premiosUsados = useMemo(() => {
+  const premiosUsados = useMemo(() => {
     if (!cliente || !Array.isArray(cliente.premios)) return [];
     return cliente.premios.filter((premio) => premio.estado === "usado");
-}, [cliente]);
-
-const premioActivo = premiosActivos[0] || null;
+  }, [cliente]);
 
   const sellos = cliente?.sellos ?? 0;
   const faltantes = Math.max(META_SELLOS - sellos, 0);
+  const premioActivo = premiosActivos[0] || null;
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#FFF7FB] px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-h-screen bg-[#FFDBEF] p-6">
+        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
           <p className="text-neutral-600">Cargando tu tarjeta...</p>
         </div>
       </main>
@@ -92,8 +91,8 @@ const premioActivo = premiosActivos[0] || null;
 
   if (error || !cliente) {
     return (
-      <main className="min-h-screen bg-[#FFF7FB] px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-3xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-h-screen bg-[#FFDBEF] p-6">
+        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
           <h1 className="text-2xl font-bold text-[#4C00F7]">Mi tarjeta</h1>
           <p className="mt-4 text-neutral-600">
             {error || "No fue posible cargar tu tarjeta."}
@@ -101,9 +100,9 @@ const premioActivo = premiosActivos[0] || null;
 
           <button
             onClick={() => router.push("/mi-cuenta")}
-            className="mt-6 rounded-2xl bg-[#4C00F7] px-5 py-3 text-sm font-semibold text-white"
+            className="mt-6 rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
           >
-            Volver a mi cuenta
+            ← Mi cuenta
           </button>
         </div>
       </main>
@@ -111,30 +110,26 @@ const premioActivo = premiosActivos[0] || null;
   }
 
   return (
-    <main className="min-h-screen bg-[#FFF7FB] px-4 py-8 md:px-6 md:py-10">
-      <div className="mx-auto max-w-3xl space-y-5">
+    <main className="min-h-screen bg-[#FFDBEF] p-6">
+      <div className="mx-auto max-w-xl space-y-5">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
-          <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-6 py-6 text-white md:px-8">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+          <div className="bg-[#4C00F7] px-6 py-6 text-white">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
               Nook
             </p>
-            <h1 className="mt-2 text-3xl font-bold leading-tight">
-              Mi tarjeta
-            </h1>
-            <p className="mt-2 text-sm text-white/85">
-              Revisa tu estado actual de fidelización.
-            </p>
+            <h1 className="text-3xl font-bold">Tarjeta Nook</h1>
           </div>
 
-        <div className="px-6 pt-4 md:px-8">
-          <button
-            onClick={() => router.push("/mi-cuenta")}
-            className="rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
-          >
-            ← Mi cuenta
-        </button>
-        </div>
-          <div className="space-y-6 px-6 py-6 md:px-8 md:py-8">
+          <div className="space-y-6 px-6 py-6">
+            <div>
+              <button
+                onClick={() => router.push("/mi-cuenta")}
+                className="rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+              >
+                ← Mi cuenta
+              </button>
+            </div>
+
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
                 Cliente
@@ -147,7 +142,7 @@ const premioActivo = premiosActivos[0] || null;
             </div>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 p-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-neutral-600">
                     Progreso actual
@@ -169,7 +164,7 @@ const premioActivo = premiosActivos[0] || null;
                     className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold ${
                       i < sellos
                         ? "border-[#4C00F7] bg-[#4C00F7] text-white"
-                        : "border-[#4C00F7]/25 bg-[#FFDBEF] text-[#4C00F7]"
+                        : "border-[#D99BE8] bg-[#F4DCE8] text-[#4C00F7]"
                     }`}
                   >
                     {i + 1}
@@ -178,7 +173,7 @@ const premioActivo = premiosActivos[0] || null;
               </div>
             </div>
 
-            {premioActivo ? (
+            {premioActivo && (
               <div className="rounded-2xl border border-[#4C00F7]/15 bg-[#4C00F7] p-5 text-white">
                 <p className="text-sm font-medium uppercase tracking-[0.14em] text-white/80">
                   Premio disponible
@@ -186,88 +181,77 @@ const premioActivo = premiosActivos[0] || null;
                 <p className="mt-2 text-2xl font-bold">🎉 ¡Tienes un premio!</p>
                 <p className="mt-1 text-lg">{premioActivo.nombre}</p>
                 <p className="mt-2 text-sm text-white/80">
-                  {premioActivo.vencimiento
-                    ? `Vence: ${premioActivo.vencimiento}`
-                    : "Disponible para canje en el local."}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-                <p className="text-sm font-medium uppercase tracking-[0.14em] text-neutral-500">
-                  Premio
-                </p>
-                <p className="mt-2 text-neutral-700">
-                  Aún no tienes un premio activo.
+                  Muéstralo en el local para canjearlo.
                 </p>
               </div>
             )}
-            
           </div>
         </div>
-      </div>
-      <details className="overflow-hidden rounded-[24px] bg-white shadow" open>
-        <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            Premios activos
-        </summary>
 
-        <div className="border-t border-neutral-200 px-6 py-5">
+        <details className="overflow-hidden rounded-[24px] bg-white shadow" open>
+          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            Premios activos
+          </summary>
+
+          <div className="border-t border-neutral-200 px-6 py-5">
             {premiosActivos.length === 0 ? (
-            <p className="text-neutral-600">No tienes premios activos.</p>
+              <p className="text-neutral-600">No tienes premios activos.</p>
             ) : (
-            <div className="space-y-3">
+              <div className="space-y-3">
                 {premiosActivos.map((premio) => (
-                <div
+                  <div
                     key={premio.id}
                     className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-4"
-                >
+                  >
                     <p className="font-semibold text-[#4C00F7]">
-                    {premio.nombre}
+                      {premio.nombre}
                     </p>
                     <p className="mt-1 text-sm text-neutral-600">
-                    Estado: {premio.estado}
+                      Estado: {premio.estado}
                     </p>
                     <p className="text-sm text-neutral-600">
-                    Vence: {premio.vencimiento || "Sin definir"}
+                      Vence: {premio.vencimiento || "Sin definir"}
                     </p>
-                </div>
+                  </div>
                 ))}
-            </div>
+              </div>
             )}
-        </div>
+          </div>
         </details>
 
         <details className="overflow-hidden rounded-[24px] bg-white shadow">
-            <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-                Historial de premios usados
-            </summary>
+          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            Historial de premios usados
+          </summary>
 
-            <div className="border-t border-neutral-200 px-6 py-5">
-                {premiosUsados.length === 0 ? (
-                <p className="text-neutral-600">
-                    Todavía no has canjeado premios.
-                </p>
-                ) : (
-                <div className="space-y-3">
-                    {premiosUsados.map((premio) => (
-                    <div
-                        key={premio.id}
-                        className="rounded-2xl border border-neutral-200 p-4"
-                    >
-                        <p className="font-semibold text-[#4C00F7]">
-                        {premio.nombre}
-                        </p>
-                        <p className="mt-1 text-sm text-neutral-600">
-                        Estado: {premio.estado}
-                        </p>
-                        <p className="text-sm text-neutral-600">
-                        Vencía: {premio.vencimiento || "Sin definir"}
-                        </p>
-                    </div>
-                    ))}
-                </div>
-                )}
-            </div>
+          <div className="border-t border-neutral-200 px-6 py-5">
+            {premiosUsados.length === 0 ? (
+              <p className="text-neutral-600">
+                Todavía no has canjeado premios.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {premiosUsados.map((premio) => (
+                  <div
+                    key={premio.id}
+                    className="rounded-2xl border border-neutral-200 p-4"
+                  >
+                    <p className="font-semibold text-[#4C00F7]">
+                      {premio.nombre}
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Estado: {premio.estado}
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      Vencía: {premio.vencimiento || "Sin definir"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </details>
+      </div>
     </main>
   );
 }
