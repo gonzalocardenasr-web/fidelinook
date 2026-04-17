@@ -128,7 +128,22 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </div>
 
           <div className="space-y-6 px-6 py-6">
-            
+                                   
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                Cliente
+              </p>
+              <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+                {clienteTyped.nombre}
+              </h2>
+              <p className="mt-2 text-sm text-neutral-600">
+                {clienteTyped.correo}
+              </p>
+              <p className="text-sm text-neutral-600">
+                {clienteTyped.telefono}
+              </p>
+            </div>
+
             <div className="px-6 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <Link
@@ -145,21 +160,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   Ver mis suscripciones
                 </Link>
               </div>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
-                Cliente
-              </p>
-              <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
-                {clienteTyped.nombre}
-              </h2>
-              <p className="mt-2 text-sm text-neutral-600">
-                {clienteTyped.correo}
-              </p>
-              <p className="text-sm text-neutral-600">
-                {clienteTyped.telefono}
-              </p>
             </div>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
