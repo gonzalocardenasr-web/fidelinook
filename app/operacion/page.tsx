@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
+import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
 
 type Premio = {
   id: number;
@@ -24,6 +25,8 @@ type Cliente = {
   email_verificado?: boolean;
   fecha_ultimo_sello?: string | null;
   fecha_ultimo_canje?: string | null;
+  created_At?: string | null;
+  fecha_activacion?: string | null;
 };
 
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -415,6 +418,8 @@ export default function OperacionPage() {
             </div>
           </div>
         </div>
+
+        <UltimosMovimientosCard clientes={clientes} />
 
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 p-4">
