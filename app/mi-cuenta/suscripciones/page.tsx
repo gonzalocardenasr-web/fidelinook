@@ -64,83 +64,94 @@ export default function MisSuscripcionesPage() {
 
   useEffect(() => {
     const cargarDatos = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        try {
+        setLoading(true);
 
-      if (!session) {
-        router.replace("/login?next=/mi-cuenta/suscripciones");
-        return;
-      }
+        const clienteActualRaw = localStorage.getItem("clienteActual");
 
-      const userId = session.user.id;
+        if (!clienteActualRaw) {
+            setPendingClaims([]);
+            setSubscriptions([]);
+            return;
+        }
 
-      const { data: clienteData, error: clienteError } = await supabase
-        .from("clientes")
-        .select("id, nombre, correo, telefono, auth_user_id")
-        .eq("auth_user_id", userId)
-        .single();
+        const clienteActual = JSON.parse(clienteActualRaw);
 
-      if (clienteError || !clienteData) {
-        setError("No encontramos una cuenta asociada a esta sesión.");
-        setLoading(false);
-        return;
-      }
+        if (!clienteActual?.id) {
+            setPendingClaims([]);
+            setSubscriptions([]);
+            return;
+        }
 
-      const clienteActual = clienteData as Cliente;
-      setCliente(clienteActual);
-
-      const { data: claimsData } = await supabase
-        .from("subscription_claims")
-        .select(`
-          id,
-          template_id,
-          status,
-          source,
-          notes,
-          template:subscription_templates (
+        const { data: claimsData, error: claimsError } = await supabase
+            .from("subscription_claims")
+            .select(`
             id,
-            name,
-            billing_period,
-            pots_per_month,
-            toppings_per_month,
-            wafer_packs_per_month,
-            cookie_packs_per_month,
-            duration_months
-          )
-        `)
-        .eq("assigned_cliente_id", clienteActual.id)
-        .eq("status", "pending")
-        .eq("source", "admin_assigned");
+            source,
+            status,
+            claim_code,
+            assigned_cliente_id,
+            template:subscription_templates (
+                name,
+                billing_period,
+                pots_per_month,
+                toppings_per_month,
+                wafer_packs_per_month,
+                cookie_packs_per_month,
+                duration_months
+            )
+            `)
+            .eq("assigned_cliente_id", clienteActual.id)
+            .eq("status", "pending")
+            .eq("source", "admin_assigned");
 
-      const { data: subscriptionsData } = await supabase
-        .from("subscriptions")
-        .select(`
+        if (claimsError) {
+            console.error("Error cargando asignaciones pendientes:", claimsError);
+            setPendingClaims([]);
+        } else {
+            setPendingClaims((claimsData as PendingClaim[]) || []);
+        }
+
+        const { data: subscriptionsData, error: subscriptionsError } = await supabase
+            .from("subscriptions")
+            .select(`
             id,
             status,
             start_date,
             end_date,
             next_cycle_date,
+            created_at,
+            activated_at,
             template:subscription_templates (
-            name,
-            billing_period,
-            pots_per_month,
-            toppings_per_month,
-            wafer_packs_per_month,
-            cookie_packs_per_month,
-            duration_months
+                name,
+                billing_period,
+                pots_per_month,
+                toppings_per_month,
+                wafer_packs_per_month,
+                cookie_packs_per_month,
+                duration_months
             )
-        `)
-        .eq("cliente_id", clienteActual.id)
-        .order("created_at", { ascending: false });
+            `)
+            .eq("cliente_id", clienteActual.id)
+            .order("created_at", { ascending: false });
 
-      setPendingClaims((claimsData as PendingClaim[]) || []);
-      setActiveSubscriptions((subscriptionsData as ActiveSubscription[]) || []);
-      setLoading(false);
+        if (subscriptionsError) {
+            console.error("Error cargando suscripciones:", subscriptionsError);
+            setSubscriptions([]);
+        } else {
+            setSubscriptions((subscriptionsData as ActiveSubscription[]) || []);
+        }
+        } catch (error) {
+        console.error("Error inesperado cargando suscripciones:", error);
+        setPendingClaims([]);
+        setSubscriptions([]);
+        } finally {
+        setLoading(false);
+        }
     };
 
     cargarDatos();
-  }, [router]);
+    }, []);
 
   const handleCanjearCodigo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -153,6 +164,7 @@ export default function MisSuscripcionesPage() {
     }
 
     setMensajeCodigo("");
+    setCanjeandoCodigo(true);
 
     try {
         const res = await fetch("/api/subscriptions/redeem-code", {
@@ -219,7 +231,7 @@ export default function MisSuscripcionesPage() {
             setPendingClaims((prev) => prev.filter((claim) => claim.id !== claimId));
 
             if (claimActivado) {
-            setActiveSubscriptions((prev) => [
+            setSubscriptions((prev) => [
                 {
                 id: Date.now(),
                 status: "active",
@@ -237,9 +249,33 @@ export default function MisSuscripcionesPage() {
             console.error("Error activando suscripción:", err);
             alert("La activación no respondió correctamente. Revisemos el backend.");
         } finally {
-            setActivandoId(null);
+            setActivandoId(null),
+            setCanjeandoCodigo(false);
         }
   };
+
+  const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const suscripcionesVigentes = subscriptions.filter((subscription) => {
+    if (subscription.status !== "active") return false;
+    if (!subscription.end_date) return true;
+
+    const endDate = new Date(subscription.end_date);
+    endDate.setHours(0, 0, 0, 0);
+
+    return endDate >= hoy;
+    });
+
+    const historialSuscripciones = subscriptions.filter((subscription) => {
+    if (subscription.status !== "active") return true;
+    if (!subscription.end_date) return false;
+
+    const endDate = new Date(subscription.end_date);
+    endDate.setHours(0, 0, 0, 0);
+
+    return endDate < hoy;
+    });
 
   if (loading) {
     return (
@@ -395,10 +431,11 @@ export default function MisSuscripcionesPage() {
 
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition hover:opacity-95"
-              >
-                Canjear código
-              </button>
+                disabled={canjeandoCodigo}
+                className="w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition duration-200 hover:opacity-95 active:scale-[0.98] disabled:opacity-60"
+                >
+                {canjeandoCodigo ? "Canjeando..." : "Canjear código"}
+                </button>
 
               {mensajeCodigo && (
                 <div className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] px-4 py-3 text-sm text-neutral-700">
@@ -410,60 +447,126 @@ export default function MisSuscripcionesPage() {
         </div>
 
         <div className="overflow-hidden rounded-[24px] bg-white shadow">
-          <div className="px-6 py-5">
-            <h2 className="text-xl font-bold text-[#4C00F7]">
-              Ver mis suscripciones
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-700">
-              Aquí verás el detalle de tus suscripciones activas, lo consumido,
-              la fecha de renovación del ciclo y tus beneficios vigentes.
+  <div className="px-6 py-5">
+    <h2 className="text-xl font-bold text-[#4C00F7]">
+      Ver mis suscripciones
+    </h2>
+    <p className="mt-2 text-sm leading-6 text-neutral-700">
+      Aquí verás solo tus suscripciones vigentes. El historial queda disponible más abajo.
+    </p>
+
+    <div className="mt-5 space-y-3">
+      {suscripcionesVigentes.length === 0 ? (
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+          <p className="text-lg font-semibold text-[#4C00F7]">
+            Aún no tienes suscripciones vigentes
+          </p>
+          <p className="mt-3 text-sm leading-6 text-neutral-700">
+            Cuando actives una suscripción vigente, aquí podrás revisar su detalle,
+            la fecha de renovación del ciclo y tus beneficios mensuales.
+          </p>
+        </div>
+      ) : (
+        suscripcionesVigentes.map((subscription) => (
+          <div
+            key={subscription.id}
+            className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
+          >
+            <p className="text-lg font-semibold text-[#4C00F7]">
+              {subscription.template.name}
             </p>
 
-            <div className="mt-5 space-y-3">
-              {activeSubscriptions.length === 0 ? (
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-                  <p className="text-lg font-semibold text-[#4C00F7]">
-                    Aún no tienes suscripciones activas
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-neutral-700">
-                    Cuando actives una suscripción, aquí podrás revisar su detalle,
-                    el saldo del ciclo actual, lo que ya consumiste y la fecha en
-                    que se renueva.
-                  </p>
-                </div>
-              ) : (
-                activeSubscriptions.map((subscription) => (
-                  <div
-                    key={subscription.id}
-                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
-                  >
-                    <p className="text-lg font-semibold text-[#4C00F7]">
-                      {subscription.template.name}
-                    </p>
-
-                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
-                      <p>Periodicidad: {subscription.template.billing_period}</p>
-                      <p>Potes por mes: {subscription.template.pots_per_month}</p>
-                      {subscription.template.toppings_per_month > 0 && (
-                        <p>Toppings por mes: {subscription.template.toppings_per_month}</p>
-                      )}
-                      {subscription.template.wafer_packs_per_month > 0 && (
-                        <p>Pack barquillos por mes: {subscription.template.wafer_packs_per_month}</p>
-                      )}
-                      {subscription.template.cookie_packs_per_month > 0 && (
-                        <p>Pack galletas por mes: {subscription.template.cookie_packs_per_month}</p>
-                      )}
-                      <p>Inicio: {subscription.start_date}</p>
-                      {subscription.end_date && <p>Término: {subscription.end_date}</p>}
-                      {subscription.next_cycle_date && (
-                        <p>Próximo ciclo: {subscription.next_cycle_date}</p>
-                      )}
-                    </div>
-                  </div>
-                ))
+            <div className="mt-3 space-y-1 text-sm text-neutral-700">
+              <p>Periodicidad: {subscription.template.billing_period}</p>
+              <p>Potes por mes: {subscription.template.pots_per_month}</p>
+              {subscription.template.toppings_per_month > 0 && (
+                <p>Toppings por mes: {subscription.template.toppings_per_month}</p>
+              )}
+              {subscription.template.wafer_packs_per_month > 0 && (
+                <p>Pack barquillos por mes: {subscription.template.wafer_packs_per_month}</p>
+              )}
+              {subscription.template.cookie_packs_per_month > 0 && (
+                <p>Pack galletas por mes: {subscription.template.cookie_packs_per_month}</p>
+              )}
+              <p>Inicio: {subscription.start_date}</p>
+              {subscription.end_date && <p>Término: {subscription.end_date}</p>}
+              {subscription.next_cycle_date && (
+                <p>Próximo ciclo: {subscription.next_cycle_date}</p>
               )}
             </div>
           </div>
+        ))
+      )}
+    </div>
+  </div>
+</div>
+
+        <div className="overflow-hidden rounded-[24px] bg-white shadow">
+        <button
+            type="button"
+            onClick={() => setMostrarHistorial(!mostrarHistorial)}
+            className="flex w-full items-center justify-between px-6 py-5 text-left transition hover:bg-neutral-50"
+        >
+            <div>
+            <h2 className="text-xl font-bold text-[#4C00F7]">
+                Historial de suscripciones
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+                Revisa tus suscripciones anteriores o vencidas.
+            </p>
+            </div>
+
+            <span className="text-2xl leading-none text-[#4C00F7]">
+            {mostrarHistorial ? "−" : "+"}
+            </span>
+        </button>
+
+        {mostrarHistorial && (
+            <div className="border-t border-neutral-200 px-6 py-5">
+            <div className="space-y-3">
+                {historialSuscripciones.length === 0 ? (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                    No tienes historial de suscripciones
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    Cuando una suscripción termine o deje de estar vigente, aparecerá aquí.
+                    </p>
+                </div>
+                ) : (
+                historialSuscripciones.map((subscription) => (
+                    <div
+                    key={subscription.id}
+                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
+                    >
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                        {subscription.template.name}
+                    </p>
+
+                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
+                        <p>Periodicidad: {subscription.template.billing_period}</p>
+                        <p>Potes por mes: {subscription.template.pots_per_month}</p>
+                        {subscription.template.toppings_per_month > 0 && (
+                        <p>Toppings por mes: {subscription.template.toppings_per_month}</p>
+                        )}
+                        {subscription.template.wafer_packs_per_month > 0 && (
+                        <p>Pack barquillos por mes: {subscription.template.wafer_packs_per_month}</p>
+                        )}
+                        {subscription.template.cookie_packs_per_month > 0 && (
+                        <p>Pack galletas por mes: {subscription.template.cookie_packs_per_month}</p>
+                        )}
+                        <p>Inicio: {subscription.start_date}</p>
+                        {subscription.end_date && <p>Término: {subscription.end_date}</p>}
+                        {subscription.next_cycle_date && (
+                        <p>Próximo ciclo: {subscription.next_cycle_date}</p>
+                        )}
+                    </div>
+                    </div>
+                ))
+                )}
+            </div>
+            </div>
+        )}
         </div>
       </div>
     </main>
