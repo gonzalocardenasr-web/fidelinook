@@ -70,16 +70,12 @@ export default function UltimosMovimientosCard({ clientes }: Props) {
   return (
     <section className="rounded-2xl border border-violet-100 bg-white shadow-sm">
       <div className="border-b border-neutral-200 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-violet-800">
-              Últimos movimientos
-            </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Últimos registros y activaciones de clientes
-            </p>
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold text-violet-800">
+          Últimos movimientos
+        </h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Últimos registros y activaciones de clientes
+        </p>
       </div>
 
       <div className="p-4">
@@ -88,42 +84,57 @@ export default function UltimosMovimientosCard({ clientes }: Props) {
             No hay movimientos recientes para mostrar.
           </p>
         ) : (
-          <div className="space-y-3">
-            {movimientos.map((movimiento) => (
-              <div
-                key={movimiento.id}
-                className="rounded-xl border border-neutral-200 bg-neutral-50 p-4"
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-semibold text-[#111111]">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th className="border-b border-neutral-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Cliente
+                  </th>
+                  <th className="border-b border-neutral-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Movimiento
+                  </th>
+                  <th className="border-b border-neutral-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Estado
+                  </th>
+                  <th className="border-b border-neutral-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Fecha
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {movimientos.map((movimiento) => (
+                  <tr key={movimiento.id} className="align-middle">
+                    <td className="border-b border-neutral-100 px-4 py-4 text-sm font-semibold text-[#111111]">
                       {movimiento.nombre}
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    </td>
+
+                    <td className="border-b border-neutral-100 px-4 py-4 text-sm text-neutral-600">
                       {movimiento.tipo === "registro"
                         ? "Registro de cliente"
                         : "Activación de tarjeta"}
-                    </p>
-                  </div>
+                    </td>
 
-                  <div className="flex flex-col gap-2 md:items-end">
-                    <span
-                      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                        movimiento.estado === "Validado"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {movimiento.estado}
-                    </span>
+                    <td className="border-b border-neutral-100 px-4 py-4 text-sm">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          movimiento.estado === "Validado"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {movimiento.estado}
+                      </span>
+                    </td>
 
-                    <p className="text-sm text-neutral-500">
+                    <td className="border-b border-neutral-100 px-4 py-4 text-sm text-neutral-500 whitespace-nowrap">
                       {formatearFecha(movimiento.fecha)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
