@@ -45,6 +45,15 @@ export default function SuscripcionesPage() {
   const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">("all");
   const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
 
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevaDuracion, setNuevaDuracion] = useState("1");
+  const [nuevosPotes, setNuevosPotes] = useState("0");
+  const [nuevosToppings, setNuevosToppings] = useState("0");
+  const [nuevosBarquillos, setNuevosBarquillos] = useState("0");
+  const [nuevasGalletas, setNuevasGalletas] = useState("0");
+  const [procesandoNuevaSuscripcion, setProcesandoNuevaSuscripcion] = useState(false);
+  const [mostrarNuevaSuscripcion, setMostrarNuevaSuscripcion] = useState(false);
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -206,6 +215,46 @@ export default function SuscripcionesPage() {
     }
   };
 
+  const crearSuscripcionConfigurable = async () => {
+    try {
+        setProcesandoNuevaSuscripcion(true);
+        setMensaje("");
+
+        const res = await fetch("/api/subscriptions/create-template", {
+        method: "POST",
+        body: JSON.stringify({
+            name: nuevoNombre,
+            durationMonths: Number(nuevaDuracion),
+            potsPerCycle: Number(nuevosPotes),
+            toppingsPerCycle: Number(nuevosToppings),
+            waferPacksPerCycle: Number(nuevosBarquillos),
+            cookiePacksPerCycle: Number(nuevasGalletas),
+        }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setMensaje(data.message || "No se pudo crear la suscripción.");
+        return;
+        }
+
+        setMensaje("Suscripción creada correctamente.");
+
+        setNuevoNombre("");
+        setNuevaDuracion("1");
+        setNuevosPotes("0");
+        setNuevosToppings("0");
+        setNuevosBarquillos("0");
+        setNuevasGalletas("0");
+        setMostrarNuevaSuscripcion(false);
+
+        await cargarDatos();
+    } finally {
+        setProcesandoNuevaSuscripcion(false);
+    }
+  };
+
   const eliminarAsignacion = async (claimId: number) => {
     const confirmado = window.confirm(
       "¿Seguro que quieres eliminar este registro pendiente?"
@@ -281,6 +330,118 @@ export default function SuscripcionesPage() {
             Gestiona asignaciones, códigos y suscripciones activas del programa.
           </p>
         </div>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <button
+                type="button"
+                onClick={() => setMostrarNuevaSuscripcion(!mostrarNuevaSuscripcion)}
+                className="flex w-full items-center justify-between text-left"
+            >
+                <div>
+                <h2 className="text-xl font-semibold">Crear suscripción configurable</h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                    Define una nueva suscripción con cantidades por tipo de producto
+                </p>
+                </div>
+                <span className="text-2xl leading-none">
+                {mostrarNuevaSuscripcion ? "−" : "+"}
+                </span>
+            </button>
+
+            {mostrarNuevaSuscripcion && (
+                <div className="mt-6 space-y-4">
+                <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                    Nombre de la suscripción
+                    </label>
+                    <input
+                    type="text"
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    placeholder="Ejemplo: Mensual 4 potes"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                </div>
+
+                <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                    Duración en meses
+                    </label>
+                    <input
+                    type="number"
+                    min="1"
+                    value={nuevaDuracion}
+                    onChange={(e) => setNuevaDuracion(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                        Potes
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={nuevosPotes}
+                        onChange={(e) => setNuevosPotes(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                    </div>
+
+                    <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                        Toppings
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={nuevosToppings}
+                        onChange={(e) => setNuevosToppings(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                    </div>
+
+                    <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                        Pack barquillos
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={nuevosBarquillos}
+                        onChange={(e) => setNuevosBarquillos(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                    </div>
+
+                    <div>
+                    <label className="mb-2 block text-sm font-semibold text-violet-700">
+                        Pack galletas
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={nuevasGalletas}
+                        onChange={(e) => setNuevasGalletas(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                    <button
+                    onClick={crearSuscripcionConfigurable}
+                    disabled={procesandoNuevaSuscripcion}
+                    className="rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+                    >
+                    {procesandoNuevaSuscripcion ? "Creando..." : "Crear suscripción"}
+                    </button>
+                </div>
+                </div>
+            )}
+        </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <button
