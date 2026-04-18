@@ -77,52 +77,46 @@ export default function MiCuentaPage() {
                 Resumen de tu cuenta
               </p>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <button
-                  onClick={() => router.push("/mi-cuenta/perfil")}
-                  className="rounded-2xl bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-[0.98]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#4C00F7]/70">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                    <button
+                    onClick={() => router.push("/mi-cuenta/perfil")}
+                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
                     Mi perfil
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-[#4C00F7]">
-                    Edita tus datos
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-neutral-600">
+                    </button>
+
+                    <p className="text-xs text-neutral-600">
                     Mantén actualizado tu nombre y teléfono.
-                  </p>
-                </button>
+                    </p>
+                </div>
 
-                <button
-                  onClick={() => router.push("/mi-cuenta/tarjeta")}
-                  className="rounded-2xl bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-[0.98]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                <div className="space-y-2">
+                    <button
+                    onClick={() => router.push("/mi-cuenta/tarjeta")}
+                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
                     Mi tarjeta
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-[#4C00F7]">
-                    Revisa tus sellos
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-neutral-600">
-                    Ve tus premios, progreso y código QR.
-                  </p>
-                </button>
+                    </button>
 
-                <button
-                  onClick={() => router.push("/mi-cuenta/suscripciones")}
-                  className="rounded-2xl bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-[0.98]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                    <p className="text-xs text-neutral-600">
+                    Ve tus premios, progreso y código QR.
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    <button
+                    onClick={() => router.push("/mi-cuenta/suscripciones")}
+                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
                     Mis suscripciones
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-[#4C00F7]">
-                    Activa y administra
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-neutral-600">
+                    </button>
+
+                    <p className="text-xs text-neutral-600">
                     Gestiona códigos y suscripciones activas.
-                  </p>
-                </button>
-              </div>
+                    </p>
+                </div>
+                </div>
             </div>
 
             {cliente?.correo && (
