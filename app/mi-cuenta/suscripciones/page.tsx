@@ -5,25 +5,26 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 
 type TemplateInfo = {
+  id: number;
   name: string;
-  billing_period: string;
-  pots_per_month: number;
-  toppings_per_month: number;
-  wafer_packs_per_month: number;
-  cookie_packs_per_month: number;
-  duration_months: number;
+  billing_period: string | null;
+  pots_per_month: number | null;
+  toppings_per_month: number | null;
+  wafer_packs_per_month: number | null;
+  cookie_packs_per_month: number | null;
+  duration_months: number | null;
 };
 
-type PendingClaim = {
+type PendingClaimRaw = {
   id: number;
   source: string;
   status: string;
   claim_code: string | null;
   assigned_cliente_id: number | null;
-  template: TemplateInfo | null;
+  template_id: number | null;
 };
 
-type Subscription = {
+type SubscriptionRaw = {
   id: number;
   status: string;
   start_date: string | null;
@@ -31,6 +32,14 @@ type Subscription = {
   next_cycle_date: string | null;
   created_at: string | null;
   activated_at: string | null;
+  template_id: number | null;
+};
+
+type PendingClaim = PendingClaimRaw & {
+  template: TemplateInfo | null;
+};
+
+type Subscription = SubscriptionRaw & {
   template: TemplateInfo | null;
 };
 
@@ -65,10 +74,8 @@ function leerClienteSesion(): ClienteSesion | null {
 
 function formatearFecha(fecha?: string | null) {
   if (!fecha) return "-";
-
   const date = new Date(fecha);
   if (Number.isNaN(date.getTime())) return "-";
-
   return date.toLocaleDateString("es-CL");
 }
 
@@ -87,7 +94,7 @@ function formatearPeriodicidad(periodo?: string | null) {
 
 export default function MisSuscripcionesPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   const [pendingClaims, setPendingClaims] = useState<PendingClaim[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -110,62 +117,68 @@ export default function MisSuscripcionesPage() {
         throw new Error("No encontramos la sesión del cliente.");
       }
 
-      const { data: claimsData, error: claimsError } = await supabase
+      const { data: claimsRaw, error: claimsError } = await supabase
         .from("subscription_claims")
-        .select(`
-          id,
-          source,
-          status,
-          claim_code,
-          assigned_cliente_id,
-          template:subscription_templates (
-            name,
-            billing_period,
-            pots_per_month,
-            toppings_per_month,
-            wafer_packs_per_month,
-            cookie_packs_per_month,
-            duration_months
-          )
-        `)
+        .select("id, source, status, claim_code, assigned_cliente_id, template_id")
         .eq("assigned_cliente_id", cliente.id)
         .eq("status", "pending")
         .eq("source", "admin_assigned")
         .order("id", { ascending: false });
 
-      if (claimsError) {
-        throw claimsError;
-      }
+      if (claimsError) throw claimsError;
 
-      const { data: subscriptionsData, error: subscriptionsError } = await supabase
+      const { data: subscriptionsRaw, error: subscriptionsError } = await supabase
         .from("subscriptions")
-        .select(`
-          id,
-          status,
-          start_date,
-          end_date,
-          next_cycle_date,
-          created_at,
-          activated_at,
-          template:subscription_templates (
-            name,
-            billing_period,
-            pots_per_month,
-            toppings_per_month,
-            wafer_packs_per_month,
-            cookie_packs_per_month,
-            duration_months
-          )
-        `)
+        .select("id, status, start_date, end_date, next_cycle_date, created_at, activated_at, template_id")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false });
 
-      if (subscriptionsError) {
-        throw subscriptionsError;
+      if (subscriptionsError) throw subscriptionsError;
+
+      const templateIds = Array.from(
+        new Set(
+          [
+            ...((claimsRaw || []) as PendingClaimRaw[]).map((item) => item.template_id),
+            ...((subscriptionsRaw || []) as SubscriptionRaw[]).map((item) => item.template_id),
+          ].filter((id): id is number => typeof id === "number")
+        )
+      );
+
+      let templatesMap = new Map<number, TemplateInfo>();
+
+      if (templateIds.length > 0) {
+        const { data: templatesData, error: templatesError } = await supabase
+          .from("subscription_templates")
+          .select(
+            "id, name, billing_period, pots_per_month, toppings_per_month, wafer_packs_per_month, cookie_packs_per_month, duration_months"
+          )
+          .in("id", templateIds);
+
+        if (templatesError) throw templatesError;
+
+        templatesMap = new Map(
+          ((templatesData || []) as TemplateInfo[]).map((template) => [template.id, template])
+        );
       }
 
-      setPendingClaims((claimsData as PendingClaim[]) || []);
-      setSubscriptions((subscriptionsData as Subscription[]) || []);
+      const claimsEnriquecidos: PendingClaim[] = ((claimsRaw || []) as PendingClaimRaw[]).map(
+        (claim) => ({
+          ...claim,
+          template: claim.template_id ? templatesMap.get(claim.template_id) || null : null,
+        })
+      );
+
+      const subscriptionsEnriquecidas: Subscription[] = (
+        (subscriptionsRaw || []) as SubscriptionRaw[]
+      ).map((subscription) => ({
+        ...subscription,
+        template: subscription.template_id
+          ? templatesMap.get(subscription.template_id) || null
+          : null,
+      }));
+
+      setPendingClaims(claimsEnriquecidos);
+      setSubscriptions(subscriptionsEnriquecidas);
     } catch (err) {
       console.error("Error cargando suscripciones:", err);
       setError("No fue posible cargar tus suscripciones.");
