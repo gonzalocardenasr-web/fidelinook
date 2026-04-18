@@ -27,20 +27,20 @@ function buildTemplateName(params: {
   cookiePacksPerCycle: number;
 }) {
   const periodMap: Record<BillingPeriod, string> = {
-    mensual: "Mensual",
-    trimestral: "Trimestral",
-    semestral: "Semestral",
-    anual: "Anual",
+    mensual: "MEN",
+    trimestral: "TRIM",
+    semestral: "SEM",
+    anual: "AN",
   };
 
   const parts: string[] = [periodMap[params.billingPeriod]];
 
-  if (params.potsPerCycle > 0) parts.push(`${params.potsPerCycle} Potes`);
-  if (params.toppingsPerCycle > 0) parts.push(`${params.toppingsPerCycle} Toppings`);
-  if (params.waferPacksPerCycle > 0) parts.push(`${params.waferPacksPerCycle} Pack Barquillos`);
-  if (params.cookiePacksPerCycle > 0) parts.push(`${params.cookiePacksPerCycle} Pack Galletas`);
+  if (params.potsPerCycle > 0) parts.push(`${params.potsPerCycle}POT`);
+  if (params.toppingsPerCycle > 0) parts.push(`${params.toppingsPerCycle}TOPP`);
+  if (params.waferPacksPerCycle > 0) parts.push(`${params.waferPacksPerCycle}PBAR`);
+  if (params.cookiePacksPerCycle > 0) parts.push(`${params.cookiePacksPerCycle}PGAL`);
 
-  return parts.join(" - ");
+  return parts.join("-");
 }
 
 async function getOrCreateTemplate(params: {
@@ -174,11 +174,16 @@ export async function POST(req: Request) {
       ok: true,
       code,
     });
-  } catch (error) {
+    } catch (error) {
     console.error("[create-code] unexpected error:", error);
 
     return NextResponse.json(
-      { message: "Error inesperado." },
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error inesperado.",
+      },
       { status: 500 }
     );
   }
