@@ -179,12 +179,20 @@ export default function MisSuscripcionesPage() {
 
       setPendingClaims(claimsEnriquecidos);
       setSubscriptions(subscriptionsEnriquecidas);
-    } catch (err) {
-      console.error("Error cargando suscripciones:", err);
-      setError("No fue posible cargar tus suscripciones.");
-      setPendingClaims([]);
-      setSubscriptions([]);
-    } finally {
+    } catch (err: any) {
+        console.error("Error cargando suscripciones:", err);
+
+        const detalle =
+            err?.message ||
+            err?.details ||
+            err?.hint ||
+            err?.error_description ||
+            JSON.stringify(err);
+
+        setError(`No fue posible cargar tus suscripciones. Detalle: ${detalle}`);
+        setPendingClaims([]);
+        setSubscriptions([]);
+        } finally {
       setLoading(false);
     }
   };
