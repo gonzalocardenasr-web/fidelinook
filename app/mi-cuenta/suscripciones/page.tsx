@@ -67,20 +67,21 @@ export default function MisSuscripcionesPage() {
         try {
         setLoading(true);
 
-        const clienteActualRaw = localStorage.getItem("clienteActual");
+        const clienteActualRaw = localStorage.getItem("Cliente");
 
         if (!clienteActualRaw) {
-            setPendingClaims([]);
-            setSubscriptions([]);
-            return;
+            throw new Error("No hay cliente en sesión");
+            }
+
+            let clienteActual;
+            try {
+            clienteActual = JSON.parse(clienteActualRaw);
+            } catch {
+            throw new Error("Error parseando cliente");
         }
 
-        const clienteActual = JSON.parse(clienteActualRaw);
-
         if (!clienteActual?.id) {
-            setPendingClaims([]);
-            setSubscriptions([]);
-            return;
+            throw new Error("Cliente sin id");
         }
 
         const { data: claimsData, error: claimsError } = await supabase
