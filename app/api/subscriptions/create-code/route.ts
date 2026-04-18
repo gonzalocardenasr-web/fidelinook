@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../../lib/supabase-admin";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 function generarCodigo() {
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
