@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function AdminRedirectPage() {
+export default function AdminRedirect() {
   redirect("/operacion");
 }
