@@ -43,67 +43,6 @@ type Subscription = SubscriptionRaw & {
   template: TemplateInfo | null;
 };
 
-type ClienteSesion = {
-  id: number;
-};
-
-function leerClienteSesion(): ClienteSesion | null {
-  const posiblesLlaves = [
-    "clienteActual",
-    "cliente",
-    "clienteId",
-    "cliente_id",
-    "clienteSession",
-    "clienteSesion",
-    "clienteData",
-    "usuario",
-    "user",
-  ];
-
-  const storages = [localStorage, sessionStorage];
-
-  for (const storage of storages) {
-    for (const key of posiblesLlaves) {
-      const raw = storage.getItem(key);
-      if (!raw) continue;
-
-      // Caso 1: viene como número string
-      if (!Number.isNaN(Number(raw))) {
-        return { id: Number(raw) };
-      }
-
-      // Caso 2: viene como JSON
-      try {
-        const parsed = JSON.parse(raw);
-
-        if (parsed?.id && !Number.isNaN(Number(parsed.id))) {
-          return { id: Number(parsed.id) };
-        }
-
-        if (parsed?.clienteId && !Number.isNaN(Number(parsed.clienteId))) {
-          return { id: Number(parsed.clienteId) };
-        }
-
-        if (parsed?.cliente_id && !Number.isNaN(Number(parsed.cliente_id))) {
-          return { id: Number(parsed.cliente_id) };
-        }
-
-        if (parsed?.cliente?.id && !Number.isNaN(Number(parsed.cliente.id))) {
-          return { id: Number(parsed.cliente.id) };
-        }
-
-        if (parsed?.user?.id && !Number.isNaN(Number(parsed.user.id))) {
-          return { id: Number(parsed.user.id) };
-        }
-      } catch {
-        // sigue buscando
-      }
-    }
-  }
-
-  return null;
-}
-
 function formatearFecha(fecha?: string | null) {
   if (!fecha) return "-";
   const date = new Date(fecha);
@@ -143,29 +82,48 @@ export default function MisSuscripcionesPage() {
       setError("");
       setMensajeCodigo("");
 
-      const cliente = leerClienteSesion();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!cliente?.id) {
-        throw new Error("No encontramos la sesión del cliente.");
+      if (userError) {
+        throw new Error(userError.message);
       }
+
+      if (!user?.id) {
+        throw new Error("No encontramos la sesión autenticada del cliente.");
+      }
+
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (clienteError || !clienteData?.id) {
+        throw new Error("No pudimos vincular la sesión con un cliente.");
+      }
+
+      const clienteId = Number(clienteData.id);
 
       const { data: claimsRaw, error: claimsError } = await supabase
         .from("subscription_claims")
         .select("id, source, status, claim_code, assigned_cliente_id, template_id")
-        .eq("assigned_cliente_id", cliente.id)
+        .eq("assigned_cliente_id", clienteId)
         .eq("status", "pending")
         .eq("source", "admin_assigned")
         .order("id", { ascending: false });
 
-      if (claimsError) throw claimsError;
+      if (claimsError) throw new Error(claimsError.message);
 
       const { data: subscriptionsRaw, error: subscriptionsError } = await supabase
         .from("subscriptions")
         .select("id, status, start_date, end_date, next_cycle_date, created_at, activated_at, template_id")
-        .eq("cliente_id", cliente.id)
+        .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false });
 
-      if (subscriptionsError) throw subscriptionsError;
+      if (subscriptionsError) throw new Error(subscriptionsError.message);
 
       const templateIds = Array.from(
         new Set(
@@ -186,7 +144,7 @@ export default function MisSuscripcionesPage() {
           )
           .in("id", templateIds);
 
-        if (templatesError) throw templatesError;
+        if (templatesError) throw new Error(templatesError.message);
 
         templatesMap = new Map(
           ((templatesData || []) as TemplateInfo[]).map((template) => [template.id, template])
@@ -211,20 +169,16 @@ export default function MisSuscripcionesPage() {
 
       setPendingClaims(claimsEnriquecidos);
       setSubscriptions(subscriptionsEnriquecidas);
-    } catch (err: any) {
-        console.error("Error cargando suscripciones:", err);
+    } catch (err) {
+      console.error("Error cargando suscripciones:", err);
 
-        const detalle =
-            err?.message ||
-            err?.details ||
-            err?.hint ||
-            err?.error_description ||
-            JSON.stringify(err);
+      const detalle =
+        err instanceof Error ? err.message : "No fue posible cargar tus suscripciones.";
 
-        setError(`No fue posible cargar tus suscripciones. Detalle: ${detalle}`);
-        setPendingClaims([]);
-        setSubscriptions([]);
-        } finally {
+      setError(detalle);
+      setPendingClaims([]);
+      setSubscriptions([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -264,16 +218,32 @@ export default function MisSuscripcionesPage() {
   }, [subscriptions, hoy]);
 
   const handleActivarAsignada = async (claimId: number) => {
-    const cliente = leerClienteSesion();
-
-    if (!cliente?.id) {
-      setMensajeCodigo("No encontramos tu sesión para activar la suscripción.");
-      return;
-    }
-
     try {
       setActivandoId(claimId);
       setMensajeCodigo("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        throw new Error(userError.message);
+      }
+
+      if (!user?.id) {
+        throw new Error("No encontramos la sesión autenticada del cliente.");
+      }
+
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (clienteError || !clienteData?.id) {
+        throw new Error("No pudimos vincular la sesión con un cliente.");
+      }
 
       const res = await fetch("/api/subscriptions/activate-assigned", {
         method: "POST",
@@ -282,7 +252,7 @@ export default function MisSuscripcionesPage() {
         },
         body: JSON.stringify({
           claimId,
-          clienteId: cliente.id,
+          clienteId: Number(clienteData.id),
         }),
       });
 
@@ -297,7 +267,11 @@ export default function MisSuscripcionesPage() {
       await cargarDatos();
     } catch (error) {
       console.error("Error activando suscripción asignada:", error);
-      setMensajeCodigo("Ocurrió un error inesperado al activar la suscripción.");
+      setMensajeCodigo(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado al activar la suscripción."
+      );
     } finally {
       setActivandoId(null);
     }
@@ -305,13 +279,6 @@ export default function MisSuscripcionesPage() {
 
   const handleCanjearCodigo = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const cliente = leerClienteSesion();
-
-    if (!cliente?.id) {
-      setMensajeCodigo("No encontramos tu sesión para canjear el código.");
-      return;
-    }
 
     if (!codigo.trim()) {
       setMensajeCodigo("Ingresa un código para canjear.");
@@ -322,6 +289,29 @@ export default function MisSuscripcionesPage() {
       setCanjeandoCodigo(true);
       setMensajeCodigo("");
 
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        throw new Error(userError.message);
+      }
+
+      if (!user?.id) {
+        throw new Error("No encontramos la sesión autenticada del cliente.");
+      }
+
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (clienteError || !clienteData?.id) {
+        throw new Error("No pudimos vincular la sesión con un cliente.");
+      }
+
       const res = await fetch("/api/subscriptions/redeem-code", {
         method: "POST",
         headers: {
@@ -329,7 +319,7 @@ export default function MisSuscripcionesPage() {
         },
         body: JSON.stringify({
           code: codigo.trim(),
-          clienteId: cliente.id,
+          clienteId: Number(clienteData.id),
         }),
       });
 
@@ -345,7 +335,11 @@ export default function MisSuscripcionesPage() {
       await cargarDatos();
     } catch (error) {
       console.error("Error canjeando código:", error);
-      setMensajeCodigo("Ocurrió un error inesperado al canjear el código.");
+      setMensajeCodigo(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado al canjear el código."
+      );
     } finally {
       setCanjeandoCodigo(false);
     }
