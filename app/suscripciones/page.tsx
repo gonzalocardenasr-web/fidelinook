@@ -25,23 +25,42 @@ export default function SuscripcionesPage() {
   const [mensaje, setMensaje] = useState("");
   const [codigoGenerado, setCodigoGenerado] = useState("");
 
+  const [claims, setClaims] = useState<any[]>([]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
 
   const cargarDatos = async () => {
     const { data: clientesData } = await supabase
-      .from("clientes")
-      .select("id, nombre, correo")
-      .order("nombre");
+        .from("clientes")
+        .select("id, nombre, correo")
+        .order("nombre");
 
     const { data: templatesData } = await supabase
-      .from("subscription_templates")
-      .select("id, name")
-      .eq("is_active", true);
+        .from("subscription_templates")
+        .select("id, name")
+        .eq("is_active", true);
+
+    const { data: claimsData } = await supabase
+        .from("subscription_claims")
+        .select(`
+        id,
+        source,
+        status,
+        claim_code,
+        created_at,
+        assigned_cliente_id,
+        template_id,
+        clientes:assigned_cliente_id ( nombre ),
+        subscription_templates:template_id ( name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(20);
 
     setClientes(clientesData || []);
     setTemplates(templatesData || []);
+    setClaims(claimsData || []);
   };
 
   const asignarSuscripcion = async () => {
@@ -176,6 +195,71 @@ export default function SuscripcionesPage() {
               {codigoGenerado}
             </div>
           )}
+        </section>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">
+                Claims recientes
+            </h2>
+
+            {claims.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                No hay registros aún.
+                </p>
+            ) : (
+                <div className="overflow-x-auto">
+                <table className="min-w-full">
+                    <thead>
+                    <tr className="text-left text-xs uppercase text-neutral-500">
+                        <th className="px-4 py-3">Tipo</th>
+                        <th className="px-4 py-3">Suscripción</th>
+                        <th className="px-4 py-3">Cliente</th>
+                        <th className="px-4 py-3">Código</th>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Fecha</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {claims.map((c) => (
+                        <tr key={c.id} className="border-t text-sm">
+                        <td className="px-4 py-3">
+                            {c.source === "admin_code" ? "Código" : "Asignado"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            {c.subscription_templates?.name || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            {c.clientes?.nombre || "-"}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono">
+                            {c.claim_code || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                c.status === "claimed"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                            >
+                            {c.status === "claimed" ? "Usado" : "Pendiente"}
+                            </span>
+                        </td>
+
+                        <td className="px-4 py-3 text-neutral-500">
+                            {new Date(c.created_at).toLocaleString("es-CL")}
+                        </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
+            )}
         </section>
 
         {mensaje && (
