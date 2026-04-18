@@ -27,6 +27,10 @@ export default function SuscripcionesPage() {
 
   const [claims, setClaims] = useState<any[]>([]);
 
+  const [procesandoAsignacion, setProcesandoAsignacion] = useState(false);
+  const [procesandoCodigo, setProcesandoCodigo] = useState(false);
+  const [eliminandoClaimId, setEliminandoClaimId] = useState<number | null>(null);
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -65,54 +69,97 @@ export default function SuscripcionesPage() {
 
   const asignarSuscripcion = async () => {
     if (!clienteId || !templateId) {
-      setMensaje("Selecciona cliente y suscripción.");
-      return;
+        setMensaje("Selecciona cliente y suscripción.");
+        return;
     }
 
-    setMensaje("");
+    try {
+        setProcesandoAsignacion(true);
+        setMensaje("");
+        setCodigoGenerado("");
 
-    const res = await fetch("/api/subscriptions/create-assigned", {
-      method: "POST",
-      body: JSON.stringify({
-        clienteId: Number(clienteId),
-        templateId: Number(templateId),
-      }),
-    });
+        const res = await fetch("/api/subscriptions/create-assigned", {
+        method: "POST",
+        body: JSON.stringify({
+            clienteId: Number(clienteId),
+            templateId: Number(templateId),
+        }),
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (!res.ok) {
-      setMensaje(data.message || "Error asignando suscripción.");
-      return;
+        if (!res.ok) {
+        setMensaje(data.message || "Error asignando suscripción.");
+        return;
+        }
+
+        setMensaje("Suscripción asignada correctamente.");
+        await cargarDatos();
+    } finally {
+        setProcesandoAsignacion(false);
     }
-
-    setMensaje("Suscripción asignada correctamente.");
   };
 
   const generarCodigo = async () => {
     if (!templateId) {
-      setMensaje("Selecciona una suscripción.");
-      return;
+        setMensaje("Selecciona una suscripción.");
+        return;
     }
 
-    setMensaje("");
+    try {
+        setProcesandoCodigo(true);
+        setMensaje("");
 
-    const res = await fetch("/api/subscriptions/create-code", {
-      method: "POST",
-      body: JSON.stringify({
-        templateId: Number(templateId),
-      }),
-    });
+        const res = await fetch("/api/subscriptions/create-code", {
+        method: "POST",
+        body: JSON.stringify({
+            templateId: Number(templateId),
+        }),
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (!res.ok) {
-      setMensaje(data.message || "Error generando código.");
-      return;
+        if (!res.ok) {
+        setMensaje(data.message || "Error generando código.");
+        return;
+        }
+
+        setCodigoGenerado(data.code);
+        setMensaje("Código generado correctamente.");
+        await cargarDatos();
+    } finally {
+        setProcesandoCodigo(false);
     }
+  };
 
-    setCodigoGenerado(data.code);
-    setMensaje("Código generado correctamente.");
+  const eliminarClaim = async (claimId: number) => {
+    const confirmado = window.confirm(
+        "¿Seguro que quieres eliminar este claim pendiente?"
+    );
+
+    if (!confirmado) return;
+
+    try {
+        setEliminandoClaimId(claimId);
+        setMensaje("");
+
+        const res = await fetch("/api/subscriptions/delete-claim", {
+        method: "POST",
+        body: JSON.stringify({ claimId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setMensaje(data.message || "No se pudo eliminar el claim.");
+        return;
+        }
+
+        setMensaje("Claim eliminado correctamente.");
+        await cargarDatos();
+    } finally {
+        setEliminandoClaimId(null);
+    }
   };
 
   return (
@@ -160,10 +207,12 @@ export default function SuscripcionesPage() {
 
           <button
             onClick={asignarSuscripcion}
-            className="bg-black text-white px-4 py-3 rounded"
-          >
-            Asignar suscripción
+            disabled={procesandoAsignacion}
+            className="rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+            {procesandoAsignacion ? "Asignando..." : "Asignar suscripción"}
           </button>
+        
         </section>
 
         {/* GENERAR CÓDIGO */}
@@ -185,14 +234,33 @@ export default function SuscripcionesPage() {
 
           <button
             onClick={generarCodigo}
-            className="bg-violet-600 text-white px-4 py-3 rounded"
-          >
-            Generar código
+            disabled={procesandoCodigo}
+            className="rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+            {procesandoCodigo ? "Generando..." : "Generar código"}
           </button>
 
           {codigoGenerado && (
-            <div className="bg-neutral-100 p-4 rounded text-center font-mono text-lg">
-              {codigoGenerado}
+            <div className="rounded-2xl bg-neutral-100 p-4">
+                <p className="mb-2 text-sm font-medium text-neutral-600">
+                Código generado
+                </p>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="font-mono text-lg text-[#111111]">
+                    {codigoGenerado}
+                </div>
+
+                <button
+                    onClick={() => {
+                    navigator.clipboard.writeText(codigoGenerado);
+                    setMensaje("Código copiado al portapapeles.");
+                    }}
+                    className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                    Copiar código
+                </button>
+                </div>
             </div>
           )}
         </section>
@@ -217,6 +285,7 @@ export default function SuscripcionesPage() {
                         <th className="px-4 py-3">Código</th>
                         <th className="px-4 py-3">Estado</th>
                         <th className="px-4 py-3">Fecha</th>
+                        <th className="px-4 py-3">Acción</th>
                     </tr>
                     </thead>
 
@@ -254,6 +323,35 @@ export default function SuscripcionesPage() {
                         <td className="px-4 py-3 text-neutral-500">
                             {new Date(c.created_at).toLocaleString("es-CL")}
                         </td>
+
+                        <td className="px-4 py-3">
+                            {c.status === "pending" ? (
+                                <div className="flex flex-wrap gap-2">
+                                {c.claim_code && (
+                                    <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(c.claim_code);
+                                        setMensaje("Código copiado al portapapeles.");
+                                    }}
+                                    className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                                    >
+                                    Copiar código
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => eliminarClaim(c.id)}
+                                    disabled={eliminandoClaimId === c.id}
+                                    className="rounded-xl bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                                >
+                                    {eliminandoClaimId === c.id ? "Eliminando..." : "Eliminar"}
+                                </button>
+                                </div>
+                            ) : (
+                                <span className="text-xs text-neutral-400">—</span>
+                            )}
+                        </td>
+                        
                         </tr>
                     ))}
                     </tbody>
