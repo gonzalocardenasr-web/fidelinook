@@ -1,307 +1,470 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 
-type Subscription = {
+type Cliente = {
+  id: number;
+  nombre: string;
+  correo: string;
+  telefono: string;
+  auth_user_id?: string | null;
+};
+
+type PendingClaim = {
+  id: number;
+  template_id: number;
+  status: string;
+  source: string;
+  notes: string | null;
+  template: {
+    id: number;
+    name: string;
+    billing_period: string;
+    pots_per_month: number;
+    toppings_per_month: number;
+    wafer_packs_per_month: number;
+    cookie_packs_per_month: number;
+    duration_months: number;
+  };
+};
+
+type ActiveSubscription = {
   id: number;
   status: string;
-  start_date: string | null;
+  start_date: string;
   end_date: string | null;
   next_cycle_date: string | null;
-  activated_at: string | null;
-  created_at: string | null;
-  subscription_templates?: {
-    name?: string;
-  } | null;
+  template: {
+    name: string;
+    billing_period: string;
+    pots_per_month: number;
+    toppings_per_month: number;
+    wafer_packs_per_month: number;
+    cookie_packs_per_month: number;
+    duration_months: number;
+  };
 };
 
 export default function MisSuscripcionesPage() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [mensaje, setMensaje] = useState("");
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [error, setError] = useState("");
+
+  const [codigo, setCodigo] = useState("");
+  const [mensajeCodigo, setMensajeCodigo] = useState("");
+  const [pendingClaims, setPendingClaims] = useState<PendingClaim[]>([]);
+  const [subscriptions, setSubscriptions] = useState<ActiveSubscription[]>([]);
+  const [activandoId, setActivandoId] = useState<number | null>(null);
+  const [canjeandoCodigo, setCanjeandoCodigo] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
 
   useEffect(() => {
-    cargarSuscripciones();
-  }, []);
+    const cargarDatos = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  const cargarSuscripciones = async () => {
-    try {
-      setCargando(true);
-      setMensaje("");
-
-      const clienteId = localStorage.getItem("clienteId");
-
-      if (!clienteId) {
-        setMensaje("No encontramos la sesión del cliente.");
-        setSubscriptions([]);
+      if (!session) {
+        router.replace("/login?next=/mi-cuenta/suscripciones");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("subscriptions")
+      const userId = session.user.id;
+
+      const { data: clienteData, error: clienteError } = await supabase
+        .from("clientes")
+        .select("id, nombre, correo, telefono, auth_user_id")
+        .eq("auth_user_id", userId)
+        .single();
+
+      if (clienteError || !clienteData) {
+        setError("No encontramos una cuenta asociada a esta sesión.");
+        setLoading(false);
+        return;
+      }
+
+      const clienteActual = clienteData as Cliente;
+      setCliente(clienteActual);
+
+      const { data: claimsData } = await supabase
+        .from("subscription_claims")
         .select(`
           id,
+          template_id,
           status,
-          start_date,
-          end_date,
-          next_cycle_date,
-          activated_at,
-          created_at,
-          subscription_templates:template_id ( name )
+          source,
+          notes,
+          template:subscription_templates (
+            id,
+            name,
+            billing_period,
+            pots_per_month,
+            toppings_per_month,
+            wafer_packs_per_month,
+            cookie_packs_per_month,
+            duration_months
+          )
         `)
-        .eq("cliente_id", Number(clienteId))
+        .eq("assigned_cliente_id", clienteActual.id)
+        .eq("status", "pending")
+        .eq("source", "admin_assigned");
+
+      const { data: subscriptionsData } = await supabase
+        .from("subscriptions")
+        .select(`
+            id,
+            status,
+            start_date,
+            end_date,
+            next_cycle_date,
+            template:subscription_templates (
+            name,
+            billing_period,
+            pots_per_month,
+            toppings_per_month,
+            wafer_packs_per_month,
+            cookie_packs_per_month,
+            duration_months
+            )
+        `)
+        .eq("cliente_id", clienteActual.id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error cargando suscripciones:", error);
-        setMensaje("No se pudieron cargar tus suscripciones.");
-        setSubscriptions([]);
-        return;
-      }
+      setPendingClaims((claimsData as PendingClaim[]) || []);
+      setActiveSubscriptions((subscriptionsData as ActiveSubscription[]) || []);
+      setLoading(false);
+    };
 
-      setSubscriptions((data || []) as Subscription[]);
+    cargarDatos();
+  }, [router]);
+
+  const handleCanjearCodigo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!cliente) return;
+
+    if (!codigo.trim()) {
+        setMensajeCodigo("Debes ingresar un código.");
+        return;
+    }
+
+    setMensajeCodigo("");
+
+    try {
+        const res = await fetch("/api/subscriptions/redeem-code", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            code: codigo.trim().toUpperCase(),
+            clienteId: cliente.id,
+        }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setMensajeCodigo(data.message || "No se pudo canjear el código.");
+        return;
+        }
+
+        setMensajeCodigo("Código canjeado correctamente.");
+        setCodigo("");
+
+        window.location.reload();
     } catch (error) {
-      console.error("Error inesperado cargando suscripciones:", error);
-      setMensaje("Ocurrió un error inesperado al cargar tus suscripciones.");
-      setSubscriptions([]);
-    } finally {
-      setCargando(false);
+        console.error("Error canjeando código:", error);
+        setMensajeCodigo("Ocurrió un error inesperado al canjear el código.");
     }
   };
+  
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const handleActivarAsignada = async (claimId: number) => {
+    if (!cliente) return;
 
-  const suscripcionesVigentes = useMemo(() => {
-    return subscriptions.filter((subscription) => {
-      if (subscription.status !== "active") return false;
-      if (!subscription.end_date) return true;
+    setActivandoId(claimId);
 
-      const endDate = new Date(subscription.end_date);
-      endDate.setHours(0, 0, 0, 0);
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
-      return endDate >= hoy;
-    });
-  }, [subscriptions]);
+            const res = await fetch("/api/subscriptions/activate-assigned", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                claimId,
+                clienteId: cliente.id,
+            }),
+            signal: controller.signal,
+            });
 
-  const historialSuscripciones = useMemo(() => {
-    return subscriptions.filter((subscription) => {
-      if (subscription.status !== "active") return true;
-      if (!subscription.end_date) return false;
+            clearTimeout(timeout);
 
-      const endDate = new Date(subscription.end_date);
-      endDate.setHours(0, 0, 0, 0);
+            const data = await res.json();
 
-      return endDate < hoy;
-    });
-  }, [subscriptions]);
+            if (!res.ok) {
+            alert(data.message || "No se pudo activar la suscripción.");
+            return;
+            }
 
-  const formatearFecha = (fecha?: string | null) => {
-    if (!fecha) return "-";
+            const claimActivado = pendingClaims.find((claim) => claim.id === claimId);
 
-    const date = new Date(fecha);
+            setPendingClaims((prev) => prev.filter((claim) => claim.id !== claimId));
 
-    if (Number.isNaN(date.getTime())) return "-";
+            if (claimActivado) {
+            setActiveSubscriptions((prev) => [
+                {
+                id: Date.now(),
+                status: "active",
+                start_date: new Date().toISOString().slice(0, 10),
+                end_date: null,
+                next_cycle_date: null,
+                template: claimActivado.template,
+                },
+                ...prev,
+            ]);
+            }
 
-    return date.toLocaleDateString("es-CL");
+            alert("Suscripción activada correctamente.");
+        } catch (err) {
+            console.error("Error activando suscripción:", err);
+            alert("La activación no respondió correctamente. Revisemos el backend.");
+        } finally {
+            setActivandoId(null);
+        }
   };
 
-  return (
-    <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div>
-          <Link
-            href="/mi-cuenta"
-            className="text-sm text-[#454545] transition hover:opacity-70"
-          >
-            ← Volver a mi cuenta
-          </Link>
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#FFDBEF] p-6">
+        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+          <p className="text-neutral-600">Cargando suscripciones...</p>
+        </div>
+      </main>
+    );
+  }
 
-          <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
-            Mis suscripciones
-          </span>
-
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
+  if (error || !cliente) {
+    return (
+      <main className="min-h-screen bg-[#FFDBEF] p-6">
+        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+          <h1 className="text-2xl font-bold text-[#4C00F7]">
             Mis suscripciones
           </h1>
-
-          <p className="mt-3 max-w-3xl text-lg text-[#454545]">
-            Revisa tus suscripciones vigentes y el historial de suscripciones anteriores.
+          <p className="mt-4 text-neutral-600">
+            {error || "No fue posible cargar tus suscripciones."}
           </p>
+
+          <button
+            onClick={() => router.push("/mi-cuenta")}
+            className="mt-6 rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+          >
+            ← Mi cuenta
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#FFDBEF] p-6">
+      <div className="mx-auto max-w-xl space-y-5">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow">
+          <div className="bg-[#4C00F7] px-6 py-6 text-white">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
+              Nook
+            </p>
+            <h1 className="text-3xl font-bold">Mis suscripciones</h1>
+          </div>
+
+          <div className="space-y-6 px-6 py-6">
+            <div>
+              <button
+                onClick={() => router.push("/mi-cuenta")}
+                className="rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+              >
+                ← Mi cuenta
+              </button>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                Cuenta
+              </p>
+              <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+                {cliente.nombre}
+              </h2>
+              <p className="mt-2 text-sm text-neutral-600">{cliente.correo}</p>
+            </div>
+          </div>
         </div>
 
-        {cargando ? (
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-neutral-600">Cargando suscripciones...</p>
-          </section>
-        ) : (
-          <>
-            <section className="rounded-2xl bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold">Suscripciones vigentes</h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Aquí ves solo tus suscripciones activas y vigentes.
-              </p>
+        <div className="overflow-hidden rounded-[24px] bg-white shadow">
+          <div className="px-6 py-5">
+            <h2 className="text-xl font-bold text-[#4C00F7]">
+              Activar suscripción
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              Aquí aparecen las suscripciones cargadas directamente a tu cuenta.
+            </p>
 
-              {suscripcionesVigentes.length === 0 ? (
-                <p className="mt-4 text-sm text-neutral-600">
-                  No tienes suscripciones vigentes en este momento.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-4">
-                  {suscripcionesVigentes.map((subscription) => (
-                    <div
-                      key={subscription.id}
-                      className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <p className="text-base font-semibold text-[#111111]">
-                            {subscription.subscription_templates?.name || "Suscripción"}
-                          </p>
-
-                          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                Inicio
-                              </p>
-                              <p className="mt-1 text-sm text-neutral-700">
-                                {formatearFecha(subscription.start_date)}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                Vencimiento
-                              </p>
-                              <p className="mt-1 text-sm text-neutral-700">
-                                {formatearFecha(subscription.end_date)}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                Próximo ciclo
-                              </p>
-                              <p className="mt-1 text-sm text-neutral-700">
-                                {formatearFecha(subscription.next_cycle_date)}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                Estado
-                              </p>
-                              <p className="mt-1">
-                                <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
-                                  Activa
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl bg-white shadow-sm">
-              <button
-                type="button"
-                onClick={() => setMostrarHistorial(!mostrarHistorial)}
-                className="flex w-full items-center justify-between p-6 text-left transition hover:bg-neutral-50"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold">Historial de suscripciones</h2>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Revisa tus suscripciones anteriores o vencidas.
+            <div className="mt-5 space-y-3">
+              {pendingClaims.length === 0 ? (
+                <div className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-5">
+                  <p className="text-lg font-semibold text-[#4C00F7]">
+                    Aún no tienes suscripciones directas para activar
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    Cuando compres una suscripción por caja, WhatsApp, teléfono o
+                    cualquier otro canal y esta quede asociada a tu cuenta, la
+                    verás aquí para activarla.
                   </p>
                 </div>
+              ) : (
+                pendingClaims.map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-5"
+                  >
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                      {claim.template.name}
+                    </p>
 
-                <span className="text-2xl leading-none">
-                  {mostrarHistorial ? "−" : "+"}
-                </span>
+                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
+                      <p>Periodicidad: {claim.template.billing_period}</p>
+                      <p>Potes por mes: {claim.template.pots_per_month}</p>
+                      {claim.template.toppings_per_month > 0 && (
+                        <p>Toppings por mes: {claim.template.toppings_per_month}</p>
+                      )}
+                      {claim.template.wafer_packs_per_month > 0 && (
+                        <p>Pack barquillos por mes: {claim.template.wafer_packs_per_month}</p>
+                      )}
+                      {claim.template.cookie_packs_per_month > 0 && (
+                        <p>Pack galletas por mes: {claim.template.cookie_packs_per_month}</p>
+                      )}
+                      {claim.notes && <p>Nota: {claim.notes}</p>}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleActivarAsignada(claim.id)}
+                      disabled={activandoId === claim.id}
+                      className="mt-5 w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition hover:opacity-95 disabled:opacity-60"
+                    >
+                      {activandoId === claim.id
+                        ? "Activando..."
+                        : "Activar suscripción"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[24px] bg-white shadow">
+          <div className="px-6 py-5">
+            <h2 className="text-xl font-bold text-[#4C00F7]">
+              Canjear código
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              Si recibiste un código de suscripción por compra web o como
+              regalo, podrás canjearlo aquí.
+            </p>
+
+            <form onSubmit={handleCanjearCodigo} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Código
+                </label>
+                <input
+                  type="text"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base uppercase text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  placeholder="Ingresa tu código"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-[#4C00F7] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.18)] transition hover:opacity-95"
+              >
+                Canjear código
               </button>
 
-              {mostrarHistorial && (
-                <div className="border-t border-neutral-200 p-6">
-                  {historialSuscripciones.length === 0 ? (
-                    <p className="text-sm text-neutral-600">
-                      No tienes historial de suscripciones para mostrar.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {historialSuscripciones.map((subscription) => (
-                        <div
-                          key={subscription.id}
-                          className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
-                        >
-                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                            <div>
-                              <p className="text-base font-semibold text-[#111111]">
-                                {subscription.subscription_templates?.name || "Suscripción"}
-                              </p>
-
-                              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                    Inicio
-                                  </p>
-                                  <p className="mt-1 text-sm text-neutral-700">
-                                    {formatearFecha(subscription.start_date)}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                    Vencimiento
-                                  </p>
-                                  <p className="mt-1 text-sm text-neutral-700">
-                                    {formatearFecha(subscription.end_date)}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                    Próximo ciclo
-                                  </p>
-                                  <p className="mt-1 text-sm text-neutral-700">
-                                    {formatearFecha(subscription.next_cycle_date)}
-                                  </p>
-                                </div>
-
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                                    Estado
-                                  </p>
-                                  <p className="mt-1">
-                                    <span className="rounded-full bg-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700">
-                                      Histórica
-                                    </span>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {mensajeCodigo && (
+                <div className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] px-4 py-3 text-sm text-neutral-700">
+                  {mensajeCodigo}
                 </div>
               )}
-            </section>
-          </>
-        )}
-
-        {mensaje && (
-          <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
-            {mensaje}
+            </form>
           </div>
-        )}
+        </div>
+
+        <div className="overflow-hidden rounded-[24px] bg-white shadow">
+          <div className="px-6 py-5">
+            <h2 className="text-xl font-bold text-[#4C00F7]">
+              Ver mis suscripciones
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              Aquí verás el detalle de tus suscripciones activas, lo consumido,
+              la fecha de renovación del ciclo y tus beneficios vigentes.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {activeSubscriptions.length === 0 ? (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                  <p className="text-lg font-semibold text-[#4C00F7]">
+                    Aún no tienes suscripciones activas
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    Cuando actives una suscripción, aquí podrás revisar su detalle,
+                    el saldo del ciclo actual, lo que ya consumiste y la fecha en
+                    que se renueva.
+                  </p>
+                </div>
+              ) : (
+                activeSubscriptions.map((subscription) => (
+                  <div
+                    key={subscription.id}
+                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
+                  >
+                    <p className="text-lg font-semibold text-[#4C00F7]">
+                      {subscription.template.name}
+                    </p>
+
+                    <div className="mt-3 space-y-1 text-sm text-neutral-700">
+                      <p>Periodicidad: {subscription.template.billing_period}</p>
+                      <p>Potes por mes: {subscription.template.pots_per_month}</p>
+                      {subscription.template.toppings_per_month > 0 && (
+                        <p>Toppings por mes: {subscription.template.toppings_per_month}</p>
+                      )}
+                      {subscription.template.wafer_packs_per_month > 0 && (
+                        <p>Pack barquillos por mes: {subscription.template.wafer_packs_per_month}</p>
+                      )}
+                      {subscription.template.cookie_packs_per_month > 0 && (
+                        <p>Pack galletas por mes: {subscription.template.cookie_packs_per_month}</p>
+                      )}
+                      <p>Inicio: {subscription.start_date}</p>
+                      {subscription.end_date && <p>Término: {subscription.end_date}</p>}
+                      {subscription.next_cycle_date && (
+                        <p>Próximo ciclo: {subscription.next_cycle_date}</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
