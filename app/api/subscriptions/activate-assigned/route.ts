@@ -72,6 +72,7 @@ export async function POST(req: Request) {
           start_date: startDate,
           end_date: endDate.toISOString().slice(0, 10),
           next_cycle_date: nextCycleDate.toISOString().slice(0, 10),
+          activated_at: activatedAt.toISOString(),
         })
         .select()
         .single();
