@@ -81,18 +81,20 @@ async function getOrCreateTemplate(params: {
   }
 
   const nombre = buildTemplateName(params);
+    const code = nombre;
 
-  const { data: created, error: createError } = await supabaseAdmin
+    const { data: created, error: createError } = await supabaseAdmin
     .from("subscription_templates")
     .insert({
-      name: nombre,
-      billing_period: billingPeriod,
-      duration_months: durationMonths,
-      pots_per_cycle: potsPerCycle,
-      toppings_per_cycle: toppingsPerCycle,
-      wafer_packs_per_cycle: waferPacksPerCycle,
-      cookie_packs_per_cycle: cookiePacksPerCycle,
-      is_active: true,
+        code,
+        name: nombre,
+        billing_period: billingPeriod,
+        duration_months: durationMonths,
+        pots_per_cycle: potsPerCycle,
+        toppings_per_cycle: toppingsPerCycle,
+        wafer_packs_per_cycle: waferPacksPerCycle,
+        cookie_packs_per_cycle: cookiePacksPerCycle,
+        is_active: true,
     })
     .select("id")
     .single();
