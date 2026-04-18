@@ -60,10 +60,10 @@ async function getOrCreateTemplate(params: {
     .select("id")
     .eq("billing_period", billingPeriod)
     .eq("duration_months", durationMonths)
-    .eq("pots_per_cycle", potsPerCycle)
-    .eq("toppings_per_cycle", toppingsPerCycle)
-    .eq("wafer_packs_per_cycle", waferPacksPerCycle)
-    .eq("cookie_packs_per_cycle", cookiePacksPerCycle)
+    .eq("pots_per_month", potsPerCycle)
+    .eq("toppings_per_month", toppingsPerCycle)
+    .eq("wafer_packs_per_month", waferPacksPerCycle)
+    .eq("cookie_packs_per_month", cookiePacksPerCycle)
     .eq("is_active", true)
     .maybeSingle();
 
@@ -85,14 +85,14 @@ async function getOrCreateTemplate(params: {
         name: nombre,
         billing_period: billingPeriod,
         duration_months: durationMonths,
-        pots_per_cycle: potsPerCycle,
-        toppings_per_cycle: toppingsPerCycle,
-        wafer_packs_per_cycle: waferPacksPerCycle,
-        cookie_packs_per_cycle: cookiePacksPerCycle,
+        pots_per_month: potsPerCycle,
+        toppings_per_month: toppingsPerCycle,
+        wafer_packs_per_month: waferPacksPerCycle,
+        cookie_packs_per_month: cookiePacksPerCycle,
         is_active: true,
     })
     .select("id")
-    .single();
+  .single();
 
   if (createError || !created) {
     throw new Error(createError?.message || "No se pudo crear la suscripción.");
