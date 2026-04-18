@@ -31,6 +31,8 @@ export default function SuscripcionesPage() {
   const [procesandoCodigo, setProcesandoCodigo] = useState(false);
   const [eliminandoClaimId, setEliminandoClaimId] = useState<number | null>(null);
 
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -62,9 +64,28 @@ export default function SuscripcionesPage() {
         .order("created_at", { ascending: false })
         .limit(20);
 
+    const { data: subscriptionsData } = await supabase
+        .from("subscriptions")
+        .select(`
+        id,
+        status,
+        start_date,
+        end_date,
+        next_cycle_date,
+        activated_at,
+        created_at,
+        cliente_id,
+        template_id,
+        clientes:cliente_id ( nombre ),
+        subscription_templates:template_id ( name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
     setClientes(clientesData || []);
     setTemplates(templatesData || []);
     setClaims(claimsData || []);
+    setSubscriptions(subscriptionsData || []);
   };
 
   const asignarSuscripcion = async () => {
@@ -351,7 +372,87 @@ export default function SuscripcionesPage() {
                                 <span className="text-xs text-neutral-400">—</span>
                             )}
                         </td>
-                        
+
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
+            )}
+        </section>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-semibold">
+                Suscripciones activas
+            </h2>
+
+            {subscriptions.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                No hay suscripciones activas registradas aún.
+                </p>
+            ) : (
+                <div className="overflow-x-auto">
+                <table className="min-w-full">
+                    <thead>
+                    <tr className="text-left text-xs uppercase text-neutral-500">
+                        <th className="px-4 py-3">Cliente</th>
+                        <th className="px-4 py-3">Suscripción</th>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Inicio</th>
+                        <th className="px-4 py-3">Vencimiento</th>
+                        <th className="px-4 py-3">Próximo ciclo</th>
+                        <th className="px-4 py-3">Activada</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {subscriptions.map((s) => (
+                        <tr key={s.id} className="border-t text-sm">
+                        <td className="px-4 py-3">
+                            {s.clientes?.nombre || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            {s.subscription_templates?.name || "-"}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            <span
+                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                s.status === "active"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-neutral-100 text-neutral-700"
+                            }`}
+                            >
+                            {s.status === "active" ? "Activa" : s.status}
+                            </span>
+                        </td>
+
+                        <td className="px-4 py-3 text-neutral-600">
+                            {s.start_date
+                            ? new Date(s.start_date).toLocaleDateString("es-CL")
+                            : "-"}
+                        </td>
+
+                        <td className="px-4 py-3 text-neutral-600">
+                            {s.end_date
+                            ? new Date(s.end_date).toLocaleDateString("es-CL")
+                            : "-"}
+                        </td>
+
+                        <td className="px-4 py-3 text-neutral-600">
+                            {s.next_cycle_date
+                            ? new Date(s.next_cycle_date).toLocaleDateString("es-CL")
+                            : "-"}
+                        </td>
+
+                        <td className="px-4 py-3 text-neutral-500">
+                            {s.activated_at
+                            ? new Date(s.activated_at).toLocaleString("es-CL")
+                            : s.created_at
+                            ? new Date(s.created_at).toLocaleString("es-CL")
+                            : "-"}
+                        </td>
                         </tr>
                     ))}
                     </tbody>
