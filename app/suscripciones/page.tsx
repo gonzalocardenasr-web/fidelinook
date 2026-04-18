@@ -33,6 +33,9 @@ export default function SuscripcionesPage() {
 
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
 
+  const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">("all");
+  const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -183,6 +186,31 @@ export default function SuscripcionesPage() {
     }
   };
 
+  const claimsFiltrados = claims.filter((claim) => {
+    if (claimFilter === "all") return true;
+    return claim.status === claimFilter;
+    });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const subscriptionsFiltradas = subscriptions.filter((subscription) => {
+    if (subscriptionFilter === "all") return true;
+
+    if (subscriptionFilter === "active") {
+        return subscription.status === "active";
+    }
+
+    if (subscriptionFilter === "expired") {
+        if (!subscription.end_date) return false;
+        const endDate = new Date(subscription.end_date);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate < hoy;
+    }
+
+    return true;
+  });
+
   return (
     <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
       <div className="mx-auto max-w-5xl space-y-8">
@@ -287,11 +315,51 @@ export default function SuscripcionesPage() {
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">
-                Claims recientes
-            </h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-xl font-semibold">
+                    Claims recientes
+                </h2>
 
-            {claims.length === 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                    type="button"
+                    onClick={() => setClaimFilter("all")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        claimFilter === "all"
+                        ? "bg-black text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Todos
+                    </button>
+
+                    <button
+                    type="button"
+                    onClick={() => setClaimFilter("pending")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        claimFilter === "pending"
+                        ? "bg-amber-500 text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Pendientes
+                    </button>
+
+                    <button
+                    type="button"
+                    onClick={() => setClaimFilter("claimed")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        claimFilter === "claimed"
+                        ? "bg-green-600 text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Usados
+                    </button>
+                </div>
+            </div>
+
+            {claimsFiltrados.length === 0 ? (
                 <p className="text-sm text-neutral-500">
                 No hay registros aún.
                 </p>
@@ -311,7 +379,7 @@ export default function SuscripcionesPage() {
                     </thead>
 
                     <tbody>
-                    {claims.map((c) => (
+                    {claimsFiltrados.map((c) => (
                         <tr key={c.id} className="border-t text-sm">
                         <td className="px-4 py-3">
                             {c.source === "admin_code" ? "Código" : "Asignado"}
@@ -382,11 +450,51 @@ export default function SuscripcionesPage() {
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold">
-                Suscripciones activas
-            </h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-xl font-semibold">
+                    Suscripciones activas
+                </h2>
 
-            {subscriptions.length === 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("all")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        subscriptionFilter === "all"
+                        ? "bg-black text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Todas
+                    </button>
+
+                    <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("active")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        subscriptionFilter === "active"
+                        ? "bg-green-600 text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Activas
+                    </button>
+
+                    <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("expired")}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                        subscriptionFilter === "expired"
+                        ? "bg-neutral-700 text-white"
+                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                    >
+                    Vencidas
+                    </button>
+                </div>
+            </div>
+
+            {subscriptionsFiltradas.length === 0 ? (
                 <p className="text-sm text-neutral-500">
                 No hay suscripciones activas registradas aún.
                 </p>
@@ -406,7 +514,7 @@ export default function SuscripcionesPage() {
                     </thead>
 
                     <tbody>
-                    {subscriptions.map((s) => (
+                    {subscriptionsFiltradas.map((s) => (
                         <tr key={s.id} className="border-t text-sm">
                         <td className="px-4 py-3">
                             {s.clientes?.nombre || "-"}
