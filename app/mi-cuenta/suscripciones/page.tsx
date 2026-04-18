@@ -48,28 +48,60 @@ type ClienteSesion = {
 };
 
 function leerClienteSesion(): ClienteSesion | null {
-  try {
-    const rawClienteActual = localStorage.getItem("clienteActual");
-    if (rawClienteActual) {
-      const parsed = JSON.parse(rawClienteActual);
-      if (parsed?.id) return { id: Number(parsed.id) };
-    }
+  const posiblesLlaves = [
+    "clienteActual",
+    "cliente",
+    "clienteId",
+    "cliente_id",
+    "clienteSession",
+    "clienteSesion",
+    "clienteData",
+    "usuario",
+    "user",
+  ];
 
-    const rawCliente = localStorage.getItem("cliente");
-    if (rawCliente) {
-      const parsed = JSON.parse(rawCliente);
-      if (parsed?.id) return { id: Number(parsed.id) };
-    }
+  const storages = [localStorage, sessionStorage];
 
-    const rawClienteId = localStorage.getItem("clienteId");
-    if (rawClienteId && !Number.isNaN(Number(rawClienteId))) {
-      return { id: Number(rawClienteId) };
-    }
+  for (const storage of storages) {
+    for (const key of posiblesLlaves) {
+      const raw = storage.getItem(key);
+      if (!raw) continue;
 
-    return null;
-  } catch {
-    return null;
+      // Caso 1: viene como número string
+      if (!Number.isNaN(Number(raw))) {
+        return { id: Number(raw) };
+      }
+
+      // Caso 2: viene como JSON
+      try {
+        const parsed = JSON.parse(raw);
+
+        if (parsed?.id && !Number.isNaN(Number(parsed.id))) {
+          return { id: Number(parsed.id) };
+        }
+
+        if (parsed?.clienteId && !Number.isNaN(Number(parsed.clienteId))) {
+          return { id: Number(parsed.clienteId) };
+        }
+
+        if (parsed?.cliente_id && !Number.isNaN(Number(parsed.cliente_id))) {
+          return { id: Number(parsed.cliente_id) };
+        }
+
+        if (parsed?.cliente?.id && !Number.isNaN(Number(parsed.cliente.id))) {
+          return { id: Number(parsed.cliente.id) };
+        }
+
+        if (parsed?.user?.id && !Number.isNaN(Number(parsed.user.id))) {
+          return { id: Number(parsed.user.id) };
+        }
+      } catch {
+        // sigue buscando
+      }
+    }
   }
+
+  return null;
 }
 
 function formatearFecha(fecha?: string | null) {
