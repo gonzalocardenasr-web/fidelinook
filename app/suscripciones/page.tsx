@@ -8,6 +8,7 @@ type Cliente = {
   id: number;
   nombre: string;
   correo: string;
+  telefono: string | null;
 };
 
 type Template = {
@@ -51,7 +52,7 @@ export default function SuscripcionesPage() {
   const cargarDatos = async () => {
     const { data: clientesData } = await supabase
       .from("clientes")
-      .select("id, nombre, correo")
+      .select("id, nombre, correo, telefono")
       .order("nombre");
 
     const { data: templatesData } = await supabase
@@ -118,19 +119,33 @@ export default function SuscripcionesPage() {
     return resultado.filter((cliente) => {
       const nombre = (cliente.nombre || "").toLowerCase();
       const correo = (cliente.correo || "").toLowerCase();
+      const telefono = (cliente.telefono || "").toLowerCase();
 
-      return nombre.includes(texto) || correo.includes(texto);
+      return (
+        nombre.includes(texto) ||
+        correo.includes(texto) ||
+        telefono.includes(texto)
+      );
     });
   }, [clientes, busquedaCliente, letraActiva]);
+
+  const clienteSeleccionado =
+    clientes.find((c) => String(c.id) === String(clienteId)) || null;
 
   const templateSeleccionado =
     templates.find((t) => String(t.id) === String(templateId)) || null;
 
   const asignarSuscripcion = async () => {
-    if (!clienteId || !templateId) {
+    if (!clienteId || !templateId || !clienteSeleccionado || !templateSeleccionado) {
       setMensaje("Selecciona cliente y suscripción.");
       return;
     }
+
+    const confirmado = window.confirm(
+      `¿Confirmas asignar la suscripción "${templateSeleccionado.name}" a ${clienteSeleccionado.nombre}?`
+    );
+
+    if (!confirmado) return;
 
     try {
       setProcesandoAsignacion(true);
@@ -274,9 +289,9 @@ export default function SuscripcionesPage() {
             className="flex w-full items-center justify-between text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Seleccionar cliente</h2>
+              <h2 className="text-xl font-semibold">Asignar suscripción a cliente</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Busca y selecciona un cliente para asignación directa
+                Selecciona un cliente, revisa la configuración y confirma la asignación
               </p>
             </div>
             <span className="text-2xl leading-none">
@@ -285,7 +300,7 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarSeleccionCliente && (
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 space-y-6">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-violet-700">
                   Buscar cliente
@@ -294,7 +309,7 @@ export default function SuscripcionesPage() {
                   type="text"
                   value={busquedaCliente}
                   onChange={(e) => setBusquedaCliente(e.target.value)}
-                  placeholder="Nombre o correo"
+                  placeholder="Nombre, correo o teléfono"
                   className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                 />
               </div>
@@ -358,79 +373,106 @@ export default function SuscripcionesPage() {
                   ))}
                 </select>
               </div>
-            </div>
-          )}
-        </section>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-semibold">
-            Configuración de suscripción
-          </h2>
-
-          <select
-            value={templateId}
-            onChange={(e) => setTemplateId(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-          >
-            <option value="">Selecciona suscripción</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-
-          {templateSeleccionado && (
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-              <p className="text-sm font-semibold text-[#111111]">
-                Configuración seleccionada
-              </p>
-
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl bg-white p-3 border border-neutral-200">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">Potes</p>
-                  <p className="mt-1 text-xl font-bold text-[#111111]">
-                    {templateSeleccionado.pots_per_cycle}
+              {clienteSeleccionado && (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                  <p className="text-sm font-semibold text-violet-800">
+                    Cliente seleccionado para asignación
                   </p>
-                </div>
 
-                <div className="rounded-xl bg-white p-3 border border-neutral-200">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">Toppings</p>
-                  <p className="mt-1 text-xl font-bold text-[#111111]">
-                    {templateSeleccionado.toppings_per_cycle}
-                  </p>
-                </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 border border-violet-100">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Nombre</p>
+                      <p className="mt-1 text-sm font-semibold text-[#111111]">
+                        {clienteSeleccionado.nombre}
+                      </p>
+                    </div>
 
-                <div className="rounded-xl bg-white p-3 border border-neutral-200">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">Pack barquillos</p>
-                  <p className="mt-1 text-xl font-bold text-[#111111]">
-                    {templateSeleccionado.wafer_packs_per_cycle}
-                  </p>
-                </div>
+                    <div className="rounded-xl bg-white p-3 border border-violet-100">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Correo</p>
+                      <p className="mt-1 text-sm font-semibold text-[#111111] break-all">
+                        {clienteSeleccionado.correo}
+                      </p>
+                    </div>
 
-                <div className="rounded-xl bg-white p-3 border border-neutral-200">
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">Pack galletas</p>
-                  <p className="mt-1 text-xl font-bold text-[#111111]">
-                    {templateSeleccionado.cookie_packs_per_cycle}
-                  </p>
+                    <div className="rounded-xl bg-white p-3 border border-violet-100">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Teléfono</p>
+                      <p className="mt-1 text-sm font-semibold text-[#111111]">
+                        {clienteSeleccionado.telefono || "-"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-violet-700">
+                  Suscripción a asignar
+                </label>
+
+                <select
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                >
+                  <option value="">Selecciona suscripción</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {templateSeleccionado && (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                  <p className="text-sm font-semibold text-[#111111]">
+                    Configuración seleccionada
+                  </p>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl bg-white p-3 border border-neutral-200">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Potes</p>
+                      <p className="mt-1 text-xl font-bold text-[#111111]">
+                        {templateSeleccionado.pots_per_cycle}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-neutral-200">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Toppings</p>
+                      <p className="mt-1 text-xl font-bold text-[#111111]">
+                        {templateSeleccionado.toppings_per_cycle}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-neutral-200">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Pack barquillos</p>
+                      <p className="mt-1 text-xl font-bold text-[#111111]">
+                        {templateSeleccionado.wafer_packs_per_cycle}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-neutral-200">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Pack galletas</p>
+                      <p className="mt-1 text-xl font-bold text-[#111111]">
+                        {templateSeleccionado.cookie_packs_per_cycle}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={asignarSuscripcion}
+                  disabled={procesandoAsignacion}
+                  className="rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+                >
+                  {procesandoAsignacion ? "Asignando..." : "Confirmar asignación"}
+                </button>
               </div>
             </div>
           )}
-        </section>
-
-        <section className="rounded-2xl bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-semibold">
-            Asignar suscripción a cliente
-          </h2>
-
-          <button
-            onClick={asignarSuscripcion}
-            disabled={procesandoAsignacion}
-            className="rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
-          >
-            {procesandoAsignacion ? "Asignando..." : "Asignar suscripción"}
-          </button>
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm space-y-4">
