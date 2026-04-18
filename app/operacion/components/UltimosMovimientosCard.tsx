@@ -64,8 +64,7 @@ export default function UltimosMovimientosCard({ clientes }: Props) {
 
       return eventos;
     })
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
   return (
     <section className="rounded-2xl border border-violet-100 bg-white shadow-sm">
@@ -84,9 +83,9 @@ export default function UltimosMovimientosCard({ clientes }: Props) {
             No hay movimientos recientes para mostrar.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0">
-              <thead>
+              <thead className="sticky top-0 bg-white z-10">
                 <tr>
                   <th className="border-b border-neutral-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Cliente
