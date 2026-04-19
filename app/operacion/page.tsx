@@ -436,7 +436,7 @@ export default function OperacionPage() {
 
   return (
             <main className="min-h-screen bg-[#F6F3FF] px-6 py-10">
-                <div className="mx-auto max-w-6xl">
+            <div className="mx-auto max-w-6xl">
                     <div className="mb-8 overflow-hidden rounded-[28px] bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white shadow-sm">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
@@ -468,7 +468,7 @@ export default function OperacionPage() {
                         </button>
                     </div>
                     </div>
-                </div>
+        
             
 
         <UltimosMovimientosCard clientes={clientes} />
@@ -627,6 +627,7 @@ export default function OperacionPage() {
               </>
             )}
           
+        </div>
         </div>
       </div>
     </main>
