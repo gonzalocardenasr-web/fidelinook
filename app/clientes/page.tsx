@@ -552,11 +552,11 @@ export default function ClientesPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <Link
-                href="/"
-                className="inline-flex items-center text-sm font-medium text-white/90 transition hover:text-white"
-              >
-                ← Volver al inicio
-              </Link>
+                    href="/"
+                    className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                >
+                    ← Volver al inicio
+                </Link>
 
               <h1 className="mt-3 text-2xl font-bold">Clientes</h1>
 
@@ -572,7 +572,7 @@ export default function ClientesPage() {
             <div>
               <button
                 onClick={cerrarSesion}
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
               >
                 Cerrar sesión
               </button>
@@ -642,7 +642,7 @@ export default function ClientesPage() {
                         <button
                           type="button"
                           onClick={() => seleccionarLetra("TODOS")}
-                          className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                          className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium transition ${
                             letraActiva === "TODOS"
                               ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
                               : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -656,7 +656,7 @@ export default function ClientesPage() {
                             key={letra}
                             type="button"
                             onClick={() => seleccionarLetra(letra)}
-                            className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                            className={`cursor-pointer min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
                               letraActiva === letra
                                 ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
                                 : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
