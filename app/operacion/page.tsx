@@ -627,7 +627,7 @@ export default function OperacionPage() {
                 
               </>
             )}
-          </div>
+          
         </div>
       </div>
     </main>
