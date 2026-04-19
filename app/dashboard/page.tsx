@@ -384,25 +384,28 @@ export default function DashboardPage() {
   };
 
   const cargarSesion = async () => {
-    try {
-        setCargandoRol(true);
+  try {
+    setCargandoRol(true);
 
-        const res = await fetch("/api/session");
-        const data = await res.json();
+    const res = await fetch("/api/session", {
+      method: "GET",
+    });
 
-        if (!res.ok) {
-        setRol(null);
-        return;
-        }
+    const data = await res.json();
 
-        setRol(data?.rol ?? null);
-    } catch (error) {
-        console.error("Error cargando sesión:", error);
-        setRol(null);
-    } finally {
-        setCargandoRol(false);
+    if (!res.ok) {
+      setRol(null);
+      return;
     }
-    };
+
+    setRol(data?.rol ?? null);
+  } catch (error) {
+    console.error("Error cargando sesión:", error);
+    setRol(null);
+  } finally {
+    setCargandoRol(false);
+  }
+  };
 
     const router = useRouter();
 
