@@ -615,16 +615,7 @@ export default function OperacionPage() {
                     <UltimosMovimientos clienteId={cliente.id} />
                 )}
 
-                <OperacionSuscripcionActiva
-                    clienteId={cliente.id}
-                    subscriptions={subscriptions}
-                    subscriptionSeleccionada={subscriptionSeleccionada}
-                    cargando={cargandoSuscripcion}
-                    onRefresh={() => cargarSuscripcionActiva(cliente.id)}
-                    onMensaje={setMensajeSuscripcion}
-                    onSelectSubscription={setSubscriptionSeleccionada}
-                />
-
+                
                     {mensajeSuscripcion && (
                     <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
                         {mensajeSuscripcion}
