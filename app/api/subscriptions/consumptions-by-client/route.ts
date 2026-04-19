@@ -15,7 +15,19 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("subscription_consumptions")
-      .select("*")
+      .select(`
+        id,
+        potes,
+        toppings,
+        barquillos,
+        galletas,
+        created_at,
+        subscriptions (
+            subscription_templates (
+            name
+            )
+        )
+      `)
       .eq("cliente_id", Number(clienteId))
       .order("created_at", { ascending: false })
       .limit(10);

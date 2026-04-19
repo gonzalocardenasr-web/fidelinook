@@ -9,6 +9,11 @@ type Consumo = {
   barquillos: number;
   galletas: number;
   created_at: string;
+  subscriptions?: {
+    subscription_templates?: {
+      name?: string;
+    };
+  };
 };
 
 export default function UltimosMovimientos({
