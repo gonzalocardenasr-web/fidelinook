@@ -86,6 +86,9 @@ export async function GET(req: Request) {
       resultado.push({
         id: subscription.id,
         name: template.name,
+        status: subscription.status,
+        startDate: subscription.start_date,
+        endDate: subscription.end_date,
         durationMonths: template.duration_months,
         cycleNumber,
         cycleStartDate: cycleStartDate.toISOString().slice(0, 10),
