@@ -435,22 +435,19 @@ export default function OperacionPage() {
   };
 
   return (
-            <main className="min-h-screen bg-[#F6F3FF] px-6 py-10">
-            <div className="mx-auto max-w-6xl">
-                    <div className="mb-8 overflow-hidden rounded-[28px] bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white shadow-sm">
+            <main className="min-h-screen bg-[#F6F3FF] p-6">
+                <div className="mx-auto max-w-5xl space-y-6">
+                    <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
-                       
                         <Link
-                            href="/"
-                            className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                        >
-                            ← Volver al inicio
+                                href="/"
+                                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                            >
+                                ← Volver al inicio
                         </Link>
 
-                        <h1 className="mt-3 text-4xl font-bold tracking-tight">
-                            Operación
-                        </h1>
+                        <h1 className="mt-3 text-2xl font-bold">Operación</h1>
 
                         <p className="mt-2 text-base text-white/90">
                             Gestión operativa de clientes, fidelización y suscripciones.
