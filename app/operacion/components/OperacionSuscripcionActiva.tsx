@@ -253,10 +253,11 @@ export default function OperacionSuscripcionActiva({
                     }}
                   >
                     {subscriptions.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.name} — Ciclo {sub.cycleNumber} de{" "}
-                        {sub.durationMonths}
-                      </option>
+                        <option key={sub.id} value={sub.id}>
+                            {sub.name} | Vigencia: {formatearFecha(sub.startDate || null)} al{" "}
+                            {formatearFecha(sub.endDate || null)} | Ciclo {sub.cycleNumber} de{" "}
+                            {sub.durationMonths}
+                        </option>
                     ))}
                   </select>
                 </div>
