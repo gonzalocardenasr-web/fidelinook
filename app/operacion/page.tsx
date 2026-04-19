@@ -596,32 +596,7 @@ export default function OperacionPage() {
                     exportarCSV={undefined}
                     mostrarAccionesAdministrativas={false}
                 />
-
-                {subscriptions.length > 1 && (
-                    <div className="mb-4">
-                        <label className="text-sm font-semibold text-violet-700">
-                        Seleccionar suscripción
-                        </label>
-
-                        <select
-                        className="mt-2 w-full rounded-xl border px-3 py-2"
-                        onChange={(e) => {
-                            const sub = subscriptions.find(
-                            (s) => s.id === Number(e.target.value)
-                            );
-                            onSelectSubscription(sub);
-                        }}
-                        value={subscriptionSeleccionada?.id || ""}
-                        >
-                        {subscriptions.map((sub) => (
-                            <option key={sub.id} value={sub.id}>
-                            {sub.name} (Ciclo {sub.cycleNumber})
-                            </option>
-                        ))}
-                        </select>
-                    </div>
-                )}
-
+                
                 <OperacionSuscripcionActiva
                     clienteId={cliente.id}
                     subscriptions={subscriptions}
