@@ -463,7 +463,7 @@ export default function OperacionPage() {
 
                         <button
                         onClick={cerrarSesion}
-                        className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                        className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
                         >
                         Cerrar sesión
                         </button>
