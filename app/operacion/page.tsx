@@ -440,9 +440,10 @@ export default function OperacionPage() {
                     <div className="mb-8 overflow-hidden rounded-[28px] bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white shadow-sm">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
+                       
                         <Link
                             href="/"
-                            className="inline-flex items-center text-sm font-medium text-white/90 transition hover:text-white"
+                            className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
                         >
                             ← Volver al inicio
                         </Link>
