@@ -58,11 +58,13 @@ export default function SuscripcionesPage() {
   const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
 
   const [cargandoRol, setCargandoRol] = useState(true);
+  const [rol, setRol] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
     cargarDatos();
+    cargarSesion();
   }, []);
 
   const cargarDatos = async () => {
@@ -265,6 +267,29 @@ export default function SuscripcionesPage() {
       await cargarDatos();
     } finally {
       setProcesandoCodigo(false);
+    }
+  };
+
+  const cargarSesion = async () => {
+    try {
+      setCargandoRol(true);
+
+      const res = await fetch("/api/session", {
+        method: "GET",
+      });
+
+      if (!res.ok) {
+        setRol(null);
+        return;
+      }
+
+      const data = await res.json();
+      setRol(data.role || null);
+    } catch (error) {
+      console.error("Error cargando sesión:", error);
+      setRol(null);
+    } finally {
+      setCargandoRol(false);
     }
   };
 
