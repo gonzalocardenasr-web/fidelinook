@@ -294,28 +294,37 @@ export default function SuscripcionesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="mb-8">
+    <main className="min-h-screen bg-[#F6F3FF] px-6 py-10">
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div className="overflow-hidden rounded-[28px] bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white shadow-sm">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
             <Link
-            href="/"
-            className="inline-flex items-center text-sm font-medium text-[#454545] transition hover:opacity-70"
+              href="/"
+              className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
             >
-            ← Volver al inicio
+              ← Volver al inicio
             </Link>
 
-          <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
-            Suscripciones
-          </span>
+            <button
+              onClick={cerrarSesion}
+              className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+            >
+              Cerrar sesión
+            </button>
+          </div>
 
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
-            Suscripciones
-          </h1>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Suscripciones
+            </h1>
 
-          <p className="mt-3 max-w-3xl text-lg text-[#454545]">
-            Gestiona asignaciones, códigos y suscripciones activas del programa.
-          </p>
+            <p className="mt-2 text-base text-white/90">
+              Gestiona asignaciones, códigos y suscripciones activas del programa.
+            </p>
+          </div>
         </div>
+      </div>
 
         <section className="rounded-2xl bg-white shadow-sm">
           <button
