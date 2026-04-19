@@ -50,7 +50,7 @@ export default function OperacionPage() {
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
 
-  
+
   useEffect(() => {
     cargarDatos();
     cargarSesion();
