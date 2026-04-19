@@ -453,7 +453,11 @@ export default function OperacionSuscripcionActiva({
                       <button
                         type="button"
                         onClick={registrarConsumo}
-                        disabled={registrando || erroresValidacion.length > 0}
+                        disabled={
+                            registrando ||
+                            erroresValidacion.length > 0 ||
+                            !hayConsumoParaRegistrar
+                        }
                         className="rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                       >
                         {registrando ? "Registrando..." : "Registrar consumo"}
