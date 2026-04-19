@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
 
 type KPIData = {
   clientesTotales: number;
@@ -372,6 +374,15 @@ export default function DashboardPage() {
       galletas: item.galletas,
     })) || [];
 
+  const cerrarSesion = async () => {
+  try {
+    await supabase.auth.signOut();
+    router.push("/login");
+  } catch (error) {
+    console.error("Error cerrando sesión:", error);
+  }
+  };
+
   const cargarSesion = async () => {
     try {
         setCargandoRol(true);
@@ -391,7 +402,9 @@ export default function DashboardPage() {
     } finally {
         setCargandoRol(false);
     }
-  };
+    };
+
+    const router = useRouter();
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
