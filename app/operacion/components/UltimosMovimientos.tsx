@@ -18,6 +18,7 @@ export default function UltimosMovimientos({
 }) {
   const [data, setData] = useState<Consumo[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [abierto, setAbierto] = useState(true);
 
   useEffect(() => {
     cargar();
@@ -48,43 +49,67 @@ export default function UltimosMovimientos({
     return d.toLocaleString("es-CL");
   };
 
+  if (!cargando && data.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="mt-6 rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-violet-700">
-        Últimos movimientos
-      </p>
+    <div className="mt-6 rounded-2xl border border-violet-100 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setAbierto(!abierto)}
+        className="flex w-full items-center justify-between px-6 py-4 text-left"
+      >
+        <span className="text-sm font-semibold text-violet-700">
+          Últimos movimientos
+        </span>
+        <span className="text-sm font-semibold text-violet-700">
+          {abierto ? "▲" : "▼"}
+        </span>
+      </button>
 
-      {cargando ? (
-        <p className="mt-3 text-sm text-neutral-600">Cargando...</p>
-      ) : data.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-600">
-          No hay movimientos registrados.
-        </p>
-      ) : (
-        <div className="mt-4 space-y-3">
-          {data.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-lg border border-neutral-200 p-3 text-sm"
-            >
-              <p className="font-medium text-neutral-800">
-                Consumo de suscripción
-              </p>
+      {abierto && (
+        <div className="border-t border-violet-100 px-6 pb-6 pt-4">
+          {cargando ? (
+            <p className="text-sm text-neutral-600">Cargando...</p>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-neutral-200">
+              <div className="max-h-72 overflow-auto">
+                <table className="min-w-full border-collapse text-sm">
+                  <thead className="sticky top-0 bg-violet-50">
+                    <tr className="text-left text-violet-700">
+                      <th className="px-4 py-3 font-semibold">Fecha</th>
+                      <th className="px-4 py-3 font-semibold">Tipo</th>
+                      <th className="px-4 py-3 font-semibold">Potes</th>
+                      <th className="px-4 py-3 font-semibold">Toppings</th>
+                      <th className="px-4 py-3 font-semibold">Barquillos</th>
+                      <th className="px-4 py-3 font-semibold">Galletas</th>
+                    </tr>
+                  </thead>
 
-              <p className="text-neutral-600">
-                {formatearFecha(item.created_at)}
-              </p>
-
-              <div className="mt-1 text-neutral-700">
-                {item.potes > 0 && <span>Potes: {item.potes} </span>}
-                {item.toppings > 0 && <span>Toppings: {item.toppings} </span>}
-                {item.barquillos > 0 && (
-                  <span>Barquillos: {item.barquillos} </span>
-                )}
-                {item.galletas > 0 && <span>Galletas: {item.galletas}</span>}
+                  <tbody>
+                    {data.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-t border-neutral-200 text-neutral-700"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {formatearFecha(item.created_at)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          Consumo suscripción
+                        </td>
+                        <td className="px-4 py-3">{item.potes}</td>
+                        <td className="px-4 py-3">{item.toppings}</td>
+                        <td className="px-4 py-3">{item.barquillos}</td>
+                        <td className="px-4 py-3">{item.galletas}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
