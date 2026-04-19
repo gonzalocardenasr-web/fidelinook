@@ -265,9 +265,9 @@ function DataTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-neutral-200">
-      <div className={`${maxHeight} overflow-auto`}>
-        <table className="min-w-full border-collapse text-sm">
+    <div className="w-full overflow-hidden rounded-2xl border border-neutral-200">
+        <div className={`w-full overflow-auto ${maxHeight}`}>
+            <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead className="sticky top-0 bg-violet-50">
             <tr className="text-left text-violet-700">
               {columns.map((column) => (
@@ -513,21 +513,33 @@ export default function DashboardPage() {
                   </p>
                   <DataTable
                     columns={[
-                      { key: "cliente", label: "Cliente" },
-                      { key: "suscripcion", label: "Suscripción" },
-                      {
+                        { key: "cliente", label: "Cliente", className: "whitespace-nowrap" },
+                        { key: "suscripcion", label: "Suscripción", className: "min-w-[220px]" },
+                        {
                         key: "inicio",
                         label: "Inicio",
                         className: "whitespace-nowrap",
-                      },
-                      { key: "fin", label: "Fin", className: "whitespace-nowrap" },
-                      { key: "estado", label: "Estado" },
-                      {
+                        },
+                        {
+                        key: "fin",
+                        label: "Fin",
+                        className: "whitespace-nowrap",
+                        },
+                        {
+                        key: "estado",
+                        label: "Estado",
+                        className: "whitespace-nowrap",
+                        },
+                        {
                         key: "proximoCiclo",
                         label: "Próximo ciclo",
                         className: "whitespace-nowrap",
-                      },
-                      { key: "diasParaVencer", label: "Días para vencer" },
+                        },
+                        {
+                        key: "diasParaVencer",
+                        label: "Días para vencer",
+                        className: "whitespace-nowrap",
+                        },
                     ]}
                     rows={suscripcionesActivasRows}
                     emptyText="No hay suscripciones activas."
