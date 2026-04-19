@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
+
 type ClienteRow = {
   id: number;
   nombre: string;
