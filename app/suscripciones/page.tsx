@@ -342,7 +342,7 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarActivas(!mostrarActivas)}
-            className="flex w-full items-center justify-between p-6 text-left"
+            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
               <h2 className="text-xl font-semibold">Suscripciones activas</h2>
@@ -362,8 +362,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setSubscriptionFilter("all")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       subscriptionFilter === "all"
-                        ? "bg-black text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-black text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Todas
@@ -374,8 +374,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setSubscriptionFilter("active")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       subscriptionFilter === "active"
-                        ? "bg-green-600 text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-green-600 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Activas
@@ -386,8 +386,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setSubscriptionFilter("expired")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       subscriptionFilter === "expired"
-                        ? "bg-neutral-700 text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-neutral-700 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Vencidas
@@ -466,7 +466,7 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarAsignaciones(!mostrarAsignaciones)}
-            className="flex w-full items-center justify-between p-6 text-left"
+            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
               <h2 className="text-xl font-semibold">Asignaciones y códigos recientes</h2>
@@ -486,8 +486,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setClaimFilter("all")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       claimFilter === "all"
-                        ? "bg-black text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-black text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Todos
@@ -498,8 +498,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setClaimFilter("pending")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       claimFilter === "pending"
-                        ? "bg-amber-500 text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-amber-500 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Pendientes
@@ -510,8 +510,8 @@ export default function SuscripcionesPage() {
                     onClick={() => setClaimFilter("claimed")}
                     className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                       claimFilter === "claimed"
-                        ? "bg-green-600 text-white"
-                        : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        ? "cursor-pointer bg-green-600 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     Usados
@@ -582,7 +582,7 @@ export default function SuscripcionesPage() {
                                       navigator.clipboard.writeText(c.claim_code);
                                       setMensaje("Código copiado al portapapeles.");
                                     }}
-                                    className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                                    className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
                                   >
                                     Copiar código
                                   </button>
@@ -591,7 +591,7 @@ export default function SuscripcionesPage() {
                                 <button
                                   onClick={() => eliminarAsignacion(c.id)}
                                   disabled={eliminandoAsignacionId === c.id}
-                                  className="rounded-xl bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                                  className="cursor-pointer rounded-xl bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                                 >
                                   {eliminandoAsignacionId === c.id ? "Eliminando..." : "Eliminar"}
                                 </button>
@@ -614,7 +614,7 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarCodigo(!mostrarCodigo)}
-            className="flex w-full items-center justify-between p-6 text-left"
+            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
               <h2 className="text-xl font-semibold">Generar código genérico</h2>
@@ -701,7 +701,7 @@ export default function SuscripcionesPage() {
               <button
                 onClick={generarCodigo}
                 disabled={procesandoCodigo}
-                className="rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+                className="cursor-pointer rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
               >
                 {procesandoCodigo ? "Generando..." : "Generar código"}
               </button>
@@ -722,7 +722,7 @@ export default function SuscripcionesPage() {
                         navigator.clipboard.writeText(codigoGenerado);
                         setMensaje("Código copiado al portapapeles.");
                       }}
-                      className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                      className="cursor-pointer rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
                     >
                       Copiar código
                     </button>
@@ -737,7 +737,7 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarAsignacionCliente(!mostrarAsignacionCliente)}
-            className="flex w-full items-center justify-between p-6 text-left"
+            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
               <h2 className="text-xl font-semibold">Asignar suscripción a cliente</h2>
@@ -816,8 +816,8 @@ export default function SuscripcionesPage() {
                       onClick={() => setLetraActiva("TODOS")}
                       className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
                         letraActiva === "TODOS"
-                          ? "border-transparent bg-black text-white"
-                          : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                          ? "cursor-pointer border-transparent bg-black text-white"
+                          : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                       }`}
                     >
                       Todos
@@ -830,8 +830,8 @@ export default function SuscripcionesPage() {
                         onClick={() => setLetraActiva(letra)}
                         className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
                           letraActiva === letra
-                            ? "border-transparent bg-black text-white"
-                            : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                            ? "cursor-pointer border-transparent bg-black text-white"
+                            : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                         }`}
                       >
                         {letra}
@@ -941,7 +941,7 @@ export default function SuscripcionesPage() {
                 <button
                   onClick={asignarSuscripcion}
                   disabled={procesandoAsignacion}
-                  className="rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+                  className="cursor-pointer rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
                 >
                   {procesandoAsignacion ? "Asignando..." : "Confirmar asignación"}
                 </button>
