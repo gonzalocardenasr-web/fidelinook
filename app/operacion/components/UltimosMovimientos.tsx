@@ -85,6 +85,7 @@ export default function UltimosMovimientos({
                     <tr className="text-left text-violet-700">
                       <th className="px-4 py-3 font-semibold">Fecha</th>
                       <th className="px-4 py-3 font-semibold">Tipo</th>
+                      <th className="px-4 py-3 font-semibold">Suscripción</th>
                       <th className="px-4 py-3 font-semibold">Potes</th>
                       <th className="px-4 py-3 font-semibold">Toppings</th>
                       <th className="px-4 py-3 font-semibold">Barquillos</th>
@@ -94,21 +95,37 @@ export default function UltimosMovimientos({
 
                   <tbody>
                     {data.map((item) => (
-                      <tr
+                        <tr
                         key={item.id}
                         className="border-t border-neutral-200 text-neutral-700"
-                      >
+                        >
+                        {/* Fecha */}
                         <td className="px-4 py-3 whitespace-nowrap">
-                          {formatearFecha(item.created_at)}
+                            {formatearFecha(item.created_at)}
                         </td>
+
+                        {/* Tipo */}
                         <td className="px-4 py-3 whitespace-nowrap">
-                          Consumo suscripción
+                            Consumo suscripción
                         </td>
+
+                        {/* 👇 NUEVA COLUMNA */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                            {item.subscriptions?.subscription_templates?.name || "-"}
+                        </td>
+
+                        {/* Potes */}
                         <td className="px-4 py-3">{item.potes}</td>
+
+                        {/* Toppings */}
                         <td className="px-4 py-3">{item.toppings}</td>
+
+                        {/* Barquillos */}
                         <td className="px-4 py-3">{item.barquillos}</td>
+
+                        {/* Galletas */}
                         <td className="px-4 py-3">{item.galletas}</td>
-                      </tr>
+                        </tr>
                     ))}
                   </tbody>
                 </table>
