@@ -57,6 +57,8 @@ export default function SuscripcionesPage() {
   const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">("all");
   const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
 
+  const [cargandoRol, setCargandoRol] = useState(true);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -317,21 +319,25 @@ export default function SuscripcionesPage() {
                 >
                     ← Volver al inicio
               </Link>
+            
+            <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
 
+            <p className="text-sm opacity-90">
+              Gestiona asignaciones, códigos y suscripciones activas del programa.
+            </p>
+
+            <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+            </p>            
+          </div>
+
+          <div>
             <button
               onClick={cerrarSesion}
               className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
             >
               Cerrar sesión
             </button>
-          </div>
-
-          <div>
-            <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
-
-            <p className="text-sm opacity-90">
-              Gestiona asignaciones, códigos y suscripciones activas del programa.
-            </p>
           </div>
         </div>
       </div>
