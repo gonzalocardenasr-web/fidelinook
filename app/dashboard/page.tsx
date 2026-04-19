@@ -267,9 +267,9 @@ function DataTable({
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-neutral-200">
-        <div className={`w-full overflow-auto ${maxHeight}`}>
-            <table className={`w-full ${minTableWidth} border-collapse text-sm`}>
+    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-neutral-200">
+        <div className={`w-full max-w-full overflow-auto ${maxHeight}`}>
+            <table className={`border-collapse text-sm ${minTableWidth}`}>
           <thead className="sticky top-0 bg-violet-50">
             <tr className="text-left text-violet-700">
               {columns.map((column) => (
@@ -451,13 +451,15 @@ export default function DashboardPage() {
               subtitle="Crecimiento mensual de usuarios registrados."
             >
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                <LineChart
-                  title="Nuevos usuarios por mes"
-                  labels={data.clientesPorMes.map((item) => formatearMes(item.mes))}
-                  values={data.clientesPorMes.map((item) => item.nuevosUsuarios)}
-                />
+                <div className="min-w-0">
+                    <LineChart
+                        title="Nuevos usuarios por mes"
+                        labels={data.clientesPorMes.map((item) => formatearMes(item.mes))}
+                        values={data.clientesPorMes.map((item) => item.nuevosUsuarios)}
+                    />
+                </div>
 
-                <div>
+              <div className="min-w-0">
                   <p className="mb-4 text-sm font-semibold text-violet-700">
                     Detalle mensual
                   </p>
@@ -500,17 +502,19 @@ export default function DashboardPage() {
               </div>
 
               <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <LineChart
-                  title="Nuevas suscripciones por mes"
-                  labels={data.suscripcionesPorMes.map((item) =>
-                    formatearMes(item.mes)
-                  )}
-                  values={data.suscripcionesPorMes.map(
-                    (item) => item.nuevasSuscripciones
-                  )}
-                />
+                <div className="min-w-0">
+                    <LineChart
+                        title="Nuevas suscripciones por mes"
+                        labels={data.suscripcionesPorMes.map((item) =>
+                        formatearMes(item.mes)
+                        )}
+                        values={data.suscripcionesPorMes.map(
+                        (item) => item.nuevasSuscripciones
+                        )}
+                    />
+                </div>
 
-                <div>
+              <div className="min-w-0">
                   <p className="mb-4 text-sm font-semibold text-violet-700">
                     Suscripciones activas
                   </p>
@@ -547,7 +551,7 @@ export default function DashboardPage() {
                     rows={suscripcionesActivasRows}
                     emptyText="No hay suscripciones activas."
                     maxHeight="max-h-96"
-                    minTableWidth="min-w-[760px]"
+                    minTableWidth="min-w-[720px]"
                     />
                 </div>
               </div>
@@ -558,21 +562,25 @@ export default function DashboardPage() {
               subtitle="Actividad reciente de consumos registrados."
             >
               <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-                <LineChart
-                  title="Movimientos de consumo por día"
-                  labels={data.consumosPorDia.map((item) =>
-                    formatearFecha(item.fecha)
-                  )}
-                  values={data.consumosPorDia.map((item) => item.movimientos)}
-                />
+                <div className="min-w-0">
+                    <LineChart
+                        title="Movimientos de consumo por día"
+                        labels={data.consumosPorDia.map((item) =>
+                        formatearFecha(item.fecha)
+                        )}
+                        values={data.consumosPorDia.map((item) => item.movimientos)}
+                    />
+                    </div>
 
-                <LineChart
-                  title="Potes consumidos por día"
-                  labels={data.consumosPorDia.map((item) =>
-                    formatearFecha(item.fecha)
-                  )}
-                  values={data.consumosPorDia.map((item) => item.potes)}
-                />
+                    <div className="min-w-0">
+                    <LineChart
+                        title="Potes consumidos por día"
+                        labels={data.consumosPorDia.map((item) =>
+                        formatearFecha(item.fecha)
+                        )}
+                        values={data.consumosPorDia.map((item) => item.potes)}
+                    />
+                </div>
               </div>
 
               <div className="mt-6">
@@ -593,7 +601,7 @@ export default function DashboardPage() {
                     rows={consumoRecienteRows}
                     emptyText="No hay consumos recientes."
                     maxHeight="max-h-96"
-                    minTableWidth="min-w-[980px]"
+                    minTableWidth="min-w-[860px]"
                   />
               </div>
             </SectionCard>
