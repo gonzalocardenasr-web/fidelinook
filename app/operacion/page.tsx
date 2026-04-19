@@ -435,45 +435,42 @@ export default function OperacionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
-        <div className="mx-auto max-w-7xl space-y-8">
-            <div className="mb-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                <Link
-                    href="/"
-                    className="inline-flex items-center text-sm font-medium text-[#454545] transition hover:opacity-70"
-                >
-                    ← Volver al inicio
-                </Link>
+            <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
+                <div className="mx-auto max-w-6xl">
+                    {/* HEADER */}
+                    <div className="mb-8 flex items-start justify-between">
+                        {/* LADO IZQUIERDO */}
+                        <div>
+                        <Link
+                            href="/"
+                            className="text-sm text-[#454545] transition hover:opacity-70"
+                        >
+                            ← Volver al inicio
+                        </Link>
 
-                <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
-                    Operación
-                </span>
+                        <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
+                            Operación
+                        </span>
 
-                <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
-                    Operación
-                </h1>
+                        <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
+                            Operación
+                        </h1>
 
-                <p className="mt-3 max-w-3xl text-lg text-[#454545]">
-                    Gestión operativa de clientes, fidelización y suscripciones.
-                </p>
+                        <p className="mt-3 text-lg text-[#454545]">
+                            Gestión operativa de clientes, fidelización y suscripciones.
+                        </p>
+                        </div>
 
-                <p className="mt-3 text-sm font-medium text-neutral-500">
-                    {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
-                </p>
+                        {/* LADO DERECHO */}
+                        <button
+                        onClick={cerrarSesion}
+                        className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                        >
+                        Cerrar sesión
+                        </button>
+                    </div>
                 </div>
-
-                <div className="pt-1">
-                <button
-                    onClick={cerrarSesion}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
-                >
-                    Cerrar sesión
-                </button>
-                </div>
-            </div>
-            </div>
+            
 
         <UltimosMovimientosCard clientes={clientes} />
 
