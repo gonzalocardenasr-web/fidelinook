@@ -278,6 +278,8 @@ export default function AdminClienteDetalle({
           {mensaje}
         </div>
       )}
+
+      <UltimosMovimientos clienteId={cliente.id} />
     </>
   );
 }
