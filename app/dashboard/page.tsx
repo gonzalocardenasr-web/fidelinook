@@ -310,8 +310,12 @@ export default function DashboardPage() {
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState("");
 
+  const [cargandoRol, setCargandoRol] = useState(true);
+  const [rol, setRol] = useState<string | null>(null);
+
   useEffect(() => {
-    cargarDashboard();
+    cargarDatos();
+    cargarSesion();
   }, []);
 
   async function cargarDashboard() {
@@ -368,30 +372,63 @@ export default function DashboardPage() {
       galletas: item.galletas,
     })) || [];
 
+  const cargarSesion = async () => {
+    try {
+        setCargandoRol(true);
+
+        const res = await fetch("/api/session");
+        const data = await res.json();
+
+        if (!res.ok) {
+        setRol(null);
+        return;
+        }
+
+        setRol(data?.rol ?? null);
+    } catch (error) {
+        console.error("Error cargando sesión:", error);
+        setRol(null);
+    } finally {
+        setCargandoRol(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm font-medium text-[#454545] transition hover:opacity-70"
-          >
-            ← Volver al inicio
-          </Link>
-
-          <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
-            Dashboard
-          </span>
-
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
-            Dashboard
-          </h1>
-
-          <p className="mt-3 max-w-3xl text-lg text-[#454545]">
-            Vista analítica del sistema de fidelización y suscripciones.
-          </p>
-        </div>
-
+    <main className="min-h-screen bg-[#F6F3FF] p-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <Link
+                        href="/"
+                        className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                    >
+                        ← Volver al inicio
+                    </Link>
+    
+                  <h1 className="mt-3 text-2xl font-bold">Dashboard</h1>
+    
+                  <p className="text-sm opacity-90">
+                    Vista analítica del sistema de fidelización y suscripciones
+                  </p>
+    
+                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                    {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+                  </p>
+                </div>
+    
+                <div>
+                  <button
+                    onClick={cerrarSesion}
+                    className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                  >
+                    Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            </div>
+    
+    
         {cargando ? (
           <section className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm">
             <p className="text-base leading-7 text-[#454545]">
