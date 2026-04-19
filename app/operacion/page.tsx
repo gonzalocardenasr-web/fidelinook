@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
 import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
+import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
 
 type Premio = {
   id: number;
@@ -44,11 +45,55 @@ export default function OperacionPage() {
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
+  const [subscriptionActiva, setSubscriptionActiva] = useState<any>(null);
+  const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
+  const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+
 
   useEffect(() => {
     cargarDatos();
     cargarSesion();
   }, []);
+
+  useEffect(() => {
+  if (!clienteSeleccionadoId) {
+    setSubscriptionActiva(null);
+    setMensajeSuscripcion("");
+    return;
+  }
+
+  cargarSuscripcionActiva(Number(clienteSeleccionadoId));
+}, [clienteSeleccionadoId]);
+
+
+  async function cargarSuscripcionActiva(clienteId: number) {
+    try {
+        setCargandoSuscripcion(true);
+        setMensajeSuscripcion("");
+
+        const res = await fetch(
+        `/api/subscriptions/active-by-client?clienteId=${clienteId}`
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        setSubscriptionActiva(null);
+        setMensajeSuscripcion(
+            data?.message || "No se pudo cargar la suscripción activa."
+        );
+        return;
+        }
+
+        setSubscriptionActiva(data?.subscription || null);
+    } catch (error) {
+        console.error("Error cargando suscripción activa:", error);
+        setSubscriptionActiva(null);
+        setMensajeSuscripcion("Ocurrió un error al cargar la suscripción activa.");
+    } finally {
+        setCargandoSuscripcion(false);
+    }
+    }
 
   const cargarSesion = async () => {
     try {
@@ -547,6 +592,20 @@ export default function OperacionPage() {
                     exportarCSV={undefined}
                     mostrarAccionesAdministrativas={false}
                 />
+
+                <OperacionSuscripcionActiva
+                    clienteId={cliente.id}
+                    subscription={subscriptionActiva}
+                    cargando={cargandoSuscripcion}
+                    onRefresh={() => cargarSuscripcionActiva(cliente.id)}
+                    onMensaje={setMensajeSuscripcion}
+                    />
+
+                    {mensajeSuscripcion && (
+                    <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+                        {mensajeSuscripcion}
+                    </div>
+                )}
                 
               </>
             )}
