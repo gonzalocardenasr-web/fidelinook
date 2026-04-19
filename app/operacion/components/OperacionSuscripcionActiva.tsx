@@ -56,6 +56,7 @@ export default function OperacionSuscripcionActiva({
   const [barquillos, setBarquillos] = useState(0);
   const [galletas, setGalletas] = useState(0);
   const [registrando, setRegistrando] = useState(false);
+  const [abierto, setAbierto] = useState(true);
 
   const hayConsumoParaRegistrar = useMemo(() => {
     return potes > 0 || toppings > 0 || barquillos > 0 || galletas > 0;
@@ -150,7 +151,23 @@ export default function OperacionSuscripcionActiva({
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
+  <div className="mt-6 rounded-2xl border border-violet-100 bg-white shadow-sm">
+    <button
+      type="button"
+      onClick={() => setAbierto(!abierto)}
+      className="flex w-full items-center justify-between px-5 py-4 text-left"
+    >
+      <span className="text-sm font-semibold text-violet-700">
+        Suscripciones activas
+      </span>
+      <span className="text-sm text-violet-700">
+        {abierto ? "▲" : "▼"}
+      </span>
+    </button>
+
+    {abierto && (
+      <div className="border-t border-violet-100 p-5">
+      
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-sm font-semibold text-violet-700">

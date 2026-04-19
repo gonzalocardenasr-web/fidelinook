@@ -45,11 +45,12 @@ export default function OperacionPage() {
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
-  const [subscriptionActiva, setSubscriptionActiva] = useState<any>(null);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [subscriptionSeleccionada, setSubscriptionSeleccionada] = useState<any>(null);
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
 
-
+  
   useEffect(() => {
     cargarDatos();
     cargarSesion();
@@ -78,18 +79,20 @@ export default function OperacionPage() {
         const data = await res.json();
 
         if (!res.ok) {
-        setSubscriptionActiva(null);
-        setMensajeSuscripcion(
-            data?.message || "No se pudo cargar la suscripción activa."
-        );
+        setSubscriptions([]);
+        setSubscriptionSeleccionada(null);
         return;
         }
 
-        setSubscriptionActiva(data?.subscription || null);
+        setSubscriptions(data.subscriptions || []);
+
+        if (data.subscriptions?.length > 0) {
+        setSubscriptionSeleccionada(data.subscriptions[0]);
+        } else {
+        setSubscriptionSeleccionada(null);
+        }
     } catch (error) {
-        console.error("Error cargando suscripción activa:", error);
-        setSubscriptionActiva(null);
-        setMensajeSuscripcion("Ocurrió un error al cargar la suscripción activa.");
+        console.error(error);
     } finally {
         setCargandoSuscripcion(false);
     }
@@ -593,13 +596,40 @@ export default function OperacionPage() {
                     mostrarAccionesAdministrativas={false}
                 />
 
+                {subscriptions.length > 1 && (
+                    <div className="mb-4">
+                        <label className="text-sm font-semibold text-violet-700">
+                        Seleccionar suscripción
+                        </label>
+
+                        <select
+                        className="mt-2 w-full rounded-xl border px-3 py-2"
+                        onChange={(e) => {
+                            const sub = subscriptions.find(
+                            (s) => s.id === Number(e.target.value)
+                            );
+                            onSelectSubscription(sub);
+                        }}
+                        value={subscriptionSeleccionada?.id || ""}
+                        >
+                        {subscriptions.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                            {sub.name} (Ciclo {sub.cycleNumber})
+                            </option>
+                        ))}
+                        </select>
+                    </div>
+                )}
+
                 <OperacionSuscripcionActiva
                     clienteId={cliente.id}
-                    subscription={subscriptionActiva}
+                    subscriptions={subscriptions}
+                    subscriptionSeleccionada={subscriptionSeleccionada}
                     cargando={cargandoSuscripcion}
                     onRefresh={() => cargarSuscripcionActiva(cliente.id)}
                     onMensaje={setMensajeSuscripcion}
-                    />
+                    onSelectSubscription={setSubscriptionSeleccionada}
+                />
 
                     {mensajeSuscripcion && (
                     <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
