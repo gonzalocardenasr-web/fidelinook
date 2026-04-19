@@ -295,11 +295,14 @@ export default function SuscripcionesPage() {
 
   return (
     <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div>
-          <Link href="/" className="text-sm text-[#454545] transition hover:opacity-70">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="mb-8">
+            <Link
+            href="/"
+            className="inline-flex items-center text-sm font-medium text-[#454545] transition hover:opacity-70"
+            >
             ← Volver al inicio
-          </Link>
+            </Link>
 
           <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
             Suscripciones

@@ -440,7 +440,7 @@ export default function MisSuscripcionesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F2C7E0] px-6 py-10">
-        <div className="mx-auto max-w-[720px]">
+        <div className="mx-auto max-w-[760px]">
           <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
             <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
               <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
@@ -463,7 +463,7 @@ export default function MisSuscripcionesPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-[#F2C7E0] px-6 py-10">
-        <div className="mx-auto max-w-[720px]">
+        <div className="mx-auto max-w-[760px]">
           <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
             <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
               <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
@@ -492,7 +492,7 @@ export default function MisSuscripcionesPage() {
 
   return (
     <main className="min-h-screen bg-[#F2C7E0] px-6 py-10">
-      <div className="mx-auto max-w-[720px]">
+      <div className="mx-auto max-w-[760px]">
         <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
           <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
             <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
@@ -501,14 +501,17 @@ export default function MisSuscripcionesPage() {
             </h1>
           </div>
 
-          <div className="space-y-8 px-8 py-8">
+          <div className="px-8 pt-6">
             <Link
-              href="/mi-cuenta"
-              className="inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
+                href="/mi-cuenta"
+                className="inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
             >
-              ← Volver a mi cuenta
+                ← Volver a mi cuenta
             </Link>
+          </div>
 
+          <div className="space-y-8 px-8 py-8">
+            
             <div className="space-y-3">
               <h2 className="text-2xl font-bold text-[#4C00F7]">Canjear código</h2>
               <p className="text-base leading-7 text-neutral-700">

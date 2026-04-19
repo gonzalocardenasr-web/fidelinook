@@ -435,39 +435,45 @@ export default function OperacionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <Link
-                href="/"
-                className="inline-flex items-center text-sm font-medium text-white/90 transition hover:text-white"
-              >
-                ← Volver al inicio
-              </Link>
+    <main className="min-h-screen bg-[#F7F7F7] px-6 py-10">
+        <div className="mx-auto max-w-7xl space-y-8">
+            <div className="mb-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                <Link
+                    href="/"
+                    className="inline-flex items-center text-sm font-medium text-[#454545] transition hover:opacity-70"
+                >
+                    ← Volver al inicio
+                </Link>
 
-              <h1 className="mt-3 text-2xl font-bold">Operación local</h1>
+                <span className="mt-5 inline-flex rounded-full bg-[#E1B4D0] px-3 py-1 text-sm font-medium text-[#454545]">
+                    Operación
+                </span>
 
-              <p className="text-sm opacity-90">
-                Búsqueda rápida, validación de compras y canje de premios
-              </p>
+                <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#111111]">
+                    Operación
+                </h1>
 
-              <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
-              </p>
+                <p className="mt-3 max-w-3xl text-lg text-[#454545]">
+                    Gestión operativa de clientes, fidelización y suscripciones.
+                </p>
+
+                <p className="mt-3 text-sm font-medium text-neutral-500">
+                    {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+                </p>
+                </div>
+
+                <div className="pt-1">
+                <button
+                    onClick={cerrarSesion}
+                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                    Cerrar sesión
+                </button>
+                </div>
             </div>
-
-            <div>
-              <button
-                onClick={cerrarSesion}
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                Cerrar sesión
-              </button>
             </div>
-          </div>
-        </div>
 
         <UltimosMovimientosCard clientes={clientes} />
 
