@@ -58,7 +58,8 @@ export default function OperacionPage() {
 
   useEffect(() => {
   if (!clienteSeleccionadoId) {
-    setSubscriptionActiva(null);
+    setSubscriptions([]);
+    setSubscriptionSeleccionada(null);
     setMensajeSuscripcion("");
     return;
   }
