@@ -62,6 +62,72 @@ export default function OperacionSuscripcionActiva({
     return potes > 0 || toppings > 0 || barquillos > 0 || galletas > 0;
   }, [potes, toppings, barquillos, galletas]);
 
+  const erroresValidacion = useMemo(() => {
+    if (!subscriptionSeleccionada) return [];
+
+    const errores: string[] = [];
+
+    if (
+        potes > 0 &&
+        subscriptionSeleccionada.incluido.potes === 0
+    ) {
+        errores.push("Esta suscripción no incluye potes.");
+    }
+
+    if (
+        toppings > 0 &&
+        subscriptionSeleccionada.incluido.toppings === 0
+    ) {
+        errores.push("Esta suscripción no incluye toppings.");
+    }
+
+    if (
+        barquillos > 0 &&
+        subscriptionSeleccionada.incluido.barquillos === 0
+    ) {
+        errores.push("Esta suscripción no incluye barquillos.");
+    }
+
+    if (
+        galletas > 0 &&
+        subscriptionSeleccionada.incluido.galletas === 0
+    ) {
+        errores.push("Esta suscripción no incluye galletas.");
+    }
+
+    if (
+        potes > subscriptionSeleccionada.disponible.potes
+    ) {
+        errores.push("La cantidad de potes supera lo disponible.");
+    }
+
+    if (
+        toppings > subscriptionSeleccionada.disponible.toppings
+    ) {
+        errores.push("La cantidad de toppings supera lo disponible.");
+    }
+
+    if (
+        barquillos > subscriptionSeleccionada.disponible.barquillos
+    ) {
+        errores.push("La cantidad de barquillos supera lo disponible.");
+    }
+
+    if (
+        galletas > subscriptionSeleccionada.disponible.galletas
+    ) {
+        errores.push("La cantidad de galletas supera lo disponible.");
+    }
+
+    return errores;
+    }, [
+    subscriptionSeleccionada,
+    potes,
+    toppings,
+    barquillos,
+    galletas,
+  ]);
+
   const formatearFecha = (fecha?: string | null) => {
     if (!fecha) return "Sin registro";
 
@@ -88,6 +154,11 @@ export default function OperacionSuscripcionActiva({
     if (!hayConsumoParaRegistrar) {
       onMensaje("Debes ingresar al menos un producto para registrar consumo.");
       return;
+    }
+
+    if (erroresValidacion.length > 0) {
+        onMensaje("Corrige los errores antes de registrar el consumo.");
+        return;
     }
 
     try {
@@ -305,6 +376,19 @@ export default function OperacionSuscripcionActiva({
                       Registrar consumo
                     </p>
 
+                    {erroresValidacion.length > 0 && (
+                        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                            <p className="text-sm font-semibold text-red-700">
+                            Revisa lo siguiente antes de registrar:
+                            </p>
+                            <ul className="mt-2 list-disc pl-5 text-sm text-red-700">
+                            {erroresValidacion.map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                            </ul>
+                        </div>
+                    )}
+
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-violet-700">
@@ -369,7 +453,7 @@ export default function OperacionSuscripcionActiva({
                       <button
                         type="button"
                         onClick={registrarConsumo}
-                        disabled={registrando}
+                        disabled={registrando || erroresValidacion.length > 0}
                         className="rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                       >
                         {registrando ? "Registrando..." : "Registrar consumo"}
