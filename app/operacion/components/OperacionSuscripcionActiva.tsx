@@ -213,7 +213,7 @@ export default function OperacionSuscripcionActiva({
       <button
         type="button"
         onClick={() => setAbierto(!abierto)}
-        className="flex w-full items-center justify-between px-5 py-4 text-left"
+        className="cursor-pointer flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <span className="text-sm font-semibold text-violet-700">
           Suscripciones activas
@@ -459,7 +459,7 @@ export default function OperacionSuscripcionActiva({
                             erroresValidacion.length > 0 ||
                             !hayConsumoParaRegistrar
                         }
-                        className="rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                        className="cursor-pointer rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                       >
                         {registrando ? "Registrando..." : "Registrar consumo"}
                       </button>

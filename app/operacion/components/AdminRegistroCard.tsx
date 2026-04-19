@@ -16,7 +16,7 @@ export default function AdminRegistroCard({
       <button
         type="button"
         onClick={() => setMostrarRegistro(!mostrarRegistro)}
-        className="flex w-full items-center justify-between p-4 text-left"
+        className="cursor-pointer flex w-full items-center justify-between p-4 text-left"
       >
         <span className="text-lg font-semibold">Registro nuevo cliente</span>
         <span className="text-2xl leading-none">
@@ -42,6 +42,7 @@ export default function AdminRegistroCard({
               <a
                 href="/registro"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="block w-fit rounded bg-black px-4 py-3 text-white"
               >
                 Abrir formulario
@@ -54,7 +55,7 @@ export default function AdminRegistroCard({
                   );
                   setMensaje("Link de registro copiado");
                 }}
-                className="block w-fit rounded bg-neutral-200 px-4 py-3"
+                className="cursor-pointer block w-fit rounded bg-neutral-200 px-4 py-3"
               >
                 Copiar link
               </button>

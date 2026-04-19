@@ -159,7 +159,7 @@ export default function AdminClienteDetalle({
               navigator.clipboard.writeText(url);
               setMensaje("Link copiado al portapapeles");
             }}
-            className="rounded-lg bg-neutral-100 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200"
+            className="cursor-pointer rounded-lg bg-neutral-100 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200"
           >
             Copiar link
           </button>
@@ -249,7 +249,7 @@ export default function AdminClienteDetalle({
               disabled={
                 reiniciando || procesandoCompra || procesandoCanje || !cliente
               }
-              className="rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
+              className="cursor-pointer rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
             >
               {reiniciando ? "Procesando..." : "Eliminar cliente"}
             </button>
@@ -257,7 +257,7 @@ export default function AdminClienteDetalle({
             <button
               onClick={reiniciarDatos}
               disabled={reiniciando || procesandoCompra || procesandoCanje}
-              className="rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
+              className="cursor-pointer rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
               {reiniciando ? "Procesando..." : "Eliminar todos"}
             </button>
@@ -265,7 +265,7 @@ export default function AdminClienteDetalle({
             <button
               onClick={exportarCSV}
               disabled={reiniciando || procesandoCompra || procesandoCanje}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+              className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
             >
               Exportar clientes CSV
             </button>
