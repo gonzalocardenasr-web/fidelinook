@@ -506,7 +506,7 @@ export default function MisSuscripcionesPage() {
                 href="/mi-cuenta"
                 className="inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
             >
-                ← Volver a mi cuenta
+                ← Mi cuenta
             </Link>
           </div>
 
