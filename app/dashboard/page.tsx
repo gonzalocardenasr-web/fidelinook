@@ -307,6 +307,11 @@ function DataTable({
   );
 }
 
+useEffect(() => {
+    cargarDashboard();
+    cargarSesion();
+  }, []);
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -314,11 +319,6 @@ export default function DashboardPage() {
 
   const [cargandoRol, setCargandoRol] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
-
-  useEffect(() => {
-    cargarDashboard();
-    cargarSesion();
-  }, []);
 
   async function cargarDashboard() {
     try {
@@ -384,28 +384,27 @@ export default function DashboardPage() {
   };
 
   const cargarSesion = async () => {
-  try {
-    setCargandoRol(true);
+    try {
+      setCargandoRol(true);
 
-    const res = await fetch("/api/session", {
-      method: "GET",
-    });
+      const res = await fetch("/api/session", {
+        method: "GET",
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        setRol(null);
+        return;
+      }
 
-    if (!res.ok) {
-      setRol(null);
-      return;
-    }
+      const data = await res.json();
+        console.log("SESSION DASHBOARD:", data);
 
-    setRol(data?.rol ?? null);
-  } catch (error) {
-    console.error("Error cargando sesión:", error);
-    setRol(null);
-  } finally {
-    setCargandoRol(false);
-  }
-  };
+        if (!res.ok) {
+        setRol(null);
+        return;
+        }
+
+        setRol(data?.rol ?? null);
 
     const router = useRouter();
 
