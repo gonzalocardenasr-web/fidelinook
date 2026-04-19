@@ -467,6 +467,7 @@ export default function OperacionPage() {
                         Cerrar sesión
                         </button>
                     </div>
+                    </div>
                 </div>
             
 
