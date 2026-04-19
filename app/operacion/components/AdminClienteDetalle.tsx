@@ -227,7 +227,7 @@ export default function AdminClienteDetalle({
           disabled={
             procesandoCompra || procesandoCanje || reiniciando || !cliente
           }
-          className="rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90 disabled:opacity-60"
+          className="cursor-pointer rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90 disabled:opacity-60"
         >
           {procesandoCompra ? "Validando..." : "Validar compra"}
         </button>
@@ -237,7 +237,7 @@ export default function AdminClienteDetalle({
           disabled={
             procesandoCanje || procesandoCompra || reiniciando || !cliente
           }
-          className="rounded-lg bg-violet-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
+          className="cursor-pointer rounded-lg bg-violet-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
         >
           {procesandoCanje ? "Canjeando..." : "Canjear premio"}
         </button>
