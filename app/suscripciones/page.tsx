@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
 type Cliente = {
@@ -55,6 +56,8 @@ export default function SuscripcionesPage() {
 
   const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">("all");
   const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
+
+  const router = useRouter();
 
   useEffect(() => {
     cargarDatos();
@@ -291,6 +294,15 @@ export default function SuscripcionesPage() {
     } finally {
       setEliminandoAsignacionId(null);
     }
+  };
+
+  const cerrarSesion = async () => {
+  try {
+    await supabase.auth.signOut();
+    router.push("/login");
+  } catch (error) {
+    console.error("Error cerrando sesión:", error);
+  }
   };
 
   return (

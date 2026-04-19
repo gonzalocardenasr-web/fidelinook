@@ -532,8 +532,8 @@ export default function OperacionPage() {
                           onClick={() => seleccionarLetra("TODOS")}
                           className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
                             letraActiva === "TODOS"
-                              ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
-                              : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                              ? "cursor-pointer border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                              : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                           }`}
                         >
                           Todos
@@ -546,8 +546,8 @@ export default function OperacionPage() {
                             onClick={() => seleccionarLetra(letra)}
                             className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
                               letraActiva === letra
-                                ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
-                                : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                                ? "cursor-pointer border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                                : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                             }`}
                           >
                             {letra}
