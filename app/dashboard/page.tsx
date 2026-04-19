@@ -254,11 +254,13 @@ function DataTable({
   rows,
   emptyText,
   maxHeight = "max-h-80",
+  minTableWidth = "min-w-full",
 }: {
   columns: { key: string; label: string; className?: string }[];
   rows: Record<string, React.ReactNode>[];
   emptyText: string;
   maxHeight?: string;
+  minTableWidth?: string;
 }) {
   if (rows.length === 0) {
     return <EmptyState text={emptyText} />;
@@ -267,7 +269,7 @@ function DataTable({
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-neutral-200">
         <div className={`w-full overflow-auto ${maxHeight}`}>
-            <table className="w-full min-w-[900px] border-collapse text-sm">
+            <table className={`w-full ${minTableWidth} border-collapse text-sm`}>
           <thead className="sticky top-0 bg-violet-50">
             <tr className="text-left text-violet-700">
               {columns.map((column) => (
@@ -461,13 +463,14 @@ export default function DashboardPage() {
                   </p>
                   <DataTable
                     columns={[
-                      { key: "mes", label: "Mes", className: "whitespace-nowrap" },
-                      { key: "nuevosUsuarios", label: "Nuevos usuarios" },
-                      { key: "acumulado", label: "Acumulado" },
+                        { key: "mes", label: "Mes", className: "whitespace-nowrap" },
+                        { key: "nuevosUsuarios", label: "Nuevos usuarios" },
+                        { key: "acumulado", label: "Acumulado" },
                     ]}
                     rows={clientesPorMesRows}
                     emptyText="No hay datos de crecimiento de clientes."
                     maxHeight="max-h-72"
+                    minTableWidth="min-w-full"
                   />
                 </div>
               </div>
@@ -544,7 +547,8 @@ export default function DashboardPage() {
                     rows={suscripcionesActivasRows}
                     emptyText="No hay suscripciones activas."
                     maxHeight="max-h-96"
-                  />
+                    minTableWidth="min-w-[760px]"
+                    />
                 </div>
               </div>
             </SectionCard>
@@ -576,20 +580,21 @@ export default function DashboardPage() {
                   Consumo reciente de suscripciones
                 </p>
                 <DataTable
-                  columns={[
-                    { key: "fecha", label: "Fecha", className: "whitespace-nowrap" },
-                    { key: "cliente", label: "Cliente" },
-                    { key: "suscripcion", label: "Suscripción" },
-                    { key: "ciclo", label: "Ciclo" },
-                    { key: "potes", label: "Potes" },
-                    { key: "toppings", label: "Toppings" },
-                    { key: "barquillos", label: "Barquillos" },
-                    { key: "galletas", label: "Galletas" },
-                  ]}
-                  rows={consumoRecienteRows}
-                  emptyText="No hay consumos recientes."
-                  maxHeight="max-h-96"
-                />
+                    columns={[
+                        { key: "fecha", label: "Fecha", className: "whitespace-nowrap" },
+                        { key: "cliente", label: "Cliente", className: "whitespace-nowrap" },
+                        { key: "suscripcion", label: "Suscripción", className: "min-w-[220px]" },
+                        { key: "ciclo", label: "Ciclo", className: "whitespace-nowrap" },
+                        { key: "potes", label: "Potes", className: "whitespace-nowrap" },
+                        { key: "toppings", label: "Toppings", className: "whitespace-nowrap" },
+                        { key: "barquillos", label: "Barquillos", className: "whitespace-nowrap" },
+                        { key: "galletas", label: "Galletas", className: "whitespace-nowrap" },
+                    ]}
+                    rows={consumoRecienteRows}
+                    emptyText="No hay consumos recientes."
+                    maxHeight="max-h-96"
+                    minTableWidth="min-w-[980px]"
+                  />
               </div>
             </SectionCard>
           </div>
