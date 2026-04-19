@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
 import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
 import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
+import UltimosMovimientos from "./components/UltimosMovimientos";
 
 type Premio = {
   id: number;
@@ -595,8 +596,25 @@ export default function OperacionPage() {
                     reiniciarDatos={undefined}
                     exportarCSV={undefined}
                     mostrarAccionesAdministrativas={false}
+                    
                 />
                 
+                {subscriptions.length > 0 && (
+                    <OperacionSuscripcionActiva
+                        clienteId={cliente.id}
+                        subscriptions={subscriptions}
+                        subscriptionSeleccionada={subscriptionSeleccionada}
+                        cargando={cargandoSuscripcion}
+                        onRefresh={() => cargarSuscripcionActiva(cliente.id)}
+                        onMensaje={setMensajeSuscripcion}
+                        onSelectSubscription={setSubscriptionSeleccionada}
+                    />
+                    )}
+
+                    {subscriptions.length > 0 && (
+                    <UltimosMovimientos clienteId={cliente.id} />
+                )}
+
                 <OperacionSuscripcionActiva
                     clienteId={cliente.id}
                     subscriptions={subscriptions}

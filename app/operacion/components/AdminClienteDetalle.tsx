@@ -1,5 +1,4 @@
 import QRCode from "react-qr-code";
-import UltimosMovimientos from "./UltimosMovimientos";
 
 type Premio = {
   id: number;
@@ -280,7 +279,6 @@ export default function AdminClienteDetalle({
         </div>
       )}
 
-      <UltimosMovimientos clienteId={cliente.id} />
     </>
   );
 }
