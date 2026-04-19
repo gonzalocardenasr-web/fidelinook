@@ -316,6 +316,7 @@ export default function DashboardPage() {
   const [rol, setRol] = useState<string | null>(null);
 
   useEffect(() => {
+    cargarDashboard();
     cargarSesion();
   }, []);
 
