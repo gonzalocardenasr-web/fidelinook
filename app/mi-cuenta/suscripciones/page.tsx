@@ -402,6 +402,15 @@ function TarjetaSuscripcionCompacta({
   );
 }
 
+function obtenerCantidadIncluida(
+  porCiclo?: number | null,
+  porMes?: number | null
+) {
+  if (typeof porCiclo === "number" && porCiclo > 0) return porCiclo;
+  if (typeof porMes === "number" && porMes > 0) return porMes;
+  return 0;
+}
+
 export default function MisSuscripcionesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -621,10 +630,22 @@ export default function MisSuscripcionesPage() {
       );
 
       const included = {
-        potes: template?.pots_per_cycle ?? template?.pots_per_month ?? 0,
-        toppings: template?.toppings_per_cycle ?? template?.toppings_per_month ?? 0,
-        barquillos: template?.wafer_packs_per_cycle ?? template?.wafer_packs_per_month ?? 0,
-        galletas: template?.cookie_packs_per_cycle ?? template?.cookie_packs_per_month ?? 0,
+        potes: obtenerCantidadIncluida(
+            template?.pots_per_cycle,
+            template?.pots_per_month
+        ),
+        toppings: obtenerCantidadIncluida(
+            template?.toppings_per_cycle,
+            template?.toppings_per_month
+        ),
+        barquillos: obtenerCantidadIncluida(
+            template?.wafer_packs_per_cycle,
+            template?.wafer_packs_per_month
+        ),
+        galletas: obtenerCantidadIncluida(
+            template?.cookie_packs_per_cycle,
+            template?.cookie_packs_per_month
+        ),
       };
 
       return {
@@ -665,11 +686,24 @@ export default function MisSuscripcionesPage() {
         currentCycleStart: null,
         currentCycleEnd: null,
         included: {
-          potes: template?.pots_per_cycle ?? template?.pots_per_month ?? 0,
-          toppings: template?.toppings_per_cycle ?? template?.toppings_per_month ?? 0,
-          barquillos: template?.wafer_packs_per_cycle ?? template?.wafer_packs_per_month ?? 0,
-          galletas: template?.cookie_packs_per_cycle ?? template?.cookie_packs_per_month ?? 0,
+            potes: obtenerCantidadIncluida(
+                template?.pots_per_cycle,
+                template?.pots_per_month
+            ),
+            toppings: obtenerCantidadIncluida(
+                template?.toppings_per_cycle,
+                template?.toppings_per_month
+            ),
+            barquillos: obtenerCantidadIncluida(
+                template?.wafer_packs_per_cycle,
+                template?.wafer_packs_per_month
+            ),
+            galletas: obtenerCantidadIncluida(
+                template?.cookie_packs_per_cycle,
+                template?.cookie_packs_per_month
+            ),
         },
+        
         consumed: {
           potes: 0,
           toppings: 0,
