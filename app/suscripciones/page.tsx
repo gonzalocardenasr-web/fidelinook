@@ -347,6 +347,7 @@ export default function SuscripcionesPage() {
         }
 
         alert("Suscripción eliminada correctamente.");
+        await cargarDatos();
 
         // aquí llama tus recargas actuales
         // por ejemplo:
@@ -468,57 +469,72 @@ export default function SuscripcionesPage() {
                 <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
                   <table className="min-w-full">
                     <thead className="sticky top-0 bg-white">
-                      <tr className="text-left text-xs uppercase text-neutral-500">
-                        <th className="px-4 py-3">Cliente</th>
-                        <th className="px-4 py-3">Suscripción</th>
-                        <th className="px-4 py-3">Estado</th>
-                        <th className="px-4 py-3">Inicio</th>
-                        <th className="px-4 py-3">Vencimiento</th>
-                        <th className="px-4 py-3">Próximo ciclo</th>
-                        <th className="px-4 py-3">Activada</th>
-                      </tr>
+                        <tr className="text-left text-xs uppercase text-neutral-500">
+                            <th className="px-4 py-3">Cliente</th>
+                            <th className="px-4 py-3">Suscripción</th>
+                            <th className="px-4 py-3">Estado</th>
+                            <th className="px-4 py-3">Inicio</th>
+                            <th className="px-4 py-3">Vencimiento</th>
+                            <th className="px-4 py-3">Próximo ciclo</th>
+                            <th className="px-4 py-3">Activada</th>
+                            {rol === "superadmin" && (
+                            <th className="px-4 py-3">Acciones</th>
+                            )}
+                        </tr>
                     </thead>
 
                     <tbody>
-                      {subscriptionsFiltradas.map((s) => (
-                        <tr key={s.id} className="border-t text-sm">
-                          <td className="px-4 py-3">{s.clientes?.nombre || "-"}</td>
-                          <td className="px-4 py-3">{s.subscription_templates?.name || "-"}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                s.status === "active"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-neutral-100 text-neutral-700"
-                              }`}
-                            >
-                              {s.status === "active" ? "Activa" : s.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-neutral-600">
-                            {s.start_date
-                              ? new Date(s.start_date).toLocaleDateString("es-CL")
-                              : "-"}
-                          </td>
-                          <td className="px-4 py-3 text-neutral-600">
-                            {s.end_date
-                              ? new Date(s.end_date).toLocaleDateString("es-CL")
-                              : "-"}
-                          </td>
-                          <td className="px-4 py-3 text-neutral-600">
-                            {s.next_cycle_date
-                              ? new Date(s.next_cycle_date).toLocaleDateString("es-CL")
-                              : "-"}
-                          </td>
-                          <td className="px-4 py-3 text-neutral-500">
-                            {s.activated_at
-                              ? new Date(s.activated_at).toLocaleString("es-CL")
-                              : s.created_at
-                              ? new Date(s.created_at).toLocaleString("es-CL")
-                              : "-"}
-                          </td>
-                        </tr>
-                      ))}
+                        {subscriptionsFiltradas.map((s) => (
+                            <tr key={s.id} className="border-t text-sm">
+                            <td className="px-4 py-3">{s.clientes?.nombre || "-"}</td>
+                            <td className="px-4 py-3">{s.subscription_templates?.name || "-"}</td>
+                            <td className="px-4 py-3">
+                                <span
+                                className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                    s.status === "active"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-neutral-100 text-neutral-700"
+                                }`}
+                                >
+                                {s.status === "active" ? "Activa" : s.status}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3 text-neutral-600">
+                                {s.start_date
+                                ? new Date(s.start_date).toLocaleDateString("es-CL")
+                                : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-neutral-600">
+                                {s.end_date
+                                ? new Date(s.end_date).toLocaleDateString("es-CL")
+                                : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-neutral-600">
+                                {s.next_cycle_date
+                                ? new Date(s.next_cycle_date).toLocaleDateString("es-CL")
+                                : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-neutral-500">
+                                {s.activated_at
+                                ? new Date(s.activated_at).toLocaleString("es-CL")
+                                : s.created_at
+                                ? new Date(s.created_at).toLocaleString("es-CL")
+                                : "-"}
+                            </td>
+
+                            {rol === "superadmin" && (
+                                <td className="px-4 py-3">
+                                <button
+                                    type="button"
+                                    onClick={() => eliminarSuscripcion(s.id)}
+                                    className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                                >
+                                    Eliminar
+                                </button>
+                                </td>
+                            )}
+                            </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -1013,17 +1029,7 @@ export default function SuscripcionesPage() {
               </div>
             </div>
           )}
-        </section>
-
-        {rol === "superadmin" && (
-            <button
-                type="button"
-                onClick={() => eliminarSuscripcion(item.id)}
-                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-            >
-                Eliminar
-            </button>
-        )}
+        </section>    
 
         {mensaje && (
           <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
