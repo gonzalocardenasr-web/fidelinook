@@ -307,11 +307,6 @@ function DataTable({
   );
 }
 
-useEffect(() => {
-    cargarDashboard();
-    cargarSesion();
-  }, []);
-
 export default function DashboardPage() {
   const router = useRouter();
   
@@ -321,30 +316,6 @@ export default function DashboardPage() {
 
   const [cargandoRol, setCargandoRol] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
-
-  async function cargarDashboard() {
-    try {
-      setCargando(true);
-      setMensaje("");
-
-      const res = await fetch("/api/dashboard/overview");
-      const json = await res.json();
-
-      if (!res.ok) {
-        setMensaje(json?.message || "No se pudo cargar el dashboard.");
-        setData(null);
-        return;
-      }
-
-      setData(json);
-    } catch (error) {
-      console.error("Error cargando dashboard:", error);
-      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
-      setData(null);
-    } finally {
-      setCargando(false);
-    }
-  }
 
   const clientesPorMesRows =
     data?.clientesPorMes.map((item) => ({
@@ -387,27 +358,57 @@ export default function DashboardPage() {
 
   const cargarSesion = async () => {
     try {
-      setCargandoRol(true);
+        setCargandoRol(true);
 
-      const res = await fetch("/api/session", {
+        const res = await fetch("/api/session", {
         method: "GET",
-      });
-
-      if (!res.ok) {
-        setRol(null);
-        return;
-      }
-
-      const data = await res.json();
-        console.log("SESSION DASHBOARD:", data);
+        });
 
         if (!res.ok) {
         setRol(null);
         return;
         }
 
-        setRol(data?.rol ?? null);
+        const data = await res.json();
+        console.log("SESSION DASHBOARD:", data);
 
+        setRol(data?.role ?? null);
+    } catch (error) {
+        console.error("Error cargando sesión:", error);
+        setRol(null);
+    } finally {
+        setCargandoRol(false);
+    }
+    };
+
+    async function cargarDashboard() {
+    try {
+      setCargando(true);
+      setMensaje("");
+
+      const res = await fetch("/api/dashboard/overview");
+      const json = await res.json();
+
+      if (!res.ok) {
+        setMensaje(json?.message || "No se pudo cargar el dashboard.");
+        setData(null);
+        return;
+      }
+
+      setData(json);
+    } catch (error) {
+      console.error("Error cargando dashboard:", error);
+      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
+      setData(null);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+    useEffect(() => {
+    cargarDashboard();
+    cargarSesion();
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
