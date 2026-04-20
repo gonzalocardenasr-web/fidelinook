@@ -313,6 +313,8 @@ useEffect(() => {
   }, []);
 
 export default function DashboardPage() {
+  const router = useRouter();
+  
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState("");
@@ -406,7 +408,6 @@ export default function DashboardPage() {
 
         setRol(data?.rol ?? null);
 
-    const router = useRouter();
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
