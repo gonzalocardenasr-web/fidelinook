@@ -348,7 +348,7 @@ export default function SuscripcionesPage() {
             <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
 
             <p className="text-sm opacity-90">
-              Gestiona asignaciones, códigos y suscripciones activas del programa.
+              Gestiona asignaciones, códigos y suscripciones activas del programa
             </p>
 
             <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
