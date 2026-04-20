@@ -63,8 +63,8 @@ export default function SuscripcionesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    cargarDatos();
     cargarSesion();
+    cargarDatos();    
   }, []);
 
   const cargarDatos = async () => {
@@ -322,6 +322,42 @@ export default function SuscripcionesPage() {
       setEliminandoAsignacionId(null);
     }
   };
+
+  const eliminarSuscripcion = async (subscriptionId: number) => {
+    const confirmado = window.confirm(
+        "¿Seguro que quieres eliminar esta suscripción? Esta acción no se puede deshacer."
+    );
+
+    if (!confirmado) return;
+
+    try {
+        const res = await fetch("/api/subscriptions/delete", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subscriptionId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+        alert(data?.message || "No se pudo eliminar la suscripción.");
+        return;
+        }
+
+        alert("Suscripción eliminada correctamente.");
+
+        // aquí llama tus recargas actuales
+        // por ejemplo:
+        // await cargarSuscripcionesActivas();
+        // await cargarAsignacionesRecientes();
+        // o la función general que ya uses
+    } catch (error) {
+        console.error("Error eliminando suscripción:", error);
+        alert("Ocurrió un error inesperado al eliminar la suscripción.");
+    }
+    };
 
   const cerrarSesion = async () => {
   try {
@@ -978,6 +1014,16 @@ export default function SuscripcionesPage() {
             </div>
           )}
         </section>
+
+        {rol === "superadmin" && (
+            <button
+                type="button"
+                onClick={() => eliminarSuscripcion(item.id)}
+                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+            >
+                Eliminar
+            </button>
+        )}
 
         {mensaje && (
           <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
