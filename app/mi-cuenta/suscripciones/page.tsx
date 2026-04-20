@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { supabase } from "../../../lib/supabase";
 
 type TemplateInfo = {
@@ -12,6 +12,10 @@ type TemplateInfo = {
   toppings_per_month: number | null;
   wafer_packs_per_month: number | null;
   cookie_packs_per_month: number | null;
+  pots_per_cycle: number | null;
+  toppings_per_cycle: number | null;
+  wafer_packs_per_cycle: number | null;
+  cookie_packs_per_cycle: number | null;
   duration_months: number | null;
 };
 
@@ -35,12 +39,56 @@ type SubscriptionRaw = {
   template_id: number | null;
 };
 
+type SubscriptionConsumptionRaw = {
+  id: number;
+  subscription_id: number;
+  cycle_number: number;
+  cycle_start_date: string | null;
+  cycle_end_date: string | null;
+  potes: number | null;
+  toppings: number | null;
+  barquillos: number | null;
+  galletas: number | null;
+  created_at: string | null;
+};
+
 type PendingClaim = PendingClaimRaw & {
   template: TemplateInfo | null;
 };
 
 type Subscription = SubscriptionRaw & {
   template: TemplateInfo | null;
+};
+
+type SubscriptionCardData = {
+  id: number;
+  name: string;
+  billingPeriodLabel: string;
+  startDate: string | null;
+  endDate: string | null;
+  nextCycleDate: string | null;
+  currentCycleNumber: number;
+  currentCycleStart: string | null;
+  currentCycleEnd: string | null;
+  included: {
+    potes: number;
+    toppings: number;
+    barquillos: number;
+    galletas: number;
+  };
+  consumed: {
+    potes: number;
+    toppings: number;
+    barquillos: number;
+    galletas: number;
+  };
+  available: {
+    potes: number;
+    toppings: number;
+    barquillos: number;
+    galletas: number;
+  };
+  isActive: boolean;
 };
 
 function formatearFecha(fecha?: string | null) {
@@ -96,84 +144,208 @@ function leerClienteSesionDesdeStorage(): { id: number } | null {
   return null;
 }
 
-function BloqueDetalleSuscripcion({
+function toDate(fecha?: string | null) {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toIsoDate(fecha: Date | null) {
+  if (!fecha) return null;
+  const year = fecha.getFullYear();
+  const month = String(fecha.getMonth() + 1).padStart(2, "0");
+  const day = String(fecha.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addMonths(date: Date, months: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function clampNonNegative(value: number) {
+  return Math.max(0, value);
+}
+
+function calcularCicloActual(
+  subscription: Subscription,
+  consumptions: SubscriptionConsumptionRaw[],
+  today: Date
+) {
+  const consumoDelCicloActual = consumptions.find((item) => {
+    const start = toDate(item.cycle_start_date);
+    const end = toDate(item.cycle_end_date);
+
+    if (!start || !end) return false;
+
+    const todayNoTime = new Date(today);
+    todayNoTime.setHours(0, 0, 0, 0);
+
+    const startNoTime = new Date(start);
+    startNoTime.setHours(0, 0, 0, 0);
+
+    const endNoTime = new Date(end);
+    endNoTime.setHours(0, 0, 0, 0);
+
+    return todayNoTime >= startNoTime && todayNoTime <= endNoTime;
+  });
+
+  if (consumoDelCicloActual) {
+    return {
+      cycleNumber: consumoDelCicloActual.cycle_number || 1,
+      cycleStart: consumoDelCicloActual.cycle_start_date,
+      cycleEnd: consumoDelCicloActual.cycle_end_date,
+    };
+  }
+
+  const startDate = toDate(subscription.start_date);
+  if (!startDate) {
+    return {
+      cycleNumber: 1,
+      cycleStart: subscription.start_date,
+      cycleEnd: subscription.next_cycle_date
+        ? toIsoDate(addDays(toDate(subscription.next_cycle_date)!, -1))
+        : null,
+    };
+  }
+
+  const nextCycleDate = toDate(subscription.next_cycle_date);
+
+  if (nextCycleDate) {
+    let cycleStart = new Date(startDate);
+    let cycleNumber = 1;
+    let guard = 0;
+
+    while (guard < 120) {
+      const nextStart = addMonths(cycleStart, 1);
+
+      if (today < nextStart) {
+        return {
+          cycleNumber,
+          cycleStart: toIsoDate(cycleStart),
+          cycleEnd: toIsoDate(addDays(nextStart, -1)),
+        };
+      }
+
+      cycleStart = nextStart;
+      cycleNumber += 1;
+      guard += 1;
+    }
+  }
+
+  let cycleStart = new Date(startDate);
+  let cycleNumber = 1;
+  let guard = 0;
+
+  while (guard < 120) {
+    const nextStart = addMonths(cycleStart, 1);
+
+    if (today < nextStart) {
+      return {
+        cycleNumber,
+        cycleStart: toIsoDate(cycleStart),
+        cycleEnd: toIsoDate(addDays(nextStart, -1)),
+      };
+    }
+
+    cycleStart = nextStart;
+    cycleNumber += 1;
+    guard += 1;
+  }
+
+  return {
+    cycleNumber: 1,
+    cycleStart: subscription.start_date,
+    cycleEnd: subscription.next_cycle_date
+      ? toIsoDate(addDays(toDate(subscription.next_cycle_date)!, -1))
+      : null,
+  };
+}
+
+function TarjetaDisponibilidad({
+  label,
+  available,
+  consumed,
+  included,
+}: {
+  label: string;
+  available: number;
+  consumed: number;
+  included: number;
+}) {
+  return (
+    <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#7A58A6]">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-bold text-[#111111]">{available}</p>
+      <p className="mt-1 text-sm text-neutral-600">
+        Disponible
+      </p>
+      <p className="mt-2 text-xs text-neutral-500">
+        Consumido: {consumed} · Incluye: {included}
+      </p>
+    </div>
+  );
+}
+
+function TarjetaSuscripcionCompacta({
   subscription,
 }: {
-  subscription: { template: TemplateInfo | null; start_date: string | null; end_date: string | null; next_cycle_date: string | null };
+  subscription: SubscriptionCardData;
 }) {
   return (
     <div className="rounded-[24px] border border-[#E7C8F2] bg-white p-5">
-      <p className="text-xl font-bold text-[#4C00F7]">
-        {subscription.template?.name || "Suscripción"}
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xl font-bold text-[#4C00F7]">{subscription.name}</p>
+
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="inline-flex rounded-full border border-[#D9B1F0] bg-[#FCF8FF] px-3 py-1 text-xs font-semibold text-[#4C00F7]">
+              {subscription.billingPeriodLabel}
+            </span>
+
+            {subscription.isActive && (
+              <span className="inline-flex rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                Vigente
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-neutral-700">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
+            Ciclo actual
+          </p>
+          <p className="mt-1 font-semibold text-[#111111]">
+            {subscription.currentCycleNumber}
+          </p>
+        </div>
+      </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-            Periodicidad
+            Vigencia
           </p>
-          <p className="mt-2 text-base font-semibold text-[#111111]">
-            {formatearPeriodicidad(subscription.template?.billing_period)}
-          </p>
-        </div>
-
-        <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-            Potes por mes
-          </p>
-          <p className="mt-2 text-base font-semibold text-[#111111]">
-            {subscription.template?.pots_per_month ?? 0}
-          </p>
-        </div>
-
-        {(subscription.template?.toppings_per_month ?? 0) > 0 && (
-          <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-              Toppings por mes
-            </p>
-            <p className="mt-2 text-base font-semibold text-[#111111]">
-              {subscription.template?.toppings_per_month ?? 0}
-            </p>
-          </div>
-        )}
-
-        {(subscription.template?.wafer_packs_per_month ?? 0) > 0 && (
-          <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-              Pack barquillos
-            </p>
-            <p className="mt-2 text-base font-semibold text-[#111111]">
-              {subscription.template?.wafer_packs_per_month ?? 0}
-            </p>
-          </div>
-        )}
-
-        {(subscription.template?.cookie_packs_per_month ?? 0) > 0 && (
-          <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-              Pack galletas
-            </p>
-            <p className="mt-2 text-base font-semibold text-[#111111]">
-              {subscription.template?.cookie_packs_per_month ?? 0}
-            </p>
-          </div>
-        )}
-
-        <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-            Inicio
-          </p>
-          <p className="mt-2 text-base font-semibold text-[#111111]">
-            {formatearFecha(subscription.start_date)}
+          <p className="mt-2 text-sm font-semibold text-[#111111]">
+            {formatearFecha(subscription.startDate)} al {formatearFecha(subscription.endDate)}
           </p>
         </div>
 
         <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-            Término
+            Período del ciclo
           </p>
-          <p className="mt-2 text-base font-semibold text-[#111111]">
-            {formatearFecha(subscription.end_date)}
+          <p className="mt-2 text-sm font-semibold text-[#111111]">
+            {formatearFecha(subscription.currentCycleStart)} al {formatearFecha(subscription.currentCycleEnd)}
           </p>
         </div>
 
@@ -181,9 +353,49 @@ function BloqueDetalleSuscripcion({
           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
             Próximo ciclo
           </p>
-          <p className="mt-2 text-base font-semibold text-[#111111]">
-            {formatearFecha(subscription.next_cycle_date)}
+          <p className="mt-2 text-sm font-semibold text-[#111111]">
+            {formatearFecha(subscription.nextCycleDate)}
           </p>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <p className="text-sm font-semibold text-[#4C00F7]">Disponible este ciclo</p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <TarjetaDisponibilidad
+            label="Potes"
+            available={subscription.available.potes}
+            consumed={subscription.consumed.potes}
+            included={subscription.included.potes}
+          />
+
+          {subscription.included.toppings > 0 && (
+            <TarjetaDisponibilidad
+              label="Toppings"
+              available={subscription.available.toppings}
+              consumed={subscription.consumed.toppings}
+              included={subscription.included.toppings}
+            />
+          )}
+
+          {subscription.included.barquillos > 0 && (
+            <TarjetaDisponibilidad
+              label="Barquillos"
+              available={subscription.available.barquillos}
+              consumed={subscription.consumed.barquillos}
+              included={subscription.included.barquillos}
+            />
+          )}
+
+          {subscription.included.galletas > 0 && (
+            <TarjetaDisponibilidad
+              label="Galletas"
+              available={subscription.available.galletas}
+              consumed={subscription.consumed.galletas}
+              included={subscription.included.galletas}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -196,6 +408,7 @@ export default function MisSuscripcionesPage() {
 
   const [pendingClaims, setPendingClaims] = useState<PendingClaim[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [consumptions, setConsumptions] = useState<SubscriptionConsumptionRaw[]>([]);
 
   const [codigo, setCodigo] = useState("");
   const [mensajeCodigo, setMensajeCodigo] = useState("");
@@ -259,6 +472,14 @@ export default function MisSuscripcionesPage() {
 
       if (subscriptionsError) throw new Error(subscriptionsError.message);
 
+      const { data: consumptionsRaw, error: consumptionsError } = await supabase
+        .from("subscription_consumptions")
+        .select("id, subscription_id, cycle_number, cycle_start_date, cycle_end_date, potes, toppings, barquillos, galletas, created_at")
+        .eq("cliente_id", clienteId)
+        .order("created_at", { ascending: false });
+
+      if (consumptionsError) throw new Error(consumptionsError.message);
+
       const templateIds = Array.from(
         new Set(
           [
@@ -274,7 +495,7 @@ export default function MisSuscripcionesPage() {
         const { data: templatesData, error: templatesError } = await supabase
           .from("subscription_templates")
           .select(
-            "id, name, billing_period, pots_per_month, toppings_per_month, wafer_packs_per_month, cookie_packs_per_month, duration_months"
+            "id, name, billing_period, pots_per_month, toppings_per_month, wafer_packs_per_month, cookie_packs_per_month, pots_per_cycle, toppings_per_cycle, wafer_packs_per_cycle, cookie_packs_per_cycle, duration_months"
           )
           .in("id", templateIds);
 
@@ -303,6 +524,7 @@ export default function MisSuscripcionesPage() {
 
       setPendingClaims(claimsEnriquecidos);
       setSubscriptions(subscriptionsEnriquecidas);
+      setConsumptions((consumptionsRaw || []) as SubscriptionConsumptionRaw[]);
     } catch (err) {
       console.error("Error cargando suscripciones:", err);
 
@@ -312,6 +534,7 @@ export default function MisSuscripcionesPage() {
       setError(detalle);
       setPendingClaims([]);
       setSubscriptions([]);
+      setConsumptions([]);
     } finally {
       setLoading(false);
     }
@@ -350,6 +573,119 @@ export default function MisSuscripcionesPage() {
       return endDate < hoy;
     });
   }, [subscriptions, hoy]);
+
+  const consumptionsBySubscription = useMemo(() => {
+    return consumptions.reduce<Record<number, SubscriptionConsumptionRaw[]>>((acc, item) => {
+      if (!acc[item.subscription_id]) {
+        acc[item.subscription_id] = [];
+      }
+
+      acc[item.subscription_id].push(item);
+      return acc;
+    }, {});
+  }, [consumptions]);
+
+  const tarjetasVigentes = useMemo<SubscriptionCardData[]>(() => {
+    return suscripcionesVigentes.map((subscription) => {
+      const template = subscription.template;
+      const subscriptionConsumptions = consumptionsBySubscription[subscription.id] || [];
+      const currentCycle = calcularCicloActual(subscription, subscriptionConsumptions, hoy);
+
+      const cycleConsumptions = subscriptionConsumptions.filter((item) => {
+        if (
+          currentCycle.cycleStart &&
+          currentCycle.cycleEnd &&
+          item.cycle_start_date === currentCycle.cycleStart &&
+          item.cycle_end_date === currentCycle.cycleEnd
+        ) {
+          return true;
+        }
+
+        return item.cycle_number === currentCycle.cycleNumber;
+      });
+
+      const consumed = cycleConsumptions.reduce(
+        (acc, item) => {
+          acc.potes += item.potes || 0;
+          acc.toppings += item.toppings || 0;
+          acc.barquillos += item.barquillos || 0;
+          acc.galletas += item.galletas || 0;
+          return acc;
+        },
+        {
+          potes: 0,
+          toppings: 0,
+          barquillos: 0,
+          galletas: 0,
+        }
+      );
+
+      const included = {
+        potes: template?.pots_per_cycle ?? template?.pots_per_month ?? 0,
+        toppings: template?.toppings_per_cycle ?? template?.toppings_per_month ?? 0,
+        barquillos: template?.wafer_packs_per_cycle ?? template?.wafer_packs_per_month ?? 0,
+        galletas: template?.cookie_packs_per_cycle ?? template?.cookie_packs_per_month ?? 0,
+      };
+
+      return {
+        id: subscription.id,
+        name: template?.name || "Suscripción",
+        billingPeriodLabel: formatearPeriodicidad(template?.billing_period),
+        startDate: subscription.start_date,
+        endDate: subscription.end_date,
+        nextCycleDate: subscription.next_cycle_date,
+        currentCycleNumber: currentCycle.cycleNumber,
+        currentCycleStart: currentCycle.cycleStart,
+        currentCycleEnd: currentCycle.cycleEnd,
+        included,
+        consumed,
+        available: {
+          potes: clampNonNegative(included.potes - consumed.potes),
+          toppings: clampNonNegative(included.toppings - consumed.toppings),
+          barquillos: clampNonNegative(included.barquillos - consumed.barquillos),
+          galletas: clampNonNegative(included.galletas - consumed.galletas),
+        },
+        isActive: true,
+      };
+    });
+  }, [suscripcionesVigentes, consumptionsBySubscription, hoy]);
+
+  const tarjetasHistorial = useMemo<SubscriptionCardData[]>(() => {
+    return historialSuscripciones.map((subscription) => {
+      const template = subscription.template;
+
+      return {
+        id: subscription.id,
+        name: template?.name || "Suscripción",
+        billingPeriodLabel: formatearPeriodicidad(template?.billing_period),
+        startDate: subscription.start_date,
+        endDate: subscription.end_date,
+        nextCycleDate: subscription.next_cycle_date,
+        currentCycleNumber: 0,
+        currentCycleStart: null,
+        currentCycleEnd: null,
+        included: {
+          potes: template?.pots_per_cycle ?? template?.pots_per_month ?? 0,
+          toppings: template?.toppings_per_cycle ?? template?.toppings_per_month ?? 0,
+          barquillos: template?.wafer_packs_per_cycle ?? template?.wafer_packs_per_month ?? 0,
+          galletas: template?.cookie_packs_per_cycle ?? template?.cookie_packs_per_month ?? 0,
+        },
+        consumed: {
+          potes: 0,
+          toppings: 0,
+          barquillos: 0,
+          galletas: 0,
+        },
+        available: {
+          potes: 0,
+          toppings: 0,
+          barquillos: 0,
+          galletas: 0,
+        },
+        isActive: false,
+      };
+    });
+  }, [historialSuscripciones]);
 
   const handleActivarAsignada = async (claimId: number) => {
     try {
@@ -390,7 +726,7 @@ export default function MisSuscripcionesPage() {
     }
   };
 
-  const handleCanjearCodigo = async (e: React.FormEvent) => {
+  const handleCanjearCodigo = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!codigo.trim()) {
@@ -503,15 +839,14 @@ export default function MisSuscripcionesPage() {
 
           <div className="px-8 pt-6">
             <Link
-                href="/mi-cuenta"
-                className="inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
+              href="/mi-cuenta"
+              className="inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
             >
-                ← Mi cuenta
+              ← Mi cuenta
             </Link>
           </div>
 
           <div className="space-y-8 px-8 py-8">
-            
             <div className="space-y-3">
               <h2 className="text-2xl font-bold text-[#4C00F7]">Canjear código</h2>
               <p className="text-base leading-7 text-neutral-700">
@@ -572,42 +907,56 @@ export default function MisSuscripcionesPage() {
 
                         <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                            Potes por mes
+                            Potes por ciclo
                           </p>
                           <p className="mt-2 text-base font-semibold text-[#111111]">
-                            {claim.template?.pots_per_month ?? 0}
+                            {claim.template?.pots_per_cycle ??
+                              claim.template?.pots_per_month ??
+                              0}
                           </p>
                         </div>
 
-                        {(claim.template?.toppings_per_month ?? 0) > 0 && (
+                        {(claim.template?.toppings_per_cycle ??
+                          claim.template?.toppings_per_month ??
+                          0) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Toppings por mes
+                              Toppings por ciclo
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.toppings_per_month ?? 0}
+                              {claim.template?.toppings_per_cycle ??
+                                claim.template?.toppings_per_month ??
+                                0}
                             </p>
                           </div>
                         )}
 
-                        {(claim.template?.wafer_packs_per_month ?? 0) > 0 && (
+                        {(claim.template?.wafer_packs_per_cycle ??
+                          claim.template?.wafer_packs_per_month ??
+                          0) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Pack barquillos
+                              Pack barquillos por ciclo
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.wafer_packs_per_month ?? 0}
+                              {claim.template?.wafer_packs_per_cycle ??
+                                claim.template?.wafer_packs_per_month ??
+                                0}
                             </p>
                           </div>
                         )}
 
-                        {(claim.template?.cookie_packs_per_month ?? 0) > 0 && (
+                        {(claim.template?.cookie_packs_per_cycle ??
+                          claim.template?.cookie_packs_per_month ??
+                          0) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Pack galletas
+                              Pack galletas por ciclo
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.cookie_packs_per_month ?? 0}
+                              {claim.template?.cookie_packs_per_cycle ??
+                                claim.template?.cookie_packs_per_month ??
+                                0}
                             </p>
                           </div>
                         )}
@@ -630,23 +979,23 @@ export default function MisSuscripcionesPage() {
             <div className="space-y-3">
               <h2 className="text-2xl font-bold text-[#4C00F7]">Ver mis suscripciones</h2>
               <p className="text-base leading-7 text-neutral-700">
-                Aquí verás solo tus suscripciones vigentes. El historial queda disponible más abajo.
+                Aquí verás tus suscripciones vigentes y lo que tienes disponible en el ciclo actual.
               </p>
 
               <div className="space-y-4">
-                {suscripcionesVigentes.length === 0 ? (
+                {tarjetasVigentes.length === 0 ? (
                   <div className="rounded-[24px] border border-[#E7C8F2] bg-[#FCF8FF] p-5">
                     <p className="text-lg font-semibold text-[#4C00F7]">
                       Aún no tienes suscripciones vigentes
                     </p>
                     <p className="mt-3 text-sm leading-6 text-neutral-700">
                       Cuando actives una suscripción vigente, aquí podrás revisar su detalle,
-                      la fecha de renovación del ciclo y tus beneficios mensuales.
+                      el ciclo actual y lo que tienes disponible.
                     </p>
                   </div>
                 ) : (
-                  suscripcionesVigentes.map((subscription) => (
-                    <BloqueDetalleSuscripcion
+                  tarjetasVigentes.map((subscription) => (
+                    <TarjetaSuscripcionCompacta
                       key={subscription.id}
                       subscription={subscription}
                     />
@@ -678,7 +1027,7 @@ export default function MisSuscripcionesPage() {
               {mostrarHistorial && (
                 <div className="border-t border-[#E7C8F2] px-6 py-6">
                   <div className="space-y-4">
-                    {historialSuscripciones.length === 0 ? (
+                    {tarjetasHistorial.length === 0 ? (
                       <div className="rounded-[24px] border border-[#E7C8F2] bg-white p-5">
                         <p className="text-lg font-semibold text-[#4C00F7]">
                           No tienes historial de suscripciones
@@ -688,11 +1037,49 @@ export default function MisSuscripcionesPage() {
                         </p>
                       </div>
                     ) : (
-                      historialSuscripciones.map((subscription) => (
-                        <BloqueDetalleSuscripcion
+                      tarjetasHistorial.map((subscription) => (
+                        <div
                           key={subscription.id}
-                          subscription={subscription}
-                        />
+                          className="rounded-[24px] border border-[#E7C8F2] bg-white p-5"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-xl font-bold text-[#4C00F7]">
+                                {subscription.name}
+                              </p>
+
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="inline-flex rounded-full border border-[#D9B1F0] bg-[#FCF8FF] px-3 py-1 text-xs font-semibold text-[#4C00F7]">
+                                  {subscription.billingPeriodLabel}
+                                </span>
+
+                                <span className="inline-flex rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-semibold text-neutral-600">
+                                  Histórica
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
+                              <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
+                                Vigencia
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-[#111111]">
+                                {formatearFecha(subscription.startDate)} al {formatearFecha(subscription.endDate)}
+                              </p>
+                            </div>
+
+                            <div className="rounded-[18px] border border-[#E7C8F2] bg-[#FCF8FF] p-4">
+                              <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
+                                Próximo ciclo registrado
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-[#111111]">
+                                {formatearFecha(subscription.nextCycleDate)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       ))
                     )}
                   </div>
