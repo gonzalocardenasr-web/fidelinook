@@ -32,7 +32,7 @@ function VerificarContenido() {
         setMensaje("Tu tarjeta ya está activa. Redirigiendo...");
 
         setTimeout(() => {
-          router.push(`/t/${data.public_token}`);
+          router.push(`/activar-cuenta?token=${token}`);
         }, 1500);
       } catch (error) {
         console.error("Error verificando correo:", error);

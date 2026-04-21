@@ -98,6 +98,26 @@ export default function LoginForm() {
               >
                 {loading ? "Ingresando..." : "Ingresar"}
               </button>
+
+              <div className="mt-4 text-sm text-center space-y-2">
+                <button
+                  type="button"
+                  onClick={() => alert("Flujo recuperar contraseña próximamente")}
+                  className="text-[#4c00f7] underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+
+                <p>
+                  ¿No tienes cuenta?{" "}
+                  <span
+                    onClick={() => router.push("/register")}
+                    className="text-[#4c00f7] font-semibold cursor-pointer"
+                  >
+                    Crear cuenta
+                  </span>
+                </p>
+              </div>
             </form>
           </div>
         </div>
