@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { supabase } from "../../../lib/supabase";
+import ClienteLogoutButton from "../components/ClienteLogoutButton";
 
 type TemplateInfo = {
   id: number;
