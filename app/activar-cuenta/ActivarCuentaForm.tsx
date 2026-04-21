@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
@@ -10,11 +10,92 @@ export default function ActivarCuentaForm() {
 
   const token = searchParams.get("token") || "";
   const next = searchParams.get("next") || "/mi-cuenta";
+  const correoDesdeUrl = searchParams.get("correo") || "";
 
-  const [correo, setCorreo] = useState("");
+  const [correo, setCorreo] = useState(correoDesdeUrl);
   const [password, setPassword] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+
+  const intentoAutomaticoRef = useRef(false);
+
+  const activarCuenta = async (email: string, pass: string) => {
+    const res = await fetch("/api/activar-cuenta", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        token,
+        correo: email,
+        password: pass,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "No se pudo activar la cuenta.");
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
+
+    if (error) {
+      throw new Error("La cuenta se activó, pero no se pudo iniciar sesión automáticamente.");
+    }
+
+    sessionStorage.removeItem("pendingRegisterEmail");
+    sessionStorage.removeItem("pendingRegisterPassword");
+
+    router.replace(next);
+  };
+
+  useEffect(() => {
+    const emailGuardado = sessionStorage.getItem("pendingRegisterEmail") || "";
+    const passwordGuardada = sessionStorage.getItem("pendingRegisterPassword") || "";
+
+    if (!correoDesdeUrl && emailGuardado) {
+      setCorreo(emailGuardado);
+    }
+
+    if (!token || intentoAutomaticoRef.current) return;
+    if (!emailGuardado || !passwordGuardada) return;
+
+    const mismoCorreo =
+      !correoDesdeUrl ||
+      correoDesdeUrl.trim().toLowerCase() === emailGuardado.trim().toLowerCase();
+
+    if (!mismoCorreo) return;
+
+    intentoAutomaticoRef.current = true;
+
+    const ejecutar = async () => {
+      try {
+        setLoading(true);
+        setMensaje("Activando tu cuenta...");
+
+        await activarCuenta(emailGuardado, passwordGuardada);
+      } catch (error) {
+        console.error("No se pudo activar automáticamente:", error);
+        setMensaje(
+          error instanceof Error
+            ? error.message
+            : "No se pudo activar automáticamente tu cuenta."
+        );
+        setCorreo(emailGuardado);
+        setPassword(passwordGuardada);
+        setConfirmacion(passwordGuardada);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void ejecutar();
+  }, [token, correoDesdeUrl, next, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,40 +110,21 @@ export default function ActivarCuentaForm() {
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
+      setMensaje("");
 
-    const res = await fetch("/api/activar-cuenta", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token,
-        correo,
-        password,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.message || "No se pudo activar la cuenta.");
+      await activarCuenta(correo, password);
+    } catch (error) {
+      console.error("Error activando cuenta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo activar la cuenta."
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: correo.trim(),
-      password,
-    });
-
-    if (error) {
-      alert("La cuenta se activó, pero no se pudo iniciar sesión automáticamente.");
-      router.replace(`/login?next=${encodeURIComponent(next)}`);
-      return;
-    }
-
-    router.replace(next);
   };
 
   return (
@@ -77,11 +139,17 @@ export default function ActivarCuentaForm() {
               Activa tu cuenta
             </h1>
             <p className="mt-2 text-sm text-white/85">
-              Crea tu contraseña para administrar tu cuenta y ver tus suscripciones.
+              Estamos terminando la activación de tu cuenta.
             </p>
           </div>
 
           <div className="px-6 py-7 md:px-8 md:py-8">
+            {mensaje && (
+              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+                {mensaje}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[#444]">

@@ -10,11 +10,25 @@ export default function RegisterPage() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmacion, setConfirmacion] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setLoading(true);
+
+    if (password.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres");
+        return;
+    }
+
+    if (password !== confirmacion) {
+        alert("Las contraseñas no coinciden");
+        return;
+    }
 
     const res = await fetch("/api/register", {
       method: "POST",
@@ -35,6 +49,9 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
+
+    sessionStorage.setItem("pendingRegisterEmail", correo.trim().toLowerCase());
+    sessionStorage.setItem("pendingRegisterPassword", password);
 
     alert("Revisa tu correo para verificar tu cuenta");
     router.push("/login");
