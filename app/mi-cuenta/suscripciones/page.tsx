@@ -814,10 +814,16 @@ export default function MisSuscripcionesPage() {
         <div className="mx-auto max-w-[760px]">
           <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
             <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
-              <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
-              <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
-                Mis suscripciones
-              </h1>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
+                  <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
+                    Mis suscripciones
+                  </h1>
+                </div>
+
+                <ClienteLogoutButton />
+              </div>
             </div>
 
             <div className="px-8 py-8">
