@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import ClienteLogoutButton from "../components/ClienteLogoutButton";
 
 type Cliente = {
   id: number;
@@ -127,10 +128,16 @@ export default function MiPerfilPage() {
       <div className="mx-auto max-w-xl space-y-5">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
           <div className="bg-[#4C00F7] px-6 py-6 text-white">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
-              Nook
-            </p>
-            <h1 className="text-3xl font-bold">Mi perfil</h1>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
+                  Nook
+                </p>
+                <h1 className="text-3xl font-bold">Mi perfil</h1>
+              </div>
+
+              <ClienteLogoutButton />
+            </div>
           </div>
 
           <div className="space-y-6 px-6 py-6">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import ClienteLogoutButton from "./components/ClienteLogoutButton";
 
 type Cliente = {
   id: number;
@@ -60,15 +61,21 @@ export default function MiCuentaPage() {
       <div className="mx-auto max-w-xl space-y-5">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
           <div className="bg-[#4C00F7] px-6 py-6 text-white">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
-              Nook
-            </p>
-            <h1 className="mt-2 text-3xl font-bold leading-tight">
-              Hola{cliente?.nombre ? `, ${cliente.nombre}` : ""}
-            </h1>
-            <p className="mt-2 text-sm text-white/85">
-              Desde aquí puedes administrar tu perfil, revisar tu tarjeta y gestionar tus suscripciones.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
+                  Nook
+                </p>
+                <h1 className="mt-2 text-3xl font-bold leading-tight">
+                  Hola{cliente?.nombre ? `, ${cliente.nombre}` : ""}
+                </h1>
+                <p className="mt-2 text-sm text-white/85">
+                  Desde aquí puedes administrar tu perfil, revisar tu tarjeta y gestionar tus suscripciones.
+                </p>
+              </div>
+
+              <ClienteLogoutButton />
+            </div>
           </div>
 
           <div className="space-y-6 px-6 py-6">
