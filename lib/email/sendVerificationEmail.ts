@@ -9,7 +9,7 @@ export async function sendVerificationEmail(
   nombre: string,
   token: string
 ) {
-  const verifyUrl = `https://fidelidad.nookheladeria.cl/verificar?token=${token}`;
+  const verifyUrl = `https://fidelidad.nookheladeria.cl/api/verify-email?token=${token}`;
 
   const html = baseTemplate({
     titulo: `Hola ${nombre}`,
