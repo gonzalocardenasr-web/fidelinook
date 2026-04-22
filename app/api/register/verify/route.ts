@@ -3,31 +3,30 @@ import { supabase } from "../../../../lib/supabase";
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get("token");
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+
+    console.log("TOKEN:", token);
 
     if (!token) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=token`
-      );
+      throw new Error("No token");
     }
 
-    const { data: cliente, error } = await supabase
+    const result = await supabase
       .from("clientes")
       .select("*")
       .eq("token_verificacion", token)
-      .maybeSingle();
+      .limit(1);
 
-    if (error || !cliente) {
-      console.error("Token inválido:", error);
+    console.log("QUERY RESULT:", result);
 
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=invalid`
-      );
+    const cliente = result.data?.[0];
+
+    if (!cliente) {
+      throw new Error("Cliente no encontrado");
     }
 
-    // ✅ actualizar cliente
-    const { error: updateError } = await supabase
+    const update = await supabase
       .from("clientes")
       .update({
         email_verificado: true,
@@ -35,28 +34,19 @@ export async function GET(req: Request) {
       })
       .eq("id", cliente.id);
 
-    if (updateError) {
-      console.error("Error update cliente:", updateError);
-
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=update`
-      );
-    }
+    console.log("UPDATE:", update);
 
     const response = NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL}/mi-cuenta`
     );
 
-    // login automático
     response.cookies.set("fidelinook_auth", "ok", { path: "/" });
     response.cookies.set("fidelinook_role", "cliente", { path: "/" });
 
     return response;
-  } catch (err) {
-    console.error("Error verify register:", err);
+  } catch (error) {
+    console.error("ERROR VERIFY REGISTER:", error);
 
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=server`
-    );
+    return new Response("Error interno", { status: 500 });
   }
 }
