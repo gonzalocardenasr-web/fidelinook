@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -9,68 +10,197 @@ export default function RegisterPage() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const nombreLimpio = nombre.trim();
+    const correoLimpio = correo.trim().toLowerCase();
+    const telefonoLimpio = telefono.trim();
+
+    if (!nombreLimpio || !correoLimpio || !telefonoLimpio || !password || !confirmacion) {
+      alert("Completa todos los campos");
+      return;
+    }
 
     setLoading(true);
 
     if (password.length < 6) {
-        alert("La contraseña debe tener al menos 6 caracteres");
-        return;
-    }
-
-    if (password !== confirmacion) {
-        alert("Las contraseñas no coinciden");
-        return;
-    }
-
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        nombre,
-        correo,
-        telefono,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Error al registrarse");
+      alert("La contraseña debe tener al menos 6 caracteres");
       setLoading(false);
       return;
     }
 
-    sessionStorage.setItem("pendingRegisterEmail", correo.trim().toLowerCase());
-    sessionStorage.setItem("pendingRegisterPassword", password);
+    if (password !== confirmacion) {
+      alert("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
 
-    alert("Revisa tu correo para verificar tu cuenta");
-    router.push("/login");
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: nombreLimpio,
+          correo: correoLimpio,
+          telefono: telefonoLimpio,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Error al registrarse");
+        setLoading(false);
+        return;
+      }
+
+      sessionStorage.setItem("pendingRegisterEmail", correoLimpio);
+      sessionStorage.setItem("pendingRegisterPassword", password);
+
+      setPassword("");
+      setConfirmacion("");
+
+      alert("Revisa tu correo para verificar tu cuenta");
+      router.push("/login");
+    } catch (error) {
+      console.error("Error registrando cuenta:", error);
+      alert("Ocurrió un error inesperado al crear la cuenta.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="min-h-screen bg-[#F4DCE8] px-6 py-10">
-      <div className="mx-auto max-w-md bg-white rounded-3xl p-8 shadow">
-        <h1 className="text-2xl font-bold mb-4">Crear cuenta</h1>
+    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto max-w-md">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 md:px-8">
+            <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+              Nook
+            </p>
+            <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+              Crear cuenta
+            </h1>
+            <p className="mt-2 text-sm text-white/85">
+              Regístrate para acceder a tu cuenta, ver tu tarjeta y gestionar tus suscripciones.
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border p-3 rounded-xl" />
-          <input placeholder="Correo" value={correo} onChange={e => setCorreo(e.target.value)} className="w-full border p-3 rounded-xl" />
-          <input placeholder="Teléfono" value={telefono} onChange={e => setTelefono(e.target.value)} className="w-full border p-3 rounded-xl" />
+          <div className="px-6 py-7 md:px-8 md:py-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Ingresa tu nombre"
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                />
+              </div>
 
-          <button className="w-full bg-[#4c00f7] text-white p-3 rounded-xl">
-            {loading ? "Creando..." : "Crear cuenta"}
-          </button>
-        </form>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Correo
+                </label>
+                <input
+                  type="email"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  placeholder="nombre@correo.com"
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Teléfono
+                </label>
+                <input
+                  type="text"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  placeholder="+56 9 1234 5678"
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Contraseña
+                </label>
+
+                <div className="relative">
+                  <input
+                    type={mostrarPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Crea tu contraseña"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 pr-16 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPassword(!mostrarPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#4C00F7]"
+                  >
+                    {mostrarPassword ? "Ocultar" : "Ver"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[#444]">
+                  Repetir contraseña
+                </label>
+
+                <div className="relative">
+                  <input
+                    type={mostrarConfirmacion ? "text" : "password"}
+                    value={confirmacion}
+                    onChange={(e) => setConfirmacion(e.target.value)}
+                    placeholder="Repite tu contraseña"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 pr-16 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setMostrarConfirmacion(!mostrarConfirmacion)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#4C00F7]"
+                  >
+                    {mostrarConfirmacion ? "Ocultar" : "Ver"}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Creando..." : "Crear cuenta"}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-sm text-[#555]">
+              ¿Ya tienes cuenta?{" "}
+              <Link href="/login" className="font-semibold text-[#4C00F7] underline">
+                Inicia sesión
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
