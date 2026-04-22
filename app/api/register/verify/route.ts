@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const { data: cliente, error: clienteError } = await supabase
       .from("clientes")
-      .select("id, correo, email_verificado, auth_user_id")
+      .select("id, correo, public_token")
       .eq("token_verificacion", token)
       .maybeSingle();
 
@@ -30,6 +30,8 @@ export async function GET(req: Request) {
       .from("clientes")
       .update({
         email_verificado: true,
+        tarjeta_activa: true,
+        fecha_activacion: new Date().toISOString(),
         token_verificacion: null,
       })
       .eq("id", cliente.id);
@@ -46,6 +48,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       correo: cliente.correo,
+      public_token: cliente.public_token,
     });
   } catch (error) {
     console.error("ERROR VERIFY REGISTER:", error);
