@@ -88,7 +88,7 @@ export default function MiCuentaPage() {
                 <div className="space-y-2">
                     <button
                     onClick={() => router.push("/mi-cuenta/perfil")}
-                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    className="cursor-pointer w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
                     >
                     Mi perfil
                     </button>
@@ -101,7 +101,7 @@ export default function MiCuentaPage() {
                 <div className="space-y-2">
                     <button
                     onClick={() => router.push("/mi-cuenta/tarjeta")}
-                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    className="cursor-pointer w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
                     >
                     Mi tarjeta
                     </button>
@@ -114,7 +114,7 @@ export default function MiCuentaPage() {
                 <div className="space-y-2">
                     <button
                     onClick={() => router.push("/mi-cuenta/suscripciones")}
-                    className="w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
+                    className="cursor-pointer w-full rounded-xl bg-white px-4 py-3 text-left font-semibold text-[#4C00F7] transition duration-200 hover:shadow-sm active:scale-[0.98]"
                     >
                     Mis suscripciones
                     </button>

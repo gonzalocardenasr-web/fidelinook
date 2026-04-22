@@ -1027,7 +1027,7 @@ export default function MisSuscripcionesPage() {
                         type="button"
                         onClick={() => handleActivarAsignada(claim.id)}
                         disabled={activandoId === claim.id}
-                        className="mt-5 rounded-[18px] bg-black px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:opacity-95 active:scale-[0.98] disabled:opacity-60"
+                        className="cursor-pointer mt-5 rounded-[18px] bg-black px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:opacity-95 active:scale-[0.98] disabled:opacity-60"
                       >
                         {activandoId === claim.id ? "Activando..." : "Activar suscripción"}
                       </button>
@@ -1069,7 +1069,7 @@ export default function MisSuscripcionesPage() {
               <button
                 type="button"
                 onClick={() => setMostrarHistorial(!mostrarHistorial)}
-                className="flex w-full items-center justify-between px-6 py-6 text-left transition duration-200 hover:bg-[#F9F1FD]"
+                className="cursor-pointer flex w-full items-center justify-between px-6 py-6 text-left transition duration-200 hover:bg-[#F9F1FD]"
               >
                 <div>
                   <h2 className="text-2xl font-bold text-[#4C00F7]">

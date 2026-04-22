@@ -103,7 +103,7 @@ export default function MiTarjetaPage() {
 
           <button
             onClick={() => router.push("/mi-cuenta")}
-            className="mt-6 rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+            className="cursor-pointer mt-6 rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
           >
             ← Mi cuenta
           </button>
@@ -133,7 +133,7 @@ export default function MiTarjetaPage() {
             <div>
               <button
                 onClick={() => router.push("/mi-cuenta")}
-                className="rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
+                className="cursor-pointer rounded-2xl border border-[#4C00F7] bg-white px-5 py-3 text-sm font-semibold text-[#4C00F7] transition hover:bg-[#4C00F7]/5"
               >
                 ← Mi cuenta
               </button>
