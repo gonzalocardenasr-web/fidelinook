@@ -15,9 +15,11 @@ export default function RegisterPage() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
 
     const nombreLimpio = nombre.trim();
     const correoLimpio = correo.trim().toLowerCase();
@@ -59,7 +61,14 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Error al registrarse");
+        if (data.code === "CLIENT_EXISTS_WITH_CARD") {
+          setError(
+            "Ya tienes una tarjeta Nook asociada a este correo. Para crear tu cuenta, debes acceder desde tu tarjeta."
+          );
+        } else {
+          setError(data.error || "Error al registrarse");
+        }
+
         setLoading(false);
         return;
       }
@@ -74,7 +83,7 @@ export default function RegisterPage() {
       router.push("/login");
     } catch (error) {
       console.error("Error registrando cuenta:", error);
-      alert("Ocurrió un error inesperado al crear la cuenta.");
+      setError("Ocurrió un error inesperado al crear la cuenta.");
     } finally {
       setLoading(false);
     }
@@ -97,6 +106,21 @@ export default function RegisterPage() {
           </div>
 
           <div className="px-6 py-7 md:px-8 md:py-8">
+            {error && (
+              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+                <p>{error}</p>
+
+                {error.includes("Ya tienes una tarjeta Nook asociada") && (
+                  <div className="mt-3">
+                    <p className="mb-2">Si ya tienes una tarjeta, debes crear tu cuenta desde ahí.</p>
+                    <Link href="/registro" className="font-semibold text-[#4C00F7] underline">
+                      Ir a mi tarjeta
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[#444]">
