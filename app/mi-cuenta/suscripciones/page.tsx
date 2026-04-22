@@ -383,7 +383,7 @@ function TarjetaSuscripcionCompacta({
 
           {subscription.included.barquillos > 0 && (
             <TarjetaDisponibilidad
-              label="Barquillos"
+              label="Pack Barquillos"
               available={subscription.available.barquillos}
               consumed={subscription.consumed.barquillos}
               included={subscription.included.barquillos}
@@ -392,7 +392,7 @@ function TarjetaSuscripcionCompacta({
 
           {subscription.included.galletas > 0 && (
             <TarjetaDisponibilidad
-              label="Galletas"
+              label="Pack Galletas"
               available={subscription.available.galletas}
               consumed={subscription.consumed.galletas}
               included={subscription.included.galletas}
@@ -994,7 +994,7 @@ export default function MisSuscripcionesPage() {
                         ) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Barquillos
+                              Pack Barquillos
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
                               {obtenerCantidadIncluida(
@@ -1011,7 +1011,7 @@ export default function MisSuscripcionesPage() {
                         ) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Galletas
+                              Pack Galletas
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
                               {obtenerCantidadIncluida(
