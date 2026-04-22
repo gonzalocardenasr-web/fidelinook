@@ -1,35 +1,47 @@
 import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
-import { sendVerificationEmail } from "../../../lib/email/sendVerificationEmail";
 import { sendRegisterVerificationEmail } from "../../../lib/email/sendRegisterVerificationEmail";
-
 
 export async function POST(req: Request) {
   try {
-    const { nombre, correo, telefono } = await req.json();
+    const { nombre, correo, telefono, password } = await req.json();
 
-    if (!nombre || !correo) {
+    if (!nombre || !correo || !password) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
     const email = correo.trim().toLowerCase();
 
-    // 🔍 Buscar cliente existente
-    const { data: clienteExistente } = await supabase
+    let cliente: any = null;
+
+    // Buscar cliente existente
+    const { data: clienteExistente, error: clienteExistenteError } = await supabase
       .from("clientes")
       .select("*")
       .eq("correo", email)
       .maybeSingle();
 
-    let cliente;
+    if (clienteExistenteError) {
+      return NextResponse.json(
+        { error: "Error buscando cliente existente" },
+        { status: 500 }
+      );
+    }
 
     if (clienteExistente) {
-      // ✅ REUTILIZAR cliente existente
       cliente = clienteExistente;
+
+      // Si ya tiene auth_user_id, no permitir crear otra cuenta
+      if (cliente.auth_user_id) {
+        return NextResponse.json(
+          { error: "Ya existe una cuenta creada con este correo. Inicia sesión." },
+          { status: 400 }
+        );
+      }
     } else {
-      // 🆕 Crear nuevo cliente
-      const { data: nuevoCliente, error } = await supabase
+      const { data: nuevoCliente, error: nuevoClienteError } = await supabase
         .from("clientes")
         .insert({
           nombre,
@@ -39,31 +51,59 @@ export async function POST(req: Request) {
         .select()
         .single();
 
-      if (error) {
-        return NextResponse.json({ error: "Error creando cliente" }, { status: 500 });
+      if (nuevoClienteError || !nuevoCliente) {
+        return NextResponse.json(
+          { error: "Error creando cliente" },
+          { status: 500 }
+        );
       }
 
       cliente = nuevoCliente;
     }
 
-    // 🔑 Generar token nuevo SIEMPRE
+    // Crear usuario en Supabase Auth
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+    if (authError || !authData.user) {
+      console.error("Error creando auth user:", authError);
+
+      return NextResponse.json(
+        { error: "No se pudo crear la cuenta de acceso." },
+        { status: 500 }
+      );
+    }
+
+    // Generar token de verificación para el flujo propio
     const token = generateVerificationToken();
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("clientes")
       .update({
+        auth_user_id: authData.user.id,
         token_verificacion: token,
         token_verificacion_creado_en: new Date().toISOString(),
       })
       .eq("id", cliente.id);
 
-    // 📧 Enviar correo
+    if (updateError) {
+      console.error("Error actualizando cliente:", updateError);
+
+      return NextResponse.json(
+        { error: "No se pudo vincular la cuenta al cliente." },
+        { status: 500 }
+      );
+    }
+
     await sendRegisterVerificationEmail(cliente.correo, cliente.nombre, token);
 
     return NextResponse.json({ ok: true });
-
   } catch (error) {
-    console.error(error);
+    console.error("Error en /api/register:", error);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
   }
 }
