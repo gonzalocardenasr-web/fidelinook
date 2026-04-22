@@ -49,9 +49,10 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          nombre: nombreLimpio,
-          correo: correoLimpio,
-          telefono: telefonoLimpio,
+            nombre: nombreLimpio,
+            correo: correoLimpio,
+            telefono: telefonoLimpio,
+            password,
         }),
       });
 
