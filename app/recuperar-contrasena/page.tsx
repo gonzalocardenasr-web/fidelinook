@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
 
 export default function RecuperarContrasenaPage() {
   const [correo, setCorreo] = useState("");
@@ -22,19 +21,29 @@ export default function RecuperarContrasenaPage() {
       setLoading(true);
       setMensaje("");
 
-      const { error } = await supabase.auth.resetPasswordForEmail(correoLimpio, {
-        redirectTo: "https://fidelidad.nookheladeria.cl/restablecer-contrasena",
-      });
+      const response = await fetch("/api/password/recovery", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            correo: correoLimpio,
+        }),
+        });
 
-      if (error) {
-        alert(error.message || "No se pudo enviar el correo.");
+        const data = await response.json();
+
+        if (!response.ok) {
+        alert(data.message || "No se pudo enviar el correo.");
         return;
-      }
+        }
 
-      setMensaje(
-        "Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada o spam."
-      );
+        setMensaje(
+        data.message ||
+            "Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada o spam."
+        );
       setCorreo("");
+
     } catch (error) {
       console.error("Error enviando recuperación:", error);
       alert("Ocurrió un error inesperado al enviar el correo.");
