@@ -919,7 +919,7 @@ export default function MisSuscripcionesPage() {
                 <button
                   type="submit"
                   disabled={canjeandoCodigo}
-                  className="w-full rounded-[20px] bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_24px_rgba(76,0,247,0.20)] transition duration-200 hover:opacity-95 active:scale-[0.98] disabled:opacity-60"
+                  className="cursor-pointer w-full rounded-[20px] bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_24px_rgba(76,0,247,0.20)] transition duration-200 hover:opacity-95 active:scale-[0.98] disabled:opacity-60"
                 >
                   {canjeandoCodigo ? "Canjeando..." : "Canjear código"}
                 </button>
