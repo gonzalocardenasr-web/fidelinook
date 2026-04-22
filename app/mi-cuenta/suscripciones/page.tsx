@@ -949,8 +949,8 @@ export default function MisSuscripcionesPage() {
                         {claim.template?.name || "Suscripción"}
                       </p>
 
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4 xl:col-span-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
                             Periodicidad
                           </p>
@@ -961,56 +961,63 @@ export default function MisSuscripcionesPage() {
 
                         <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                            Potes por ciclo
+                            Potes
                           </p>
                           <p className="mt-2 text-base font-semibold text-[#111111]">
-                            {claim.template?.pots_per_cycle ??
-                              claim.template?.pots_per_month ??
-                              0}
+                            {obtenerCantidadIncluida(
+                              claim.template?.pots_per_cycle,
+                              claim.template?.pots_per_month
+                            )}
                           </p>
                         </div>
 
-                        {(claim.template?.toppings_per_cycle ??
-                          claim.template?.toppings_per_month ??
-                          0) > 0 && (
+                        {obtenerCantidadIncluida(
+                          claim.template?.toppings_per_cycle,
+                          claim.template?.toppings_per_month
+                        ) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Toppings por ciclo
+                              Toppings
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.toppings_per_cycle ??
-                                claim.template?.toppings_per_month ??
-                                0}
+                              {obtenerCantidadIncluida(
+                                claim.template?.toppings_per_cycle,
+                                claim.template?.toppings_per_month
+                              )}
                             </p>
                           </div>
                         )}
 
-                        {(claim.template?.wafer_packs_per_cycle ??
-                          claim.template?.wafer_packs_per_month ??
-                          0) > 0 && (
+                        {obtenerCantidadIncluida(
+                          claim.template?.wafer_packs_per_cycle,
+                          claim.template?.wafer_packs_per_month
+                        ) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Pack barquillos por ciclo
+                              Barquillos
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.wafer_packs_per_cycle ??
-                                claim.template?.wafer_packs_per_month ??
-                                0}
+                              {obtenerCantidadIncluida(
+                                claim.template?.wafer_packs_per_cycle,
+                                claim.template?.wafer_packs_per_month
+                              )}
                             </p>
                           </div>
                         )}
 
-                        {(claim.template?.cookie_packs_per_cycle ??
-                          claim.template?.cookie_packs_per_month ??
-                          0) > 0 && (
+                        {obtenerCantidadIncluida(
+                          claim.template?.cookie_packs_per_cycle,
+                          claim.template?.cookie_packs_per_month
+                        ) > 0 && (
                           <div className="rounded-[18px] border border-[#E7C8F2] bg-white p-4">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#7A58A6]">
-                              Pack galletas por ciclo
+                              Galletas
                             </p>
                             <p className="mt-2 text-base font-semibold text-[#111111]">
-                              {claim.template?.cookie_packs_per_cycle ??
-                                claim.template?.cookie_packs_per_month ??
-                                0}
+                              {obtenerCantidadIncluida(
+                                claim.template?.cookie_packs_per_cycle,
+                                claim.template?.cookie_packs_per_month
+                              )}
                             </p>
                           </div>
                         )}
