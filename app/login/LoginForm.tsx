@@ -14,7 +14,22 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [mensaje, setMensaje] = useState("");
+
   useEffect(() => {
+    const verified = searchParams.get("verified");
+      const emailParam = searchParams.get("email");
+
+      if (verified === "1") {
+        setMensaje("Cuenta verificada correctamente. Ahora ingresa con tu correo y contraseña.");
+      }
+
+      if (emailParam) {
+        setCorreo(emailParam);
+    }
+    
+    
+    
     const checkSession = async () => {
       const {
         data: { session },
@@ -64,6 +79,13 @@ export default function LoginForm() {
           </div>
 
           <div className="px-6 py-7 md:px-8 md:py-8">
+            {mensaje && (
+              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+                {mensaje}
+              </div>
+            )}
+
+            
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[#444]">

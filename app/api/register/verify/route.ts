@@ -6,27 +6,27 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
 
-    console.log("TOKEN:", token);
-
     if (!token) {
-      throw new Error("No token");
+      return NextResponse.json(
+        { ok: false, message: "Token no encontrado." },
+        { status: 400 }
+      );
     }
 
-    const result = await supabase
+    const { data: cliente, error: clienteError } = await supabase
       .from("clientes")
-      .select("*")
+      .select("id, correo, email_verificado, auth_user_id")
       .eq("token_verificacion", token)
-      .limit(1);
+      .maybeSingle();
 
-    console.log("QUERY RESULT:", result);
-
-    const cliente = result.data?.[0];
-
-    if (!cliente) {
-      throw new Error("Cliente no encontrado");
+    if (clienteError || !cliente) {
+      return NextResponse.json(
+        { ok: false, message: "Token inválido o cliente no encontrado." },
+        { status: 404 }
+      );
     }
 
-    const update = await supabase
+    const { error: updateError } = await supabase
       .from("clientes")
       .update({
         email_verificado: true,
@@ -34,19 +34,25 @@ export async function GET(req: Request) {
       })
       .eq("id", cliente.id);
 
-    console.log("UPDATE:", update);
+    if (updateError) {
+      console.error("Error actualizando cliente en register/verify:", updateError);
 
-    const response = NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/mi-cuenta`
-    );
+      return NextResponse.json(
+        { ok: false, message: "No se pudo verificar el correo." },
+        { status: 500 }
+      );
+    }
 
-    response.cookies.set("fidelinook_auth", "ok", { path: "/" });
-    response.cookies.set("fidelinook_role", "cliente", { path: "/" });
-
-    return response;
+    return NextResponse.json({
+      ok: true,
+      correo: cliente.correo,
+    });
   } catch (error) {
     console.error("ERROR VERIFY REGISTER:", error);
 
-    return new Response("Error interno", { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: "Error interno al verificar el registro." },
+      { status: 500 }
+    );
   }
 }
