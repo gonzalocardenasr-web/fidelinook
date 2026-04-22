@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import Link from "next/link";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -122,13 +123,9 @@ export default function LoginForm() {
               </button>
 
               <div className="mt-4 text-sm text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={() => alert("Flujo recuperar contraseña próximamente")}
-                  className="text-[#4c00f7] underline"
-                >
+                <Link href="/recuperar-contrasena" className="text-[#4c00f7] underline">
                   ¿Olvidaste tu contraseña?
-                </button>
+                </Link>
 
                 <p>
                   ¿No tienes cuenta?{" "}
