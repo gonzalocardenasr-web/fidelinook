@@ -12,20 +12,22 @@ export async function GET(req: Request) {
       );
     }
 
-    const { data: cliente } = await supabase
+    const { data: cliente, error } = await supabase
       .from("clientes")
       .select("*")
       .eq("token_verificacion", token)
-      .single();
+      .maybeSingle();
 
-    if (!cliente) {
+    if (error || !cliente) {
+      console.error("Token inválido:", error);
+
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=invalid`
       );
     }
 
-    // ✅ SOLO verificar email (NO tocar tarjeta)
-    await supabase
+    // ✅ actualizar cliente
+    const { error: updateError } = await supabase
       .from("clientes")
       .update({
         email_verificado: true,
@@ -33,17 +35,25 @@ export async function GET(req: Request) {
       })
       .eq("id", cliente.id);
 
+    if (updateError) {
+      console.error("Error update cliente:", updateError);
+
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=update`
+      );
+    }
+
     const response = NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL}/mi-cuenta`
     );
 
-    // ✅ login automático
+    // login automático
     response.cookies.set("fidelinook_auth", "ok", { path: "/" });
     response.cookies.set("fidelinook_role", "cliente", { path: "/" });
 
     return response;
-  } catch (error) {
-    console.error("Error verify register:", error);
+  } catch (err) {
+    console.error("Error verify register:", err);
 
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL}/login?error=server`
