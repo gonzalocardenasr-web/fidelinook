@@ -28,20 +28,11 @@ export async function GET(req: Request) {
     }
 
     if (cliente.email_verificado && cliente.tarjeta_activa) {
-      const response = NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/mi-cuenta`
-      );
-
-      // opcional pero recomendado → setear cookies de sesión
-      response.cookies.set("fidelinook_auth", "ok", {
-        path: "/",
+      return NextResponse.json({
+        ok: true,
+        ya_verificado: true,
+        public_token: cliente.public_token,
       });
-
-      response.cookies.set("fidelinook_role", "cliente", {
-        path: "/",
-      });
-
-      return response;
     }
 
     const { error: errorUpdate } = await supabase

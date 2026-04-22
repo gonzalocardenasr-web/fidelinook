@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
 import { sendVerificationEmail } from "../../../lib/email/sendVerificationEmail";
+import { sendRegisterVerificationEmail } from "../../../lib/email/sendRegisterVerificationEmail";
+
 
 export async function POST(req: Request) {
   try {
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
       .eq("id", cliente.id);
 
     // 📧 Enviar correo
-    await sendVerificationEmail(cliente.correo, cliente.nombre, token);
+    await sendRegisterVerificationEmail(cliente.correo, cliente.nombre, token);
 
     return NextResponse.json({ ok: true });
 
