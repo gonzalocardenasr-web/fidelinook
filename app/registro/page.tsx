@@ -14,6 +14,9 @@ export default function RegistroPage() {
   const [telefono, setTelefono] = useState("");
   const [cargando, setCargando] = useState(false);
 
+  const [errorRegistro, setErrorRegistro] = useState("");
+  const [mensajeRegistro, setMensajeRegistro] = useState("");
+
   const [registroExitoso, setRegistroExitoso] = useState(false);
   const [correoPendiente, setCorreoPendiente] = useState("");
   const [reenviando, setReenviando] = useState(false);
@@ -27,12 +30,15 @@ export default function RegistroPage() {
   const handleRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    setErrorRegistro("");
+    setMensajeRegistro("");
+
     const nombreLimpio = nombre.trim();
     const correoLimpio = correo.trim().toLowerCase();
     const telefonoLimpio = telefono.trim();
 
     if (!nombreLimpio || !correoLimpio || !telefonoLimpio) {
-      alert("Completa todos los campos");
+      setErrorRegistro("Completa todos los campos.");
       return;
     }
 
@@ -46,7 +52,7 @@ export default function RegistroPage() {
 
       if (errorBusqueda) {
         console.error("Error al validar duplicados:", errorBusqueda);
-        alert("No se pudo validar si el cliente ya existe");
+        setErrorRegistro("No se pudo validar si el cliente ya existe.");
         return;
       }
 
@@ -60,17 +66,17 @@ export default function RegistroPage() {
         );
 
         if (correoDuplicado && telefonoDuplicado) {
-          alert("Ya existe un cliente registrado con ese correo y teléfono");
+          setErrorRegistro("Ya existe un cliente registrado con ese correo y teléfono.");
           return;
         }
 
         if (correoDuplicado) {
-          alert("Ya existe un cliente registrado con ese correo");
+          setErrorRegistro("Ya existe un cliente registrado con ese correo.");
           return;
         }
 
         if (telefonoDuplicado) {
-          alert("Ya existe un cliente registrado con ese teléfono");
+          setErrorRegistro("Ya existe un cliente registrado con ese teléfono.");
           return;
         }
       }
@@ -99,7 +105,7 @@ export default function RegistroPage() {
 
       if (error) {
         console.error("Error al registrar cliente:", error);
-        alert("Hubo un error al registrar el cliente");
+        setErrorRegistro("Hubo un error al registrar el cliente.");
         return;
       }
 
@@ -121,6 +127,9 @@ export default function RegistroPage() {
       
       } catch (emailError) {
         console.error("Error enviando correo:", emailError);
+        setMensajeRegistro(
+          "Tu tarjeta fue creada, pero no pudimos enviar el correo de verificación en este momento."
+        );
       }
 
       setCorreoPendiente(correoLimpio);
