@@ -16,10 +16,12 @@ export default function RegisterPage() {
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setWarning("");
 
     const nombreLimpio = nombre.trim();
     const correoLimpio = correo.trim().toLowerCase();
@@ -73,8 +75,21 @@ export default function RegisterPage() {
         return;
       }
 
+      if (data.code === "REGISTER_EMAIL_SEND_FAILED") {
+        setWarning(
+          "Tu cuenta fue creada, pero no pudimos enviar el correo de verificación. Escríbenos o vuelve a intentarlo más tarde."
+        );
+      }
+
       sessionStorage.setItem("pendingRegisterEmail", correoLimpio);
       sessionStorage.setItem("pendingRegisterPassword", password);
+
+      if (data.code === "REGISTER_EMAIL_SEND_FAILED") {
+        setLoading(false);
+        return;
+      }
+
+      router.push(`/verificar-registro?correo=${encodeURIComponent(correoLimpio)}`);
 
       setPassword("");
       setConfirmacion("");
@@ -118,6 +133,12 @@ export default function RegisterPage() {
                     </Link>
                   </div>
                 )}
+              </div>
+            )}
+
+            {warning && (
+              <div className="mb-5 rounded-2xl border border-[#F3D9A4] bg-[#FFF7E8] px-4 py-3 text-sm text-[#6B5500]">
+                <p>{warning}</p>
               </div>
             )}
 
