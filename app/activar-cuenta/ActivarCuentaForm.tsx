@@ -16,6 +16,7 @@ export default function ActivarCuentaForm() {
   const [password, setPassword] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
   const intentoAutomaticoRef = useRef(false);
@@ -40,7 +41,7 @@ export default function ActivarCuentaForm() {
     }
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password: pass,
     });
 
@@ -76,12 +77,14 @@ export default function ActivarCuentaForm() {
     const ejecutar = async () => {
       try {
         setLoading(true);
+        setError("");
         setMensaje("Activando tu cuenta...");
 
         await activarCuenta(emailGuardado, passwordGuardada);
       } catch (error) {
         console.error("No se pudo activar automáticamente:", error);
-        setMensaje(
+        setMensaje("");
+        setError(
           error instanceof Error
             ? error.message
             : "No se pudo activar automáticamente tu cuenta."
@@ -100,24 +103,33 @@ export default function ActivarCuentaForm() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    setError("");
+    setMensaje("");
+
     if (!token) {
-      alert("Falta el token de la tarjeta.");
+      setError("Falta el token de la tarjeta.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     if (password !== confirmacion) {
-      alert("Las contraseñas no coinciden.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
     try {
       setLoading(true);
-      setMensaje("");
+      setMensaje("Activando tu cuenta...");
 
       await activarCuenta(correo, password);
     } catch (error) {
       console.error("Error activando cuenta:", error);
-      alert(
+      setMensaje("");
+      setError(
         error instanceof Error
           ? error.message
           : "No se pudo activar la cuenta."
@@ -144,8 +156,14 @@ export default function ActivarCuentaForm() {
           </div>
 
           <div className="px-6 py-7 md:px-8 md:py-8">
+            {error && (
+              <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+                {error}
+              </div>
+            )}
+
             {mensaje && (
-              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+              <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
                 {mensaje}
               </div>
             )}
