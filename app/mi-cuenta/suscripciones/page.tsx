@@ -823,24 +823,29 @@ export default function MisSuscripcionesPage() {
   };
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-2xl">
-          <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
-            <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
-                  <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
-                    Mis suscripciones
-                  </h1>
-                </div>
-
-                <ClienteLogoutButton />
+  return (
+    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto max-w-2xl">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+                  Mi cuenta
+                </p>
+                <h1 className="mt-2 text-2xl font-bold leading-tight">
+                  Tus suscripciones
+                </h1>
+                <p className="mt-2 text-sm text-white/85">
+                  Activa, revisa y gestiona tus productos vigentes
+                </p>
               </div>
-            </div>
 
-            <div className="px-8 py-8">
+              <ClienteLogoutButton />
+            </div>
+          </div>
+
+            <div className="px-6 py-7 md:px-8 md:py-8">
               <div className="rounded-[24px] border border-[#E7C8F2] bg-[#FCF8FF] p-5">
                 <p className="text-base text-neutral-700">Cargando suscripciones...</p>
               </div>
@@ -852,31 +857,36 @@ export default function MisSuscripcionesPage() {
   }
 
   if (error) {
-    return (
-      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-2xl">
-          <div className="overflow-hidden rounded-[36px] bg-white shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
-            <div className="bg-gradient-to-r from-[#4C00F7] to-[#6A1BFF] px-8 py-8">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[13px] uppercase tracking-[0.3em] text-white/90">NOOK</p>
-                  <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
-                    Mis suscripciones
-                  </h1>
-                </div>
-
-                <ClienteLogoutButton />
+  return (
+    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto max-w-2xl">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+                  Mi cuenta
+                </p>
+                <h1 className="mt-2 text-2xl font-bold leading-tight">
+                  Tus suscripciones
+                </h1>
+                <p className="mt-2 text-sm text-white/85">
+                  Activa, revisa y gestiona tus productos vigentes
+                </p>
               </div>
-            </div>
 
-            <div className="px-8 py-8">
-              <div className="rounded-[24px] border border-[#E7C8F2] bg-[#FCF8FF] p-5">
-                <p className="text-base text-neutral-700">{error}</p>
+              <ClienteLogoutButton />
+            </div>
+          </div>
+
+            <div className="px-6 py-7 md:px-8 md:py-8">
+              <div className="rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+                {error}
               </div>
 
               <Link
                 href="/mi-cuenta"
-                className="mt-6 inline-flex rounded-2xl border border-[#4C00F7] px-5 py-3 font-semibold text-[#4C00F7] transition duration-200 hover:bg-[#F7F4FF] active:scale-[0.98]"
+                className="mt-6 inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
               >
                 ← Mi cuenta
               </Link>
@@ -901,7 +911,7 @@ export default function MisSuscripcionesPage() {
                       Tus suscripciones
                     </h1>
                     <p className="mt-2 text-sm text-white/85">
-                      Activa, revisa y gestiona tus productos activos
+                      Activa, revisa y gestiona tus productos vigentes
                     </p>
                   </div>
     
