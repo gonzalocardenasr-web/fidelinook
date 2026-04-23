@@ -343,10 +343,6 @@ export default function RegistroPage() {
 
                 <p className="mt-3 text-sm leading-6 text-[#555]">
                   Te enviamos un correo a <span className="font-semibold">{correoPendiente}</span> para activar tu tarjeta.
-                </p>
-
-                <p className="mt-3 text-sm leading-6 text-[#555]">
-                  Enviamos un enlace de verificación a <strong>{correoPendiente}</strong>.
                   Revisa tu bandeja de entrada, spam o promociones.
                 </p>
 
@@ -424,6 +420,7 @@ export default function RegistroPage() {
                 <p>Recibirás un correo para activarla y acceder a tu tarjeta digital.</p>
                 <p>Desde tu tarjeta podrás revisar tus premios activos y acceder luego a tu cuenta.</p>
               </div>
+            </div>
           </div>
         </div>
       </div>
