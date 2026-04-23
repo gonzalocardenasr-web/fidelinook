@@ -13,43 +13,47 @@ export default function RestablecerContrasenaPage() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    setError("");
+    setMensaje("");
+    setLoading(true);
+
     if (password.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres.");
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      setLoading(false);
       return;
     }
 
     if (password !== confirmacion) {
-      alert("Las contraseñas no coinciden.");
+      setError("Las contraseñas no coinciden.");
+      setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
-      setMensaje("");
-
       const { error } = await supabase.auth.updateUser({
         password,
       });
 
       if (error) {
-        alert(error.message || "No se pudo actualizar la contraseña.");
+        setError(error.message || "No se pudo actualizar la contraseña.");
+        setLoading(false);
         return;
       }
 
-      setMensaje("Contraseña actualizada correctamente. Redirigiendo al login...");
+      setMensaje("Tu contraseña fue actualizada correctamente. Redirigiendo al login...");
 
       setTimeout(() => {
         router.replace("/login");
-      }, 2000);
+      }, 1500);
     } catch (error) {
       console.error("Error actualizando contraseña:", error);
-      alert("Ocurrió un error inesperado al actualizar la contraseña.");
-    } finally {
+      setError("Ocurrió un error inesperado al actualizar la contraseña.");
       setLoading(false);
     }
   };
@@ -71,8 +75,14 @@ export default function RestablecerContrasenaPage() {
           </div>
 
           <div className="px-6 py-7 md:px-8 md:py-8">
+            {error && (
+              <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+                {error}
+              </div>
+            )}
+
             {mensaje && (
-              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F0EBFF] px-4 py-3 text-sm text-[#4c00f7]">
+              <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
                 {mensaje}
               </div>
             )}

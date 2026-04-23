@@ -6,14 +6,18 @@ import { useState } from "react";
 export default function RecuperarContrasenaPage() {
   const [correo, setCorreo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    setError("");
+    setMensaje("");
+    setLoading(true);
+
     const correoLimpio = correo.trim().toLowerCase();
     if (!correoLimpio) {
-      alert("Ingresa tu correo.");
       return;
     }
 
@@ -24,29 +28,31 @@ export default function RecuperarContrasenaPage() {
       const response = await fetch("/api/password/recovery", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            correo: correoLimpio,
+          correo: correoLimpio,
         }),
-        });
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-        alert(data.message || "No se pudo enviar el correo.");
+      if (!response.ok) {
+        setError(data.message || "No se pudo enviar el correo.");
+        setLoading(false);
         return;
-        }
+      }
 
-        setMensaje(
-        data.message ||
-            "Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada o spam."
-        );
+      // Mensaje neutro (no revela si el correo existe)
+      setMensaje(
+        "Si existe una cuenta asociada a este correo, te enviaremos instrucciones para recuperar tu contraseña."
+      );
+
       setCorreo("");
+      setLoading(false);
 
     } catch (error) {
       console.error("Error enviando recuperación:", error);
-      alert("Ocurrió un error inesperado al enviar el correo.");
     } finally {
       setLoading(false);
     }
@@ -71,6 +77,18 @@ export default function RecuperarContrasenaPage() {
           <div className="px-6 py-7 md:px-8 md:py-8">
             {mensaje && (
               <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F0EBFF] px-4 py-3 text-sm text-[#4c00f7]">
+                {mensaje}
+              </div>
+            )}
+            
+            {error && (
+              <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+                {error}
+              </div>
+            )}
+
+            {mensaje && (
+              <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
                 {mensaje}
               </div>
             )}
