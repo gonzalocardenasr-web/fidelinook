@@ -47,10 +47,12 @@ export default function RestablecerContrasenaPage() {
       }
 
       setMensaje("Tu contraseña fue actualizada correctamente. Redirigiendo al login...");
+      setLoading(false);
 
       setTimeout(() => {
         router.replace("/login");
       }, 1500);
+
     } catch (error) {
       console.error("Error actualizando contraseña:", error);
       setError("Ocurrió un error inesperado al actualizar la contraseña.");
@@ -143,7 +145,7 @@ export default function RestablecerContrasenaPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Actualizando..." : "Actualizar contraseña"}
               </button>

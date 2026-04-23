@@ -100,7 +100,7 @@ export default function LoginForm() {
             )}
 
             {mensaje && (
-              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+              <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
                 {mensaje}
               </div>
             )}
@@ -115,7 +115,7 @@ export default function LoginForm() {
                   value={correo}
                   onChange={(e) => setCorreo(e.target.value)}
                   required
-                  className="w-full rounded-2xl border border-[#E3D2EA] px-4 py-4"
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
@@ -128,14 +128,14 @@ export default function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full rounded-2xl border border-[#E3D2EA] px-4 py-4"
+                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-[#4c00f7] text-white py-4"
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
               >
                 {loading ? "Ingresando..." : "Ingresar"}
               </button>

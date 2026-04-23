@@ -14,17 +14,17 @@ export default function RecuperarContrasenaPage() {
 
     setError("");
     setMensaje("");
-    setLoading(true);
 
     const correoLimpio = correo.trim().toLowerCase();
     if (!correoLimpio) {
+      setError("Ingresa tu correo.");
       return;
     }
 
-    try {
-      setLoading(true);
-      setMensaje("");
+    setLoading(true);
 
+    try {
+      
       const response = await fetch("/api/password/recovery", {
         method: "POST",
         headers: {
@@ -53,6 +53,7 @@ export default function RecuperarContrasenaPage() {
 
     } catch (error) {
       console.error("Error enviando recuperación:", error);
+      setError("Ocurrió un error inesperado al enviar el correo.");
     } finally {
       setLoading(false);
     }
@@ -74,13 +75,7 @@ export default function RecuperarContrasenaPage() {
             </p>
           </div>
 
-          <div className="px-6 py-7 md:px-8 md:py-8">
-            {mensaje && (
-              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F0EBFF] px-4 py-3 text-sm text-[#4c00f7]">
-                {mensaje}
-              </div>
-            )}
-            
+          <div className="px-6 py-7 md:px-8 md:py-8">                   
             {error && (
               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 {error}
@@ -111,7 +106,7 @@ export default function RecuperarContrasenaPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Enviando..." : "Enviar correo"}
               </button>
