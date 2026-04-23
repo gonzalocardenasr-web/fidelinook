@@ -41,6 +41,7 @@ export default function OperacionPage() {
   const [busqueda, setBusqueda] = useState("");
   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">("info");
   const [cargando, setCargando] = useState(true);
   const [procesandoCompra, setProcesandoCompra] = useState(false);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
@@ -66,7 +67,7 @@ export default function OperacionPage() {
   }
 
   cargarSuscripcionActiva(Number(clienteSeleccionadoId));
-}, [clienteSeleccionadoId]);
+    }, [clienteSeleccionadoId]);
 
 
   async function cargarSuscripcionActiva(clienteId: number) {
@@ -210,6 +211,7 @@ export default function OperacionPage() {
   const seleccionarLetra = (letra: string) => {
     setLetraActiva(letra);
     setMensaje("");
+    setTipoMensaje("info");
 
     const listaFiltrada =
       letra === "TODOS"
@@ -238,11 +240,13 @@ export default function OperacionPage() {
 
   const validarCompra = async () => {
     if (!cliente) {
+      setTipoMensaje("error");
       setMensaje("Debes seleccionar un cliente.");
       return;
     }
 
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
+      setTipoMensaje("error");
       setMensaje(
         "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero."
       );
@@ -252,6 +256,7 @@ export default function OperacionPage() {
     try {
       setProcesandoCompra(true);
       setMensaje("");
+      setTipoMensaje("info");
 
       const premiosActuales = Array.isArray(cliente.premios)
         ? cliente.premios
@@ -296,6 +301,7 @@ export default function OperacionPage() {
 
       if (error) {
         console.error("Error al validar compra:", error);
+        setTipoMensaje("error");
         setMensaje("Hubo un error al validar la compra.");
         return;
       }
@@ -335,9 +341,11 @@ export default function OperacionPage() {
       }
 
       await cargarDatos(true);
+      setTipoMensaje("success");
       setMensaje(mensajeFinal);
     } catch (err) {
       console.error("Error inesperado al validar compra:", err);
+      setTipoMensaje("error");
       setMensaje("Ocurrió un error inesperado al validar la compra.");
     } finally {
       setProcesandoCompra(false);
@@ -346,11 +354,13 @@ export default function OperacionPage() {
 
   const canjearPrimerPremio = async () => {
     if (!cliente) {
+      setTipoMensaje("error");
       setMensaje("Debes seleccionar un cliente.");
       return;
     }
 
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
+      setTipoMensaje("error");
       setMensaje(
         "El cliente aún no ha activado su tarjeta. No es posible canjear premios."
       );
@@ -360,6 +370,7 @@ export default function OperacionPage() {
     try {
       setProcesandoCanje(true);
       setMensaje("");
+      setTipoMensaje("info");
 
       const premiosActuales = Array.isArray(cliente.premios)
         ? [...cliente.premios]
@@ -370,6 +381,7 @@ export default function OperacionPage() {
       );
 
       if (indexPremioActivo === -1) {
+        setTipoMensaje("error");
         setMensaje("No hay premios activos para canjear.");
         return;
       }
@@ -391,6 +403,7 @@ export default function OperacionPage() {
 
       if (error) {
         console.error("Error al canjear premio:", error);
+        setTipoMensaje("error");
         setMensaje("Hubo un error al canjear el premio.");
         return;
       }
@@ -413,9 +426,11 @@ export default function OperacionPage() {
       }
 
       await cargarDatos(true);
+      setTipoMensaje("success");
       setMensaje("Premio canjeado correctamente.");
     } catch (err) {
       console.error("Error inesperado al canjear premio:", err);
+      setTipoMensaje("error");
       setMensaje("Ocurrió un error inesperado al canjear el premio.");
     } finally {
       setProcesandoCanje(false);
@@ -430,42 +445,43 @@ export default function OperacionPage() {
       window.location.href = "/login";
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
-      alert("No se pudo cerrar sesión.");
+      setTipoMensaje("error");
+      setMensaje("No se pudo cerrar sesión.");
     }
   };
 
   return (
-            <main className="min-h-screen bg-[#F6F3FF] p-6">
-                <div className="mx-auto max-w-5xl space-y-6">
-                    <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                        <Link
-                                href="/"
-                                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                            >
-                                ← Volver al inicio
-                        </Link>
+    <main className="min-h-screen bg-[#F6F3FF] p-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+                <Link
+                    href="/"
+                    className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                >
+                    ← Volver al inicio
+                </Link>
 
-                        <h1 className="mt-3 text-2xl font-bold">Operación</h1>
+                <h1 className="mt-3 text-2xl font-bold">Operación</h1>
 
-                        <p className="mt-2 text-base text-white/90">
-                            Gestión operativa de clientes, fidelización y suscripciones.
-                        </p>
+                <p className="text-sm opacity-90">
+                    Gestión operativa de clientes, fidelización y suscripciones
+                </p>
 
-                        <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                            {cargandoRol ? "Cargando rol..." : `ROL: ${rol ?? "sin sesión"}`}
-                        </p>
-                        </div>
+                <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                    {cargandoRol ? "Cargando rol..." : `ROL: ${rol ?? "sin sesión"}`}
+                </p>
+                </div>
 
-                        <button
-                        onClick={cerrarSesion}
-                        className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                        >
-                        Cerrar sesión
-                        </button>
-                    </div>
-                    </div>
+                <button
+                onClick={cerrarSesion}
+                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+                >
+                Cerrar sesión
+                </button>
+            </div>
+            </div>
         
             
 
@@ -585,6 +601,7 @@ export default function OperacionPage() {
                     cliente={cliente}
                     premiosActivos={premiosActivos}
                     mensaje={mensaje}
+                    tipoMensaje={tipoMensaje}
                     setMensaje={setMensaje}
                     procesandoCompra={procesandoCompra}
                     procesandoCanje={procesandoCanje}
