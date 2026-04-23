@@ -19,6 +19,11 @@ export default function RegistroPage() {
   const [reenviando, setReenviando] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  const [correoRecuperacion, setCorreoRecuperacion] = useState("");
+  const [recuperandoTarjeta, setRecuperandoTarjeta] = useState(false);
+  const [mensajeRecuperacion, setMensajeRecuperacion] = useState("");
+  const [errorRecuperacion, setErrorRecuperacion] = useState("");
+
   const handleRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -175,6 +180,54 @@ export default function RegistroPage() {
     }
   };
 
+  const handleRecuperarTarjeta = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    e.preventDefault();
+
+    const correoLimpio = correoRecuperacion.trim().toLowerCase();
+
+    setMensajeRecuperacion("");
+    setErrorRecuperacion("");
+
+    if (!correoLimpio) {
+      setErrorRecuperacion("Ingresa tu correo.");
+      return;
+    }
+
+    try {
+      setRecuperandoTarjeta(true);
+
+      const res = await fetch("/api/recover-card", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: correoLimpio }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorRecuperacion(
+          data.error || "No se pudo recuperar la tarjeta."
+        );
+        return;
+      }
+
+      setMensajeRecuperacion(
+        data.message ||
+          "Si existe una tarjeta asociada a este correo, te enviaremos un acceso."
+      );
+      setCorreoRecuperacion("");
+    } catch (error) {
+      console.error("Error recuperando tarjeta:", error);
+      setErrorRecuperacion("Ocurrió un error al recuperar la tarjeta.");
+    } finally {
+      setRecuperandoTarjeta(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
       <div className="mx-auto max-w-2xl">
@@ -297,6 +350,56 @@ export default function RegistroPage() {
                 </button>
               </div>
             )}
+
+            <div className="mt-6 rounded-[24px] border border-[#E8CFE0] bg-[#F8ECF3] p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A57F6]">
+                ¿Ya tienes tu tarjeta Fideli-NooK?
+              </p>
+
+              <h3 className="mt-3 text-2xl font-bold text-[#4c00f7]">
+                Recupérala aquí
+              </h3>
+
+              <p className="mt-3 text-sm leading-6 text-[#555]">
+                Ingresa el correo con el que registraste tu tarjeta y te enviaremos un acceso
+                directo para volver a verla.
+              </p>
+
+              {mensajeRecuperacion && (
+                <div className="mt-4 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
+                  {mensajeRecuperacion}
+                </div>
+              )}
+
+              {errorRecuperacion && (
+                <div className="mt-4 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+                  {errorRecuperacion}
+                </div>
+              )}
+
+              <form onSubmit={handleRecuperarTarjeta} className="mt-5 space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#444]">
+                    Correo
+                  </label>
+                  <input
+                    type="email"
+                    value={correoRecuperacion}
+                    onChange={(e) => setCorreoRecuperacion(e.target.value)}
+                    placeholder="nombre@correo.com"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={recuperandoTarjeta}
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {recuperandoTarjeta ? "Enviando..." : "Recuperar mi tarjeta"}
+                </button>
+              </form>
+            </div>
 
             <div className="mt-6 rounded-[24px] border border-[#E8CFE0] bg-[#F8ECF3] p-5">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A57F6]">
