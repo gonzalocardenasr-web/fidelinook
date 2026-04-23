@@ -127,9 +127,10 @@ export default function MiPerfilPage() {
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
       <div className="mx-auto max-w-2xl">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
-          <div className="bg-[#4C00F7] px-6 py-6 text-white">
+          <div className="mb-6 rounded-[24px] bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div className="flex items-start justify-between gap-4">
-              <div className="mb-6 rounded-[24px] bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+              
+              <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-white/80">
                   Mi cuenta
                 </p>
@@ -142,6 +143,7 @@ export default function MiPerfilPage() {
               </div>
 
               <ClienteLogoutButton />
+              
             </div>
           </div>
 
