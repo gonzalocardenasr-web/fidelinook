@@ -9,6 +9,9 @@ function generarPublicToken() {
 }
 
 export async function POST(req: Request) {
+  let clienteIdCreado: string | null = null;
+  let authUserIdCreado: string | null = null;
+
   try {
     const { nombre, correo, telefono, password } = await req.json();
 
@@ -19,8 +22,6 @@ export async function POST(req: Request) {
     const nombreLimpio = String(nombre).trim();
     const email = String(correo).trim().toLowerCase();
     const telefonoLimpio = String(telefono).trim();
-
-    let cliente: any = null;
 
     // 1. Buscar cliente existente por correo
     const { data: clienteExistente, error: clienteExistenteError } = await supabase
@@ -37,62 +38,40 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Si ya existe y ya tiene auth_user_id, no duplicar cuenta
-    if (clienteExistente?.auth_user_id) {
+    // 2. Si ya existe un cliente con este correo, el usuario debe continuar desde su tarjeta
+    if (clienteExistente) {
       return NextResponse.json(
-        { error: "Ya existe una cuenta creada con este correo. Inicia sesión." },
+        {
+          error: "Este correo ya tiene una tarjeta activa.",
+          code: "CLIENT_EXISTS_WITH_CARD",
+        },
         { status: 400 }
       );
     }
 
-    // 3. Crear o reutilizar cliente
-    if (clienteExistente) {
-      const publicToken = clienteExistente.public_token || generarPublicToken();
+    // 3. Crear cliente nuevo
+    const { data: nuevoCliente, error: nuevoClienteError } = await supabase
+      .from("clientes")
+      .insert({
+        nombre: nombreLimpio,
+        correo: email,
+        telefono: telefonoLimpio,
+        public_token: generarPublicToken(),
+        email_verificado: false,
+        tarjeta_activa: false,
+      })
+      .select()
+      .single();
 
-      const { data: clienteActualizado, error: updateClienteError } = await supabase
-        .from("clientes")
-        .update({
-          nombre: nombreLimpio || clienteExistente.nombre,
-          telefono: telefonoLimpio || clienteExistente.telefono,
-          public_token: publicToken,
-        })
-        .eq("id", clienteExistente.id)
-        .select()
-        .single();
-
-      if (updateClienteError || !clienteActualizado) {
-        console.error("Error actualizando cliente existente:", updateClienteError);
-        return NextResponse.json(
-          { error: "No se pudo actualizar el cliente existente." },
-          { status: 500 }
-        );
-      }
-
-      cliente = clienteActualizado;
-    } else {
-      const { data: nuevoCliente, error: nuevoClienteError } = await supabase
-        .from("clientes")
-        .insert({
-          nombre: nombreLimpio,
-          correo: email,
-          telefono: telefonoLimpio,
-          public_token: generarPublicToken(),
-          email_verificado: false,
-          tarjeta_activa: false,
-        })
-        .select()
-        .single();
-
-      if (nuevoClienteError || !nuevoCliente) {
-        console.error("Error creando cliente:", nuevoClienteError);
-        return NextResponse.json(
-          { error: "Error creando cliente" },
-          { status: 500 }
-        );
-      }
-
-      cliente = nuevoCliente;
+    if (nuevoClienteError || !nuevoCliente) {
+      console.error("Error creando cliente:", nuevoClienteError);
+      return NextResponse.json(
+        { error: "Error creando cliente" },
+        { status: 500 }
+      );
     }
+
+    clienteIdCreado = nuevoCliente.id;
 
     // 4. Crear usuario auth
     const { data: authData, error: authError } =
@@ -104,11 +83,25 @@ export async function POST(req: Request) {
 
     if (authError || !authData.user) {
       console.error("Error creando auth user:", authError);
+
+      if (clienteIdCreado) {
+        const { error: rollbackClienteError } = await supabase
+          .from("clientes")
+          .delete()
+          .eq("id", clienteIdCreado);
+
+        if (rollbackClienteError) {
+          console.error("Error eliminando cliente tras fallo de auth:", rollbackClienteError);
+        }
+      }
+
       return NextResponse.json(
-        { error: "No se pudo crear la cuenta de acceso." },
+        { error: authError?.message || "No se pudo crear la cuenta de acceso." },
         { status: 500 }
       );
     }
+
+    authUserIdCreado = authData.user.id;
 
     // 5. Generar token de verificación del flujo de cuenta
     const token = generateVerificationToken();
@@ -116,14 +109,35 @@ export async function POST(req: Request) {
     const { error: vinculoError } = await supabase
       .from("clientes")
       .update({
-        auth_user_id: authData.user.id,
+        auth_user_id: authUserIdCreado,
         token_verificacion: token,
         token_verificacion_creado_en: new Date().toISOString(),
       })
-      .eq("id", cliente.id);
+      .eq("id", clienteIdCreado);
 
     if (vinculoError) {
       console.error("Error vinculando auth_user_id al cliente:", vinculoError);
+
+      if (authUserIdCreado) {
+        const { error: rollbackAuthError } =
+          await supabaseAdmin.auth.admin.deleteUser(authUserIdCreado);
+
+        if (rollbackAuthError) {
+          console.error("Error eliminando auth user tras fallo de vínculo:", rollbackAuthError);
+        }
+      }
+
+      if (clienteIdCreado) {
+        const { error: rollbackClienteError } = await supabase
+          .from("clientes")
+          .delete()
+          .eq("id", clienteIdCreado);
+
+        if (rollbackClienteError) {
+          console.error("Error eliminando cliente tras fallo de vínculo:", rollbackClienteError);
+        }
+      }
+
       return NextResponse.json(
         { error: "No se pudo vincular la cuenta al cliente." },
         { status: 500 }
@@ -131,11 +145,42 @@ export async function POST(req: Request) {
     }
 
     // 6. Enviar correo del flujo de cuenta
-    await sendRegisterVerificationEmail(cliente.correo, cliente.nombre, token);
+    try {
+      await sendRegisterVerificationEmail(email, nombreLimpio, token);
+    } catch (emailError) {
+      console.error("Error enviando correo de verificación de registro:", emailError);
+
+      return NextResponse.json({
+        ok: true,
+        warning: "La cuenta fue creada, pero no se pudo enviar el correo de verificación.",
+        code: "REGISTER_EMAIL_SEND_FAILED",
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error en /api/register:", error);
+
+    if (authUserIdCreado) {
+      const { error: rollbackAuthError } =
+        await supabaseAdmin.auth.admin.deleteUser(authUserIdCreado);
+
+      if (rollbackAuthError) {
+        console.error("Error eliminando auth user en catch general:", rollbackAuthError);
+      }
+    }
+
+    if (clienteIdCreado) {
+      const { error: rollbackClienteError } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", clienteIdCreado);
+
+      if (rollbackClienteError) {
+        console.error("Error eliminando cliente en catch general:", rollbackClienteError);
+      }
+    }
+
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
   }
 }
