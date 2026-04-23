@@ -138,7 +138,7 @@ export default function MiPerfilPage() {
                   Tu cuenta
                 </h1>
                 <p className="mt-2 text-sm text-white/85">
-                  Accede a tu información personal. Podrás editar nombre y teléfono
+                  Revisa y actualiza tus datos
                 </p>
               </div>
 
