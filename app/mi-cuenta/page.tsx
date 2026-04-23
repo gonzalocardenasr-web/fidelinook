@@ -48,8 +48,8 @@ export default function MiCuentaPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#FFDBEF] p-6">
-        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto max-w-2xl">
           <p className="text-neutral-600">Cargando tu cuenta...</p>
         </div>
       </main>
@@ -57,8 +57,8 @@ export default function MiCuentaPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFDBEF] p-6">
-      <div className="mx-auto max-w-xl space-y-5">
+    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto max-w-2xl">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
           <div className="bg-[#4C00F7] px-6 py-6 text-white">
             <div className="flex items-start justify-between gap-4">

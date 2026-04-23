@@ -97,8 +97,8 @@ export default function MiPerfilPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#FFDBEF] p-6">
-        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto max-w-2xl">
           <p className="text-neutral-600">Cargando tu perfil...</p>
         </div>
       </main>
@@ -107,8 +107,8 @@ export default function MiPerfilPage() {
 
   if (error && !clienteId) {
     return (
-      <main className="min-h-screen bg-[#FFDBEF] p-6">
-        <div className="mx-auto max-w-xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto max-w-2xl">
           <h1 className="text-2xl font-bold text-[#4C00F7]">Mi perfil</h1>
           <p className="mt-4 text-neutral-600">{error}</p>
 
@@ -124,16 +124,21 @@ export default function MiPerfilPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFDBEF] p-6">
-      <div className="mx-auto max-w-xl space-y-5">
+    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto max-w-2xl">
         <div className="overflow-hidden rounded-[28px] bg-white shadow">
           <div className="bg-[#4C00F7] px-6 py-6 text-white">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">
-                  Nook
+              <div className="mb-6 rounded-[24px] bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+                <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+                  Mi cuenta
                 </p>
-                <h1 className="text-3xl font-bold">Mi perfil</h1>
+                <h1 className="mt-2 text-2xl font-bold leading-tight">
+                  Tu cuenta
+                </h1>
+                <p className="mt-2 text-sm text-white/85">
+                  Accede a tu información personal. Podrás editar nombre y teléfono
+                </p>
               </div>
 
               <ClienteLogoutButton />
