@@ -17,31 +17,33 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
+  const [mensaje, setMensaje] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setWarning("");
+    setMensaje("");
 
     const nombreLimpio = nombre.trim();
     const correoLimpio = correo.trim().toLowerCase();
     const telefonoLimpio = telefono.trim();
 
     if (!nombreLimpio || !correoLimpio || !telefonoLimpio || !password || !confirmacion) {
-      alert("Completa todos los campos");
+      setError("Completa todos los campos.");
       return;
     }
 
     setLoading(true);
 
     if (password.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres");
+      setError("La contraseña debe tener al menos 6 caracteres.");
       setLoading(false);
       return;
     }
 
     if (password !== confirmacion) {
-      alert("Las contraseñas no coinciden");
+      setError("Las contraseñas no coinciden.");
       setLoading(false);
       return;
     }
@@ -89,13 +91,11 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push(`/verificar-registro?correo=${encodeURIComponent(correoLimpio)}`);
-
+      setMensaje("Cuenta creada correctamente. Revisa tu correo para verificar tu cuenta.");
       setPassword("");
       setConfirmacion("");
 
-      alert("Revisa tu correo para verificar tu cuenta");
-      router.push("/login");
+      router.push(`/verificar-registro?correo=${encodeURIComponent(correoLimpio)}`);
     } catch (error) {
       console.error("Error registrando cuenta:", error);
       setError("Ocurrió un error inesperado al crear la cuenta.");
@@ -139,6 +139,12 @@ export default function RegisterPage() {
             {warning && (
               <div className="mb-5 rounded-2xl border border-[#F3D9A4] bg-[#FFF7E8] px-4 py-3 text-sm text-[#6B5500]">
                 <p>{warning}</p>
+              </div>
+            )}
+
+            {mensaje && (
+              <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
+                <p>{mensaje}</p>
               </div>
             )}
 
