@@ -416,6 +416,7 @@ function obtenerCantidadIncluida(
 export default function MisSuscripcionesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
 
   const [pendingClaims, setPendingClaims] = useState<PendingClaim[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -423,10 +424,11 @@ export default function MisSuscripcionesPage() {
 
   const [codigo, setCodigo] = useState("");
   const [mensajeCodigo, setMensajeCodigo] = useState("");
+  const [tipoMensajeCodigo, setTipoMensajeCodigo] = useState<"success" | "error" | "info">("info");
   const [activandoId, setActivandoId] = useState<number | null>(null);
   const [canjeandoCodigo, setCanjeandoCodigo] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
-
+  
   const obtenerClienteId = async () => {
     const {
       data: { user },
@@ -727,6 +729,7 @@ export default function MisSuscripcionesPage() {
     try {
       setActivandoId(claimId);
       setMensajeCodigo("");
+      setTipoMensajeCodigo("info");
 
       const clienteId = await obtenerClienteId();
 
@@ -744,11 +747,13 @@ export default function MisSuscripcionesPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        setTipoMensajeCodigo("error");
         setMensajeCodigo(data.message || "No se pudo activar la suscripción.");
         return;
       }
 
-      setMensajeCodigo("Suscripción activada correctamente.");
+      setTipoMensajeCodigo("success");
+      setMensajeCodigo("Tu suscripción fue activada correctamente.");
       await cargarDatos();
     } catch (error) {
       console.error("Error activando suscripción asignada:", error);
@@ -765,7 +770,11 @@ export default function MisSuscripcionesPage() {
   const handleCanjearCodigo = async (e: FormEvent) => {
     e.preventDefault();
 
+    setMensajeCodigo("");
+    setTipoMensajeCodigo("info");
+
     if (!codigo.trim()) {
+      setTipoMensajeCodigo("error");
       setMensajeCodigo("Ingresa un código para canjear.");
       return;
     }
@@ -773,6 +782,7 @@ export default function MisSuscripcionesPage() {
     try {
       setCanjeandoCodigo(true);
       setMensajeCodigo("");
+      setTipoMensajeCodigo("info");
 
       const clienteId = await obtenerClienteId();
 
@@ -790,15 +800,18 @@ export default function MisSuscripcionesPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        setTipoMensajeCodigo("error");
         setMensajeCodigo(data.message || "No se pudo canjear el código.");
         return;
       }
 
+      setTipoMensajeCodigo("success");
       setMensajeCodigo("Código activado correctamente.");
       setCodigo("");
       await cargarDatos();
     } catch (error) {
       console.error("Error canjeando código:", error);
+      setTipoMensajeCodigo("error");
       setMensajeCodigo(
         error instanceof Error
           ? error.message
@@ -926,7 +939,15 @@ export default function MisSuscripcionesPage() {
               </form>
 
               {mensajeCodigo && (
-                <div className="rounded-[20px] border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-neutral-700">
+                <div
+                  className={`rounded-[20px] px-4 py-3 text-sm ${
+                    tipoMensajeCodigo === "success"
+                      ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
+                      : tipoMensajeCodigo === "error"
+                      ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+                      : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+                  }`}
+                >
                   {mensajeCodigo}
                 </div>
               )}

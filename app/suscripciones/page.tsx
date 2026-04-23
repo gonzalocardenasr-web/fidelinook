@@ -48,6 +48,7 @@ export default function SuscripcionesPage() {
   const [cookieCodigo, setCookieCodigo] = useState("0");
 
   const [mensaje, setMensaje] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">("info");
   const [codigoGenerado, setCodigoGenerado] = useState("");
 
   const [procesandoAsignacion, setProcesandoAsignacion] = useState(false);
@@ -210,10 +211,12 @@ export default function SuscripcionesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMensaje(data.message || "Error asignando suscripción.");
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo asignar la suscripción.");
         return;
       }
 
+      setTipoMensaje("success");
       setMensaje("Suscripción asignada correctamente.");
       await cargarDatos();
     } finally {
@@ -230,6 +233,7 @@ export default function SuscripcionesPage() {
     ];
 
     if (!cantidades.some((valor) => valor > 0)) {
+      setTipoMensaje("error");
       setMensaje("Debes configurar al menos un producto para generar un código.");
       return;
     }
@@ -243,6 +247,7 @@ export default function SuscripcionesPage() {
     try {
       setProcesandoCodigo(true);
       setMensaje("");
+      setTipoMensaje("info");
 
       const res = await fetch("/api/subscriptions/create-code", {
         method: "POST",
@@ -258,11 +263,13 @@ export default function SuscripcionesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMensaje(data.message || "Error generando código.");
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo generar el código.");
         return;
       }
 
       setCodigoGenerado(data.code);
+      setTipoMensaje("success");
       setMensaje("Código generado correctamente.");
       await cargarDatos();
     } finally {
@@ -303,6 +310,7 @@ export default function SuscripcionesPage() {
     try {
       setEliminandoAsignacionId(claimId);
       setMensaje("");
+      setTipoMensaje("info");
 
       const res = await fetch("/api/subscriptions/delete-claim", {
         method: "POST",
@@ -312,10 +320,12 @@ export default function SuscripcionesPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        setTipoMensaje("error");
         setMensaje(data.message || "No se pudo eliminar el registro.");
         return;
       }
 
+      setTipoMensaje("success");
       setMensaje("Registro eliminado correctamente.");
       await cargarDatos();
     } finally {
@@ -342,11 +352,13 @@ export default function SuscripcionesPage() {
         const data = await res.json();
 
         if (!res.ok) {
-        alert(data?.message || "No se pudo eliminar la suscripción.");
-        return;
+          setTipoMensaje("error");
+          setMensaje(data?.message || "No se pudo eliminar la suscripción.");
+          return;
         }
 
-        alert("Suscripción eliminada correctamente.");
+        setTipoMensaje("success");
+        setMensaje("Suscripción eliminada correctamente.");
         await cargarDatos();
 
         // aquí llama tus recargas actuales
@@ -356,7 +368,8 @@ export default function SuscripcionesPage() {
         // o la función general que ya uses
     } catch (error) {
         console.error("Error eliminando suscripción:", error);
-        alert("Ocurrió un error inesperado al eliminar la suscripción.");
+        setTipoMensaje("error");
+        setMensaje("Ocurrió un error inesperado al eliminar la suscripción.");
     }
     };
 
@@ -372,6 +385,19 @@ export default function SuscripcionesPage() {
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
+        {mensaje && (
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm ${
+              tipoMensaje === "success"
+                ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
+                : tipoMensaje === "error"
+                ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+                : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+            }`}
+          >
+            {mensaje}
+          </div>
+        )}
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
