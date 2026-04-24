@@ -269,7 +269,7 @@ export default function RegisterPage() {
                     className="mt-1 h-4 w-4 accent-[#4c00f7]"
                   />
                   <span>
-                    Quiero recibir promociones, beneficios y campañas de Nook.
+                    Quiero recibir promociones, beneficios y comunicaciones de Nook.
                   </span>
                 </label>
               </div>
