@@ -12,6 +12,8 @@ export default function RegisterPage() {
   const [telefono, setTelefono] = useState("");
   const [password, setPassword] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaMarketing, setAceptaMarketing] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,10 @@ export default function RegisterPage() {
 
     if (!nombreLimpio || !correoLimpio || !telefonoLimpio || !password || !confirmacion) {
       setError("Completa todos los campos.");
+      return;
+    }
+    if (!aceptaTerminos) {
+      setError("Debes aceptar los términos y condiciones para crear tu cuenta.");
       return;
     }
 
@@ -55,10 +61,12 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            nombre: nombreLimpio,
-            correo: correoLimpio,
-            telefono: telefonoLimpio,
-            password,
+          nombre: nombreLimpio,
+          correo: correoLimpio,
+          telefono: telefonoLimpio,
+          password,
+          aceptaTerminos,
+          aceptaMarketing,
         }),
       });
 
@@ -122,7 +130,7 @@ export default function RegisterPage() {
 
           <div className="px-6 py-7 md:px-8 md:py-8">
             {error && (
-              <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#F8ECF3] px-4 py-3 text-sm text-[#555]">
+              <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 <p>{error}</p>
 
                 {error.includes("Ya tienes una tarjeta Nook asociada") && (
@@ -236,10 +244,40 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              <div className="space-y-3 rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4 text-sm text-[#555]">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={aceptaTerminos}
+                    onChange={(e) => setAceptaTerminos(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                  />
+                  <span>
+                    Acepto los{" "}
+                    <span className="font-semibold text-[#4c00f7] underline">
+                      términos y condiciones
+                    </span>{" "}
+                    de Fideli-NooK.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={aceptaMarketing}
+                    onChange={(e) => setAceptaMarketing(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                  />
+                  <span>
+                    Quiero recibir promociones, beneficios y campañas de Nook.
+                  </span>
+                </label>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Creando..." : "Crear cuenta"}
               </button>

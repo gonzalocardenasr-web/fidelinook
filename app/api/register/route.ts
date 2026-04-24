@@ -13,10 +13,24 @@ export async function POST(req: Request) {
   let authUserIdCreado: string | null = null;
 
   try {
-    const { nombre, correo, telefono, password } = await req.json();
+    const {
+      nombre,
+      correo,
+      telefono,
+      password,
+      aceptaTerminos,
+      aceptaMarketing,
+    } = await req.json();
 
     if (!nombre || !correo || !telefono || !password) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
+    }
+
+    if (!aceptaTerminos) {
+      return NextResponse.json(
+        { error: "Debes aceptar los términos y condiciones." },
+        { status: 400 }
+      );
     }
 
     const nombreLimpio = String(nombre).trim();
@@ -59,6 +73,10 @@ export async function POST(req: Request) {
         public_token: generarPublicToken(),
         email_verificado: false,
         tarjeta_activa: false,
+        acepta_terminos: true,
+        acepta_marketing: Boolean(aceptaMarketing),
+        fecha_aceptacion: new Date().toISOString(),
+        version_terminos: "v1.0", 
       })
       .select()
       .single();
