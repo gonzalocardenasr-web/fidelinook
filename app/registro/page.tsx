@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { generateVerificationToken } from "../../lib/utils/generateVerificationToken";
+
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -13,6 +15,9 @@ export default function RegistroPage() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [cargando, setCargando] = useState(false);
+
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaMarketing, setAceptaMarketing] = useState(false);
 
   const [errorRegistro, setErrorRegistro] = useState("");
   const [mensajeRegistro, setMensajeRegistro] = useState("");
@@ -39,6 +44,11 @@ export default function RegistroPage() {
 
     if (!nombreLimpio || !correoLimpio || !telefonoLimpio) {
       setErrorRegistro("Completa todos los campos.");
+      return;
+    }
+
+    if (!aceptaTerminos) {
+      setErrorRegistro("Debes aceptar los términos y condiciones para registrar tu tarjeta.");
       return;
     }
 
@@ -88,9 +98,9 @@ export default function RegistroPage() {
         .from("clientes")
         .insert([
           {
-            nombre,
-            correo,
-            telefono,
+            nombre: nombreLimpio,
+            correo: correoLimpio,
+            telefono: telefonoLimpio,
             sellos: 0,
             premios: [],
             public_token,
@@ -98,6 +108,10 @@ export default function RegistroPage() {
             tarjeta_activa: false,
             token_verificacion,
             token_verificacion_creado_en: new Date().toISOString(),
+            acepta_terminos: true,
+            acepta_marketing: aceptaMarketing,
+            fecha_aceptacion: new Date().toISOString(),
+            version_terminos: "v1.0",
           },
         ])
         .select()
@@ -139,6 +153,8 @@ export default function RegistroPage() {
       setNombre("");
       setCorreo("");
       setTelefono("");
+      setAceptaTerminos(false);
+      setAceptaMarketing(false);
 
       
     } catch (error) {
@@ -325,6 +341,40 @@ export default function RegistroPage() {
                     placeholder="Ingresa tu teléfono"
                     className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                   />
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4 text-sm text-[#555]">
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                    />
+                    <span>
+                      Acepto los{" "}
+                      <Link
+                        href="/terminos"
+                        target="_blank"
+                        className="font-semibold text-[#4c00f7] underline"
+                      >
+                        términos y condiciones
+                      </Link>{" "}
+                      de Fideli-NooK.
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aceptaMarketing}
+                      onChange={(e) => setAceptaMarketing(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                    />
+                    <span>
+                      Quiero recibir promociones, beneficios y campañas de Nook.
+                    </span>
+                  </label>
                 </div>
 
                 <button
