@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -254,9 +255,9 @@ export default function RegisterPage() {
                   />
                   <span>
                     Acepto los{" "}
-                    <span className="font-semibold text-[#4c00f7] underline">
+                    <Link href="/terminos" target="_blank" className="font-semibold text-[#4c00f7] underline">
                       términos y condiciones
-                    </span>{" "}
+                    </Link>{" "}
                     de Fideli-NooK.
                   </span>
                 </label>
