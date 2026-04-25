@@ -142,9 +142,11 @@ export default function AdminClienteDetalle({
               </p>
               <p className="mt-1 text-xl font-bold text-pink-700">
                 {premiosActivos.length}
-              </p>
+              </p>          
 
-              <div className="mt-4 space-y-3">
+            </div>
+
+            <div className="mt-4 space-y-3">
                 {premiosActivos.length === 0 ? (
                   <p className="text-sm text-neutral-500">
                     No hay premios activos
@@ -176,8 +178,6 @@ export default function AdminClienteDetalle({
                     </div>
                   ))
                 )}
-              </div>
-
             </div>
           </div>
         </div>
