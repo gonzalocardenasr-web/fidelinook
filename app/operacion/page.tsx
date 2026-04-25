@@ -31,6 +31,19 @@ type Cliente = {
   fecha_activacion?: string | null;
 };
 
+type Campana = {
+  id: number;
+  nombre_interno: string;
+  premio_nombre: string;
+  duracion_horas: number;
+  fecha_lanzamiento: string;
+  recurrencia: string;
+  estado: "borrador" | "programada" | "lanzando" | "lanzada" | "fallida" | "cancelada";
+  total_objetivo?: number | null;
+  total_enviados?: number | null;
+  created_at?: string | null;
+};
+
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const META_SELLOS = 7;
 
@@ -51,11 +64,15 @@ export default function OperacionPage() {
   const [subscriptionSeleccionada, setSubscriptionSeleccionada] = useState<any>(null);
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+  const [campanas, setCampanas] = useState<Campana[]>([]);
+  const [cargandoCampanas, setCargandoCampanas] = useState(false);
+  const [procesandoCampanaId, setProcesandoCampanaId] = useState<number | null>(null);
 
 
   useEffect(() => {
-    cargarDatos();
     cargarSesion();
+    cargarDatos();
+    cargarCampanas();
   }, []);
 
   useEffect(() => {
@@ -173,6 +190,105 @@ export default function OperacionPage() {
       setClientes([]);
     } finally {
       setCargando(false);
+    }
+  };
+
+  const cargarCampanas = async () => {
+    try {
+      setCargandoCampanas(true);
+
+      const { data, error } = await supabase
+        .from("campanas")
+        .select(
+          "id, nombre_interno, premio_nombre, duracion_horas, fecha_lanzamiento, recurrencia, estado, total_objetivo, total_enviados, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Error cargando campañas:", error);
+        return;
+      }
+
+      setCampanas((data || []) as Campana[]);
+    } catch (error) {
+      console.error("Error inesperado cargando campañas:", error);
+    } finally {
+      setCargandoCampanas(false);
+    }
+  };
+
+  const programarLanzamientoCampana = async (campanaId: number) => {
+    try {
+      setProcesandoCampanaId(campanaId);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/admin/campanas/programar-lanzamiento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ campanaId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo programar la campaña.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje(data.message || "Campaña programada correctamente.");
+
+      await cargarCampanas();
+    } catch (error) {
+      console.error("Error programando campaña:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error al programar la campaña.");
+    } finally {
+      setProcesandoCampanaId(null);
+    }
+  };
+
+  const cancelarCampana = async (campanaId: number) => {
+    const confirmar = window.confirm("¿Seguro que quieres cancelar esta campaña?");
+
+    if (!confirmar) return;
+
+    try {
+      setProcesandoCampanaId(campanaId);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/admin/campanas/cancelar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ campanaId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo cancelar la campaña.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje(data.message || "Campaña cancelada correctamente.");
+
+      await cargarCampanas();
+    } catch (error) {
+      console.error("Error cancelando campaña:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error al cancelar la campaña.");
+    } finally {
+      setProcesandoCampanaId(null);
     }
   };
 
@@ -537,6 +653,139 @@ export default function OperacionPage() {
                   <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
                     {mensaje}
                   </div>
+                )}
+
+                {rol === "superadmin" && (
+                  <section className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+                    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#7A57F6]">
+                          Campañas
+                        </p>
+                        <h2 className="mt-1 text-xl font-bold text-[#222]">
+                          Gestión de campañas
+                        </h2>
+                        <p className="mt-1 text-sm text-[#666]">
+                          Revisa, lanza o cancela campañas antes de publicarlas.
+                        </p>
+                      </div>
+
+                      <a
+                        href="/campanas"
+                        className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+                      >
+                        Crear campaña
+                      </a>
+                    </div>
+
+                    {cargandoCampanas ? (
+                      <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+                        Cargando campañas...
+                      </div>
+                    ) : campanas.length === 0 ? (
+                      <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+                        No hay campañas creadas.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+                          <thead>
+                            <tr className="text-xs uppercase tracking-[0.18em] text-[#777]">
+                              <th className="px-3 py-2">Campaña</th>
+                              <th className="px-3 py-2">Premio</th>
+                              <th className="px-3 py-2">Estado</th>
+                              <th className="px-3 py-2">Lanzamiento</th>
+                              <th className="px-3 py-2">Vigencia</th>
+                              <th className="px-3 py-2">Alcance</th>
+                              <th className="px-3 py-2 text-right">Acciones</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {campanas.map((campana) => {
+                              const puedeLanzar =
+                                campana.estado === "borrador" || campana.estado === "fallida";
+
+                              const puedeCancelar =
+                                campana.estado === "borrador" ||
+                                campana.estado === "programada" ||
+                                campana.estado === "fallida";
+
+                              return (
+                                <tr key={campana.id}>
+                                  <td className="rounded-l-2xl bg-[#FCF8FF] px-3 py-3">
+                                    <p className="font-semibold text-[#222]">
+                                      {campana.nombre_interno}
+                                    </p>
+                                    <p className="mt-1 text-xs text-[#777]">
+                                      #{campana.id}
+                                    </p>
+                                  </td>
+
+                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                                    {campana.premio_nombre}
+                                  </td>
+
+                                  <td className="bg-[#FCF8FF] px-3 py-3">
+                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4c00f7]">
+                                      {campana.estado}
+                                    </span>
+                                  </td>
+
+                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                                    {new Date(campana.fecha_lanzamiento).toLocaleString("es-CL")}
+                                  </td>
+
+                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                                    {campana.duracion_horas} h
+                                  </td>
+
+                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                                    {campana.total_enviados || 0}/{campana.total_objetivo || 0}
+                                  </td>
+
+                                  <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3">
+                                    <div className="flex justify-end gap-2">
+                                      <a
+                                        href={`/campanas/${campana.id}`}
+                                        className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+                                      >
+                                        Ver
+                                      </a>
+
+                                      {puedeLanzar && (
+                                        <button
+                                          type="button"
+                                          onClick={() => programarLanzamientoCampana(campana.id)}
+                                          disabled={procesandoCampanaId === campana.id}
+                                          className="rounded-xl bg-[#4c00f7] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                                        >
+                                          {procesandoCampanaId === campana.id
+                                            ? "Procesando..."
+                                            : "Lanzar"}
+                                        </button>
+                                      )}
+
+                                      {puedeCancelar && (
+                                        <button
+                                          type="button"
+                                          onClick={() => cancelarCampana(campana.id)}
+                                          disabled={procesandoCampanaId === campana.id}
+                                          className="rounded-xl border border-[#E7C9D1] bg-white px-3 py-2 text-xs font-semibold text-[#8A3550] transition hover:bg-[#FFF1F4] disabled:opacity-60"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
                 )}
               </div>
             ) : (
