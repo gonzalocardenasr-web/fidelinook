@@ -67,6 +67,7 @@ export default function RegisterPage() {
           password,
           aceptaTerminos,
           aceptaMarketing,
+          marketingPreferenciaDefinida: true,
         }),
       });
 

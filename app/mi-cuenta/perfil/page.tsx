@@ -13,6 +13,7 @@ type Cliente = {
   auth_user_id?: string | null;
   acepta_terminos?: boolean | null;
   acepta_marketing?: boolean | null;
+  marketing_preferencia_definida?: boolean | null;
   fecha_aceptacion?: string | null;
   version_terminos?: string | null;
 };
@@ -50,7 +51,7 @@ export default function MiPerfilPage() {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, nombre, correo, telefono, auth_user_id, acepta_terminos, acepta_marketing, fecha_aceptacion, version_terminos")
+        .select("id, nombre, correo, telefono, auth_user_id, acepta_terminos, acepta_marketing, marketing_preferencia_definida, fecha_aceptacion, version_terminos")
         .eq("auth_user_id", userId)
         .single();
 
@@ -101,6 +102,7 @@ export default function MiPerfilPage() {
         telefono: telefono.trim(),
         acepta_terminos: terminosAceptadosOriginalmente ? true : aceptaTerminos,
         acepta_marketing: aceptaMarketing,
+        marketing_preferencia_definida: true,
         fecha_aceptacion: terminosAceptadosOriginalmente
           ? undefined
           : aceptaTerminos

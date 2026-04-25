@@ -20,6 +20,7 @@ export async function POST(req: Request) {
       password,
       aceptaTerminos,
       aceptaMarketing,
+      marketingPreferenciaDefinida,
     } = await req.json();
 
     if (!nombre || !correo || !telefono || !password) {
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
         tarjeta_activa: false,
         acepta_terminos: true,
         acepta_marketing: Boolean(aceptaMarketing),
+        marketing_preferencia_definida: Boolean(marketingPreferenciaDefinida),
         fecha_aceptacion: new Date().toISOString(),
         version_terminos: "v1.0", 
       })
