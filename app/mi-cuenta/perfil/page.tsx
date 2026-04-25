@@ -11,6 +11,10 @@ type Cliente = {
   correo: string;
   telefono: string;
   auth_user_id?: string | null;
+  acepta_terminos?: boolean | null;
+  acepta_marketing?: boolean | null;
+  fecha_aceptacion?: string | null;
+  version_terminos?: string | null;
 };
 
 export default function MiPerfilPage() {
@@ -23,6 +27,10 @@ export default function MiPerfilPage() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
+
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaMarketing, setAceptaMarketing] = useState(false);
+  const [terminosAceptadosOriginalmente, setTerminosAceptadosOriginalmente] = useState(false);
 
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +50,7 @@ export default function MiPerfilPage() {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, nombre, correo, telefono, auth_user_id")
+        .select("id, nombre, correo, telefono, auth_user_id, acepta_terminos, acepta_marketing, fecha_aceptacion, version_terminos")
         .eq("auth_user_id", userId)
         .single();
 
@@ -58,6 +66,9 @@ export default function MiPerfilPage() {
       setNombre(cliente.nombre || "");
       setCorreo(cliente.correo || "");
       setTelefono(cliente.telefono || "");
+      setAceptaTerminos(Boolean(cliente.acepta_terminos));
+      setAceptaMarketing(Boolean(cliente.acepta_marketing));
+      setTerminosAceptadosOriginalmente(Boolean(cliente.acepta_terminos));
       setLoading(false);
     };
 
@@ -77,11 +88,29 @@ export default function MiPerfilPage() {
     setMensaje("");
     setError("");
 
+    if (!terminosAceptadosOriginalmente && !aceptaTerminos) {
+      setError("Debes aceptar los términos y condiciones para continuar usando Fideli-NooK.");
+      setGuardando(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("clientes")
       .update({
         nombre: nombre.trim(),
         telefono: telefono.trim(),
+        acepta_terminos: terminosAceptadosOriginalmente ? true : aceptaTerminos,
+        acepta_marketing: aceptaMarketing,
+        fecha_aceptacion: terminosAceptadosOriginalmente
+          ? undefined
+          : aceptaTerminos
+          ? new Date().toISOString()
+          : null,
+        version_terminos: terminosAceptadosOriginalmente
+          ? undefined
+          : aceptaTerminos
+          ? "v1.0"
+          : null,
       })
       .eq("id", clienteId);
 
@@ -89,6 +118,10 @@ export default function MiPerfilPage() {
       setError("No se pudo guardar tu perfil. Inténtalo nuevamente.");
       setGuardando(false);
       return;
+    }
+
+    if (aceptaTerminos) {
+      setTerminosAceptadosOriginalmente(true);
     }
 
     setMensaje("Tu perfil fue actualizado correctamente.");
@@ -210,6 +243,56 @@ export default function MiPerfilPage() {
                   className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                   placeholder="Tu teléfono"
                 />
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4 text-sm text-[#555]">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#7A57F6]">
+                    Preferencias
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[#555]">
+                    Administra el uso de tus datos para comunicaciones, promociones y beneficios.
+                  </p>
+                </div>
+
+                {!terminosAceptadosOriginalmente ? (
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                    />
+                    <span>
+                      Acepto los{" "}
+                      <a
+                        href="/terminos"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#4c00f7] underline"
+                      >
+                        términos y condiciones
+                      </a>{" "}
+                      de Fideli-NooK.
+                    </span>
+                  </label>
+                ) : (
+                  <div className="rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
+                    Ya aceptaste los términos y condiciones vigentes.
+                  </div>
+                )}
+
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={aceptaMarketing}
+                    onChange={(e) => setAceptaMarketing(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-[#4c00f7]"
+                  />
+                  <span>
+                    Quiero recibir promociones, beneficios y comunicaciones de Nook.
+                  </span>
+                </label>
               </div>
 
               {mensaje && (
