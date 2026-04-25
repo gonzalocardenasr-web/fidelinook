@@ -143,14 +143,10 @@ export default function AdminClienteDetalle({
                 {premiosActivos.length}
               </p>          
 
-            </div>
-           
-
+            </div>           
           </div>
         </div>
-
-                </div>
-
+        
         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
           <p className="mb-3 text-sm font-medium text-neutral-700">
             Premios activos
