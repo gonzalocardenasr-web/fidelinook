@@ -1,0 +1,145 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+
+async function aplicarCampana(campanaId: number, duracionHoras: number) {
+  const { data: campana, error: campanaError } = await supabaseAdmin
+    .from("campanas")
+    .select("*")
+    .eq("id", campanaId)
+    .single();
+
+  if (campanaError || !campana) {
+    throw new Error("No se encontró la campaña.");
+  }
+
+  const { data: clientes, error: clientesError } = await supabaseAdmin
+    .from("clientes")
+    .select("id, premios, acepta_marketing, marketing_preferencia_definida")
+    .or("acepta_marketing.eq.true,marketing_preferencia_definida.eq.false");
+
+  if (clientesError) {
+    throw clientesError;
+  }
+
+  const clientesObjetivo = clientes || [];
+  const fechaExpiracion = new Date();
+  fechaExpiracion.setHours(fechaExpiracion.getHours() + duracionHoras);
+
+  let totalAplicados = 0;
+
+  for (const cliente of clientesObjetivo) {
+    const premiosActuales = Array.isArray(cliente.premios)
+      ? [...cliente.premios]
+      : [];
+
+    const yaTieneCampana = premiosActuales.some(
+      (premio: any) => premio.campana_id === campana.id
+    );
+
+    if (yaTieneCampana) continue;
+
+    const premioId = crypto.randomUUID();
+
+    premiosActuales.push({
+    id: premioId,
+    nombre: campana.premio_nombre,
+    descripcion: campana.premio_descripcion,
+    estado: "activo",
+    tipo: "campana",
+    campana_id: campana.id,
+    vencimiento: fechaExpiracion.toISOString(),
+    creado_en: new Date().toISOString(),
+    });
+
+    const { error: updateError } = await supabaseAdmin
+    .from("clientes")
+    .update({ premios: premiosActuales })
+    .eq("id", cliente.id);
+
+    if (!updateError) {
+    const { error: trackingError } = await supabaseAdmin
+        .from("campana_clientes")
+        .insert({
+        campana_id: campana.id,
+        cliente_id: cliente.id,
+        premio_id: premioId,
+        estado: "asignado",
+        asignado_at: new Date().toISOString(),
+        vencimiento: fechaExpiracion.toISOString(),
+        email_enviado: false,
+        });
+
+    if (trackingError) {
+        console.error(
+        "Error creando trazabilidad de campaña:",
+        cliente.id,
+        trackingError
+        );
+    }
+
+    totalAplicados += 1;
+    } else {
+    console.error("Error aplicando premio a cliente:", cliente.id, updateError);
+    }
+  }
+
+  const { error: updateCampanaError } = await supabaseAdmin
+    .from("campanas")
+    .update({
+      estado: "lanzada",
+      launched_at: new Date().toISOString(),
+      total_objetivo: clientesObjetivo.length,
+      total_enviados: totalAplicados,
+    })
+    .eq("id", campana.id);
+
+  if (updateCampanaError) {
+    console.error("Error actualizando campaña:", updateCampanaError);
+  }
+
+  return {
+    totalObjetivo: clientesObjetivo.length,
+    totalAplicados,
+  };
+}
+
+export async function GET() {
+  try {
+    const ahora = new Date().toISOString();
+
+    const { data: campanas, error } = await supabaseAdmin
+      .from("campanas")
+      .select("*")
+      .eq("estado", "programada")
+      .lte("fecha_lanzamiento", ahora);
+
+    if (error) {
+      console.error("Error buscando campañas:", error);
+      return NextResponse.json({ ok: false });
+    }
+
+    let totalProcesadas = 0;
+
+    for (const campana of campanas || []) {
+      try {
+        await aplicarCampana(campana.id, campana.duracion_horas);
+        totalProcesadas++;
+      } catch (err) {
+        console.error("Error aplicando campaña:", campana.id, err);
+
+        await supabaseAdmin
+          .from("campanas")
+          .update({ estado: "fallida" })
+          .eq("id", campana.id);
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      totalProcesadas,
+    });
+  } catch (err) {
+    console.error("Error cron campañas:", err);
+    return NextResponse.json({ ok: false });
+  }
+}
