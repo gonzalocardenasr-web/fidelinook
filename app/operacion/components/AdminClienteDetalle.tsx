@@ -25,6 +25,7 @@ type Props = {
   cliente: Cliente | null;
   premiosActivos: Premio[];
   mensaje: string;
+  tipoMensaje: "success" | "error" | "info";
   setMensaje: (value: string) => void;
   procesandoCompra: boolean;
   procesandoCanje: boolean;
@@ -32,6 +33,7 @@ type Props = {
   rol: "admin" | "superadmin" | null;
   validarCompra: () => Promise<void>;
   canjearPrimerPremio: () => Promise<void>;
+  canjearPremioPorId: (premioId: number) => Promise<void>;
   eliminarClienteSeleccionado?: () => void;
   reiniciarDatos?: () => void;
   exportarCSV?: () => void;
@@ -44,6 +46,7 @@ export default function AdminClienteDetalle({
   cliente,
   premiosActivos,
   mensaje,
+  tipoMensaje,
   setMensaje,
   procesandoCompra,
   procesandoCanje,
@@ -51,6 +54,7 @@ export default function AdminClienteDetalle({
   rol,
   validarCompra,
   canjearPrimerPremio,
+  canjearPremioPorId,
   eliminarClienteSeleccionado,
   reiniciarDatos,
   exportarCSV,
@@ -139,6 +143,41 @@ export default function AdminClienteDetalle({
               <p className="mt-1 text-xl font-bold text-pink-700">
                 {premiosActivos.length}
               </p>
+
+              <div className="mt-4 space-y-3">
+                {premiosActivos.length === 0 ? (
+                  <p className="text-sm text-neutral-500">
+                    No hay premios activos
+                  </p>
+                ) : (
+                  premiosActivos.map((premio) => (
+                    <div
+                      key={premio.id}
+                      className="flex items-center justify-between rounded-2xl border p-3"
+                    >
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {premio.nombre}
+                        </p>
+                        {premio.vencimiento && (
+                          <p className="text-xs text-neutral-500">
+                            Vence: {premio.vencimiento}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => canjearPremioPorId(premio.id)}
+                        disabled={procesandoCanje}
+                        className="rounded-xl bg-[#4c00f7] px-3 py-2 text-white text-sm"
+                      >
+                        Canjear
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
             </div>
           </div>
         </div>
@@ -231,17 +270,7 @@ export default function AdminClienteDetalle({
         >
           {procesandoCompra ? "Validando..." : "Validar compra"}
         </button>
-
-        <button
-          onClick={canjearPrimerPremio}
-          disabled={
-            procesandoCanje || procesandoCompra || reiniciando || !cliente
-          }
-          className="cursor-pointer rounded-lg bg-violet-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
-        >
-          {procesandoCanje ? "Canjeando..." : "Canjear premio"}
-        </button>
-
+        
         {mostrarAccionesAdministrativas && rol === "superadmin" && (
           <>
             <button
@@ -274,7 +303,15 @@ export default function AdminClienteDetalle({
       </div>
 
       {mensaje && (
-        <div className="mt-6 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
+        <div
+          className={`mt-6 rounded-lg p-4 text-sm ${
+            tipoMensaje === "success"
+              ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
+              : tipoMensaje === "error"
+              ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+              : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+          }`}
+        >
           {mensaje}
         </div>
       )}
