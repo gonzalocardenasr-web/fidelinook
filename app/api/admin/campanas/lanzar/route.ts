@@ -130,26 +130,48 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
 
     if (yaTieneCampana) continue;
 
+    const premioId = crypto.randomUUID();
+
     premiosActuales.push({
-      id: crypto.randomUUID(),
-      nombre: campana.premio_nombre,
-      descripcion: campana.premio_descripcion,
-      estado: "activo",
-      tipo: "campana",
-      campana_id: campana.id,
-      vencimiento: fechaExpiracion.toISOString(),
-      creado_en: new Date().toISOString(),
+    id: premioId,
+    nombre: campana.premio_nombre,
+    descripcion: campana.premio_descripcion,
+    estado: "activo",
+    tipo: "campana",
+    campana_id: campana.id,
+    vencimiento: fechaExpiracion.toISOString(),
+    creado_en: new Date().toISOString(),
     });
 
     const { error: updateError } = await supabaseAdmin
-      .from("clientes")
-      .update({ premios: premiosActuales })
-      .eq("id", cliente.id);
+    .from("clientes")
+    .update({ premios: premiosActuales })
+    .eq("id", cliente.id);
 
     if (!updateError) {
-      totalAplicados += 1;
+    const { error: trackingError } = await supabaseAdmin
+        .from("campana_clientes")
+        .insert({
+        campana_id: campana.id,
+        cliente_id: cliente.id,
+        premio_id: premioId,
+        estado: "asignado",
+        asignado_at: new Date().toISOString(),
+        vencimiento: fechaExpiracion.toISOString(),
+        email_enviado: false,
+        });
+
+    if (trackingError) {
+        console.error(
+        "Error creando trazabilidad de campaña:",
+        cliente.id,
+        trackingError
+        );
+    }
+
+    totalAplicados += 1;
     } else {
-      console.error("Error aplicando premio a cliente:", cliente.id, updateError);
+    console.error("Error aplicando premio a cliente:", cliente.id, updateError);
     }
   }
 

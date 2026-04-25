@@ -410,6 +410,22 @@ export default function OperacionPage() {
         return;
       }
 
+      if (premioActivo?.tipo === "campana" && premioActivo?.campana_id) {
+        const { error: trackingError } = await supabase
+          .from("campana_clientes")
+          .update({
+            estado: "canjeado",
+            canjeado_at: new Date().toISOString(),
+          })
+          .eq("campana_id", premioActivo.campana_id)
+          .eq("cliente_id", cliente.id)
+          .eq("premio_id", String(premioActivo.id));
+
+        if (trackingError) {
+          console.error("Error actualizando trazabilidad de campaña:", trackingError);
+        }
+      }
+
       try {
         await fetch("/api/send-reward-redeemed", {
           method: "POST",
