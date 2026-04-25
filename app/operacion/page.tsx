@@ -352,7 +352,7 @@ export default function OperacionPage() {
     }
   };
 
-  const canjearPrimerPremio = async () => {
+  const canjearPremioPorId = async (premioId: number) => {
     if (!cliente) {
       setTipoMensaje("error");
       setMensaje("Debes seleccionar un cliente.");
@@ -377,12 +377,13 @@ export default function OperacionPage() {
         : [];
 
       const indexPremioActivo = premiosActuales.findIndex(
-        (premio: Premio) => premio.estado === "activo"
+        (premio: Premio) =>
+          premio.id === premioId && premio.estado === "activo"
       );
 
       if (indexPremioActivo === -1) {
         setTipoMensaje("error");
-        setMensaje("No hay premios activos para canjear.");
+        setMensaje("No se encontró un premio activo para canjear.");
         return;
       }
 
@@ -391,6 +392,7 @@ export default function OperacionPage() {
       premiosActuales[indexPremioActivo] = {
         ...premiosActuales[indexPremioActivo],
         estado: "usado",
+        fecha_canje: new Date().toISOString(),
       };
 
       const { error } = await supabase
@@ -427,70 +429,11 @@ export default function OperacionPage() {
 
       await cargarDatos(true);
       setTipoMensaje("success");
-      setMensaje("Premio canjeado correctamente.");
+      setMensaje(`Premio canjeado correctamente: ${premioActivo.nombre}.`);
     } catch (err) {
       console.error("Error inesperado al canjear premio:", err);
       setTipoMensaje("error");
       setMensaje("Ocurrió un error inesperado al canjear el premio.");
-    } finally {
-      setProcesandoCanje(false);
-    }
-  };
-
-  const canjearPremioPorId = async (premioId: number) => {
-    if (!cliente) {
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setMensaje("El cliente aún no ha activado su tarjeta.");
-      return;
-    }
-
-    try {
-      setProcesandoCanje(true);
-      setMensaje("");
-
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? [...cliente.premios]
-        : [];
-
-      const index = premiosActuales.findIndex(
-        (p: any) => p.id === premioId && p.estado === "activo"
-      );
-
-      if (index === -1) {
-        setMensaje("No se encontró el premio.");
-        return;
-      }
-
-      premiosActuales[index] = {
-        ...premiosActuales[index],
-        estado: "usado",
-        fecha_canje: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          premios: premiosActuales,
-          fecha_ultimo_canje: new Date().toISOString(),
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        setMensaje("Error al canjear el premio.");
-        return;
-      }
-
-      setMensaje("Premio canjeado correctamente.");
-
-      await cargarDatos();
-
-    } catch (err) {
-      console.error(err);
-      setMensaje("Error inesperado al canjear.");
     } finally {
       setProcesandoCanje(false);
     }
@@ -667,7 +610,6 @@ export default function OperacionPage() {
                     reiniciando={false}
                     rol={rol}
                     validarCompra={validarCompra}
-                    canjearPrimerPremio={canjearPrimerPremio}
                     canjearPremioPorId={canjearPremioPorId}
                     eliminarClienteSeleccionado={undefined}
                     reiniciarDatos={undefined}

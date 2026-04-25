@@ -5,6 +5,7 @@ type Premio = {
   nombre: string;
   estado: "activo" | "usado";
   vencimiento?: string;
+  fecha_canje?: string;
 };
 
 type Cliente = {
@@ -32,7 +33,6 @@ type Props = {
   reiniciando: boolean;
   rol: "admin" | "superadmin" | null;
   validarCompra: () => Promise<void>;
-  canjearPrimerPremio: () => Promise<void>;
   canjearPremioPorId: (premioId: number) => Promise<void>;
   eliminarClienteSeleccionado?: () => void;
   reiniciarDatos?: () => void;
@@ -53,7 +53,6 @@ export default function AdminClienteDetalle({
   reiniciando,
   rol,
   validarCompra,
-  canjearPrimerPremio,
   canjearPremioPorId,
   eliminarClienteSeleccionado,
   reiniciarDatos,
@@ -145,41 +144,53 @@ export default function AdminClienteDetalle({
               </p>          
 
             </div>
+           
 
-            <div className="mt-4 space-y-3">
-                {premiosActivos.length === 0 ? (
-                  <p className="text-sm text-neutral-500">
-                    No hay premios activos
-                  </p>
-                ) : (
-                  premiosActivos.map((premio) => (
-                    <div
-                      key={premio.id}
-                      className="flex items-center justify-between rounded-2xl border p-3"
-                    >
-                      <div>
-                        <p className="font-semibold text-sm">
-                          {premio.nombre}
-                        </p>
-                        {premio.vencimiento && (
-                          <p className="text-xs text-neutral-500">
-                            Vence: {premio.vencimiento}
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() => canjearPremioPorId(premio.id)}
-                        disabled={procesandoCanje}
-                        className="rounded-xl bg-[#4c00f7] px-3 py-2 text-white text-sm"
-                      >
-                        Canjear
-                      </button>
-                    </div>
-                  ))
-                )}
-            </div>
           </div>
+        </div>
+
+                </div>
+
+        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="mb-3 text-sm font-medium text-neutral-700">
+            Premios activos
+          </p>
+
+          {premiosActivos.length === 0 ? (
+            <p className="text-sm text-neutral-500">
+              No hay premios activos para este cliente.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {premiosActivos.map((premio) => (
+                <div
+                  key={premio.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900">
+                      {premio.nombre}
+                    </p>
+
+                    {premio.vencimiento && (
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Vence: {formatearFecha(premio.vencimiento)}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => canjearPremioPorId(premio.id)}
+                    disabled={procesandoCanje}
+                    className="rounded-xl bg-[#4c00f7] px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {procesandoCanje ? "Canjeando..." : "Canjear"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
