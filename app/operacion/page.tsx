@@ -454,17 +454,8 @@ export default function OperacionPage() {
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">      
 
-        {rol === "superadmin" && (
-          <Link
-            href="/campanas"
-            className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
-          >
-            Crear campaña
-          </Link>
-        )}
-        
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
@@ -492,6 +483,14 @@ export default function OperacionPage() {
                 >
                 Cerrar sesión
                 </button>
+                {rol === "superadmin" && (
+                  <Link
+                    href="/campanas"
+                    className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+                  >
+                    Crear campaña
+                  </Link>
+                )}
             </div>
             </div>
         
