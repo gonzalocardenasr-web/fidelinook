@@ -3,10 +3,6 @@
     {
       "path": "/api/daily-crm",
       "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/campanas",
-      "schedule": "0 * * * *"
     }
   ]
 }

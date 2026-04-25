@@ -41,8 +41,6 @@ export async function POST(req: Request) {
     }
 
     const recurrenciaFinal = recurrencia === "semanal" ? "semanal" : "una_vez";
-    const ahora = new Date();
-    const estadoInicial = fecha <= ahora ? "lanzada" : "programada";
 
     const { data: campana, error: campanaError } = await supabaseAdmin
       .from("campanas")
@@ -53,9 +51,9 @@ export async function POST(req: Request) {
         duracion_horas: duracion,
         fecha_lanzamiento: fecha.toISOString(),
         recurrencia: recurrenciaFinal,
-        estado: estadoInicial,
+        estado: "borrador",
         creado_por: creadoPor || "superadmin",
-        launched_at: estadoInicial === "lanzada" ? ahora.toISOString() : null,
+        launched_at: null,
       })
       .select()
       .single();
@@ -68,22 +66,12 @@ export async function POST(req: Request) {
       );
     }
 
-    if (estadoInicial === "programada") {
-      return NextResponse.json({
-        ok: true,
-        message: "Campaña programada correctamente.",
-        campana,
-      });
-    }
-
-    const resultado = await aplicarCampana(campana.id, duracion);
-
     return NextResponse.json({
-      ok: true,
-      message: "Campaña lanzada correctamente.",
-      campana,
-      resultado,
+        ok: true,
+        message: "Campaña creada correctamente. Podrás lanzarla desde Operación local.",
+        campana,
     });
+    
   } catch (error) {
     console.error("Error en /api/admin/campanas/lanzar:", error);
     return NextResponse.json(
