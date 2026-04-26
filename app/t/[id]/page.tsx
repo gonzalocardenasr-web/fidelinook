@@ -124,7 +124,13 @@ export default async function TarjetaPublicaPage({ params }: Props) {
       (premio.estado === "activo" && estaVencido(premio.vencimiento))
   );
 
-  const premioDestacado = premiosActivos[0] || null;
+  const premioDestacado =
+  premiosActivos.find(
+    (premio: Premio) =>
+      premio.tipo === "campana" || premio.tipo === "campana_prueba"
+  ) ||
+  premiosActivos[0] ||
+  null;
 
   const sellos = clienteTyped.sellos ?? 0;
   const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${clienteTyped.public_token}`;
