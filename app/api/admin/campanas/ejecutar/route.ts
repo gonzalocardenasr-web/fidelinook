@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 
 export async function POST(req: Request) {
   try {
-    const { campanaId } = await req.json();
+    const { campanaId, clienteCorreoPrueba } = await req.json();
 
     if (!campanaId) {
       return NextResponse.json(
@@ -32,7 +32,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const resultado = await aplicarCampana(campana.id, campana.duracion_horas);
+    const resultado = await aplicarCampana(
+        campana.id,
+        campana.duracion_horas,
+        clienteCorreoPrueba
+    );
 
     return NextResponse.json({
       ok: true,
@@ -48,7 +52,11 @@ export async function POST(req: Request) {
   }
 }
 
-async function aplicarCampana(campanaId: number, duracionHoras: number) {
+async function aplicarCampana(
+  campanaId: number,
+  duracionHoras: number,
+  clienteCorreoPrueba?: string
+) {
   const { data: campana, error: campanaError } = await supabaseAdmin
     .from("campanas")
     .select("*")
@@ -67,10 +75,19 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
     })
     .eq("id", campana.id);
 
-  const { data: clientes, error: clientesError } = await supabaseAdmin
+  const esPrueba = Boolean(clienteCorreoPrueba?.trim());
+
+    const queryClientes = supabaseAdmin
     .from("clientes")
-    .select("id, premios, acepta_marketing, marketing_preferencia_definida")
-    .or("acepta_marketing.eq.true,marketing_preferencia_definida.eq.false");
+    .select("id, correo, premios, acepta_marketing, marketing_preferencia_definida");
+
+    const { data: clientes, error: clientesError } = esPrueba
+    ? await queryClientes
+        .eq("correo", clienteCorreoPrueba.trim().toLowerCase())
+        .limit(1)
+    : await queryClientes.or(
+        "acepta_marketing.eq.true,marketing_preferencia_definida.eq.false"
+        );
 
   if (clientesError) {
     await supabaseAdmin
@@ -85,6 +102,11 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
   }
 
   const clientesObjetivo = clientes || [];
+
+  if (esPrueba && clientesObjetivo.length === 0) {
+    throw new Error("No se encontró un cliente con el correo de prueba indicado.");
+  }
+
   const fechaExpiracion = new Date();
   fechaExpiracion.setHours(fechaExpiracion.getHours() + duracionHoras);
 
@@ -104,14 +126,14 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
     const premioId = crypto.randomUUID();
 
     premiosActuales.push({
-      id: premioId,
-      nombre: campana.premio_nombre,
-      descripcion: campana.premio_descripcion,
-      estado: "activo",
-      tipo: "campana",
-      campana_id: campana.id,
-      vencimiento: fechaExpiracion.toISOString(),
-      creado_en: new Date().toISOString(),
+        id: premioId,
+        nombre: campana.premio_nombre,
+        descripcion: campana.premio_descripcion,
+        estado: "activo",
+        tipo: esPrueba ? "campana_prueba" : "campana",
+        campana_id: campana.id,
+        vencimiento: fechaExpiracion.toISOString(),
+        creado_en: new Date().toISOString(),
     });
 
     const { error: updateError } = await supabaseAdmin
@@ -142,23 +164,26 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
     }
   }
 
-  const { error: updateCampanaError } = await supabaseAdmin
-    .from("campanas")
-    .update({
-      estado: "lanzada",
-      launched_at: new Date().toISOString(),
-      total_objetivo: clientesObjetivo.length,
-      total_enviados: totalAplicados,
-      error_message: null,
-    })
-    .eq("id", campana.id);
+  if (!esPrueba) {
+    const { error: updateCampanaError } = await supabaseAdmin
+        .from("campanas")
+        .update({
+        estado: "lanzada",
+        launched_at: new Date().toISOString(),
+        total_objetivo: clientesObjetivo.length,
+        total_enviados: totalAplicados,
+        error_message: null,
+        })
+        .eq("id", campana.id);
 
-  if (updateCampanaError) {
-    throw updateCampanaError;
+    if (updateCampanaError) {
+        throw updateCampanaError;
+    }
   }
 
-  return {
-    totalObjetivo: clientesObjetivo.length,
-    totalAplicados,
-  };
+    return {
+        modoPrueba: esPrueba,
+        totalObjetivo: clientesObjetivo.length,
+        totalAplicados,
+    };
 }

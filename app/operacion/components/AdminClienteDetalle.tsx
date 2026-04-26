@@ -1,10 +1,13 @@
 import QRCode from "react-qr-code";
 
 type Premio = {
-  id: number;
+  id: number | string;
   nombre: string;
-  estado: "activo" | "usado";
+  descripcion?: string;
+  estado: "activo" | "usado" | "caducado";
   vencimiento?: string;
+  tipo?: string;
+  campana_id?: number;
   fecha_canje?: string;
 };
 
@@ -33,7 +36,7 @@ type Props = {
   reiniciando: boolean;
   rol: "admin" | "superadmin" | null;
   validarCompra: () => Promise<void>;
-  canjearPremioPorId: (premioId: number) => Promise<void>;
+  canjearPremioPorId: (premioId: number | string) => Promise<void>;
   eliminarClienteSeleccionado?: () => void;
   reiniciarDatos?: () => void;
   exportarCSV?: () => void;

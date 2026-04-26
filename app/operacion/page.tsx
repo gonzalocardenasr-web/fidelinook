@@ -9,10 +9,14 @@ import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva"
 import UltimosMovimientos from "./components/UltimosMovimientos";
 
 type Premio = {
-  id: number;
+  id: number | string;
   nombre: string;
-  estado: "activo" | "usado";
+  descripcion?: string;
+  estado: "activo" | "usado" | "caducado";
   vencimiento?: string;
+  tipo?: string;
+  campana_id?: number;
+  fecha_canje?: string;
 };
 
 type Cliente = {
@@ -334,6 +338,51 @@ export default function OperacionPage() {
     }
   };
 
+  const ejecutarCampanaPrueba = async (campanaId: number) => {
+    const correo = window.prompt(
+      "Ingresa el correo del cliente de prueba que recibirá el premio:"
+    );
+
+    if (!correo) return;
+
+    try {
+      setProcesandoCampanaId(campanaId);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/admin/campanas/ejecutar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campanaId,
+          clienteCorreoPrueba: correo.trim().toLowerCase(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo ejecutar la prueba.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje("Prueba ejecutada correctamente para el cliente indicado.");
+
+      await cargarCampanas();
+      await cargarDatos(true);
+    } catch (error) {
+      console.error("Error ejecutando prueba de campaña:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error al ejecutar la prueba.");
+    } finally {
+      setProcesandoCampanaId(null);
+    }
+  };
+
   const clientesFiltrados = useMemo(() => {
     let resultado = [...clientes];
 
@@ -510,7 +559,7 @@ export default function OperacionPage() {
     }
   };
 
-  const canjearPremioPorId = async (premioId: number) => {
+  const canjearPremioPorId = async (premioId: number | string) => {
     if (!cliente) {
       setTipoMensaje("error");
       setMensaje("Debes seleccionar un cliente.");
@@ -536,7 +585,7 @@ export default function OperacionPage() {
 
       const indexPremioActivo = premiosActuales.findIndex(
         (premio: Premio) =>
-          premio.id === premioId && premio.estado === "activo"
+          String(premio.id) === String(premioId) && premio.estado === "activo"
       );
 
       if (indexPremioActivo === -1) {
@@ -786,6 +835,17 @@ export default function OperacionPage() {
                                           {procesandoCampanaId === campana.id
                                             ? "Ejecutando..."
                                             : "Ejecutar ahora"}
+                                        </button>
+                                      )}
+
+                                      {["borrador", "programada", "fallida"].includes(campana.estado) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => ejecutarCampanaPrueba(campana.id)}
+                                          disabled={procesandoCampanaId === campana.id}
+                                          className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF] disabled:opacity-60"
+                                        >
+                                          Probar
                                         </button>
                                       )}
 
