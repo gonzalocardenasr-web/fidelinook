@@ -7,10 +7,14 @@ import QRCode from "react-qr-code";
 import ClienteLogoutButton from "../components/ClienteLogoutButton";
 
 type Premio = {
-  id: number;
+  id: number | string;
   nombre: string;
-  estado: "activo" | "usado";
+  descripcion?: string;
+  estado: "activo" | "usado" | "caducado";
   vencimiento?: string;
+  tipo?: string;
+  campana_id?: number;
+  fecha_canje?: string;
 };
 
 type Cliente = {
@@ -27,6 +31,33 @@ type Cliente = {
 };
 
 const META_SELLOS = 7;
+
+function formatearFecha(fecha?: string) {
+  if (!fecha) return "Sin definir";
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return "Sin definir";
+
+  return date.toLocaleString("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function estaVencido(fecha?: string) {
+  if (!fecha) return false;
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date.getTime() < Date.now();
+}
 
 export default function MiTarjetaPage() {
   const router = useRouter();
@@ -69,12 +100,23 @@ export default function MiTarjetaPage() {
 
   const premiosActivos = useMemo(() => {
     if (!cliente || !Array.isArray(cliente.premios)) return [];
-    return cliente.premios.filter((premio) => premio.estado === "activo");
+    return cliente.premios.filter(
+      (premio) => premio.estado === "activo" && !estaVencido(premio.vencimiento)
+    );
   }, [cliente]);
 
   const premiosUsados = useMemo(() => {
     if (!cliente || !Array.isArray(cliente.premios)) return [];
     return cliente.premios.filter((premio) => premio.estado === "usado");
+  }, [cliente]);
+
+  const premiosCaducados = useMemo(() => {
+    if (!cliente || !Array.isArray(cliente.premios)) return [];
+    return cliente.premios.filter(
+      (premio) =>
+        premio.estado === "caducado" ||
+        (premio.estado === "activo" && estaVencido(premio.vencimiento))
+    );
   }, [cliente]);
 
   const sellos = cliente?.sellos ?? 0;
@@ -210,7 +252,17 @@ export default function MiTarjetaPage() {
                   Premio disponible
                 </p>
                 <p className="mt-2 text-2xl font-bold">🎉 ¡Tienes un premio!</p>
-                <p className="mt-1 text-lg">{premioActivo.nombre}</p>
+
+                <p className="mt-2 text-lg leading-7">
+                  {premioActivo.descripcion || premioActivo.nombre}
+                </p>
+
+                {premioActivo.vencimiento && (
+                  <p className="mt-2 text-sm text-white/80">
+                    Vence: {formatearFecha(premioActivo.vencimiento)}
+                  </p>
+                )}
+
                 <p className="mt-2 text-sm text-white/80">
                   Muéstralo en el local para canjearlo.
                 </p>
@@ -219,9 +271,11 @@ export default function MiTarjetaPage() {
           </div>
         </div>
 
-        <details className="overflow-hidden rounded-[24px] bg-white shadow" open>
-          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            Premios activos
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Premios activos ({premiosActivos.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -229,19 +283,26 @@ export default function MiTarjetaPage() {
               <p className="text-neutral-600">No tienes premios activos.</p>
             ) : (
               <div className="space-y-3">
-                {premiosActivos.map((premio) => (
+                {premiosActivos.map((premio: Premio) => (
                   <div
                     key={premio.id}
-                    className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] p-4"
+                    className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/35 p-4"
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
                     </p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Estado: {premio.estado}
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: activo
                     </p>
                     <p className="text-sm text-neutral-600">
-                      Vence: {premio.vencimiento || "Sin definir"}
+                      Vence: {formatearFecha(premio.vencimiento)}
                     </p>
                   </div>
                 ))}
@@ -250,9 +311,11 @@ export default function MiTarjetaPage() {
           </div>
         </details>
 
-        <details className="overflow-hidden rounded-[24px] bg-white shadow">
-          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            Historial de premios usados
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Historial de premios usados ({premiosUsados.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -262,7 +325,7 @@ export default function MiTarjetaPage() {
               </p>
             ) : (
               <div className="space-y-3">
-                {premiosUsados.map((premio) => (
+                {premiosUsados.map((premio: Premio) => (
                   <div
                     key={premio.id}
                     className="rounded-2xl border border-neutral-200 p-4"
@@ -270,11 +333,60 @@ export default function MiTarjetaPage() {
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
                     </p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Estado: {premio.estado}
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: usado
                     </p>
                     <p className="text-sm text-neutral-600">
-                      Vencía: {premio.vencimiento || "Sin definir"}
+                      Vencía: {formatearFecha(premio.vencimiento)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
+
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Historial de premios caducados ({premiosCaducados.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
+          </summary>
+
+          <div className="border-t border-neutral-200 px-6 py-5">
+            {premiosCaducados.length === 0 ? (
+              <p className="text-neutral-600">
+                No tienes premios caducados.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {premiosCaducados.map((premio: Premio) => (
+                  <div
+                    key={premio.id}
+                    className="rounded-2xl border border-neutral-200 p-4"
+                  >
+                    <p className="font-semibold text-[#4C00F7]">
+                      {premio.nombre}
+                    </p>
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: caducado
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      Venció: {formatearFecha(premio.vencimiento)}
                     </p>
                   </div>
                 ))}

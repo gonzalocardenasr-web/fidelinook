@@ -4,10 +4,14 @@ import QRCode from "react-qr-code";
 import { supabase } from "../../../lib/supabase";
 
 type Premio = {
-  id: number;
+  id: number | string;
   nombre: string;
-  estado: "activo" | "usado";
+  descripcion?: string;
+  estado: "activo" | "usado" | "caducado";
   vencimiento?: string;
+  tipo?: string;
+  campana_id?: number;
+  fecha_canje?: string;
 };
 
 type Cliente = {
@@ -30,6 +34,33 @@ type Props = {
 };
 
 const META_SELLOS = 7;
+
+function formatearFecha(fecha?: string) {
+  if (!fecha) return "Sin definir";
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return "Sin definir";
+
+  return date.toLocaleString("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function estaVencido(fecha?: string) {
+  if (!fecha) return false;
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date.getTime() < Date.now();
+}
 
 export default async function TarjetaPublicaPage({ params }: Props) {
   const { id } = await params;
@@ -79,12 +110,21 @@ export default async function TarjetaPublicaPage({ params }: Props) {
     : [];
 
   const premiosActivos = premiosArray.filter(
-    (premio: Premio) => premio.estado === "activo"
+    (premio: Premio) =>
+      premio.estado === "activo" && !estaVencido(premio.vencimiento)
   );
 
   const premiosUsados = premiosArray.filter(
     (premio: Premio) => premio.estado === "usado"
   );
+
+  const premiosCaducados = premiosArray.filter(
+    (premio: Premio) =>
+      premio.estado === "caducado" ||
+      (premio.estado === "activo" && estaVencido(premio.vencimiento))
+  );
+
+  const premioDestacado = premiosActivos[0] || null;
 
   const sellos = clienteTyped.sellos ?? 0;
   const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${clienteTyped.public_token}`;
@@ -208,13 +248,23 @@ export default async function TarjetaPublicaPage({ params }: Props) {
               </div>
             </div>
 
-            {premiosActivos.length > 0 && (
+            {premioDestacado && (
               <div className="rounded-2xl border border-[#4C00F7]/15 bg-[#4C00F7] p-5 text-white">
                 <p className="text-sm font-medium uppercase tracking-[0.14em] text-white/80">
                   Premio disponible
                 </p>
                 <p className="mt-2 text-2xl font-bold">🎉 ¡Tienes un premio!</p>
-                <p className="mt-1 text-lg">{premiosActivos[0].nombre}</p>
+
+                <p className="mt-2 text-lg leading-7">
+                  {premioDestacado.descripcion || premioDestacado.nombre}
+                </p>
+
+                {premioDestacado.vencimiento && (
+                  <p className="mt-2 text-sm text-white/80">
+                    Vence: {formatearFecha(premioDestacado.vencimiento)}
+                  </p>
+                )}
+
                 <p className="mt-2 text-sm text-white/80">
                   Muéstralo en el local para canjearlo.
                 </p>
@@ -224,9 +274,11 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </div>
         </div>
 
-        <details className="overflow-hidden rounded-[24px] bg-white shadow" open>
-          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            Premios activos
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Premios activos ({premiosActivos.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -242,11 +294,18 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
                     </p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Estado: {premio.estado}
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: activo
                     </p>
                     <p className="text-sm text-neutral-600">
-                      Vence: {premio.vencimiento || "Sin definir"}
+                      Vence: {formatearFecha(premio.vencimiento)}
                     </p>
                   </div>
                 ))}
@@ -255,9 +314,11 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </div>
         </details>
         
-        <details className="overflow-hidden rounded-[24px] bg-white shadow">
-          <summary className="cursor-pointer list-none px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            Historial de premios usados
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Historial de premios usados ({premiosUsados.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -275,11 +336,60 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
                     </p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Estado: {premio.estado}
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: usado
                     </p>
                     <p className="text-sm text-neutral-600">
-                      Vencía: {premio.vencimiento || "Sin definir"}
+                      Vencía: {formatearFecha(premio.vencimiento)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
+
+        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+            <span>Historial de premios caducados ({premiosCaducados.length})</span>
+            <span className="text-2xl leading-none group-open:hidden">+</span>
+            <span className="hidden text-2xl leading-none group-open:inline">−</span>
+          </summary>
+
+          <div className="border-t border-neutral-200 px-6 py-5">
+            {premiosCaducados.length === 0 ? (
+              <p className="text-neutral-600">
+                No tienes premios caducados.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {premiosCaducados.map((premio: Premio) => (
+                  <div
+                    key={premio.id}
+                    className="rounded-2xl border border-neutral-200 p-4"
+                  >
+                    <p className="font-semibold text-[#4C00F7]">
+                      {premio.nombre}
+                    </p>
+
+                    {premio.descripcion && (
+                      <p className="mt-2 text-sm leading-6 text-neutral-700">
+                        {premio.descripcion}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Estado: caducado
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      Venció: {formatearFecha(premio.vencimiento)}
                     </p>
                   </div>
                 ))}
