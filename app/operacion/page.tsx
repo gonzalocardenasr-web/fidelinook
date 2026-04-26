@@ -616,15 +616,7 @@ export default function OperacionPage() {
                 Cerrar sesión
                 </button>
                 
-            </div>
-            {rol === "superadmin" && (
-                  <Link
-                    href="/campanas"
-                    className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
-                  >
-                    Crear campaña
-                  </Link>
-                )}
+            </div>            
             </div>
         
             
