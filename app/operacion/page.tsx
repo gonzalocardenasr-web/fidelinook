@@ -292,6 +292,48 @@ export default function OperacionPage() {
     }
   };
 
+  const ejecutarCampanaAhora = async (campanaId: number) => {
+    const confirmar = window.confirm(
+      "¿Seguro que quieres ejecutar esta campaña ahora? Se asignará el premio a los clientes objetivo."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      setProcesandoCampanaId(campanaId);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/admin/campanas/ejecutar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ campanaId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo ejecutar la campaña.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje(data.message || "Campaña ejecutada correctamente.");
+
+      await cargarCampanas();
+      await cargarDatos(true);
+    } catch (error) {
+      console.error("Error ejecutando campaña:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error al ejecutar la campaña.");
+    } finally {
+      setProcesandoCampanaId(null);
+    }
+  };
+
   const clientesFiltrados = useMemo(() => {
     let resultado = [...clientes];
 
@@ -731,6 +773,19 @@ export default function OperacionPage() {
                                           {procesandoCampanaId === campana.id
                                             ? "Procesando..."
                                             : "Lanzar"}
+                                        </button>
+                                      )}
+
+                                      {campana.estado === "programada" && (
+                                        <button
+                                          type="button"
+                                          onClick={() => ejecutarCampanaAhora(campana.id)}
+                                          disabled={procesandoCampanaId === campana.id}
+                                          className="rounded-xl bg-black px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                                        >
+                                          {procesandoCampanaId === campana.id
+                                            ? "Ejecutando..."
+                                            : "Ejecutar ahora"}
                                         </button>
                                       )}
 
