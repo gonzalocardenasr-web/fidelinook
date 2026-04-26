@@ -57,6 +57,8 @@ async function aplicarCampana(
   duracionHoras: number,
   clienteCorreoPrueba?: string
 ) {
+
+    const esPrueba = Boolean(clienteCorreoPrueba?.trim());
   const { data: campana, error: campanaError } = await supabaseAdmin
     .from("campanas")
     .select("*")
@@ -67,6 +69,7 @@ async function aplicarCampana(
     throw new Error("No se encontró la campaña.");
   }
 
+  if (!esPrueba) {
   await supabaseAdmin
     .from("campanas")
     .update({
@@ -74,8 +77,8 @@ async function aplicarCampana(
       error_message: null,
     })
     .eq("id", campana.id);
+    }
 
-  const esPrueba = Boolean(clienteCorreoPrueba?.trim());
 
     const queryClientes = supabaseAdmin
     .from("clientes")
