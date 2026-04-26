@@ -631,31 +631,7 @@ export default function OperacionPage() {
 
         <UltimosMovimientosCard clientes={clientes} />
 
-        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-          <div className="border-b border-neutral-200 p-4">
-            <span className="text-lg font-semibold text-violet-800">
-              Atención en local
-            </span>
-          </div>
-
-          <div className="p-4 pt-4">
-            {cargando ? (
-              <div className="mt-2">
-                <p className="text-neutral-600">Cargando clientes...</p>
-              </div>
-            ) : clientes.length === 0 ? (
-              <div className="mt-2">
-                <p className="text-neutral-600">
-                  No hay clientes registrados todavía.
-                </p>
-
-                {mensaje && (
-                  <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
-                    {mensaje}
-                  </div>
-                )}
-
-                {rol === "superadmin" && (
+        {rol === "superadmin" && (
                   <section className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
@@ -786,7 +762,33 @@ export default function OperacionPage() {
                       </div>
                     )}
                   </section>
+          )}
+
+        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-200 p-4">
+            <span className="text-lg font-semibold text-violet-800">
+              Atención en local
+            </span>
+          </div>
+
+          <div className="p-4 pt-4">
+            {cargando ? (
+              <div className="mt-2">
+                <p className="text-neutral-600">Cargando clientes...</p>
+              </div>
+            ) : clientes.length === 0 ? (
+              <div className="mt-2">
+                <p className="text-neutral-600">
+                  No hay clientes registrados todavía.
+                </p>
+
+                {mensaje && (
+                  <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
+                    {mensaje}
+                  </div>
                 )}
+
+                
               </div>
             ) : (
               <>
