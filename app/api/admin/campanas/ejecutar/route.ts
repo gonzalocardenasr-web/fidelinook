@@ -5,6 +5,8 @@ export async function POST(req: Request) {
   try {
     const { campanaId, clienteCorreoPrueba } = await req.json();
 
+    const esPrueba = Boolean(clienteCorreoPrueba?.trim());
+
     if (!campanaId) {
       return NextResponse.json(
         { message: "Falta el ID de la campaña." },
@@ -25,11 +27,24 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!["programada", "fallida"].includes(campana.estado)) {
-      return NextResponse.json(
-        { message: "Solo se pueden ejecutar campañas programadas o fallidas." },
-        { status: 400 }
-      );
+    if (
+        esPrueba &&
+        !["borrador", "programada", "fallida"].includes(campana.estado)
+    ) {
+        return NextResponse.json(
+            { message: "Solo se pueden probar campañas en estado borrador, programada o fallida." },
+            { status: 400 }
+        );
+    }
+
+    if (
+        !esPrueba &&
+        !["programada", "fallida"].includes(campana.estado)
+    ) {
+        return NextResponse.json(
+            { message: "Solo se pueden ejecutar campañas programadas o fallidas." },
+            { status: 400 }
+        );
     }
 
     const resultado = await aplicarCampana(
@@ -58,7 +73,7 @@ async function aplicarCampana(
   clienteCorreoPrueba?: string
 ) {
 
-    const esPrueba = Boolean(clienteCorreoPrueba?.trim());
+  const esPrueba = Boolean(clienteCorreoPrueba?.trim());
   const { data: campana, error: campanaError } = await supabaseAdmin
     .from("campanas")
     .select("*")
@@ -77,7 +92,7 @@ async function aplicarCampana(
       error_message: null,
     })
     .eq("id", campana.id);
-    }
+  }
 
 
     const queryClientes = supabaseAdmin

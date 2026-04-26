@@ -541,7 +541,7 @@ export default function ClientesPage() {
       window.location.href = "/login";
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
-      alert("No se pudo cerrar sesión.");
+      setMensaje("No se pudo cerrar sesión.");
     }
   };
 
