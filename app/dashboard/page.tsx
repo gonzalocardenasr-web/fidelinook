@@ -317,6 +317,9 @@ export default function DashboardPage() {
   const [cargandoRol, setCargandoRol] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
 
+  const [data, setData] = useState<DashboardResponse | null>(null);
+  const [campanasData, setCampanasData] = useState<any[]>([]);
+
   const clientesPorMesRows =
     data?.clientesPorMes.map((item) => ({
       mes: formatearMes(item.mes),
@@ -347,15 +350,36 @@ export default function DashboardPage() {
       galletas: item.galletas,
     })) || [];
 
-  const cerrarSesion = async () => {
-  try {
-    await supabase.auth.signOut();
-    router.push("/login");
-  } catch (error) {
-    console.error("Error cerrando sesión:", error);
-  }
-  };
+  async function cargarDashboard() {
+    try {
+      setCargando(true);
+      setMensaje("");
 
+      const res = await fetch("/api/dashboard/overview");
+      const resCampanas = await fetch("/api/dashboard/campanas");
+      const jsonCampanas = await resCampanas.json();
+
+      if (resCampanas.ok) {
+        setCampanasData(jsonCampanas.data || []);
+      }
+      const json = await res.json();
+
+      if (!res.ok) {
+        setMensaje(json?.message || "No se pudo cargar el dashboard.");
+        setData(null);
+        return;
+      }
+
+      setData(json);
+    } catch (error) {
+      console.error("Error cargando dashboard:", error);
+      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
+      setData(null);
+    } finally {
+      setCargando(false);
+    }
+  }
+  
   const cargarSesion = async () => {
     try {
         setCargandoRol(true);
@@ -380,32 +404,17 @@ export default function DashboardPage() {
         setCargandoRol(false);
     }
     };
-
-    async function cargarDashboard() {
-    try {
-      setCargando(true);
-      setMensaje("");
-
-      const res = await fetch("/api/dashboard/overview");
-      const json = await res.json();
-
-      if (!res.ok) {
-        setMensaje(json?.message || "No se pudo cargar el dashboard.");
-        setData(null);
-        return;
-      }
-
-      setData(json);
-    } catch (error) {
-      console.error("Error cargando dashboard:", error);
-      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
-      setData(null);
-    } finally {
-      setCargando(false);
-    }
+  
+  const cerrarSesion = async () => {
+  try {
+    await supabase.auth.signOut();
+    router.push("/login");
+  } catch (error) {
+    console.error("Error cerrando sesión:", error);
   }
+  };
 
-    useEffect(() => {
+  useEffect(() => {
     cargarDashboard();
     cargarSesion();
   }, []);
@@ -658,6 +667,24 @@ export default function DashboardPage() {
                     minTableWidth="min-w-[860px]"
                   />
               </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Efectividad de campañas"
+              subtitle="Performance de campañas ejecutadas"
+            >
+              <DataTable
+                columns={[
+                  { key: "nombre", label: "Campaña" },
+                  { key: "estado", label: "Estado" },
+                  { key: "enviados", label: "Enviados" },
+                  { key: "canjeados", label: "Canjeados" },
+                  { key: "caducados", label: "Caducados" },
+                  { key: "conversion", label: "Conversión" },
+                ]}
+                rows={campanasData}
+                emptyText="No hay campañas registradas."
+              />
             </SectionCard>
           </div>
         )}
