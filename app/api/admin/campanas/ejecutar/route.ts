@@ -92,34 +92,26 @@ async function aplicarCampana(
       error_message: null,
     })
     .eq("id", campana.id);
-  }
+}
 
+try {
 
-    const queryClientes = supabaseAdmin
+  const queryClientes = supabaseAdmin
     .from("clientes")
     .select("id, correo, premios, acepta_marketing, marketing_preferencia_definida");
 
-    const { data: clientes, error: clientesError } = esPrueba
+  const { data: clientes, error: clientesError } = esPrueba
     ? await queryClientes
         .eq("correo", clienteCorreoPrueba.trim().toLowerCase())
         .limit(1)
     : await queryClientes.or(
-        "acepta_marketing.eq.true,marketing_preferencia_definida.eq.false"
-        );
+        "acepta_marketing.eq.true,marketing_preferencia_definida.is.null"
+      );
 
-  if (clientesError) {
-    await supabaseAdmin
-      .from("campanas")
-      .update({
-        estado: "fallida",
-        error_message: "No se pudieron obtener clientes objetivo.",
-      })
-      .eq("id", campana.id);
-
-    throw clientesError;
-  }
+  if (clientesError) throw clientesError;
 
   const clientesObjetivo = clientes || [];
+  let totalElegibles = 0;
 
   if (esPrueba && clientesObjetivo.length === 0) {
     throw new Error("No se encontró un cliente con el correo de prueba indicado.");
@@ -141,17 +133,19 @@ async function aplicarCampana(
 
     if (yaTieneCampana) continue;
 
+    totalElegibles += 1;
+
     const premioId = crypto.randomUUID();
 
     premiosActuales.push({
-        id: premioId,
-        nombre: campana.premio_nombre,
-        descripcion: campana.premio_descripcion,
-        estado: "activo",
-        tipo: esPrueba ? "campana_prueba" : "campana",
-        campana_id: campana.id,
-        vencimiento: fechaExpiracion.toISOString(),
-        creado_en: new Date().toISOString(),
+      id: premioId,
+      nombre: campana.premio_nombre,
+      descripcion: campana.premio_descripcion,
+      estado: "activo",
+      tipo: esPrueba ? "campana_prueba" : "campana",
+      campana_id: campana.id,
+      vencimiento: fechaExpiracion.toISOString(),
+      creado_en: new Date().toISOString(),
     });
 
     const { error: updateError } = await supabaseAdmin
@@ -160,7 +154,7 @@ async function aplicarCampana(
       .eq("id", cliente.id);
 
     if (!updateError) {
-      const { error: trackingError } = await supabaseAdmin
+      await supabaseAdmin
         .from("campana_clientes")
         .insert({
           campana_id: campana.id,
@@ -172,36 +166,42 @@ async function aplicarCampana(
           email_enviado: false,
         });
 
-      if (trackingError) {
-        console.error("Error creando trazabilidad:", cliente.id, trackingError);
-      }
-
       totalAplicados += 1;
     } else {
-      console.error("Error aplicando premio a cliente:", cliente.id, updateError);
+      console.error("Error aplicando premio:", cliente.id, updateError);
     }
   }
 
   if (!esPrueba) {
-    const { error: updateCampanaError } = await supabaseAdmin
-        .from("campanas")
-        .update({
+    await supabaseAdmin
+      .from("campanas")
+      .update({
         estado: "lanzada",
         launched_at: new Date().toISOString(),
-        total_objetivo: clientesObjetivo.length,
+        total_objetivo: totalElegibles,
         total_enviados: totalAplicados,
         error_message: null,
-        })
-        .eq("id", campana.id);
-
-    if (updateCampanaError) {
-        throw updateCampanaError;
-    }
+      })
+      .eq("id", campana.id);
   }
 
-    return {
-        modoPrueba: esPrueba,
-        totalObjetivo: clientesObjetivo.length,
-        totalAplicados,
-    };
+  return {
+    modoPrueba: esPrueba,
+    totalObjetivo: clientesObjetivo.length,
+    totalAplicados,
+  };
+
+} catch (error: any) {
+
+  if (!esPrueba) {
+    await supabaseAdmin
+      .from("campanas")
+      .update({
+        estado: "fallida",
+        error_message: error?.message || "Error en ejecución",
+      })
+      .eq("id", campana.id);
+  }
+
+  throw error;
 }
