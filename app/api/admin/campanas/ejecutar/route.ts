@@ -108,9 +108,7 @@ async function aplicarCampana(
       ? await queryClientes
           .eq("correo", clienteCorreoPrueba!.trim().toLowerCase())
           .limit(1)
-      : await queryClientes.or(
-          "acepta_marketing.eq.true,marketing_preferencia_definida.is.null"
-        );
+      : await queryClientes.neq("acepta_marketing", true);
 
     if (clientesError) throw clientesError;
 
