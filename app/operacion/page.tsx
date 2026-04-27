@@ -729,6 +729,26 @@ export default function OperacionPage() {
                         </p>
                       </div>
 
+                      <button
+                        onClick={async () => {
+                          const confirmar = confirm("¿Expirar premios vencidos?");
+                          if (!confirmar) return;
+
+                          const res = await fetch("/api/admin/campanas/expirar", {
+                            method: "POST",
+                          });
+
+                          const data = await res.json();
+
+                          alert(`Clientes actualizados: ${data.totalActualizados}`);
+
+                          await cargarDatos(true);
+                        }}
+                        className="cursor-pointer mb-4 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Expirar premios
+                      </button>
+
                       <a
                         href="/campanas"
                         className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
