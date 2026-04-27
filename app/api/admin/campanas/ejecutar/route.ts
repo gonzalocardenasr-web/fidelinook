@@ -154,6 +154,20 @@ try {
       .eq("id", cliente.id);
 
     if (!updateError) {
+      
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-campana-email`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            to: cliente.correo,
+            nombrePremio: campana.premio_nombre,
+            descripcion: campana.premio_descripcion,
+            vencimiento: fechaExpiracion.toISOString(),
+        }),
+      });
+
       await supabaseAdmin
         .from("campana_clientes")
         .insert({
