@@ -14,7 +14,14 @@ export async function POST(req: Request) {
         Te asignamos un nuevo premio en <strong>Nook</strong>.<br/><br/>
         <strong>${nombrePremio}</strong><br/>
         ${descripcion}<br/><br/>
-        Válido hasta: ${new Date(vencimiento).toLocaleString("es-CL")}
+        Válido hasta: ${new Date(vencimiento).toLocaleString("es-CL", {
+            timeZone: "America/Santiago",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        })}
       `,
       botonTexto: "Ver mi tarjeta",
       botonUrl: "https://fidelidad.nookheladeria.cl/mi-cuenta/tarjeta",
