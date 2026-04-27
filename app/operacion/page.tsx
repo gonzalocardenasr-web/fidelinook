@@ -792,7 +792,14 @@ export default function OperacionPage() {
                                   </td>
 
                                   <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
-                                    {new Date(campana.fecha_lanzamiento).toLocaleString("es-CL")}
+                                    {new Date(campana.fecha_lanzamiento).toLocaleString("es-CL", {
+                                      timeZone: "America/Santiago",
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </td>
 
                                   <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
