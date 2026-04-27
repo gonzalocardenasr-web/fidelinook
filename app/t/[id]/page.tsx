@@ -43,6 +43,7 @@ function formatearFecha(fecha?: string) {
   if (Number.isNaN(date.getTime())) return "Sin definir";
 
   return date.toLocaleString("es-CL", {
+    timeZone: "America/Santiago",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

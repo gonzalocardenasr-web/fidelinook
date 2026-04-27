@@ -66,7 +66,20 @@ export default function CampanaDetallePage() {
       setPremioNombre(c.premio_nombre || "");
       setPremioDescripcion(c.premio_descripcion || "");
       setDuracionHoras(String(c.duracion_horas || 48));
-      setFechaLanzamiento(c.fecha_lanzamiento ? c.fecha_lanzamiento.slice(0, 16) : "");
+      setFechaLanzamiento(
+        c.fecha_lanzamiento
+            ? new Date(c.fecha_lanzamiento)
+                .toLocaleString("sv-SE", {
+                timeZone: "America/Santiago",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                })
+                .replace(" ", "T")
+            : ""
+      );
       setRecurrencia(c.recurrencia || "una_vez");
     } catch (error) {
       console.error("Error cargando campaña:", error);
