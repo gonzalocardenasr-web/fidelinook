@@ -121,7 +121,12 @@ export default function MiTarjetaPage() {
 
   const sellos = cliente?.sellos ?? 0;
   const faltantes = Math.max(META_SELLOS - sellos, 0);
-  const premioActivo = premiosActivos[0] || null;
+  const premioActivo =
+    premiosActivos.find(
+      (premio) => premio.tipo === "campana" || premio.tipo === "campana_prueba"
+    ) ||
+    premiosActivos[0] ||
+    null;
   const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${cliente?.public_token ?? ""}`;
 
   if (loading) {
@@ -251,6 +256,7 @@ export default function MiTarjetaPage() {
                 <p className="text-sm font-medium uppercase tracking-[0.14em] text-white/80">
                   Premio disponible
                 </p>
+
                 <p className="mt-2 text-2xl font-bold">🎉 ¡Tienes un premio!</p>
 
                 <p className="mt-2 text-lg leading-7">
@@ -332,13 +338,7 @@ export default function MiTarjetaPage() {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>
-
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
+                    </p>                    
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: usado
@@ -374,13 +374,7 @@ export default function MiTarjetaPage() {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>
-
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
+                    </p>                    
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: caducado

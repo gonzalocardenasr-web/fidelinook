@@ -299,13 +299,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>
-
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
+                    </p>                    
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: activo
@@ -341,13 +335,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>
-
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
+                    </p>                    
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: usado
@@ -383,13 +371,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>
-
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
+                    </p>                    
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: caducado
