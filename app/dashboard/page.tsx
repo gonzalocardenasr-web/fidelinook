@@ -317,7 +317,6 @@ export default function DashboardPage() {
   const [cargandoRol, setCargandoRol] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
 
-  const [data, setData] = useState<DashboardResponse | null>(null);
   const [campanasData, setCampanasData] = useState<any[]>([]);
 
   const clientesPorMesRows =
