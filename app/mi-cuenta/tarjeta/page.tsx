@@ -389,6 +389,7 @@ export default function MiTarjetaPage() {
           </div>
         </details>
         </div>
+        </div>
       </div>
     </main>
   );
