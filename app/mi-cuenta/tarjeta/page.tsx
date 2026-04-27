@@ -275,7 +275,7 @@ export default function MiTarjetaPage() {
               </div>
             )}
           </div>
-        </div>
+        <div className="space-y-4 px-6 pb-6">
 
         <details className="group overflow-hidden rounded-[24px] bg-white shadow">
           <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
@@ -388,6 +388,7 @@ export default function MiTarjetaPage() {
             )}
           </div>
         </details>
+        </div>
       </div>
     </main>
   );
