@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { to, nombrePremio, descripcion, vencimiento } = await req.json();
 
     const response = await resend.emails.send({
-        from: "Nook Heladería de Autora <nookheladeria@nookheladeria.cl>",
+        from: "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>",
         to,
         subject: "🎁 Tienes un nuevo premio en Nook",
         html: `
@@ -25,6 +25,9 @@ export async function POST(req: Request) {
     });
 
         console.log("RESEND RESPONSE:", response);
+        if (response.error) {
+            throw new Error(`Resend error: ${JSON.stringify(response.error)}`);
+        }
 
     return NextResponse.json({ ok: true });
 
