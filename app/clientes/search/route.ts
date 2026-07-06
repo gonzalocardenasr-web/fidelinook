@@ -2,25 +2,6 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
 
-type Cliente = {
-  id: number;
-  nombre: string | null;
-  correo: string | null;
-  telefono: string | null;
-  sellos: number | null;
-  premios: unknown;
-  tarjeta_activa: boolean | null;
-  email_verificado: boolean | null;
-};
-
-function normalizarTexto(value: string | null | undefined) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
 export async function GET(req: Request) {
   const session = await getOperationSession();
 
@@ -38,14 +19,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, clientes: [] });
   }
 
-  const queryNormalizada = normalizarTexto(query);
+  const normalized = query.toLowerCase();
 
   const { data, error } = await supabaseAdmin
     .from("clientes")
     .select(
       "id, nombre, correo, telefono, sellos, premios, tarjeta_activa, email_verificado",
     )
-    .order("nombre", { ascending: true });
+    .or(
+      `nombre.ilike.%${normalized}%,correo.ilike.%${normalized}%,telefono.ilike.%${normalized}%`,
+    )
+    .limit(10);
 
   if (error) {
     return NextResponse.json(
@@ -54,22 +38,8 @@ export async function GET(req: Request) {
     );
   }
 
-  const clientes = ((data || []) as Cliente[])
-    .filter((cliente) => {
-      const nombre = normalizarTexto(cliente.nombre);
-      const correo = normalizarTexto(cliente.correo);
-      const telefono = normalizarTexto(cliente.telefono);
-
-      return (
-        nombre.includes(queryNormalizada) ||
-        correo.includes(queryNormalizada) ||
-        telefono.includes(queryNormalizada)
-      );
-    })
-    .slice(0, 10);
-
   return NextResponse.json({
     ok: true,
-    clientes,
+    clientes: data || [],
   });
 }
