@@ -54,7 +54,7 @@ export default function ClienteSelector({ value, onChange }: Props) {
       setMessage("");
 
       const res = await fetch(
-        `/api/operacion/clientes/search?q=${encodeURIComponent(texto)}`,
+        `/api/clientes/search?q=${encodeURIComponent(texto)}`,
       );
 
       const data = await res.json();
