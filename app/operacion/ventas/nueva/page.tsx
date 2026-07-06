@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import ClienteSelector, {
+  ClienteSelectorValue,
+} from "../../../../components/client/ClienteSelector";
+
 type Product = {
   id: number;
   sku: string;
@@ -53,6 +57,9 @@ export default function NuevaVentaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [selectedCliente, setSelectedCliente] =
+    useState<ClienteSelectorValue | null>(null);
 
   useEffect(() => {
     cargarCatalogo();
@@ -214,7 +221,7 @@ export default function NuevaVentaPage() {
 
       const payload = {
         paymentMethod,
-        customerId: null,
+        customerId: selectedCliente?.id || null,
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -314,6 +321,13 @@ export default function NuevaVentaPage() {
 
           <aside className="rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold text-neutral-900">Pedido</h2>
+
+            <div className="mt-4">
+              <ClienteSelector
+                value={selectedCliente}
+                onChange={setSelectedCliente}
+              />
+            </div>
 
             <div className="mt-4 space-y-4">
               {cart.length === 0 ? (
