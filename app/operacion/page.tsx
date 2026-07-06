@@ -42,7 +42,13 @@ type Campana = {
   duracion_horas: number;
   fecha_lanzamiento: string;
   recurrencia: string;
-  estado: "borrador" | "programada" | "lanzando" | "lanzada" | "fallida" | "cancelada";
+  estado:
+    | "borrador"
+    | "programada"
+    | "lanzando"
+    | "lanzada"
+    | "fallida"
+    | "cancelada";
   total_objetivo?: number | null;
   total_enviados?: number | null;
   created_at?: string | null;
@@ -58,20 +64,24 @@ export default function OperacionPage() {
   const [busqueda, setBusqueda] = useState("");
   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
-  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">("info");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+    "info",
+  );
   const [cargando, setCargando] = useState(true);
   const [procesandoCompra, setProcesandoCompra] = useState(false);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [subscriptionSeleccionada, setSubscriptionSeleccionada] = useState<any>(null);
+  const [subscriptionSeleccionada, setSubscriptionSeleccionada] =
+    useState<any>(null);
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
   const [campanas, setCampanas] = useState<Campana[]>([]);
   const [cargandoCampanas, setCargandoCampanas] = useState(false);
-  const [procesandoCampanaId, setProcesandoCampanaId] = useState<number | null>(null);
-
+  const [procesandoCampanaId, setProcesandoCampanaId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     cargarSesion();
@@ -80,47 +90,46 @@ export default function OperacionPage() {
   }, []);
 
   useEffect(() => {
-  if (!clienteSeleccionadoId) {
-    setSubscriptions([]);
-    setSubscriptionSeleccionada(null);
-    setMensajeSuscripcion("");
-    return;
-  }
+    if (!clienteSeleccionadoId) {
+      setSubscriptions([]);
+      setSubscriptionSeleccionada(null);
+      setMensajeSuscripcion("");
+      return;
+    }
 
-  cargarSuscripcionActiva(Number(clienteSeleccionadoId));
-    }, [clienteSeleccionadoId]);
-
+    cargarSuscripcionActiva(Number(clienteSeleccionadoId));
+  }, [clienteSeleccionadoId]);
 
   async function cargarSuscripcionActiva(clienteId: number) {
     try {
-        setCargandoSuscripcion(true);
-        setMensajeSuscripcion("");
+      setCargandoSuscripcion(true);
+      setMensajeSuscripcion("");
 
-        const res = await fetch(
-        `/api/subscriptions/active-by-client?clienteId=${clienteId}`
-        );
+      const res = await fetch(
+        `/api/subscriptions/active-by-client?clienteId=${clienteId}`,
+      );
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
+      if (!res.ok) {
         setSubscriptions([]);
         setSubscriptionSeleccionada(null);
         return;
-        }
+      }
 
-        setSubscriptions(data.subscriptions || []);
+      setSubscriptions(data.subscriptions || []);
 
-        if (data.subscriptions?.length > 0) {
+      if (data.subscriptions?.length > 0) {
         setSubscriptionSeleccionada(data.subscriptions[0]);
-        } else {
+      } else {
         setSubscriptionSeleccionada(null);
-        }
+      }
     } catch (error) {
-        console.error(error);
+      console.error(error);
     } finally {
-        setCargandoSuscripcion(false);
+      setCargandoSuscripcion(false);
     }
-    }
+  }
 
   const cargarSesion = async () => {
     try {
@@ -171,12 +180,12 @@ export default function OperacionPage() {
       }
 
       const seleccionadoGuardado = localStorage.getItem(
-        "operacionClienteSeleccionadoId"
+        "operacionClienteSeleccionadoId",
       );
 
       if (mantenerSeleccion && seleccionadoGuardado) {
         const existeSeleccionado = listaClientes.some(
-          (c) => String(c.id) === String(seleccionadoGuardado)
+          (c) => String(c.id) === String(seleccionadoGuardado),
         );
 
         if (existeSeleccionado) {
@@ -204,7 +213,7 @@ export default function OperacionPage() {
       const { data, error } = await supabase
         .from("campanas")
         .select(
-          "id, nombre_interno, premio_nombre, duracion_horas, fecha_lanzamiento, recurrencia, estado, total_objetivo, total_enviados, created_at"
+          "id, nombre_interno, premio_nombre, duracion_horas, fecha_lanzamiento, recurrencia, estado, total_objetivo, total_enviados, created_at",
         )
         .order("created_at", { ascending: false })
         .limit(20);
@@ -258,7 +267,9 @@ export default function OperacionPage() {
   };
 
   const cancelarCampana = async (campanaId: number) => {
-    const confirmar = window.confirm("¿Seguro que quieres cancelar esta campaña?");
+    const confirmar = window.confirm(
+      "¿Seguro que quieres cancelar esta campaña?",
+    );
 
     if (!confirmar) return;
 
@@ -298,7 +309,7 @@ export default function OperacionPage() {
 
   const ejecutarCampanaAhora = async (campanaId: number) => {
     const confirmar = window.confirm(
-      "¿Seguro que quieres ejecutar esta campaña ahora? Se asignará el premio a los clientes objetivo."
+      "¿Seguro que quieres ejecutar esta campaña ahora? Se asignará el premio a los clientes objetivo.",
     );
 
     if (!confirmar) return;
@@ -340,7 +351,7 @@ export default function OperacionPage() {
 
   const ejecutarCampanaPrueba = async (campanaId: number) => {
     const correo = window.prompt(
-      "Ingresa el correo del cliente de prueba que recibirá el premio:"
+      "Ingresa el correo del cliente de prueba que recibirá el premio:",
     );
 
     if (!correo) return;
@@ -427,7 +438,7 @@ export default function OperacionPage() {
             (cliente.nombre || "")
               .trim()
               .toLowerCase()
-              .startsWith(letra.toLowerCase())
+              .startsWith(letra.toLowerCase()),
           );
 
     if (listaFiltrada.length > 0) {
@@ -438,11 +449,12 @@ export default function OperacionPage() {
   };
 
   const cliente =
-    clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) || null;
+    clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
+    null;
 
   const premiosArray = Array.isArray(cliente?.premios) ? cliente.premios : [];
   const premiosActivos = premiosArray.filter(
-    (premio: Premio) => premio.estado === "activo"
+    (premio: Premio) => premio.estado === "activo",
   );
 
   const validarCompra = async () => {
@@ -455,7 +467,7 @@ export default function OperacionPage() {
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
       setTipoMensaje("error");
       setMensaje(
-        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero."
+        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.",
       );
       return;
     }
@@ -488,7 +500,7 @@ export default function OperacionPage() {
           nombre: "Helado simple gratis",
           estado: "activo",
           vencimiento: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
           ).toISOString(),
         };
 
@@ -569,7 +581,7 @@ export default function OperacionPage() {
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
       setTipoMensaje("error");
       setMensaje(
-        "El cliente aún no ha activado su tarjeta. No es posible canjear premios."
+        "El cliente aún no ha activado su tarjeta. No es posible canjear premios.",
       );
       return;
     }
@@ -585,7 +597,7 @@ export default function OperacionPage() {
 
       const indexPremioActivo = premiosActuales.findIndex(
         (premio: Premio) =>
-          String(premio.id) === String(premioId) && premio.estado === "activo"
+          String(premio.id) === String(premioId) && premio.estado === "activo",
       );
 
       if (indexPremioActivo === -1) {
@@ -629,7 +641,10 @@ export default function OperacionPage() {
           .eq("premio_id", String(premioActivo.id));
 
         if (trackingError) {
-          console.error("Error actualizando trazabilidad de campaña:", trackingError);
+          console.error(
+            "Error actualizando trazabilidad de campaña:",
+            trackingError,
+          );
         }
       }
 
@@ -677,226 +692,274 @@ export default function OperacionPage() {
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-5xl space-y-6">      
-
+      <div className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-                <Link
-                    href="/"
-                    className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                >
-                    ← Volver al inicio
-                </Link>
+              <Link
+                href="/"
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
+                ← Volver al inicio
+              </Link>
 
-                <h1 className="mt-3 text-2xl font-bold">Operación</h1>
+              <h1 className="mt-3 text-2xl font-bold">Operación</h1>
 
-                <p className="text-sm opacity-90">
-                    Gestión operativa de clientes, fidelización y suscripciones
-                </p>
+              <p className="text-sm opacity-90">
+                Gestión operativa de clientes, fidelización y suscripciones
+              </p>
 
-                <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                    {cargandoRol ? "Cargando rol..." : `ROL: ${rol ?? "sin sesión"}`}
-                </p>
-                </div>
-
-                <button
-                onClick={cerrarSesion}
-                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                >
-                Cerrar sesión
-                </button>
-                
-            </div>            
+              <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                {cargandoRol
+                  ? "Cargando rol..."
+                  : `ROL: ${rol ?? "sin sesión"}`}
+              </p>
             </div>
-        
-            
+
+            <button
+              onClick={cerrarSesion}
+              className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <Link
+            href="/operacion/ventas/nueva"
+            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+          >
+            <p className="text-lg font-bold text-neutral-900">Nueva Venta</p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Crear una venta local y generar un pedido.
+            </p>
+          </Link>
+
+          <Link
+            href="/operacion/cola"
+            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+          >
+            <p className="text-lg font-bold text-neutral-900">
+              Cola de Preparación
+            </p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Gestionar pedidos pendientes de entrega.
+            </p>
+          </Link>
+
+          <Link
+            href="/operacion/ventas"
+            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+          >
+            <p className="text-lg font-bold text-neutral-900">Historial</p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Revisar ventas y pedidos recientes.
+            </p>
+          </Link>
+        </section>
 
         <UltimosMovimientosCard clientes={clientes} />
 
         {rol === "superadmin" && (
-                  <section className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-                    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#7A57F6]">
-                          Campañas
-                        </p>
-                        <h2 className="mt-1 text-xl font-bold text-[#222]">
-                          Gestión de campañas
-                        </h2>
-                        <p className="mt-1 text-sm text-[#666]">
-                          Revisa, lanza o cancela campañas antes de publicarlas.
-                        </p>
-                      </div>
+          <section className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#7A57F6]">
+                  Campañas
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-[#222]">
+                  Gestión de campañas
+                </h2>
+                <p className="mt-1 text-sm text-[#666]">
+                  Revisa, lanza o cancela campañas antes de publicarlas.
+                </p>
+              </div>
 
-                      <button
-                        onClick={async () => {
-                          const confirmar = confirm("¿Expirar premios vencidos?");
-                          if (!confirmar) return;
+              <button
+                onClick={async () => {
+                  const confirmar = confirm("¿Expirar premios vencidos?");
+                  if (!confirmar) return;
 
-                          const res = await fetch("/api/admin/campanas/expirar", {
-                            method: "POST",
-                          });
+                  const res = await fetch("/api/admin/campanas/expirar", {
+                    method: "POST",
+                  });
 
-                          const data = await res.json();
+                  const data = await res.json();
 
-                          alert(`Clientes actualizados: ${data.totalActualizados}`);
+                  alert(`Clientes actualizados: ${data.totalActualizados}`);
 
-                          await cargarDatos(true);
-                        }}
-                        className="cursor-pointer mb-4 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
-                      >
-                        Expirar premios
-                      </button>
+                  await cargarDatos(true);
+                }}
+                className="cursor-pointer mb-4 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
+              >
+                Expirar premios
+              </button>
 
-                      <a
-                        href="/campanas"
-                        className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
-                      >
-                        Crear campaña
-                      </a>
-                    </div>
+              <a
+                href="/campanas"
+                className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+              >
+                Crear campaña
+              </a>
+            </div>
 
-                    {cargandoCampanas ? (
-                      <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
-                        Cargando campañas...
-                      </div>
-                    ) : campanas.length === 0 ? (
-                      <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
-                        No hay campañas creadas.
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
-                          <thead>
-                            <tr className="text-xs uppercase tracking-[0.18em] text-[#777]">
-                              <th className="px-3 py-2">Campaña</th>
-                              <th className="px-3 py-2">Premio</th>
-                              <th className="px-3 py-2">Estado</th>
-                              <th className="px-3 py-2">Lanzamiento</th>
-                              <th className="px-3 py-2">Vigencia</th>
-                              <th className="px-3 py-2">Alcance</th>
-                              <th className="px-3 py-2 text-right">Acciones</th>
-                            </tr>
-                          </thead>
+            {cargandoCampanas ? (
+              <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+                Cargando campañas...
+              </div>
+            ) : campanas.length === 0 ? (
+              <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+                No hay campañas creadas.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-[0.18em] text-[#777]">
+                      <th className="px-3 py-2">Campaña</th>
+                      <th className="px-3 py-2">Premio</th>
+                      <th className="px-3 py-2">Estado</th>
+                      <th className="px-3 py-2">Lanzamiento</th>
+                      <th className="px-3 py-2">Vigencia</th>
+                      <th className="px-3 py-2">Alcance</th>
+                      <th className="px-3 py-2 text-right">Acciones</th>
+                    </tr>
+                  </thead>
 
-                          <tbody>
-                            {campanas.map((campana) => {
-                              const puedeLanzar =
-                                campana.estado === "borrador" || campana.estado === "fallida";
+                  <tbody>
+                    {campanas.map((campana) => {
+                      const puedeLanzar =
+                        campana.estado === "borrador" ||
+                        campana.estado === "fallida";
 
-                              const puedeCancelar =
-                                campana.estado === "borrador" ||
-                                campana.estado === "programada" ||
-                                campana.estado === "fallida";
+                      const puedeCancelar =
+                        campana.estado === "borrador" ||
+                        campana.estado === "programada" ||
+                        campana.estado === "fallida";
 
-                              return (
-                                <tr key={campana.id}>
-                                  <td className="rounded-l-2xl bg-[#FCF8FF] px-3 py-3">
-                                    <p className="font-semibold text-[#222]">
-                                      {campana.nombre_interno}
-                                    </p>
-                                    <p className="mt-1 text-xs text-[#777]">
-                                      #{campana.id}
-                                    </p>
-                                  </td>
+                      return (
+                        <tr key={campana.id}>
+                          <td className="rounded-l-2xl bg-[#FCF8FF] px-3 py-3">
+                            <p className="font-semibold text-[#222]">
+                              {campana.nombre_interno}
+                            </p>
+                            <p className="mt-1 text-xs text-[#777]">
+                              #{campana.id}
+                            </p>
+                          </td>
 
-                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
-                                    {campana.premio_nombre}
-                                  </td>
+                          <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                            {campana.premio_nombre}
+                          </td>
 
-                                  <td className="bg-[#FCF8FF] px-3 py-3">
-                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4c00f7]">
-                                      {campana.estado}
-                                    </span>
-                                  </td>
+                          <td className="bg-[#FCF8FF] px-3 py-3">
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4c00f7]">
+                              {campana.estado}
+                            </span>
+                          </td>
 
-                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
-                                    {new Date(campana.fecha_lanzamiento).toLocaleString("es-CL", {
-                                      timeZone: "America/Santiago",
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </td>
+                          <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                            {new Date(campana.fecha_lanzamiento).toLocaleString(
+                              "es-CL",
+                              {
+                                timeZone: "America/Santiago",
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </td>
 
-                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
-                                    {campana.duracion_horas} h
-                                  </td>
+                          <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                            {campana.duracion_horas} h
+                          </td>
 
-                                  <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
-                                    {campana.total_enviados || 0}/{campana.total_objetivo || 0}
-                                  </td>
+                          <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+                            {campana.total_enviados || 0}/
+                            {campana.total_objetivo || 0}
+                          </td>
 
-                                  <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3">
-                                    <div className="flex justify-end gap-2">
-                                      <a
-                                        href={`/campanas/${campana.id}`}
-                                        className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
-                                      >
-                                        Ver
-                                      </a>
+                          <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3">
+                            <div className="flex justify-end gap-2">
+                              <a
+                                href={`/campanas/${campana.id}`}
+                                className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+                              >
+                                Ver
+                              </a>
 
-                                      {puedeLanzar && (
-                                        <button
-                                          type="button"
-                                          onClick={() => programarLanzamientoCampana(campana.id)}
-                                          disabled={procesandoCampanaId === campana.id}
-                                          className="rounded-xl bg-[#4c00f7] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
-                                        >
-                                          {procesandoCampanaId === campana.id
-                                            ? "Procesando..."
-                                            : "Lanzar"}
-                                        </button>
-                                      )}
+                              {puedeLanzar && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    programarLanzamientoCampana(campana.id)
+                                  }
+                                  disabled={procesandoCampanaId === campana.id}
+                                  className="rounded-xl bg-[#4c00f7] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                                >
+                                  {procesandoCampanaId === campana.id
+                                    ? "Procesando..."
+                                    : "Lanzar"}
+                                </button>
+                              )}
 
-                                      {campana.estado === "programada" && (
-                                        <button
-                                          type="button"
-                                          onClick={() => ejecutarCampanaAhora(campana.id)}
-                                          disabled={procesandoCampanaId === campana.id}
-                                          className="rounded-xl bg-black px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                                        >
-                                          {procesandoCampanaId === campana.id
-                                            ? "Ejecutando..."
-                                            : "Ejecutar ahora"}
-                                        </button>
-                                      )}
+                              {campana.estado === "programada" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    ejecutarCampanaAhora(campana.id)
+                                  }
+                                  disabled={procesandoCampanaId === campana.id}
+                                  className="rounded-xl bg-black px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                                >
+                                  {procesandoCampanaId === campana.id
+                                    ? "Ejecutando..."
+                                    : "Ejecutar ahora"}
+                                </button>
+                              )}
 
-                                      {["borrador", "programada", "fallida"].includes(campana.estado) && (
-                                        <button
-                                          type="button"
-                                          onClick={() => ejecutarCampanaPrueba(campana.id)}
-                                          disabled={procesandoCampanaId === campana.id}
-                                          className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF] disabled:opacity-60"
-                                        >
-                                          Probar
-                                        </button>
-                                      )}
+                              {["borrador", "programada", "fallida"].includes(
+                                campana.estado,
+                              ) && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    ejecutarCampanaPrueba(campana.id)
+                                  }
+                                  disabled={procesandoCampanaId === campana.id}
+                                  className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF] disabled:opacity-60"
+                                >
+                                  Probar
+                                </button>
+                              )}
 
-                                      {puedeCancelar && (
-                                        <button
-                                          type="button"
-                                          onClick={() => cancelarCampana(campana.id)}
-                                          disabled={procesandoCampanaId === campana.id}
-                                          className="rounded-xl border border-[#E7C9D1] bg-white px-3 py-2 text-xs font-semibold text-[#8A3550] transition hover:bg-[#FFF1F4] disabled:opacity-60"
-                                        >
-                                          Cancelar
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </section>
-          )}
+                              {puedeCancelar && (
+                                <button
+                                  type="button"
+                                  onClick={() => cancelarCampana(campana.id)}
+                                  disabled={procesandoCampanaId === campana.id}
+                                  className="rounded-xl border border-[#E7C9D1] bg-white px-3 py-2 text-xs font-semibold text-[#8A3550] transition hover:bg-[#FFF1F4] disabled:opacity-60"
+                                >
+                                  Cancelar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 p-4">
@@ -921,8 +984,6 @@ export default function OperacionPage() {
                     {mensaje}
                   </div>
                 )}
-
-                
               </div>
             ) : (
               <>
@@ -1011,52 +1072,47 @@ export default function OperacionPage() {
                 </p>
 
                 <AdminClienteDetalle
-                    cliente={cliente}
-                    premiosActivos={premiosActivos}
-                    mensaje={mensaje}
-                    tipoMensaje={tipoMensaje}
-                    setMensaje={setMensaje}
-                    procesandoCompra={procesandoCompra}
-                    procesandoCanje={procesandoCanje}
-                    reiniciando={false}
-                    rol={rol}
-                    validarCompra={validarCompra}
-                    canjearPremioPorId={canjearPremioPorId}
-                    eliminarClienteSeleccionado={undefined}
-                    reiniciarDatos={undefined}
-                    exportarCSV={undefined}
-                    mostrarAccionesAdministrativas={false}
-                    
-                    
+                  cliente={cliente}
+                  premiosActivos={premiosActivos}
+                  mensaje={mensaje}
+                  tipoMensaje={tipoMensaje}
+                  setMensaje={setMensaje}
+                  procesandoCompra={procesandoCompra}
+                  procesandoCanje={procesandoCanje}
+                  reiniciando={false}
+                  rol={rol}
+                  validarCompra={validarCompra}
+                  canjearPremioPorId={canjearPremioPorId}
+                  eliminarClienteSeleccionado={undefined}
+                  reiniciarDatos={undefined}
+                  exportarCSV={undefined}
+                  mostrarAccionesAdministrativas={false}
                 />
-                
+
                 {subscriptions.length > 0 && (
-                    <OperacionSuscripcionActiva
-                        clienteId={cliente.id}
-                        subscriptions={subscriptions}
-                        subscriptionSeleccionada={subscriptionSeleccionada}
-                        cargando={cargandoSuscripcion}
-                        onRefresh={() => cargarSuscripcionActiva(cliente.id)}
-                        onMensaje={setMensajeSuscripcion}
-                        onSelectSubscription={setSubscriptionSeleccionada}
-                    />
-                    )}
-
-                    {subscriptions.length > 0 && (
-                    <UltimosMovimientos clienteId={cliente.id} />
+                  <OperacionSuscripcionActiva
+                    clienteId={cliente.id}
+                    subscriptions={subscriptions}
+                    subscriptionSeleccionada={subscriptionSeleccionada}
+                    cargando={cargandoSuscripcion}
+                    onRefresh={() => cargarSuscripcionActiva(cliente.id)}
+                    onMensaje={setMensajeSuscripcion}
+                    onSelectSubscription={setSubscriptionSeleccionada}
+                  />
                 )}
 
-                
-                    {mensajeSuscripcion && (
-                    <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                        {mensajeSuscripcion}
-                    </div>
+                {subscriptions.length > 0 && (
+                  <UltimosMovimientos clienteId={cliente.id} />
                 )}
-                
+
+                {mensajeSuscripcion && (
+                  <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+                    {mensajeSuscripcion}
+                  </div>
+                )}
               </>
             )}
-          
-        </div>
+          </div>
         </div>
       </div>
     </main>
