@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../../lib/supabase-admin";
-import { getOperationSession } from "../../../../../lib/operation-auth";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../lib/operation-auth";
 
 export async function GET(req: Request) {
   const session = await getOperationSession();
