@@ -7,6 +7,7 @@ import AdminClienteDetalle from "./components/AdminClienteDetalle";
 import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
 import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
 import UltimosMovimientos from "./components/UltimosMovimientos";
+import OperationSummary from "../../components/operations/OperationSummary";
 
 type Premio = {
   id: number | string;
@@ -724,6 +725,8 @@ export default function OperacionPage() {
             </button>
           </div>
         </div>
+
+        <OperationSummary />
 
         <section className="grid gap-4 md:grid-cols-4">
           <Link
