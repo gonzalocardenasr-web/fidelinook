@@ -7,10 +7,10 @@ type Props = {
   onChangeStatus: (orderId: number, status: OrderStatus) => void;
 };
 
-const sections: { title: string; status: OrderStatus }[] = [
+const columns: { title: string; status: OrderStatus }[] = [
   { title: "Pendientes", status: "pending" },
-  { title: "En preparación", status: "preparing" },
-  { title: "Listos para entregar", status: "ready" },
+  { title: "Preparando", status: "preparing" },
+  { title: "Listos", status: "ready" },
 ];
 
 export default function OrderQueue({ orders, loading, onChangeStatus }: Props) {
@@ -27,34 +27,41 @@ export default function OrderQueue({ orders, loading, onChangeStatus }: Props) {
   }
 
   return (
-    <div className="space-y-8">
-      {sections.map((section) => {
+    <div className="grid h-[calc(100vh-220px)] gap-4 lg:grid-cols-3">
+      {columns.map((column) => {
         const filtered = orders.filter(
-          (order) => order.status === section.status,
+          (order) => order.status === column.status,
         );
 
-        if (filtered.length === 0) return null;
-
         return (
-          <section key={section.status}>
+          <section
+            key={column.status}
+            className="flex min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white/70 p-3 shadow-sm"
+          >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-black text-neutral-900">
-                {section.title}
+              <h2 className="text-sm font-black uppercase tracking-wide text-neutral-800">
+                {column.title}
               </h2>
 
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-neutral-500">
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-neutral-500 shadow-sm">
                 {filtered.length}
               </span>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((order) => (
-                <OrderQueueCard
-                  key={order.id}
-                  order={order}
-                  onChangeStatus={onChangeStatus}
-                />
-              ))}
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+              {filtered.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-neutral-200 bg-white/60 p-4 text-center text-sm text-neutral-400">
+                  Sin pedidos
+                </div>
+              ) : (
+                filtered.map((order) => (
+                  <OrderQueueCard
+                    key={order.id}
+                    order={order}
+                    onChangeStatus={onChangeStatus}
+                  />
+                ))
+              )}
             </div>
           </section>
         );
