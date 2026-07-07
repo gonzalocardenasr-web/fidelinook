@@ -35,7 +35,7 @@ export type CartItem = {
   localId: string;
   product: Product;
   quantity: number;
-  flavorIds: number[];
+  flavorSelections: number[];
   toppingIds: number[];
   notes: string;
 };

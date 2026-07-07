@@ -21,6 +21,7 @@ type Props = {
   onToggleFlavor: (item: CartItem, flavorId: number) => void;
   onToggleTopping: (item: CartItem, toppingId: number) => void;
   onConfirm: () => void;
+  onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
 };
 
 export default function OrderBuilder({
@@ -39,6 +40,7 @@ export default function OrderBuilder({
   onToggleFlavor,
   onToggleTopping,
   onConfirm,
+  onRemoveFlavorSelection,
 }: Props) {
   return (
     <aside className="rounded-2xl bg-white p-5 shadow-sm">
@@ -65,6 +67,7 @@ export default function OrderBuilder({
               onUpdate={onUpdateItem}
               onToggleFlavor={onToggleFlavor}
               onToggleTopping={onToggleTopping}
+              onRemoveFlavorSelection={onRemoveFlavorSelection}
             />
           ))
         )}

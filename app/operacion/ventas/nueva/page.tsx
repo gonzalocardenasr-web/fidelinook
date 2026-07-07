@@ -84,7 +84,7 @@ export default function NuevaVentaPage() {
         localId: `${product.id}-${Date.now()}-${Math.random()}`,
         product,
         quantity: 1,
-        flavorIds: [],
+        flavorSelections: [],
         toppingIds: [],
         notes: "",
       },
@@ -104,19 +104,28 @@ export default function NuevaVentaPage() {
   }
 
   function toggleFlavor(item: CartItem, flavorId: number) {
-    const exists = item.flavorIds.includes(flavorId);
+    const maxFlavors = item.product.max_flavors || 0;
+    const currentSelections = item.flavorSelections || [];
 
-    if (exists) {
+    if (maxFlavors <= 0) return;
+
+    if (currentSelections.length >= maxFlavors) {
       updateItem(item.localId, {
-        flavorIds: item.flavorIds.filter((id) => id !== flavorId),
+        flavorSelections: currentSelections.slice(0, -1),
       });
       return;
     }
 
-    if (item.flavorIds.length >= item.product.max_flavors) return;
-
     updateItem(item.localId, {
-      flavorIds: [...item.flavorIds, flavorId],
+      flavorSelections: [...currentSelections, flavorId],
+    });
+  }
+
+  function removeFlavorSelection(item: CartItem, selectionIndex: number) {
+    updateItem(item.localId, {
+      flavorSelections: item.flavorSelections.filter(
+        (_flavorId, index) => index !== selectionIndex,
+      ),
     });
   }
 
@@ -146,13 +155,13 @@ export default function NuevaVentaPage() {
     if (cart.length === 0) return "Agrega al menos un producto.";
 
     for (const item of cart) {
-      if (item.product.has_flavors && item.flavorIds.length === 0) {
+      if (item.product.has_flavors && item.flavorSelections.length === 0) {
         return `Debes seleccionar sabor para ${item.product.name}.`;
       }
 
       if (
         item.product.has_flavors &&
-        item.flavorIds.length > item.product.max_flavors
+        item.flavorSelections.length > item.product.max_flavors
       ) {
         return `${item.product.name} supera el máximo de sabores.`;
       }
@@ -188,7 +197,7 @@ export default function NuevaVentaPage() {
           quantity: item.quantity,
           notes: item.notes,
           options: [
-            ...item.flavorIds.map((id) => ({
+            ...item.flavorSelections.map((id) => ({
               option_group_code: "flavor",
               option_value_id: id,
               quantity: 1,
@@ -279,6 +288,7 @@ export default function NuevaVentaPage() {
           onToggleFlavor={toggleFlavor}
           onToggleTopping={toggleTopping}
           onConfirm={confirmarVenta}
+          onRemoveFlavorSelection={removeFlavorSelection}
         />
       }
       context={

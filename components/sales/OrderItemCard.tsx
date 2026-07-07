@@ -9,6 +9,7 @@ type Props = {
   onUpdate: (localId: string, patch: Partial<CartItem>) => void;
   onToggleFlavor: (item: CartItem, flavorId: number) => void;
   onToggleTopping: (item: CartItem, toppingId: number) => void;
+  onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
 };
 
 export default function OrderItemCard({
@@ -20,6 +21,7 @@ export default function OrderItemCard({
   onUpdate,
   onToggleFlavor,
   onToggleTopping,
+  onRemoveFlavorSelection,
 }: Props) {
   return (
     <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
@@ -61,24 +63,52 @@ export default function OrderItemCard({
       {item.product.has_flavors && (
         <div className="mt-3">
           <p className="text-xs font-semibold text-neutral-600">
-            Sabores ({item.flavorIds.length}/{item.product.max_flavors})
+            Sabores ({item.flavorSelections.length}/{item.product.max_flavors})
           </p>
 
+          {item.flavorSelections.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.flavorSelections.map((flavorId, index) => {
+                const flavor = flavors.find(
+                  (itemFlavor) => itemFlavor.id === flavorId,
+                );
+
+                return (
+                  <button
+                    key={`${item.localId}-${flavorId}-${index}`}
+                    type="button"
+                    onClick={() => onRemoveFlavorSelection(item, index)}
+                    className="cursor-pointer rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-violet-700 active:scale-95"
+                    title="Quitar sabor"
+                  >
+                    {flavor?.name || "Sabor"} ×
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div className="mt-2 flex flex-wrap gap-2">
-            {flavors.map((flavor) => (
-              <button
-                key={flavor.id}
-                type="button"
-                onClick={() => onToggleFlavor(item, flavor.id)}
-                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition duration-200 active:scale-95 ${
-                  item.flavorIds.includes(flavor.id)
-                    ? "bg-violet-600 text-white hover:bg-violet-700"
-                    : "bg-white text-neutral-700 hover:bg-violet-50"
-                }`}
-              >
-                {flavor.name}
-              </button>
-            ))}
+            {flavors.map((flavor) => {
+              const disabled =
+                item.flavorSelections.length >= item.product.max_flavors;
+
+              return (
+                <button
+                  key={flavor.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onToggleFlavor(item, flavor.id)}
+                  className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+                    item.flavorSelections.includes(flavor.id)
+                      ? "bg-violet-50 text-violet-700 hover:bg-violet-100"
+                      : "bg-white text-neutral-700 hover:bg-violet-50"
+                  }`}
+                >
+                  {flavor.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
