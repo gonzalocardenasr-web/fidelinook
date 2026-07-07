@@ -9,6 +9,7 @@ import ProductGrid from "../../../../components/sales/ProductGrid";
 import OrderBuilder from "../../../../components/sales/OrderBuilder";
 import { CartItem, OptionGroup, Product } from "../../../../types/sales";
 import POSLayout from "../../../../components/pos/POSLayout";
+import POSContextPanel from "../../../../components/pos/POSContextPanel";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -322,47 +323,12 @@ export default function NuevaVentaPage() {
         />
       }
       context={
-        <div>
-          <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
-            Contexto
-          </h2>
-
-          {selectedCliente ? (
-            <div className="mt-3 rounded-2xl bg-violet-50 p-4">
-              <p className="text-xs font-semibold text-violet-600">
-                Cliente seleccionado
-              </p>
-              <p className="mt-1 font-bold text-neutral-900">
-                {selectedCliente.nombre}
-              </p>
-              <p className="mt-1 text-xs text-neutral-600">
-                {selectedCliente.telefono ||
-                  selectedCliente.correo ||
-                  "Sin contacto"}
-              </p>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
-              Sin cliente seleccionado.
-            </div>
-          )}
-
-          <div className="mt-3 rounded-2xl bg-neutral-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              Pedido
-            </p>
-            <p className="mt-1 text-2xl font-black text-neutral-900">
-              {cart.length}
-            </p>
-            <p className="text-xs text-neutral-500">ítems agregados</p>
-          </div>
-
-          {message && (
-            <div className="mt-3 rounded-2xl border border-violet-100 bg-white p-4 text-sm text-neutral-700">
-              {message}
-            </div>
-          )}
-        </div>
+        <POSContextPanel
+          selectedCliente={selectedCliente}
+          cart={cart}
+          total={total}
+          message={message}
+        />
       }
     />
   );
