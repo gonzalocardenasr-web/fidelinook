@@ -19,6 +19,7 @@ export default function NuevaVentaPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("TODOS");
+  const [productSearch, setProductSearch] = useState("");
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -55,10 +56,22 @@ export default function NuevaVentaPage() {
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === "TODOS") return products;
+    const search = productSearch.trim().toLowerCase();
 
-    return products.filter((product) => product.category === selectedCategory);
-  }, [products, selectedCategory]);
+    return products.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "TODOS" || product.category === selectedCategory;
+
+      const matchesSearch =
+        !search ||
+        product.name.toLowerCase().includes(search) ||
+        product.sku.toLowerCase().includes(search) ||
+        product.category.toLowerCase().includes(search) ||
+        product.operational_type.toLowerCase().includes(search);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, productSearch]);
 
   const flavors = useMemo(() => {
     return (
@@ -284,6 +297,8 @@ export default function NuevaVentaPage() {
           loading={loading}
           getPrice={getPrice}
           onAdd={addProduct}
+          search={productSearch}
+          onSearchChange={setProductSearch}
         />
       }
       right={
