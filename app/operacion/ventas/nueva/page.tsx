@@ -18,6 +18,7 @@ export default function NuevaVentaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("TODOS");
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -47,6 +48,17 @@ export default function NuevaVentaPage() {
       setLoading(false);
     }
   }
+
+  const categories = useMemo(() => {
+    const unique = [...new Set(products.map((product) => product.category))];
+    return ["TODOS", ...unique];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === "TODOS") return products;
+
+    return products.filter((product) => product.category === selectedCategory);
+  }, [products, selectedCategory]);
 
   const flavors = useMemo(() => {
     return (
@@ -249,23 +261,26 @@ export default function NuevaVentaPage() {
           </h2>
 
           <div className="mt-3 space-y-2">
-            {[...new Set(products.map((product) => product.category))].map(
-              (category) => (
-                <button
-                  key={category}
-                  type="button"
-                  className="w-full cursor-pointer rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-left text-sm font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
-                >
-                  {category}
-                </button>
-              ),
-            )}
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+                className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left text-sm font-bold transition duration-200 active:scale-[0.98] ${
+                  selectedCategory === category
+                    ? "border-violet-300 bg-violet-600 text-white shadow-sm"
+                    : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+                }`}
+              >
+                {category === "TODOS" ? "Todos los productos" : category}
+              </button>
+            ))}
           </div>
         </div>
       }
       center={
         <ProductGrid
-          products={products}
+          products={filteredProducts}
           loading={loading}
           getPrice={getPrice}
           onAdd={addProduct}
