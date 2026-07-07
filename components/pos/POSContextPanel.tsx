@@ -39,11 +39,13 @@ export default function POSContextPanel({
               {selectedCliente.nombre}
             </p>
 
-            <p className="mt-1 text-xs text-neutral-600">
-              {selectedCliente.telefono ||
-                selectedCliente.correo ||
-                "Sin contacto"}
-            </p>
+            <div className="mt-1 space-y-0.5 text-xs text-neutral-600">
+                {selectedCliente.telefono && <p>{selectedCliente.telefono}</p>}
+                {selectedCliente.correo && <p>{selectedCliente.correo}</p>}
+                {!selectedCliente.telefono && !selectedCliente.correo && (
+                    <p>Sin contacto</p>
+                )}
+            </div
 
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white p-3">
