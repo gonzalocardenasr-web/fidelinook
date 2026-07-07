@@ -13,7 +13,7 @@ export default function ColaPreparacionPage() {
   useEffect(() => {
     cargarPedidos();
 
-    const interval = window.setInterval(cargarPedidos, 15000);
+    const interval = window.setInterval(cargarPedidos, 5000);
 
     return () => window.clearInterval(interval);
   }, []);
