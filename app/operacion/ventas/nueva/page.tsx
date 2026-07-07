@@ -8,6 +8,7 @@ import ClienteSelector, {
 import ProductGrid from "../../../../components/sales/ProductGrid";
 import OrderBuilder from "../../../../components/sales/OrderBuilder";
 import { CartItem, OptionGroup, Product } from "../../../../types/sales";
+import POSLayout from "../../../../components/pos/POSLayout";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -229,51 +230,100 @@ export default function NuevaVentaPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <Link href="/operacion" className="text-sm font-medium text-white/90">
-            ← Volver a operación
-          </Link>
-          <h1 className="mt-3 text-2xl font-bold">Nueva venta local</h1>
-          <p className="text-sm opacity-90">
-            Registra una venta y genera automáticamente un pedido operacional.
-          </p>
-        </div>
+    <POSLayout
+      title="Venta local"
+      subtitle="POS Operacional Nook"
+      left={
+        <div>
+          <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+            Categorías
+          </h2>
 
-        {message && (
-          <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-sm text-neutral-700">
-            {message}
+          <div className="mt-3 space-y-2">
+            {[...new Set(products.map((product) => product.category))].map(
+              (category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className="w-full cursor-pointer rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-left text-sm font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
+                >
+                  {category}
+                </button>
+              ),
+            )}
           </div>
-        )}
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <ProductGrid
-            products={products}
-            loading={loading}
-            getPrice={getPrice}
-            onAdd={addProduct}
-          />
-
-          <OrderBuilder
-            cart={cart}
-            flavors={flavors}
-            toppings={toppings}
-            selectedCliente={selectedCliente}
-            paymentMethod={paymentMethod}
-            total={total}
-            saving={saving}
-            getPrice={getPrice}
-            onClienteChange={setSelectedCliente}
-            onPaymentMethodChange={setPaymentMethod}
-            onRemoveItem={removeItem}
-            onUpdateItem={updateItem}
-            onToggleFlavor={toggleFlavor}
-            onToggleTopping={toggleTopping}
-            onConfirm={confirmarVenta}
-          />
         </div>
-      </div>
-    </main>
+      }
+      center={
+        <ProductGrid
+          products={products}
+          loading={loading}
+          getPrice={getPrice}
+          onAdd={addProduct}
+        />
+      }
+      right={
+        <OrderBuilder
+          cart={cart}
+          flavors={flavors}
+          toppings={toppings}
+          selectedCliente={selectedCliente}
+          paymentMethod={paymentMethod}
+          total={total}
+          saving={saving}
+          getPrice={getPrice}
+          onClienteChange={setSelectedCliente}
+          onPaymentMethodChange={setPaymentMethod}
+          onRemoveItem={removeItem}
+          onUpdateItem={updateItem}
+          onToggleFlavor={toggleFlavor}
+          onToggleTopping={toggleTopping}
+          onConfirm={confirmarVenta}
+        />
+      }
+      context={
+        <div>
+          <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+            Contexto
+          </h2>
+
+          {selectedCliente ? (
+            <div className="mt-3 rounded-2xl bg-violet-50 p-4">
+              <p className="text-xs font-semibold text-violet-600">
+                Cliente seleccionado
+              </p>
+              <p className="mt-1 font-bold text-neutral-900">
+                {selectedCliente.nombre}
+              </p>
+              <p className="mt-1 text-xs text-neutral-600">
+                {selectedCliente.telefono ||
+                  selectedCliente.correo ||
+                  "Sin contacto"}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3 rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
+              Sin cliente seleccionado.
+            </div>
+          )}
+
+          <div className="mt-3 rounded-2xl bg-neutral-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Pedido
+            </p>
+            <p className="mt-1 text-2xl font-black text-neutral-900">
+              {cart.length}
+            </p>
+            <p className="text-xs text-neutral-500">ítems agregados</p>
+          </div>
+
+          {message && (
+            <div className="mt-3 rounded-2xl border border-violet-100 bg-white p-4 text-sm text-neutral-700">
+              {message}
+            </div>
+          )}
+        </div>
+      }
+    />
   );
 }
