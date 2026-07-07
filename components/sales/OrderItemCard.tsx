@@ -88,17 +88,44 @@ export default function OrderItemCard({
               Cantidad
             </label>
 
-            <input
-              type="number"
-              min={1}
-              value={item.quantity}
-              onChange={(event) =>
-                onUpdate(item.localId, {
-                  quantity: Math.max(1, Number(event.target.value) || 1),
-                })
-              }
-              className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-            />
+            <div className="mt-1 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate(item.localId, {
+                    quantity: Math.max(1, item.quantity - 1),
+                  })
+                }
+                disabled={item.quantity <= 1}
+                className="h-10 w-10 cursor-pointer rounded-xl border border-neutral-200 bg-white text-lg font-black text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                −
+              </button>
+
+              <input
+                type="number"
+                min={1}
+                value={item.quantity}
+                onChange={(event) =>
+                  onUpdate(item.localId, {
+                    quantity: Math.max(1, Number(event.target.value) || 1),
+                  })
+                }
+                className="h-10 min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 text-center text-sm font-bold outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate(item.localId, {
+                    quantity: item.quantity + 1,
+                  })
+                }
+                className="h-10 w-10 cursor-pointer rounded-xl border border-neutral-200 bg-white text-lg font-black text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 active:scale-95"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {item.product.has_flavors && (
