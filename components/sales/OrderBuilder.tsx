@@ -20,8 +20,8 @@ type Props = {
   onUpdateItem: (localId: string, patch: Partial<CartItem>) => void;
   onToggleFlavor: (item: CartItem, flavorId: number) => void;
   onToggleTopping: (item: CartItem, toppingId: number) => void;
-  onConfirm: () => void;
   onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
+  onConfirm: () => void;
 };
 
 export default function OrderBuilder({
@@ -39,22 +39,26 @@ export default function OrderBuilder({
   onUpdateItem,
   onToggleFlavor,
   onToggleTopping,
-  onConfirm,
   onRemoveFlavorSelection,
+  onConfirm,
 }: Props) {
   return (
-    <aside className="rounded-2xl bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-neutral-900">Pedido</h2>
+    <aside className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">
+        <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+          Pedido
+        </h2>
 
-      <div className="mt-4">
-        <ClienteSelector value={selectedCliente} onChange={onClienteChange} />
+        <div className="mt-3">
+          <ClienteSelector value={selectedCliente} onChange={onClienteChange} />
+        </div>
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
         {cart.length === 0 ? (
-          <p className="text-sm text-neutral-500">
+          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-400">
             Aún no hay productos agregados.
-          </p>
+          </div>
         ) : (
           cart.map((item) => (
             <OrderItemCard
@@ -73,15 +77,15 @@ export default function OrderBuilder({
         )}
       </div>
 
-      <div className="mt-5 border-t border-neutral-200 pt-4">
-        <label className="text-sm font-semibold text-neutral-700">
+      <div className="mt-3 shrink-0 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+        <label className="text-xs font-bold uppercase tracking-wide text-neutral-500">
           Medio de pago
         </label>
 
         <select
           value={paymentMethod}
           onChange={(event) => onPaymentMethodChange(event.target.value)}
-          className="mt-2 w-full cursor-pointer rounded-xl border border-neutral-200 px-3 py-3 text-sm outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+          className="mt-2 w-full cursor-pointer rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
         >
           <option value="efectivo">Efectivo</option>
           <option value="debito">Débito</option>
@@ -96,7 +100,7 @@ export default function OrderBuilder({
           type="button"
           onClick={onConfirm}
           disabled={saving || cart.length === 0}
-          className="mt-4 w-full cursor-pointer rounded-2xl bg-violet-600 px-5 py-4 text-sm font-bold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="mt-3 w-full cursor-pointer rounded-2xl bg-violet-600 px-5 py-4 text-sm font-black text-white transition duration-200 hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
         >
           {saving ? "Confirmando..." : "Confirmar venta"}
         </button>
