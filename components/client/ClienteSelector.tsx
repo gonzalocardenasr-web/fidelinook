@@ -77,49 +77,16 @@ export default function ClienteSelector({ value, onChange }: Props) {
 
   if (value) {
     return (
-      <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-              Cliente seleccionado
+      <div className="rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+              Cliente
             </p>
 
-            <p className="mt-1 text-lg font-bold text-neutral-900">
+            <p className="truncate text-sm font-black text-neutral-900">
               {value.nombre}
             </p>
-
-            <div className="mt-1 space-y-0.5 text-sm text-neutral-600">
-              {value.telefono && <p>{value.telefono}</p>}
-              {value.correo && <p>{value.correo}</p>}
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  value.tarjeta_activa
-                    ? "bg-green-100 text-green-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {value.tarjeta_activa ? "Tarjeta activa" : "Sin activar"}
-              </span>
-
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  value.email_verificado
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {value.email_verificado ? "Correo verificado" : "No verificado"}
-              </span>
-
-              {premiosActivos > 0 && (
-                <span className="rounded-full bg-pink-100 px-3 py-1 text-xs font-semibold text-pink-700">
-                  {premiosActivos} premio{premiosActivos === 1 ? "" : "s"}
-                </span>
-              )}
-            </div>
           </div>
 
           <button
@@ -129,7 +96,7 @@ export default function ClienteSelector({ value, onChange }: Props) {
               setQuery("");
               setClientes([]);
             }}
-            className="cursor-pointer rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 active:scale-95"
+            className="cursor-pointer rounded-lg bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 active:scale-95"
           >
             Cambiar
           </button>
