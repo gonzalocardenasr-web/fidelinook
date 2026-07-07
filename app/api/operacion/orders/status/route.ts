@@ -41,12 +41,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin.rpc("update_order_status", {
-      p_order_id: orderId,
-      p_new_status: newStatus,
-      p_actor_role: session.role,
-      p_notes: notes,
-    });
+    const rpcName =
+      newStatus === "cancelled"
+        ? "cancel_order_and_sale"
+        : "update_order_status";
+
+    const rpcPayload =
+      newStatus === "cancelled"
+        ? {
+            p_order_id: orderId,
+            p_actor_role: session.role,
+            p_notes: notes,
+          }
+        : {
+            p_order_id: orderId,
+            p_new_status: newStatus,
+            p_actor_role: session.role,
+            p_notes: notes,
+          };
+
+    const { data, error } = await supabaseAdmin.rpc(rpcName, rpcPayload);
 
     if (error) {
       return NextResponse.json(
