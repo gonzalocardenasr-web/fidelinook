@@ -21,6 +21,7 @@ export default function NuevaVentaPage() {
   const [message, setMessage] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("TODOS");
   const [productSearch, setProductSearch] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -217,6 +218,7 @@ export default function NuevaVentaPage() {
 
       const payload = {
         paymentMethod,
+        orderNotes,
         customerId: selectedCliente?.id || null,
         items: cart.map((item) => ({
           product_id: item.product.id,
@@ -253,6 +255,8 @@ export default function NuevaVentaPage() {
       }
 
       setCart([]);
+      setOrderNotes("");
+      setSelectedCliente(null);
       setMessage(
         `Venta creada correctamente. Pedido ${data.result.display_order_code}.`,
       );
@@ -309,17 +313,19 @@ export default function NuevaVentaPage() {
           toppings={toppings}
           selectedCliente={selectedCliente}
           paymentMethod={paymentMethod}
+          orderNotes={orderNotes}
           total={total}
           saving={saving}
           getPrice={getPrice}
           onClienteChange={setSelectedCliente}
           onPaymentMethodChange={setPaymentMethod}
+          onOrderNotesChange={setOrderNotes}
           onRemoveItem={removeItem}
           onUpdateItem={updateItem}
           onToggleFlavor={toggleFlavor}
           onToggleTopping={toggleTopping}
-          onConfirm={confirmarVenta}
           onRemoveFlavorSelection={removeFlavorSelection}
+          onConfirm={confirmarVenta}
         />
       }
       context={
