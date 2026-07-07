@@ -2,52 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import ClienteSelector, {
   ClienteSelectorValue,
 } from "../../../../components/client/ClienteSelector";
-
-type Product = {
-  id: number;
-  sku: string;
-  name: string;
-  category: string;
-  operational_type: string;
-  has_flavors: boolean;
-  max_flavors: number;
-  allows_toppings: boolean;
-  max_toppings: number;
-  product_prices?: {
-    price: number;
-    channel: string;
-    price_list: string;
-    is_active: boolean;
-  }[];
-};
-
-type OptionValue = {
-  id: number;
-  code: string;
-  name: string;
-  is_active: boolean;
-  sort_order: number;
-};
-
-type OptionGroup = {
-  id: number;
-  code: string;
-  name: string;
-  catalog_option_values: OptionValue[];
-};
-
-type CartItem = {
-  localId: string;
-  product: Product;
-  quantity: number;
-  flavorIds: number[];
-  toppingIds: number[];
-  notes: string;
-};
+import ProductGrid from "../../../../components/sales/ProductGrid";
+import OrderBuilder from "../../../../components/sales/OrderBuilder";
+import { CartItem, OptionGroup, Product } from "../../../../types/sales";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -288,198 +248,30 @@ export default function NuevaVentaPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <section className="rounded-2xl bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-neutral-900">Productos</h2>
+          <ProductGrid
+            products={products}
+            loading={loading}
+            getPrice={getPrice}
+            onAdd={addProduct}
+          />
 
-            {loading ? (
-              <p className="mt-4 text-sm text-neutral-600">
-                Cargando catálogo...
-              </p>
-            ) : (
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {products.map((product) => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => addProduct(product)}
-                    className="cursor-pointer rounded-2xl border border-neutral-200 bg-white p-4 text-left transition hover:border-violet-300 hover:bg-violet-50"
-                  >
-                    <p className="font-semibold text-neutral-900">
-                      {product.name}
-                    </p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {product.category} · {product.operational_type}
-                    </p>
-                    <p className="mt-2 text-sm font-bold text-violet-700">
-                      ${getPrice(product).toLocaleString("es-CL")}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <aside className="rounded-2xl bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-neutral-900">Pedido</h2>
-
-            <div className="mt-4">
-              <ClienteSelector
-                value={selectedCliente}
-                onChange={setSelectedCliente}
-              />
-            </div>
-
-            <div className="mt-4 space-y-4">
-              {cart.length === 0 ? (
-                <p className="text-sm text-neutral-500">
-                  Aún no hay productos agregados.
-                </p>
-              ) : (
-                cart.map((item) => (
-                  <div
-                    key={item.localId}
-                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-neutral-900">
-                          {item.product.name}
-                        </p>
-                        <p className="text-sm text-neutral-600">
-                          ${getPrice(item.product).toLocaleString("es-CL")}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.localId)}
-                        className="text-sm font-semibold text-red-600"
-                      >
-                        Quitar
-                      </button>
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="text-xs font-semibold text-neutral-600">
-                        Cantidad
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateItem(item.localId, {
-                            quantity: Math.max(
-                              1,
-                              Number(event.target.value) || 1,
-                            ),
-                          })
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    {item.product.has_flavors && (
-                      <div className="mt-3">
-                        <p className="text-xs font-semibold text-neutral-600">
-                          Sabores ({item.flavorIds.length}/
-                          {item.product.max_flavors})
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {flavors.map((flavor) => (
-                            <button
-                              key={flavor.id}
-                              type="button"
-                              onClick={() => toggleFlavor(item, flavor.id)}
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                item.flavorIds.includes(flavor.id)
-                                  ? "bg-violet-600 text-white"
-                                  : "bg-white text-neutral-700"
-                              }`}
-                            >
-                              {flavor.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {item.product.allows_toppings && (
-                      <div className="mt-3">
-                        <p className="text-xs font-semibold text-neutral-600">
-                          Toppings ({item.toppingIds.length}/
-                          {item.product.max_toppings})
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {toppings.map((topping) => (
-                            <button
-                              key={topping.id}
-                              type="button"
-                              onClick={() => toggleTopping(item, topping.id)}
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                item.toppingIds.includes(topping.id)
-                                  ? "bg-black text-white"
-                                  : "bg-white text-neutral-700"
-                              }`}
-                            >
-                              {topping.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-3">
-                      <label className="text-xs font-semibold text-neutral-600">
-                        Nota
-                      </label>
-                      <input
-                        value={item.notes}
-                        onChange={(event) =>
-                          updateItem(item.localId, {
-                            notes: event.target.value,
-                          })
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
-                        placeholder="Ej: sin barquillo"
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="mt-5 border-t border-neutral-200 pt-4">
-              <label className="text-sm font-semibold text-neutral-700">
-                Medio de pago
-              </label>
-              <select
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm"
-              >
-                <option value="efectivo">Efectivo</option>
-                <option value="debito">Débito</option>
-                <option value="credito">Crédito</option>
-                <option value="transferencia">Transferencia</option>
-                <option value="manual">Manual</option>
-              </select>
-
-              <div className="mt-4 flex items-center justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>${total.toLocaleString("es-CL")}</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={confirmarVenta}
-                disabled={saving || cart.length === 0}
-                className="mt-4 w-full rounded-2xl bg-violet-600 px-5 py-4 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-              >
-                {saving ? "Confirmando..." : "Confirmar venta"}
-              </button>
-            </div>
-          </aside>
+          <OrderBuilder
+            cart={cart}
+            flavors={flavors}
+            toppings={toppings}
+            selectedCliente={selectedCliente}
+            paymentMethod={paymentMethod}
+            total={total}
+            saving={saving}
+            getPrice={getPrice}
+            onClienteChange={setSelectedCliente}
+            onPaymentMethodChange={setPaymentMethod}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
+            onToggleFlavor={toggleFlavor}
+            onToggleTopping={toggleTopping}
+            onConfirm={confirmarVenta}
+          />
         </div>
       </div>
     </main>
