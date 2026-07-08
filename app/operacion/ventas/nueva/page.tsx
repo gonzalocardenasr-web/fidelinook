@@ -24,6 +24,7 @@ export default function NuevaVentaPage() {
   const [productSearch, setProductSearch] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -241,6 +242,7 @@ export default function NuevaVentaPage() {
       );
     });
 
+    setEditingItem(null);
     setConfiguringProduct(null);
   }
 
@@ -322,6 +324,30 @@ export default function NuevaVentaPage() {
     );
   }
 
+  function reconfigureItem(item: CartItem) {
+    setEditingItem(item);
+    setConfiguringProduct(item.product);
+  }
+
+  function updateConfiguredProduct(
+    localId: string,
+    updatedItem: Omit<CartItem, "localId">,
+  ) {
+    setCart((current) =>
+      current.map((item) =>
+        item.localId === localId
+          ? {
+              ...updatedItem,
+              localId,
+            }
+          : item,
+      ),
+    );
+
+    setEditingItem(null);
+    setConfiguringProduct(null);
+  }
+
   return (
     <POSLayout
       title="Venta local"
@@ -363,11 +389,16 @@ export default function NuevaVentaPage() {
 
           <ProductConfigurator
             product={configuringProduct}
+            editingItem={editingItem}
             flavors={flavors}
             toppings={toppings}
             getPrice={getPrice}
-            onCancel={() => setConfiguringProduct(null)}
+            onCancel={() => {
+              setConfiguringProduct(null);
+              setEditingItem(null);
+            }}
             onAddConfigured={addConfiguredProduct}
+            onUpdateConfigured={updateConfiguredProduct}
           />
         </div>
       }
@@ -393,6 +424,7 @@ export default function NuevaVentaPage() {
           onRemoveFlavorSelection={removeFlavorSelection}
           onConfirm={confirmarVenta}
           onDuplicateItem={duplicateItem}
+          onReconfigureItem={reconfigureItem}
         />
       }
       context={

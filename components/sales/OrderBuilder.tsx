@@ -26,6 +26,7 @@ type Props = {
   onConfirm: () => void;
   onOrderNotesChange: (value: string) => void;
   onDuplicateItem: (item: CartItem) => void;
+  onReconfigureItem: (item: CartItem) => void;
 };
 
 export default function OrderBuilder({
@@ -49,6 +50,7 @@ export default function OrderBuilder({
   onOrderNotesChange,
   clienteSelectorResetKey,
   onDuplicateItem,
+  onReconfigureItem,
 }: Props) {
   return (
     <aside className="flex h-full min-h-0 flex-col">
@@ -85,6 +87,7 @@ export default function OrderBuilder({
               onToggleTopping={onToggleTopping}
               onRemoveFlavorSelection={onRemoveFlavorSelection}
               onDuplicate={onDuplicateItem}
+              onReconfigure={onReconfigureItem}
             />
           ))
         )}

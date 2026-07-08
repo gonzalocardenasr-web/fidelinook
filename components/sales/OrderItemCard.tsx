@@ -11,6 +11,7 @@ type Props = {
   onToggleFlavor: (item: CartItem, flavorId: number) => void;
   onToggleTopping: (item: CartItem, toppingId: number) => void;
   onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
+  onReconfigure: (item: CartItem) => void;
 };
 
 export default function OrderItemCard({
@@ -20,6 +21,7 @@ export default function OrderItemCard({
   price,
   onRemove,
   onDuplicate,
+  onReconfigure,
 }: Props) {
   const selectedFlavorNames = item.flavorSelections
     .map((id) => flavors.find((flavor) => flavor.id === id)?.name)
@@ -87,6 +89,14 @@ export default function OrderItemCard({
         </div>
 
         <div className="flex shrink-0 flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => onReconfigure(item)}
+            className="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-bold text-neutral-700 transition hover:bg-neutral-100 active:scale-95"
+          >
+            Editar
+          </button>
+
           <button
             type="button"
             onClick={() => onDuplicate(item)}

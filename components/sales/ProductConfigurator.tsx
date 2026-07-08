@@ -3,11 +3,16 @@ import { Product, OptionValue, CartItem } from "../../types/sales";
 
 type Props = {
   product: Product | null;
+  editingItem: CartItem | null;
   flavors: OptionValue[];
   toppings: OptionValue[];
   getPrice: (product: Product) => number;
   onCancel: () => void;
   onAddConfigured: (item: Omit<CartItem, "localId">) => void;
+  onUpdateConfigured: (
+    localId: string,
+    item: Omit<CartItem, "localId">,
+  ) => void;
 };
 
 type ServiceFormat = "vaso" | "barquillo" | "ambos";
@@ -19,6 +24,8 @@ export default function ProductConfigurator({
   getPrice,
   onCancel,
   onAddConfigured,
+  editingItem,
+  onUpdateConfigured,
 }: Props) {
   const [quantity, setQuantity] = useState(1);
   const [flavorSelections, setFlavorSelections] = useState<number[]>([]);
@@ -32,6 +39,24 @@ export default function ProductConfigurator({
   >([]);
 
   useEffect(() => {
+    if (editingItem) {
+      setQuantity(editingItem.quantity);
+      setFlavorSelections(editingItem.flavorSelections || []);
+      setNotes(editingItem.notes || "");
+      setChocolateDip(
+        editingItem.extraLabels?.includes("Baño chocolate") || false,
+      );
+
+      const toppingLabel = editingItem.extraLabels?.find((label) =>
+        label.startsWith("Topping"),
+      );
+
+      setToppingEnabled(Boolean(toppingLabel));
+      setExtraToppingSelections([]);
+
+      return;
+    }
+
     setQuantity(1);
     setFlavorSelections([]);
     setNotes("");
@@ -40,7 +65,7 @@ export default function ProductConfigurator({
     setChocolateDip(false);
     setToppingEnabled(false);
     setExtraToppingSelections([]);
-  }, [product?.id]);
+  }, [product?.id, editingItem?.localId]);
 
   const isServedIceCream = useMemo(() => {
     if (!product) return false;
@@ -149,7 +174,7 @@ export default function ProductConfigurator({
   function addProduct() {
     if (!product || !canAdd) return;
 
-    onAddConfigured({
+    const configuredItem: Omit<CartItem, "localId"> = {
       product,
       quantity,
       flavorSelections,
@@ -157,7 +182,13 @@ export default function ProductConfigurator({
       notes: buildNotes(),
       extraUnitPrice,
       extraLabels,
-    });
+    };
+
+    if (editingItem) {
+      onUpdateConfigured(editingItem.localId, configuredItem);
+    } else {
+      onAddConfigured(configuredItem);
+    }
 
     resetConfig();
   }
