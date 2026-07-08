@@ -22,6 +22,7 @@ export default function NuevaVentaPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("TODOS");
   const [productSearch, setProductSearch] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -257,6 +258,7 @@ export default function NuevaVentaPage() {
       setCart([]);
       setOrderNotes("");
       setSelectedCliente(null);
+      setClienteSelectorResetKey((current) => current + 1);
       setMessage(
         `Venta creada correctamente. Pedido ${data.result.display_order_code}.`,
       );
@@ -314,6 +316,7 @@ export default function NuevaVentaPage() {
           selectedCliente={selectedCliente}
           paymentMethod={paymentMethod}
           orderNotes={orderNotes}
+          clienteSelectorResetKey={clienteSelectorResetKey}
           total={total}
           saving={saving}
           getPrice={getPrice}
