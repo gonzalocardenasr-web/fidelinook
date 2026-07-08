@@ -10,6 +10,7 @@ import OrderBuilder from "../../../../components/sales/OrderBuilder";
 import { CartItem, OptionGroup, Product } from "../../../../types/sales";
 import POSLayout from "../../../../components/pos/POSLayout";
 import POSContextPanel from "../../../../components/pos/POSContextPanel";
+import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,6 +27,10 @@ export default function NuevaVentaPage() {
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
+
+  const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
+    null,
+  );
 
   useEffect(() => {
     cargarCatalogo();
@@ -106,17 +111,7 @@ export default function NuevaVentaPage() {
   }
 
   function addProduct(product: Product) {
-    setCart((current) => [
-      ...current,
-      {
-        localId: `${product.id}-${Date.now()}-${Math.random()}`,
-        product,
-        quantity: 1,
-        flavorSelections: [],
-        toppingIds: [],
-        notes: "",
-      },
-    ]);
+    setConfiguringProduct(product);
   }
 
   function removeItem(localId: string) {
@@ -203,6 +198,18 @@ export default function NuevaVentaPage() {
     }
 
     return null;
+  }
+
+  function addConfiguredProduct(item: Omit<CartItem, "localId">) {
+    setCart((current) => [
+      ...current,
+      {
+        ...item,
+        localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
+      },
+    ]);
+
+    setConfiguringProduct(null);
   }
 
   async function confirmarVenta() {
@@ -299,14 +306,25 @@ export default function NuevaVentaPage() {
         </div>
       }
       center={
-        <ProductGrid
-          products={filteredProducts}
-          loading={loading}
-          getPrice={getPrice}
-          onAdd={addProduct}
-          search={productSearch}
-          onSearchChange={setProductSearch}
-        />
+        <div className="grid h-full min-h-0 grid-cols-[1fr_320px] gap-3">
+          <ProductGrid
+            products={filteredProducts}
+            loading={loading}
+            getPrice={getPrice}
+            onAdd={addProduct}
+            search={productSearch}
+            onSearchChange={setProductSearch}
+          />
+
+          <ProductConfigurator
+            product={configuringProduct}
+            flavors={flavors}
+            toppings={toppings}
+            getPrice={getPrice}
+            onCancel={() => setConfiguringProduct(null)}
+            onAddConfigured={addConfiguredProduct}
+          />
+        </div>
       }
       right={
         <OrderBuilder
