@@ -170,7 +170,9 @@ export default function NuevaVentaPage() {
   }
 
   const total = cart.reduce(
-    (acc, item) => acc + getPrice(item.product) * item.quantity,
+    (acc, item) =>
+      acc +
+      (getPrice(item.product) + (item.extraUnitPrice || 0)) * item.quantity,
     0,
   );
 
@@ -231,7 +233,10 @@ export default function NuevaVentaPage() {
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
-          notes: item.notes,
+          extra_unit_price: item.extraUnitPrice || 0,
+          notes: [item.notes, ...(item.extraLabels || [])]
+            .filter(Boolean)
+            .join(" · "),
           options: [
             ...item.flavorSelections.map((id) => ({
               option_group_code: "flavor",
