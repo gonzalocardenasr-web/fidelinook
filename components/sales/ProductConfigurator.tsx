@@ -197,6 +197,7 @@ export default function ProductConfigurator({
     }
 
     resetConfig();
+    onCancel();
   }
 
   function cancel() {
