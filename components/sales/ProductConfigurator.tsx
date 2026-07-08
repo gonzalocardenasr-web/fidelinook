@@ -26,6 +26,7 @@ export default function ProductConfigurator({
   const [serviceFormat, setServiceFormat] = useState<ServiceFormat>("vaso");
   const [includesCookie, setIncludesCookie] = useState(false);
   const [chocolateDip, setChocolateDip] = useState(false);
+  const [toppingEnabled, setToppingEnabled] = useState(false);
   const [extraToppingSelections, setExtraToppingSelections] = useState<
     number[]
   >([]);
@@ -37,6 +38,7 @@ export default function ProductConfigurator({
     setServiceFormat("vaso");
     setIncludesCookie(false);
     setChocolateDip(false);
+    setToppingEnabled(false);
     setExtraToppingSelections([]);
   }, [product?.id]);
 
@@ -58,28 +60,40 @@ export default function ProductConfigurator({
   }
 
   const requiresFlavors = product.has_flavors && product.max_flavors > 0;
-  const canAdd = !requiresFlavors || flavorSelections.length > 0;
+  const hasRequiredFlavors = !requiresFlavors || flavorSelections.length > 0;
+  const hasRequiredToppings =
+    !toppingEnabled || extraToppingSelections.length > 0;
+  const canAdd = hasRequiredFlavors && hasRequiredToppings;
+
   const unitPrice = getPrice(product);
 
-  const toppingExtraPrice = extraToppingSelections.length > 0 ? 500 : 0;
-  const chocolateDipPrice = chocolateDip ? 500 : 0;
-  const extraUnitPrice = isServedIceCream
-    ? toppingExtraPrice + chocolateDipPrice
-    : 0;
+  const toppingExtraPrice =
+    isServedIceCream && toppingEnabled && extraToppingSelections.length > 0
+      ? 500
+      : 0;
+
+  const chocolateDipPrice = isServedIceCream && chocolateDip ? 500 : 0;
+
+  const extraUnitPrice = toppingExtraPrice + chocolateDipPrice;
 
   const extraLabels = [
     ...(chocolateDip ? ["Baño chocolate"] : []),
-    ...(extraToppingSelections.length > 0
+    ...(toppingEnabled && extraToppingSelections.length > 0
       ? [
-          `Topping: ${extraToppingSelections
+          `Topping (${extraToppingSelections
             .map((id) => toppings.find((topping) => topping.id === id)?.name)
             .filter(Boolean)
-            .join(" + ")}`,
+            .join(" + ")})`,
         ]
       : []),
   ];
 
   const lineTotal = (unitPrice + extraUnitPrice) * quantity;
+
+  function getFormatLabel(format: ServiceFormat) {
+    if (format === "ambos") return "vaso + barquillo";
+    return format;
+  }
 
   function addFlavor(flavorId: number) {
     if (flavorSelections.length >= product.max_flavors) return;
@@ -92,11 +106,22 @@ export default function ProductConfigurator({
     );
   }
 
+  function addExtraTopping(toppingId: number) {
+    if (extraToppingSelections.length >= 2) return;
+    setExtraToppingSelections((current) => [...current, toppingId]);
+  }
+
+  function removeExtraTopping(indexToRemove: number) {
+    setExtraToppingSelections((current) =>
+      current.filter((_id, index) => index !== indexToRemove),
+    );
+  }
+
   function buildNotes() {
     const structuredNotes: string[] = [];
 
     if (isServedIceCream) {
-      structuredNotes.push(`Formato: ${serviceFormat}`);
+      structuredNotes.push(`Formato: ${getFormatLabel(serviceFormat)}`);
 
       if (includesCookie && serviceFormat !== "barquillo") {
         structuredNotes.push("Con galleta");
@@ -108,6 +133,17 @@ export default function ProductConfigurator({
     }
 
     return structuredNotes.join(" · ");
+  }
+
+  function resetConfig() {
+    setQuantity(1);
+    setFlavorSelections([]);
+    setNotes("");
+    setServiceFormat("vaso");
+    setIncludesCookie(false);
+    setChocolateDip(false);
+    setToppingEnabled(false);
+    setExtraToppingSelections([]);
   }
 
   function addProduct() {
@@ -123,35 +159,12 @@ export default function ProductConfigurator({
       extraLabels,
     });
 
-    setQuantity(1);
-    setFlavorSelections([]);
-    setNotes("");
-    setServiceFormat("vaso");
-    setIncludesCookie(false);
-    setChocolateDip(false);
-    setExtraToppingSelections([]);
+    resetConfig();
   }
 
   function cancel() {
-    setQuantity(1);
-    setFlavorSelections([]);
-    setNotes("");
-    setServiceFormat("vaso");
-    setIncludesCookie(false);
+    resetConfig();
     onCancel();
-    setChocolateDip(false);
-    setExtraToppingSelections([]);
-  }
-
-  function addExtraTopping(toppingId: number) {
-    if (extraToppingSelections.length >= 2) return;
-    setExtraToppingSelections((current) => [...current, toppingId]);
-  }
-
-  function removeExtraTopping(indexToRemove: number) {
-    setExtraToppingSelections((current) =>
-      current.filter((_id, index) => index !== indexToRemove),
-    );
   }
 
   return (
@@ -255,73 +268,7 @@ export default function ProductConfigurator({
           </div>
         )}
 
-        {isServedIceCream && (
-          <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-              Extras
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setChocolateDip((current) => !current)}
-              className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
-                chocolateDip
-                  ? "border-violet-300 bg-violet-600 text-white"
-                  : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
-              }`}
-            >
-              Baño chocolate +$500
-            </button>
-
-            <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-neutral-600">
-                  Topping +$500
-                </p>
-                <p className="text-xs font-bold text-violet-700">
-                  {extraToppingSelections.length}/2
-                </p>
-              </div>
-
-              {extraToppingSelections.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {extraToppingSelections.map((toppingId, index) => {
-                    const topping = toppings.find(
-                      (item) => item.id === toppingId,
-                    );
-
-                    return (
-                      <button
-                        key={`${toppingId}-${index}`}
-                        type="button"
-                        onClick={() => removeExtraTopping(index)}
-                        className="cursor-pointer rounded-full bg-black px-3 py-1 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-95"
-                      >
-                        {topping?.name || "Topping"} ×
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="mt-2 grid gap-2">
-                {toppings.map((topping) => (
-                  <button
-                    key={topping.id}
-                    type="button"
-                    disabled={extraToppingSelections.length >= 2}
-                    onClick={() => addExtraTopping(topping.id)}
-                    className="cursor-pointer rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-left text-xs font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {topping.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {requiresFlavors ? (
+        {requiresFlavors && (
           <div className="mt-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
@@ -370,10 +317,89 @@ export default function ProductConfigurator({
               })}
             </div>
           </div>
-        ) : (
-          <p className="mt-4 text-sm text-neutral-500">
-            Este producto no requiere selección de sabores.
-          </p>
+        )}
+
+        {isServedIceCream && (
+          <div className="mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Adicionales
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setChocolateDip((current) => !current)}
+              className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                chocolateDip
+                  ? "border-violet-300 bg-violet-600 text-white"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+              }`}
+            >
+              Baño chocolate +$500
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setToppingEnabled((current) => !current);
+                setExtraToppingSelections([]);
+              }}
+              className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                toppingEnabled
+                  ? "border-violet-300 bg-violet-600 text-white"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+              }`}
+            >
+              Topping helado +$500
+            </button>
+
+            {toppingEnabled && (
+              <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-neutral-600">
+                    Porciones de topping
+                  </p>
+                  <p className="text-xs font-bold text-violet-700">
+                    {extraToppingSelections.length}/2
+                  </p>
+                </div>
+
+                {extraToppingSelections.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {extraToppingSelections.map((toppingId, index) => {
+                      const topping = toppings.find(
+                        (item) => item.id === toppingId,
+                      );
+
+                      return (
+                        <button
+                          key={`${toppingId}-${index}`}
+                          type="button"
+                          onClick={() => removeExtraTopping(index)}
+                          className="cursor-pointer rounded-full bg-black px-3 py-1 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-95"
+                        >
+                          {topping?.name || "Topping"} ×
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-2 grid gap-2">
+                  {toppings.map((topping) => (
+                    <button
+                      key={topping.id}
+                      type="button"
+                      disabled={extraToppingSelections.length >= 2}
+                      onClick={() => addExtraTopping(topping.id)}
+                      className="cursor-pointer rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-left text-xs font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {topping.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="mt-4">

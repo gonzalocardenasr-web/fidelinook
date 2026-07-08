@@ -31,6 +31,17 @@ export default function OrderItemCard({
     .map((id) => toppings.find((topping) => topping.id === id)?.name)
     .filter(Boolean);
 
+  function formatRepeatedNames(names: string[]) {
+    const counts = names.reduce<Record<string, number>>((acc, name) => {
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts)
+      .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+      .join(" + ");
+  }
+
   return (
     <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
       <div className="flex items-start justify-between gap-2">
@@ -40,7 +51,11 @@ export default function OrderItemCard({
           </p>
 
           <p className="mt-0.5 text-xs font-semibold text-violet-700">
-            ${(price * item.quantity).toLocaleString("es-CL")}
+            $
+            {(
+              (price + (item.extraUnitPrice || 0)) *
+              item.quantity
+            ).toLocaleString("es-CL")}
           </p>
         </div>
 
@@ -53,19 +68,28 @@ export default function OrderItemCard({
         </button>
       </div>
 
-      {(selectedFlavorNames.length > 0 || selectedToppingNames.length > 0) && (
+      {(selectedFlavorNames.length > 0 ||
+        selectedToppingNames.length > 0 ||
+        item.extraLabels?.length > 0) && (
         <div className="mt-2 space-y-1 text-xs text-neutral-600">
           {selectedFlavorNames.length > 0 && (
             <p>
               <span className="font-bold">Sabores:</span>{" "}
-              {selectedFlavorNames.join(" + ")}
+              {formatRepeatedNames(selectedFlavorNames as string[])}
             </p>
           )}
 
           {selectedToppingNames.length > 0 && (
             <p>
               <span className="font-bold">Toppings:</span>{" "}
-              {selectedToppingNames.join(" + ")}
+              {formatRepeatedNames(selectedToppingNames as string[])}
+            </p>
+          )}
+
+          {item.extraLabels?.length > 0 && (
+            <p>
+              <span className="font-bold">Adicionales:</span>{" "}
+              {item.extraLabels.join(" + ")}
             </p>
           )}
         </div>
