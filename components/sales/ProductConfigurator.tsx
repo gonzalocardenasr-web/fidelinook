@@ -81,8 +81,6 @@ export default function ProductConfigurator({
 
   const lineTotal = (unitPrice + extraUnitPrice) * quantity;
 
-  const lineTotal = unitPrice * quantity;
-
   function addFlavor(flavorId: number) {
     if (flavorSelections.length >= product.max_flavors) return;
     setFlavorSelections((current) => [...current, flavorId]);
