@@ -202,14 +202,44 @@ export default function NuevaVentaPage() {
     return null;
   }
 
+  function getCartItemSignature(item: Omit<CartItem, "localId">) {
+    return JSON.stringify({
+      productId: item.product.id,
+      flavorSelections: item.flavorSelections,
+      toppingIds: item.toppingIds,
+      notes: item.notes || "",
+      extraUnitPrice: item.extraUnitPrice || 0,
+      extraLabels: item.extraLabels || [],
+    });
+  }
+
   function addConfiguredProduct(item: Omit<CartItem, "localId">) {
-    setCart((current) => [
-      ...current,
-      {
-        ...item,
-        localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
-      },
-    ]);
+    const newSignature = getCartItemSignature(item);
+
+    setCart((current) => {
+      const existingIndex = current.findIndex(
+        (cartItem) => getCartItemSignature(cartItem) === newSignature,
+      );
+
+      if (existingIndex === -1) {
+        return [
+          ...current,
+          {
+            ...item,
+            localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
+          },
+        ];
+      }
+
+      return current.map((cartItem, index) =>
+        index === existingIndex
+          ? {
+              ...cartItem,
+              quantity: cartItem.quantity + item.quantity,
+            }
+          : cartItem,
+      );
+    });
 
     setConfiguringProduct(null);
   }
