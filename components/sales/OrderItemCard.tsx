@@ -6,6 +6,7 @@ type Props = {
   toppings: OptionValue[];
   price: number;
   onRemove: (localId: string) => void;
+  onDuplicate: (item: CartItem) => void;
   onUpdate: (localId: string, patch: Partial<CartItem>) => void;
   onToggleFlavor: (item: CartItem, flavorId: number) => void;
   onToggleTopping: (item: CartItem, toppingId: number) => void;
@@ -84,13 +85,23 @@ export default function OrderItemCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onRemove(item.localId)}
-          className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-[11px] font-bold text-red-600 transition hover:bg-red-50 active:scale-95"
-        >
-          Quitar
-        </button>
+        <div className="flex shrink-0 flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => onDuplicate(item)}
+            className="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-bold text-violet-700 transition hover:bg-violet-50 active:scale-95"
+          >
+            Duplicar
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onRemove(item.localId)}
+            className="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-bold text-red-600 transition hover:bg-red-50 active:scale-95"
+          >
+            Quitar
+          </button>
+        </div>
       </div>
     </div>
   );

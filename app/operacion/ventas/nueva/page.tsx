@@ -312,6 +312,16 @@ export default function NuevaVentaPage() {
     }
   }
 
+  function duplicateItem(item: CartItem) {
+    setCart((current) =>
+      current.map((cartItem) =>
+        cartItem.localId === item.localId
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem,
+      ),
+    );
+  }
+
   return (
     <POSLayout
       title="Venta local"

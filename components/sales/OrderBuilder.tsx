@@ -13,6 +13,8 @@ type Props = {
   paymentMethod: string;
   total: number;
   saving: boolean;
+  orderNotes: string;
+  clienteSelectorResetKey: number;
   getPrice: (product: CartItem["product"]) => number;
   onClienteChange: (cliente: ClienteSelectorValue | null) => void;
   onPaymentMethodChange: (value: string) => void;
@@ -22,6 +24,8 @@ type Props = {
   onToggleTopping: (item: CartItem, toppingId: number) => void;
   onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
   onConfirm: () => void;
+  onOrderNotesChange: (value: string) => void;
+  onDuplicateItem: (item: CartItem) => void;
 };
 
 export default function OrderBuilder({
@@ -41,6 +45,10 @@ export default function OrderBuilder({
   onToggleTopping,
   onRemoveFlavorSelection,
   onConfirm,
+  orderNotes,
+  onOrderNotesChange,
+  clienteSelectorResetKey,
+  onDuplicateItem,
 }: Props) {
   return (
     <aside className="flex h-full min-h-0 flex-col">
@@ -50,7 +58,11 @@ export default function OrderBuilder({
         </h2>
 
         <div className="mt-3">
-          <ClienteSelector value={selectedCliente} onChange={onClienteChange} />
+          <ClienteSelector
+            value={selectedCliente}
+            onChange={onClienteChange}
+            resetKey={clienteSelectorResetKey}
+          />
         </div>
       </div>
 
@@ -72,9 +84,23 @@ export default function OrderBuilder({
               onToggleFlavor={onToggleFlavor}
               onToggleTopping={onToggleTopping}
               onRemoveFlavorSelection={onRemoveFlavorSelection}
+              onDuplicate={onDuplicateItem}
             />
           ))
         )}
+      </div>
+
+      <div className="mb-3">
+        <label className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+          Nota pedido
+        </label>
+
+        <input
+          value={orderNotes}
+          onChange={(event) => onOrderNotesChange(event.target.value)}
+          placeholder="Ej: cliente espera afuera"
+          className="mt-2 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+        />
       </div>
 
       <div className="mt-3 shrink-0 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
