@@ -20,10 +20,12 @@ export default function ProductConfigurator({
 }: Props) {
   const [quantity, setQuantity] = useState(1);
   const [flavorSelections, setFlavorSelections] = useState<number[]>([]);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     setQuantity(1);
     setFlavorSelections([]);
+    setNotes("");
   }, [product?.id]);
 
   if (!product) {
@@ -58,16 +60,18 @@ export default function ProductConfigurator({
       quantity,
       flavorSelections,
       toppingIds: [],
-      notes: "",
+      notes,
     });
 
     setQuantity(1);
     setFlavorSelections([]);
+    setNotes("");
   }
 
   function cancel() {
     setQuantity(1);
     setFlavorSelections([]);
+    setNotes("");
     onCancel();
   }
 
@@ -121,6 +125,19 @@ export default function ProductConfigurator({
               +
             </button>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+            Nota producto
+          </label>
+
+          <input
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Ej: sin barquillo"
+            className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+          />
         </div>
 
         {requiresFlavors ? (
