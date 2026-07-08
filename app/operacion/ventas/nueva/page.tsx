@@ -333,16 +333,41 @@ export default function NuevaVentaPage() {
     localId: string,
     updatedItem: Omit<CartItem, "localId">,
   ) {
-    setCart((current) =>
-      current.map((item) =>
-        item.localId === localId
-          ? {
-              ...updatedItem,
-              localId,
-            }
-          : item,
-      ),
-    );
+    const updatedSignature = getCartItemSignature(updatedItem);
+
+    setCart((current) => {
+      const itemBeingEdited = current.find((item) => item.localId === localId);
+
+      if (!itemBeingEdited) return current;
+
+      const matchingItem = current.find(
+        (item) =>
+          item.localId !== localId &&
+          getCartItemSignature(item) === updatedSignature,
+      );
+
+      if (!matchingItem) {
+        return current.map((item) =>
+          item.localId === localId
+            ? {
+                ...updatedItem,
+                localId,
+              }
+            : item,
+        );
+      }
+
+      return current
+        .filter((item) => item.localId !== localId)
+        .map((item) =>
+          item.localId === matchingItem.localId
+            ? {
+                ...item,
+                quantity: item.quantity + updatedItem.quantity,
+              }
+            : item,
+        );
+    });
 
     setEditingItem(null);
     setConfiguringProduct(null);
