@@ -26,7 +26,9 @@ export default function ProductConfigurator({
   const [serviceFormat, setServiceFormat] = useState<ServiceFormat>("vaso");
   const [includesCookie, setIncludesCookie] = useState(false);
   const [chocolateDip, setChocolateDip] = useState(false);
-  const [extraToppingSelections, setExtraToppingSelections] = useState<number[]>([]);
+  const [extraToppingSelections, setExtraToppingSelections] = useState<
+    number[]
+  >([]);
 
   useEffect(() => {
     setQuantity(1);
@@ -60,27 +62,24 @@ export default function ProductConfigurator({
   const unitPrice = getPrice(product);
 
   const toppingExtraPrice = extraToppingSelections.length > 0 ? 500 : 0;
-    const chocolateDipPrice = chocolateDip ? 500 : 0;
-    const extraUnitPrice = isServedIceCream
+  const chocolateDipPrice = chocolateDip ? 500 : 0;
+  const extraUnitPrice = isServedIceCream
     ? toppingExtraPrice + chocolateDipPrice
     : 0;
 
-    const extraLabels = [
+  const extraLabels = [
     ...(chocolateDip ? ["Baño chocolate"] : []),
     ...(extraToppingSelections.length > 0
-        ? [
-            `Topping: ${extraToppingSelections
+      ? [
+          `Topping: ${extraToppingSelections
             .map((id) => toppings.find((topping) => topping.id === id)?.name)
             .filter(Boolean)
             .join(" + ")}`,
         ]
-        : []),
-    ];
+      : []),
+  ];
 
-    const lineTotal = (unitPrice + extraUnitPrice) * quantity;
-
-
-
+  const lineTotal = (unitPrice + extraUnitPrice) * quantity;
 
   const lineTotal = unitPrice * quantity;
 
@@ -122,8 +121,6 @@ export default function ProductConfigurator({
       flavorSelections,
       toppingIds: [],
       notes: buildNotes(),
-      setChocolateDip(false);
-      setExtraToppingSelections([]);
       extraUnitPrice,
       extraLabels,
     });
@@ -133,6 +130,8 @@ export default function ProductConfigurator({
     setNotes("");
     setServiceFormat("vaso");
     setIncludesCookie(false);
+    setChocolateDip(false);
+    setExtraToppingSelections([]);
   }
 
   function cancel() {
@@ -149,13 +148,13 @@ export default function ProductConfigurator({
   function addExtraTopping(toppingId: number) {
     if (extraToppingSelections.length >= 2) return;
     setExtraToppingSelections((current) => [...current, toppingId]);
-    }
+  }
 
-    function removeExtraTopping(indexToRemove: number) {
+  function removeExtraTopping(indexToRemove: number) {
     setExtraToppingSelections((current) =>
-        current.filter((_id, index) => index !== indexToRemove)
+      current.filter((_id, index) => index !== indexToRemove),
     );
-    }
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -259,68 +258,70 @@ export default function ProductConfigurator({
         )}
 
         {isServedIceCream && (
-            <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Extras
+          <div className="mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Extras
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setChocolateDip((current) => !current)}
+              className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                chocolateDip
+                  ? "border-violet-300 bg-violet-600 text-white"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+              }`}
+            >
+              Baño chocolate +$500
+            </button>
+
+            <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-neutral-600">
+                  Topping +$500
                 </p>
+                <p className="text-xs font-bold text-violet-700">
+                  {extraToppingSelections.length}/2
+                </p>
+              </div>
 
-                <button
-                type="button"
-                onClick={() => setChocolateDip((current) => !current)}
-                className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
-                    chocolateDip
-                    ? "border-violet-300 bg-violet-600 text-white"
-                    : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
-                }`}
-                >
-                Baño chocolate +$500
-                </button>
+              {extraToppingSelections.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {extraToppingSelections.map((toppingId, index) => {
+                    const topping = toppings.find(
+                      (item) => item.id === toppingId,
+                    );
 
-                <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
-                <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-neutral-600">
-                    Topping +$500
-                    </p>
-                    <p className="text-xs font-bold text-violet-700">
-                    {extraToppingSelections.length}/2
-                    </p>
-                </div>
-
-                {extraToppingSelections.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                    {extraToppingSelections.map((toppingId, index) => {
-                        const topping = toppings.find((item) => item.id === toppingId);
-
-                        return (
-                        <button
-                            key={`${toppingId}-${index}`}
-                            type="button"
-                            onClick={() => removeExtraTopping(index)}
-                            className="cursor-pointer rounded-full bg-black px-3 py-1 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-95"
-                        >
-                            {topping?.name || "Topping"} ×
-                        </button>
-                        );
-                    })}
-                    </div>
-                )}
-
-                <div className="mt-2 grid gap-2">
-                    {toppings.map((topping) => (
-                    <button
-                        key={topping.id}
+                    return (
+                      <button
+                        key={`${toppingId}-${index}`}
                         type="button"
-                        disabled={extraToppingSelections.length >= 2}
-                        onClick={() => addExtraTopping(topping.id)}
-                        className="cursor-pointer rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-left text-xs font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        {topping.name}
-                    </button>
-                    ))}
+                        onClick={() => removeExtraTopping(index)}
+                        className="cursor-pointer rounded-full bg-black px-3 py-1 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-95"
+                      >
+                        {topping?.name || "Topping"} ×
+                      </button>
+                    );
+                  })}
                 </div>
-                </div>
+              )}
+
+              <div className="mt-2 grid gap-2">
+                {toppings.map((topping) => (
+                  <button
+                    key={topping.id}
+                    type="button"
+                    disabled={extraToppingSelections.length >= 2}
+                    onClick={() => addExtraTopping(topping.id)}
+                    className="cursor-pointer rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-left text-xs font-bold text-neutral-800 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {topping.name}
+                  </button>
+                ))}
+              </div>
             </div>
-            )}
+          </div>
+        )}
 
         {requiresFlavors ? (
           <div className="mt-4">
