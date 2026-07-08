@@ -392,6 +392,7 @@ export default function NuevaVentaPage() {
           onToggleTopping={toggleTopping}
           onRemoveFlavorSelection={removeFlavorSelection}
           onConfirm={confirmarVenta}
+          onDuplicateItem={duplicateItem}
         />
       }
       context={

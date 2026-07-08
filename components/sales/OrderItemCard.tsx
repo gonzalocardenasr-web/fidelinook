@@ -19,6 +19,7 @@ export default function OrderItemCard({
   toppings,
   price,
   onRemove,
+  onDuplicate,
 }: Props) {
   const selectedFlavorNames = item.flavorSelections
     .map((id) => flavors.find((flavor) => flavor.id === id)?.name)
