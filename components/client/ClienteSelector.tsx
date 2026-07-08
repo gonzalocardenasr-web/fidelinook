@@ -16,9 +16,10 @@ export type ClienteSelectorValue = {
 type Props = {
   value: ClienteSelectorValue | null;
   onChange: (cliente: ClienteSelectorValue | null) => void;
+  resetKey?: number;
 };
 
-export default function ClienteSelector({ value, onChange }: Props) {
+export default function ClienteSelector({ value, onChange, resetKey }: Props) {
   const [query, setQuery] = useState("");
   const [clientes, setClientes] = useState<ClienteSelectorValue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,15 @@ export default function ClienteSelector({ value, onChange }: Props) {
 
     return () => window.clearTimeout(timeout);
   }, [query, value]);
+
+  useEffect(() => {
+    if (resetKey === undefined) return;
+
+    setQuery("");
+    setClientes([]);
+    setMessage("");
+    setLoading(false);
+  }, [resetKey]);
 
   async function buscarClientes(texto: string) {
     try {
@@ -110,6 +120,7 @@ export default function ClienteSelector({ value, onChange }: Props) {
       <label className="text-sm font-semibold text-neutral-700">Cliente</label>
 
       <input
+        key={resetKey}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Buscar por nombre, teléfono o correo"
