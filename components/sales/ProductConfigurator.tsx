@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Product, OptionValue, CartItem } from "../../types/sales";
 
 type Props = {
@@ -9,6 +9,8 @@ type Props = {
   onCancel: () => void;
   onAddConfigured: (item: Omit<CartItem, "localId">) => void;
 };
+
+type ServiceFormat = "vaso" | "barquillo" | "ambos";
 
 export default function ProductConfigurator({
   product,
@@ -21,12 +23,25 @@ export default function ProductConfigurator({
   const [quantity, setQuantity] = useState(1);
   const [flavorSelections, setFlavorSelections] = useState<number[]>([]);
   const [notes, setNotes] = useState("");
+  const [serviceFormat, setServiceFormat] = useState<ServiceFormat>("vaso");
+  const [includesCookie, setIncludesCookie] = useState(false);
 
   useEffect(() => {
     setQuantity(1);
     setFlavorSelections([]);
     setNotes("");
+    setServiceFormat("vaso");
+    setIncludesCookie(false);
   }, [product?.id]);
+
+  const isServedIceCream = useMemo(() => {
+    if (!product) return false;
+
+    return (
+      product.category?.toLowerCase() === "helados" &&
+      product.operational_type?.toLowerCase() === "servido"
+    );
+  }, [product]);
 
   if (!product) {
     return (
@@ -52,6 +67,24 @@ export default function ProductConfigurator({
     );
   }
 
+  function buildNotes() {
+    const structuredNotes: string[] = [];
+
+    if (isServedIceCream) {
+      structuredNotes.push(`Formato: ${serviceFormat}`);
+
+      if (includesCookie && serviceFormat !== "barquillo") {
+        structuredNotes.push("Con galleta");
+      }
+    }
+
+    if (notes.trim()) {
+      structuredNotes.push(notes.trim());
+    }
+
+    return structuredNotes.join(" · ");
+  }
+
   function addProduct() {
     if (!product || !canAdd) return;
 
@@ -60,18 +93,22 @@ export default function ProductConfigurator({
       quantity,
       flavorSelections,
       toppingIds: [],
-      notes,
+      notes: buildNotes(),
     });
 
     setQuantity(1);
     setFlavorSelections([]);
     setNotes("");
+    setServiceFormat("vaso");
+    setIncludesCookie(false);
   }
 
   function cancel() {
     setQuantity(1);
     setFlavorSelections([]);
     setNotes("");
+    setServiceFormat("vaso");
+    setIncludesCookie(false);
     onCancel();
   }
 
@@ -127,18 +164,54 @@ export default function ProductConfigurator({
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-            Nota producto
-          </label>
+        {isServedIceCream && (
+          <div className="mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Formato
+            </p>
 
-          <input
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Ej: sin barquillo"
-            className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-          />
-        </div>
+            <div className="mt-2 grid gap-2">
+              {[
+                { value: "vaso", label: "Vaso" },
+                { value: "barquillo", label: "Barquillo" },
+                { value: "ambos", label: "Vaso + barquillo" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setServiceFormat(option.value as ServiceFormat);
+
+                    if (option.value === "barquillo") {
+                      setIncludesCookie(false);
+                    }
+                  }}
+                  className={`cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                    serviceFormat === option.value
+                      ? "border-violet-300 bg-violet-600 text-white"
+                      : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {serviceFormat !== "barquillo" && (
+              <button
+                type="button"
+                onClick={() => setIncludesCookie((current) => !current)}
+                className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                  includesCookie
+                    ? "border-amber-300 bg-amber-100 text-amber-800"
+                    : "border-neutral-200 bg-white text-neutral-800 hover:bg-amber-50"
+                }`}
+              >
+                {includesCookie ? "Con galleta" : "Agregar galleta"}
+              </button>
+            )}
+          </div>
+        )}
 
         {requiresFlavors ? (
           <div className="mt-4">
@@ -191,9 +264,22 @@ export default function ProductConfigurator({
           </div>
         ) : (
           <p className="mt-4 text-sm text-neutral-500">
-            Este producto no requiere configuración adicional.
+            Este producto no requiere selección de sabores.
           </p>
         )}
+
+        <div className="mt-4">
+          <label className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+            Nota producto
+          </label>
+
+          <input
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Ej: sin barquillo"
+            className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+          />
+        </div>
       </div>
 
       <div className="mt-4 shrink-0 rounded-2xl border border-neutral-200 bg-white p-3">
