@@ -42,7 +42,13 @@ export default function ProductConfigurator({
     if (editingItem) {
       setQuantity(editingItem.quantity);
       setFlavorSelections(editingItem.flavorSelections || []);
-      setNotes(editingItem.notes || "");
+      setNotes(
+        (editingItem.notes || "")
+          .split(" · ")
+          .filter((note) => !note.startsWith("Formato:"))
+          .filter((note) => note !== "Con galleta")
+          .join(" · "),
+      );
       setChocolateDip(
         editingItem.extraLabels?.includes("Baño chocolate") || false,
       );

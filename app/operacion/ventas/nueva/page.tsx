@@ -206,11 +206,11 @@ export default function NuevaVentaPage() {
   function getCartItemSignature(item: Omit<CartItem, "localId">) {
     return JSON.stringify({
       productId: item.product.id,
-      flavorSelections: item.flavorSelections,
-      toppingIds: item.toppingIds,
+      flavorSelections: [...item.flavorSelections].sort((a, b) => a - b),
+      toppingIds: [...item.toppingIds].sort((a, b) => a - b),
       notes: item.notes || "",
       extraUnitPrice: item.extraUnitPrice || 0,
-      extraLabels: item.extraLabels || [],
+      extraLabels: [...(item.extraLabels || [])].sort(),
     });
   }
 
