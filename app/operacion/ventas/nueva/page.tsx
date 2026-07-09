@@ -402,7 +402,13 @@ export default function NuevaVentaPage() {
         </div>
       }
       center={
-        <div className="grid h-full min-h-0 grid-cols-[1fr_320px] gap-3">
+        <div
+          className={
+            configuringProduct
+              ? "grid h-full min-h-0 grid-cols-[1fr_320px] gap-2"
+              : "grid h-full min-h-0 grid-cols-1 gap-2"
+          }
+        >
           <ProductGrid
             products={filteredProducts}
             loading={loading}
@@ -412,19 +418,21 @@ export default function NuevaVentaPage() {
             onSearchChange={setProductSearch}
           />
 
-          <ProductConfigurator
-            product={configuringProduct}
-            editingItem={editingItem}
-            flavors={flavors}
-            toppings={toppings}
-            getPrice={getPrice}
-            onCancel={() => {
-              setConfiguringProduct(null);
-              setEditingItem(null);
-            }}
-            onAddConfigured={addConfiguredProduct}
-            onUpdateConfigured={updateConfiguredProduct}
-          />
+          {configuringProduct && (
+            <ProductConfigurator
+              product={configuringProduct}
+              editingItem={editingItem}
+              flavors={flavors}
+              toppings={toppings}
+              getPrice={getPrice}
+              onCancel={() => {
+                setConfiguringProduct(null);
+                setEditingItem(null);
+              }}
+              onAddConfigured={addConfiguredProduct}
+              onUpdateConfigured={updateConfiguredProduct}
+            />
+          )}
         </div>
       }
       right={
