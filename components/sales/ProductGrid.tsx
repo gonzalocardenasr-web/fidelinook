@@ -20,6 +20,16 @@ export default function ProductGrid({
   onSearchChange,
   compact = false,
 }: Props) {
+  const groupedProducts = products.reduce<Record<string, Product[]>>(
+    (acc, product) => {
+      const category = product.category || "Sin categoría";
+      acc[category] = acc[category] || [];
+      acc[category].push(product);
+      return acc;
+    },
+    {},
+  );
+
   return (
     <section className="flex h-full min-h-0 flex-col">
       <div className="shrink-0">
@@ -48,7 +58,7 @@ export default function ProductGrid({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar producto, SKU o categoría"
-          className="mt-3 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+          className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
         />
       </div>
 
@@ -60,17 +70,29 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-          <div
-            className={`grid gap-2 ${compact ? "grid-cols-1" : "xl:grid-cols-2"}`}
-          >
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                price={getPrice(product)}
-                onAdd={onAdd}
-              />
-            ))}
+          <div className="space-y-3">
+            {Object.entries(groupedProducts).map(
+              ([category, categoryProducts]) => (
+                <section key={category}>
+                  <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-neutral-400">
+                    {category}
+                  </p>
+
+                  <div
+                    className={`grid gap-2 ${compact ? "grid-cols-1" : "xl:grid-cols-2"}`}
+                  >
+                    {categoryProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        price={getPrice(product)}
+                        onAdd={onAdd}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ),
+            )}
           </div>
         </div>
       )}
