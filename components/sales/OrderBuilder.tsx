@@ -1,6 +1,4 @@
-import ClienteSelector, {
-  ClienteSelectorValue,
-} from "../client/ClienteSelector";
+import { ClienteSelectorValue } from "../client/ClienteSelector";
 import { CartItem, OptionValue } from "../../types/sales";
 import OrderItemCard from "./OrderItemCard";
 import OrderTotals from "./OrderTotals";
@@ -58,14 +56,6 @@ export default function OrderBuilder({
         <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
           Pedido
         </h2>
-
-        <div className="mt-3">
-          <ClienteSelector
-            value={selectedCliente}
-            onChange={onClienteChange}
-            resetKey={clienteSelectorResetKey}
-          />
-        </div>
       </div>
 
       <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">

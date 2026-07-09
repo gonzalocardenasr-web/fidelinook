@@ -1,11 +1,15 @@
-import { ClienteSelectorValue } from "../client/ClienteSelector";
 import { CartItem } from "../../types/sales";
+import ClienteSelector, {
+  ClienteSelectorValue,
+} from "../client/ClienteSelector";
 
 type Props = {
   selectedCliente: ClienteSelectorValue | null;
   cart: CartItem[];
   total: number;
   message?: string;
+  onClienteChange: (cliente: ClienteSelectorValue | null) => void;
+  clienteSelectorResetKey: number;
 };
 
 export default function POSContextPanel({
@@ -13,6 +17,8 @@ export default function POSContextPanel({
   cart,
   total,
   message,
+  onClienteChange,
+  clienteSelectorResetKey,
 }: Props) {
   const premiosActivos = Array.isArray(selectedCliente?.premios)
     ? selectedCliente.premios.filter(
@@ -28,6 +34,14 @@ export default function POSContextPanel({
         <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
           Contexto
         </h2>
+
+        <div className="mt-3">
+          <ClienteSelector
+            value={selectedCliente}
+            onChange={onClienteChange}
+            resetKey={clienteSelectorResetKey}
+          />
+        </div>
 
         {selectedCliente ? (
           <div className="mt-3 rounded-2xl bg-violet-50 p-4">

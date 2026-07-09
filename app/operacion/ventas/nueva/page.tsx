@@ -458,6 +458,8 @@ export default function NuevaVentaPage() {
           cart={cart}
           total={total}
           message={message}
+          onClienteChange={setSelectedCliente}
+          clienteSelectorResetKey={clienteSelectorResetKey}
         />
       }
     />

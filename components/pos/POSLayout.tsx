@@ -70,20 +70,20 @@ export default function POSLayout({
             </div>
           </header>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_380px_260px] gap-3 p-3">
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-3 shadow-sm">
+          <div className="grid min-h-0 flex-1 grid-cols-[220px_1fr_340px_260px] gap-2 p-2">
+            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {left}
             </section>
 
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-3 shadow-sm">
+            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {center}
             </section>
 
-            <section className="min-h-0 overflow-hidden rounded-2xl bg-white p-3 shadow-sm">
+            <section className="min-h-0 overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
               {right}
             </section>
 
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-3 shadow-sm">
+            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {context}
             </section>
           </div>
