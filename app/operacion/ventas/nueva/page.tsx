@@ -416,6 +416,7 @@ export default function NuevaVentaPage() {
             onAdd={addProduct}
             search={productSearch}
             onSearchChange={setProductSearch}
+            compact={Boolean(configuringProduct)}
           />
 
           {configuringProduct && (

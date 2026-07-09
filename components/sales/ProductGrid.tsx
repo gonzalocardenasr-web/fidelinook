@@ -8,6 +8,7 @@ type Props = {
   onAdd: (product: Product) => void;
   search: string;
   onSearchChange: (value: string) => void;
+  compact?: boolean;
 };
 
 export default function ProductGrid({
@@ -17,6 +18,7 @@ export default function ProductGrid({
   onAdd,
   search,
   onSearchChange,
+  compact = false,
 }: Props) {
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -58,7 +60,9 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="grid gap-2 xl:grid-cols-2">
+          <div
+            className={`grid gap-2 ${compact ? "grid-cols-1" : "xl:grid-cols-2"}`}
+          >
             {products.map((product) => (
               <ProductCard
                 key={product.id}
