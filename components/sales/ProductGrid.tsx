@@ -1,5 +1,6 @@
 import { Product } from "../../types/sales";
 import ProductCard from "./ProductCard";
+import { useMemo, useState, useEffect } from "react";
 
 type Props = {
   products: Product[];
@@ -29,6 +30,36 @@ export default function ProductGrid({
     },
     {},
   );
+
+  const categoryNames = useMemo(
+    () => Object.keys(groupedProducts),
+    [groupedProducts],
+  );
+
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >({});
+
+  useEffect(() => {
+    setExpandedCategories((current) => {
+      if (Object.keys(current).length > 0) return current;
+
+      const initial: Record<string, boolean> = {};
+
+      categoryNames.forEach((category, index) => {
+        initial[category] = index === 0;
+      });
+
+      return initial;
+    });
+  }, [categoryNames]);
+
+  function toggleCategory(category: string) {
+    setExpandedCategories((current) => ({
+      ...current,
+      [category]: !current[category],
+    }));
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -70,28 +101,51 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="space-y-3">
+          <div className="space-y-2">
             {Object.entries(groupedProducts).map(
-              ([category, categoryProducts]) => (
-                <section key={category}>
-                  <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-neutral-400">
-                    {category}
-                  </p>
+              ([category, categoryProducts]) => {
+                const expanded = expandedCategories[category];
 
-                  <div
-                    className={`grid gap-2 ${compact ? "grid-cols-1" : "xl:grid-cols-2"}`}
+                return (
+                  <section
+                    key={category}
+                    className="rounded-xl border border-neutral-200 bg-neutral-50"
                   >
-                    {categoryProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        price={getPrice(product)}
-                        onAdd={onAdd}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ),
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category)}
+                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition hover:bg-violet-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-violet-700">
+                          {expanded ? "▼" : "▶"}
+                        </span>
+
+                        <span className="text-xs font-black uppercase tracking-wide text-neutral-700">
+                          {category}
+                        </span>
+                      </div>
+
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-neutral-500">
+                        {categoryProducts.length}
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="space-y-2 border-t border-neutral-200 p-2">
+                        {categoryProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            price={getPrice(product)}
+                            onAdd={onAdd}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              },
             )}
           </div>
         </div>
