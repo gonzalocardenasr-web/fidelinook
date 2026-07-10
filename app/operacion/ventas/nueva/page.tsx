@@ -20,7 +20,6 @@ export default function NuevaVentaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("TODOS");
   const [productSearch, setProductSearch] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
@@ -59,44 +58,29 @@ export default function NuevaVentaPage() {
     }
   }
 
-  const categories = useMemo(() => {
-    const counts = products.reduce<Record<string, number>>((acc, product) => {
-      const category = product.category || "Sin categoría";
-      acc[category] = (acc[category] || 0) + 1;
-      return acc;
-    }, {});
-
-    return [
-      {
-        name: "TODOS",
-        label: "Todos",
-        count: products.length,
-      },
-      ...Object.entries(counts).map(([name, count]) => ({
-        name,
-        label: name,
-        count,
-      })),
-    ];
-  }, [products]);
-
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
 
+    if (!search) {
+      return products;
+    }
+
     return products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === "TODOS" || product.category === selectedCategory;
+      const name = product.name?.toLowerCase() || "";
+      const sku = product.sku?.toLowerCase() || "";
+      const category = product.category?.toLowerCase() || "";
+      const operationalType = product.operational_type?.toLowerCase() || "";
+      const subcategory = product.subcategory?.toLowerCase() || "";
 
-      const matchesSearch =
-        !search ||
-        product.name.toLowerCase().includes(search) ||
-        product.sku.toLowerCase().includes(search) ||
-        product.category.toLowerCase().includes(search) ||
-        product.operational_type.toLowerCase().includes(search);
-
-      return matchesCategory && matchesSearch;
+      return (
+        name.includes(search) ||
+        sku.includes(search) ||
+        category.includes(search) ||
+        operationalType.includes(search) ||
+        subcategory.includes(search)
+      );
     });
-  }, [products, selectedCategory, productSearch]);
+  }, [products, productSearch]);
 
   const flavors = useMemo(() => {
     return (
@@ -393,46 +377,6 @@ export default function NuevaVentaPage() {
     <POSLayout
       title="Venta local"
       subtitle="POS Operacional Nook"
-      left={
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0">
-            <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
-              Categorías
-            </h2>
-
-            <p className="mt-0.5 text-xs text-neutral-400">
-              {products.length} productos activos
-            </p>
-          </div>
-
-          <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-            {categories.map((category) => (
-              <button
-                key={category.name}
-                type="button"
-                onClick={() => setSelectedCategory(category.name)}
-                className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold transition duration-200 active:scale-[0.98] ${
-                  selectedCategory === category.name
-                    ? "border-violet-300 bg-violet-600 text-white shadow-sm"
-                    : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
-                }`}
-              >
-                <span className="truncate">{category.label}</span>
-
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${
-                    selectedCategory === category.name
-                      ? "bg-white/20 text-white"
-                      : "bg-white text-neutral-500"
-                  }`}
-                >
-                  {category.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      }
       center={
         <div
           className={

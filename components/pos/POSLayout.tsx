@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 type Props = {
   title: string;
   subtitle?: string;
-  left: ReactNode;
+  left?: ReactNode;
   center: ReactNode;
   right: ReactNode;
   context?: ReactNode;
@@ -70,10 +70,18 @@ export default function POSLayout({
             </div>
           </header>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[220px_1fr_340px_260px] gap-2 p-2">
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
-              {left}
-            </section>
+          <div
+            className={`grid min-h-0 flex-1 gap-2 p-2 ${
+              left
+                ? "grid-cols-[220px_minmax(0,1fr)_340px_260px]"
+                : "grid-cols-[minmax(0,1fr)_340px_260px]"
+            }`}
+          >
+            {left && (
+              <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
+                {left}
+              </section>
+            )}
 
             <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {center}
