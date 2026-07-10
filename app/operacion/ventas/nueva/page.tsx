@@ -381,19 +381,25 @@ export default function NuevaVentaPage() {
         <div
           className={
             configuringProduct
-              ? "grid h-full min-h-0 grid-cols-[1fr_320px] gap-2"
-              : "grid h-full min-h-0 grid-cols-1 gap-2"
+              ? "grid h-full min-h-0 grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] gap-2"
+              : "flex h-full min-h-0"
           }
         >
-          <ProductGrid
-            products={filteredProducts}
-            loading={loading}
-            getPrice={getPrice}
-            onAdd={addProduct}
-            search={productSearch}
-            onSearchChange={setProductSearch}
-            compact={Boolean(configuringProduct)}
-          />
+          <div
+            className={
+              configuringProduct ? "min-w-0" : "h-full w-full max-w-[760px]"
+            }
+          >
+            <ProductGrid
+              products={filteredProducts}
+              loading={loading}
+              getPrice={getPrice}
+              onAdd={addProduct}
+              search={productSearch}
+              onSearchChange={setProductSearch}
+              compact={Boolean(configuringProduct)}
+            />
+          </div>
 
           {configuringProduct && (
             <ProductConfigurator
