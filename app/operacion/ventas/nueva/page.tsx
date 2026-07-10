@@ -60,8 +60,24 @@ export default function NuevaVentaPage() {
   }
 
   const categories = useMemo(() => {
-    const unique = [...new Set(products.map((product) => product.category))];
-    return ["TODOS", ...unique];
+    const counts = products.reduce<Record<string, number>>((acc, product) => {
+      const category = product.category || "Sin categoría";
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+
+    return [
+      {
+        name: "TODOS",
+        label: "Todos",
+        count: products.length,
+      },
+      ...Object.entries(counts).map(([name, count]) => ({
+        name,
+        label: name,
+        count,
+      })),
+    ];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -378,24 +394,40 @@ export default function NuevaVentaPage() {
       title="Venta local"
       subtitle="POS Operacional Nook"
       left={
-        <div>
-          <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
-            Categorías
-          </h2>
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0">
+            <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+              Categorías
+            </h2>
 
-          <div className="mt-3 space-y-2">
+            <p className="mt-0.5 text-xs text-neutral-400">
+              {products.length} productos activos
+            </p>
+          </div>
+
+          <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
             {categories.map((category) => (
               <button
-                key={category}
+                key={category.name}
                 type="button"
-                onClick={() => setSelectedCategory(category)}
-                className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left text-sm font-bold transition duration-200 active:scale-[0.98] ${
-                  selectedCategory === category
+                onClick={() => setSelectedCategory(category.name)}
+                className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold transition duration-200 active:scale-[0.98] ${
+                  selectedCategory === category.name
                     ? "border-violet-300 bg-violet-600 text-white shadow-sm"
                     : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
                 }`}
               >
-                {category === "TODOS" ? "Todos los productos" : category}
+                <span className="truncate">{category.label}</span>
+
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${
+                    selectedCategory === category.name
+                      ? "bg-white/20 text-white"
+                      : "bg-white text-neutral-500"
+                  }`}
+                >
+                  {category.count}
+                </span>
               </button>
             ))}
           </div>
