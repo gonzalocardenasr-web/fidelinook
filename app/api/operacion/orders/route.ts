@@ -33,6 +33,7 @@ export async function GET() {
         customer_id,
         total,
         payment_method,
+        channel,
         clientes (
           id,
           nombre,

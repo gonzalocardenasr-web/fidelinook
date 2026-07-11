@@ -12,6 +12,7 @@ export type QueueOrder = {
   created_at: string;
   notes?: string | null;
   sales?: {
+    channel?: string | null;
     total: number;
     payment_method: string;
     clientes?: {
