@@ -72,7 +72,6 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getOperationSession();
-  const orderNotes = String(body.orderNotes || "").trim();
 
   if (!session.ok) {
     return NextResponse.json(
@@ -83,6 +82,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    const orderNotes = String(body.orderNotes || "").trim();
 
     const customerId =
       body.customerId === null ||
