@@ -89,7 +89,7 @@ export default function ProductGrid({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar producto, SKU o categoría"
-          className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+          className="mt-2 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
         />
       </div>
 
@@ -101,7 +101,7 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {Object.entries(groupedProducts).map(
               ([category, categoryProducts]) => {
                 const expanded = expandedCategories[category];
@@ -109,12 +109,12 @@ export default function ProductGrid({
                 return (
                   <section
                     key={category}
-                    className="rounded-xl border border-neutral-200 bg-neutral-50"
+                    className="rounded-lg border border-neutral-200 bg-neutral-50"
                   >
                     <button
                       type="button"
                       onClick={() => toggleCategory(category)}
-                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition hover:bg-violet-50"
+                      className="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 text-left transition hover:bg-violet-50 active:bg-violet-100"
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black text-violet-700">
@@ -132,7 +132,7 @@ export default function ProductGrid({
                     </button>
 
                     {expanded && (
-                      <div className="space-y-2 border-t border-neutral-200 p-2">
+                      <div className="space-y-1.5 border-t border-neutral-200 p-1.5">
                         {categoryProducts.map((product) => (
                           <ProductCard
                             key={product.id}

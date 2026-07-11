@@ -64,7 +64,7 @@ export default function OrderBuilder({
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {cart.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-400">
+          <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-400">
             Aún no hay productos agregados.
           </div>
         ) : (
@@ -87,7 +87,7 @@ export default function OrderBuilder({
         )}
       </div>
 
-      <div className="mt-2 shrink-0 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+      <div className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm">
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
             Nota pedido
@@ -97,7 +97,7 @@ export default function OrderBuilder({
             value={orderNotes}
             onChange={(event) => onOrderNotesChange(event.target.value)}
             placeholder="Ej: cliente espera afuera"
-            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
         </div>
 
@@ -109,7 +109,7 @@ export default function OrderBuilder({
           <select
             value={paymentMethod}
             onChange={(event) => onPaymentMethodChange(event.target.value)}
-            className="mt-1 w-full cursor-pointer rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+            className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           >
             <option value="efectivo">Efectivo</option>
             <option value="debito">Débito</option>
@@ -127,7 +127,7 @@ export default function OrderBuilder({
           type="button"
           onClick={onConfirm}
           disabled={saving || cart.length === 0}
-          className="mt-3 w-full cursor-pointer rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white transition duration-200 hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="mt-2.5 w-full cursor-pointer rounded-lg bg-violet-600 px-4 py-2.5 text-[13px] font-black text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Confirmando..." : "Confirmar venta"}
         </button>

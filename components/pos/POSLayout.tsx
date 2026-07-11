@@ -56,9 +56,11 @@ export default function POSLayout({
         </aside>
 
         <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-5">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
             <div>
-              <h1 className="text-xl font-black text-neutral-900">{title}</h1>
+              <h1 className="text-lg font-black leading-tight text-neutral-900">
+                {title}
+              </h1>
               {subtitle && (
                 <p className="text-xs text-neutral-500">{subtitle}</p>
               )}
@@ -73,8 +75,8 @@ export default function POSLayout({
           <div
             className={`grid min-h-0 flex-1 gap-2 p-2 ${
               left
-                ? "grid-cols-[220px_minmax(0,1fr)_340px_260px]"
-                : "grid-cols-[minmax(0,1fr)_340px_260px]"
+                ? "grid-cols-[220px_minmax(0,1fr)_330px_250px]"
+                : "grid-cols-[minmax(0,1fr)_330px_250px]"
             }`}
           >
             {left && (
