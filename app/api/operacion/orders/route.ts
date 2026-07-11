@@ -27,6 +27,7 @@ export async function GET() {
       delivered_at,
       cancelled_at,
       created_at,
+      notes,
       sales (
         id,
         customer_id,

@@ -36,29 +36,20 @@ export default function ProductGrid({
     [groupedProducts],
   );
 
-  const [expandedCategories, setExpandedCategories] = useState<
-    Record<string, boolean>
-  >({});
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    setExpandedCategories((current) => {
-      if (Object.keys(current).length > 0) return current;
+    setExpandedCategory((current) => {
+      if (current && categoryNames.includes(current)) {
+        return current;
+      }
 
-      const initial: Record<string, boolean> = {};
-
-      categoryNames.forEach((category, index) => {
-        initial[category] = index === 0;
-      });
-
-      return initial;
+      return categoryNames[0] ?? null;
     });
   }, [categoryNames]);
 
   function toggleCategory(category: string) {
-    setExpandedCategories((current) => ({
-      ...current,
-      [category]: !current[category],
-    }));
+    setExpandedCategory((current) => (current === category ? null : category));
   }
 
   return (
@@ -104,7 +95,7 @@ export default function ProductGrid({
           <div className="space-y-1.5">
             {Object.entries(groupedProducts).map(
               ([category, categoryProducts]) => {
-                const expanded = expandedCategories[category];
+                const expanded = expandedCategory === category;
 
                 return (
                   <section

@@ -38,6 +38,12 @@ export default function OrderQueueCard({ order, onChangeStatus }: Props) {
           <p className="mt-1 text-xs text-neutral-500">
             {order.sales?.clientes?.nombre || "Mostrador"}
           </p>
+
+          {order.notes && (
+            <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+              {order.notes}
+            </p>
+          )}
         </div>
 
         <OrderStatusBadge status={order.status} />

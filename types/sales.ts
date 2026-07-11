@@ -38,4 +38,6 @@ export type CartItem = {
   flavorSelections: number[];
   toppingIds: number[];
   notes: string;
+  extraUnitPrice: number;
+  extraLabels: string[];
 };

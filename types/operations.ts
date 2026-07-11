@@ -10,6 +10,7 @@ export type QueueOrder = {
   display_order_code: string;
   status: OrderStatus;
   created_at: string;
+  notes?: string | null;
   sales?: {
     total: number;
     payment_method: string;
