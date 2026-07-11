@@ -206,17 +206,26 @@ export default function NuevaVentaPage() {
   function getCartItemSignature(item: Omit<CartItem, "localId">) {
     return JSON.stringify({
       productId: item.product.id,
-      flavorSelections: [...item.flavorSelections].sort((a, b) => a - b),
-      toppingIds: [...item.toppingIds].sort((a, b) => a - b),
+
+      flavorSelections: [...(item.flavorSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+
+      toppingIds: [...(item.toppingIds || [])].sort((a, b) => a - b),
+
       serviceFormat: item.serviceFormat || null,
+
       includesCookie: Boolean(item.includesCookie),
+
       chocolateDip: Boolean(item.chocolateDip),
+
       extraToppingSelections: [...(item.extraToppingSelections || [])].sort(
         (a, b) => a - b,
       ),
+
       notes: item.notes?.trim() || "",
+
       extraUnitPrice: item.extraUnitPrice || 0,
-      extraLabels: [...(item.extraLabels || [])].sort(),
     });
   }
 
