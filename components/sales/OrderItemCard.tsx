@@ -44,6 +44,18 @@ export default function OrderItemCard({
 
   const lineTotal = (price + (item.extraUnitPrice || 0)) * item.quantity;
 
+  function getServiceFormatLabel() {
+    if (!item.serviceFormat) return null;
+
+    if (item.serviceFormat === "ambos") {
+      return "Vaso + barquillo";
+    }
+
+    return (
+      item.serviceFormat.charAt(0).toUpperCase() + item.serviceFormat.slice(1)
+    );
+  }
+
   return (
     <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
       <div className="flex items-start justify-between gap-2">
@@ -63,6 +75,14 @@ export default function OrderItemCard({
               <p>
                 <span className="font-bold">Sabores:</span>{" "}
                 {formatRepeatedNames(selectedFlavorNames)}
+              </p>
+            )}
+
+            {item.serviceFormat && (
+              <p>
+                <span className="font-bold">Formato:</span>{" "}
+                {getServiceFormatLabel()}
+                {item.includesCookie ? " · Con galleta" : ""}
               </p>
             )}
 

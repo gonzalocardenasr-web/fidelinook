@@ -49,25 +49,12 @@ export default function ProductConfigurator({
   useEffect(() => {
     if (editingItem) {
       setFlavorSelections(editingItem.flavorSelections || []);
-
-      setNotes(
-        (editingItem.notes || "")
-          .split(" · ")
-          .filter((note) => !note.startsWith("Formato:"))
-          .filter((note) => note !== "Con galleta")
-          .join(" · "),
-      );
-
-      setChocolateDip(
-        editingItem.extraLabels?.includes("Baño chocolate") || false,
-      );
-
-      const toppingLabel = editingItem.extraLabels?.find((label) =>
-        label.startsWith("Topping"),
-      );
-
-      setToppingEnabled(Boolean(toppingLabel));
-      setExtraToppingSelections([]);
+      setNotes(editingItem.notes || "");
+      setServiceFormat(editingItem.serviceFormat || "vaso");
+      setIncludesCookie(Boolean(editingItem.includesCookie));
+      setChocolateDip(Boolean(editingItem.chocolateDip));
+      setExtraToppingSelections(editingItem.extraToppingSelections || []);
+      setToppingEnabled((editingItem.extraToppingSelections || []).length > 0);
 
       return;
     }
@@ -148,24 +135,6 @@ export default function ProductConfigurator({
     });
   }
 
-  function buildNotes() {
-    const structuredNotes: string[] = [];
-
-    if (isServedIceCream) {
-      structuredNotes.push(`Formato: ${getFormatLabel(serviceFormat)}`);
-
-      if (includesCookie && serviceFormat !== "barquillo") {
-        structuredNotes.push("Con galleta");
-      }
-    }
-
-    if (notes.trim()) {
-      structuredNotes.push(notes.trim());
-    }
-
-    return structuredNotes.join(" · ");
-  }
-
   function addProduct() {
     if (!product || !canAdd) return;
 
@@ -174,9 +143,14 @@ export default function ProductConfigurator({
       quantity: 1,
       flavorSelections,
       toppingIds: [],
-      notes: buildNotes(),
+      notes: notes.trim(),
       extraUnitPrice,
       extraLabels,
+      serviceFormat: isServedIceCream ? serviceFormat : undefined,
+      includesCookie:
+        isServedIceCream && serviceFormat !== "barquillo" && includesCookie,
+      chocolateDip: isServedIceCream && chocolateDip,
+      extraToppingSelections: isServedIceCream ? extraToppingSelections : [],
     };
 
     if (editingItem) {

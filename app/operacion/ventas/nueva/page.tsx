@@ -208,7 +208,13 @@ export default function NuevaVentaPage() {
       productId: item.product.id,
       flavorSelections: [...item.flavorSelections].sort((a, b) => a - b),
       toppingIds: [...item.toppingIds].sort((a, b) => a - b),
-      notes: item.notes || "",
+      serviceFormat: item.serviceFormat || null,
+      includesCookie: Boolean(item.includesCookie),
+      chocolateDip: Boolean(item.chocolateDip),
+      extraToppingSelections: [...(item.extraToppingSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+      notes: item.notes?.trim() || "",
       extraUnitPrice: item.extraUnitPrice || 0,
       extraLabels: [...(item.extraLabels || [])].sort(),
     });
@@ -266,7 +272,18 @@ export default function NuevaVentaPage() {
           product_id: item.product.id,
           quantity: item.quantity,
           extra_unit_price: item.extraUnitPrice || 0,
-          notes: [item.notes, ...(item.extraLabels || [])]
+          notes: [
+            item.serviceFormat
+              ? `Formato: ${
+                  item.serviceFormat === "ambos"
+                    ? "vaso + barquillo"
+                    : item.serviceFormat
+                }`
+              : null,
+            item.includesCookie ? "Con galleta" : null,
+            ...(item.extraLabels || []),
+            item.notes?.trim() || null,
+          ]
             .filter(Boolean)
             .join(" · "),
           options: [

@@ -40,4 +40,8 @@ export type CartItem = {
   notes: string;
   extraUnitPrice: number;
   extraLabels: string[];
+  serviceFormat?: "vaso" | "barquillo" | "ambos";
+  includesCookie?: boolean;
+  chocolateDip?: boolean;
+  extraToppingSelections?: number[];
 };
