@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { QueueOrder, OrderStatus } from "../../types/operations";
 import OrderQueueCard from "./OrderQueueCard";
 
 type Props = {
   orders: QueueOrder[];
   loading: boolean;
-  onChangeStatus: (orderId: number, status: OrderStatus) => void;
+  onChangeStatus: (
+    orderId: number,
+    status: OrderStatus,
+  ) => Promise<void> | void;
 };
 
 const columns: { title: string; status: OrderStatus }[] = [
@@ -13,7 +17,39 @@ const columns: { title: string; status: OrderStatus }[] = [
   { title: "Listos", status: "ready" },
 ];
 
+function getNextStatus(status: OrderStatus): OrderStatus | null {
+  if (status === "pending") return "preparing";
+  if (status === "preparing") return "ready";
+  if (status === "ready") return "delivered";
+
+  return null;
+}
+
 export default function OrderQueue({ orders, loading, onChangeStatus }: Props) {
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+
+  async function advanceOrder(order: QueueOrder) {
+    const nextStatus = getNextStatus(order.status);
+
+    if (!nextStatus) return;
+
+    try {
+      setUpdatingOrderId(order.id);
+      await onChangeStatus(order.id, nextStatus);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  async function cancelOrder(order: QueueOrder) {
+    try {
+      setUpdatingOrderId(order.id);
+      await onChangeStatus(order.id, "cancelled");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-neutral-600">Cargando pedidos...</p>;
   }
@@ -58,7 +94,9 @@ export default function OrderQueue({ orders, loading, onChangeStatus }: Props) {
                   <OrderQueueCard
                     key={order.id}
                     order={order}
-                    onChangeStatus={onChangeStatus}
+                    onAdvance={advanceOrder}
+                    onCancel={cancelOrder}
+                    updating={updatingOrderId === order.id}
                   />
                 ))
               )}
