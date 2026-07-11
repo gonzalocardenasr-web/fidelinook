@@ -203,7 +203,7 @@ export default function ProductConfigurator({
 
         <div className="mt-1 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="truncate text-xl font-black text-neutral-900">
+            <h2 className="truncate text-lg font-black leading-tight text-neutral-900">
               {product.name}
             </h2>
 
@@ -220,8 +220,8 @@ export default function ProductConfigurator({
         </div>
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl bg-neutral-50 p-3">
-        <div className="space-y-3">
+      <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg bg-neutral-50 p-2.5">
+        <div className="space-y-2">
           {isServedIceCream && (
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
@@ -238,7 +238,7 @@ export default function ProductConfigurator({
                     setIncludesCookie(false);
                   }
                 }}
-                className="mt-1 w-full cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white h-9 px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               >
                 <option value="vaso">Vaso</option>
                 <option value="barquillo">Barquillo</option>
@@ -249,7 +249,7 @@ export default function ProductConfigurator({
                 <button
                   type="button"
                   onClick={() => setIncludesCookie((current) => !current)}
-                  className={`mt-2 w-full cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                  className={`mt-2 w-full cursor-pointer rounded-lg border px-3 py-2 text-left text-[13px] font-bold transition active:scale-[0.98] ${
                     includesCookie
                       ? "border-amber-300 bg-amber-100 text-amber-800"
                       : "border-neutral-200 bg-white text-neutral-800 hover:bg-amber-50"
@@ -282,7 +282,7 @@ export default function ProductConfigurator({
                       onChange={(event) =>
                         updateFlavorSelection(index, event.target.value)
                       }
-                      className="w-full cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full cursor-pointer rounded-lg border border-neutral-200 bg-white h-9 px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                     >
                       <option value="">
                         {product.max_flavors === 1
@@ -312,7 +312,7 @@ export default function ProductConfigurator({
                 <button
                   type="button"
                   onClick={() => setChocolateDip((current) => !current)}
-                  className={`cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                  className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-[13px] font-bold transition active:scale-[0.98] ${
                     chocolateDip
                       ? "border-violet-300 bg-violet-600 text-white"
                       : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
@@ -327,7 +327,7 @@ export default function ProductConfigurator({
                     setToppingEnabled((current) => !current);
                     setExtraToppingSelections([]);
                   }}
-                  className={`cursor-pointer rounded-xl border px-3 py-2 text-left text-sm font-bold transition active:scale-[0.98] ${
+                  className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-[13px] font-bold transition active:scale-[0.98] ${
                     toppingEnabled
                       ? "border-violet-300 bg-violet-600 text-white"
                       : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
@@ -338,7 +338,7 @@ export default function ProductConfigurator({
               </div>
 
               {toppingEnabled && (
-                <div className="mt-2 space-y-2 rounded-xl border border-neutral-200 bg-white p-2">
+                <div className="mt-2 space-y-2 rounded-lg border border-neutral-200 bg-white p-2.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
                       Porciones topping
@@ -356,7 +356,7 @@ export default function ProductConfigurator({
                       onChange={(event) =>
                         updateExtraToppingSelection(index, event.target.value)
                       }
-                      className="w-full cursor-pointer rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full cursor-pointer rounded-lg border border-neutral-200 bg-neutral-50 h-9 px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                     >
                       <option value="">Topping {index + 1}</option>
 
@@ -381,14 +381,14 @@ export default function ProductConfigurator({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="Ej: sin barquillo"
-              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
         </div>
       </div>
 
-      <div className="mt-3 shrink-0 rounded-xl border border-neutral-200 bg-white p-3">
-        <div className="mb-2 flex items-center justify-between text-sm">
+      <div className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-white p-2.5">
+        <div className="mb-2 flex items-center justify-between text-[13px]">
           <span className="font-bold text-neutral-600">Total línea</span>
 
           <span className="text-lg font-black text-violet-700">
@@ -400,7 +400,7 @@ export default function ProductConfigurator({
           <button
             type="button"
             onClick={cancel}
-            className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold text-neutral-700 transition hover:bg-neutral-50 active:scale-[0.98]"
+            className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-[13px] font-bold text-neutral-700 transition hover:bg-neutral-50 active:scale-[0.98]"
           >
             Cancelar
           </button>
@@ -409,7 +409,7 @@ export default function ProductConfigurator({
             type="button"
             onClick={addProduct}
             disabled={!canAdd}
-            className="cursor-pointer rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white transition hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-lg bg-violet-600 px-4 py-2.5 text-[13px] font-black text-white transition hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {editingItem ? "Actualizar" : "Agregar"}
           </button>

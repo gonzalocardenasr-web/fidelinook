@@ -75,8 +75,8 @@ export default function POSLayout({
           <div
             className={`grid min-h-0 flex-1 gap-2 p-2 ${
               left
-                ? "grid-cols-[220px_minmax(0,1fr)_330px_250px]"
-                : "grid-cols-[minmax(0,1fr)_330px_250px]"
+                ? "grid-cols-[220px_minmax(0,1fr)_380px_250px]"
+                : "grid-cols-[minmax(0,1fr)_380px_250px]"
             }`}
           >
             {left && (
