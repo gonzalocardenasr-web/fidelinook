@@ -2,6 +2,7 @@ import { CartItem } from "../../types/sales";
 import ClienteSelector, {
   ClienteSelectorValue,
 } from "../client/ClienteSelector";
+import SalesChannelSelector, { SalesChannel } from "./SalesChannelSelector";
 
 type Props = {
   selectedCliente: ClienteSelectorValue | null;
@@ -10,6 +11,10 @@ type Props = {
   message?: string;
   onClienteChange: (cliente: ClienteSelectorValue | null) => void;
   clienteSelectorResetKey: number;
+  channel: SalesChannel;
+  externalOrderId: string;
+  onChannelChange: (channel: SalesChannel) => void;
+  onExternalOrderIdChange: (value: string) => void;
 };
 
 export default function POSContextPanel({
@@ -19,6 +24,10 @@ export default function POSContextPanel({
   message,
   onClienteChange,
   clienteSelectorResetKey,
+  channel,
+  externalOrderId,
+  onChannelChange,
+  onExternalOrderIdChange,
 }: Props) {
   const premiosActivos = Array.isArray(selectedCliente?.premios)
     ? selectedCliente.premios.filter(
@@ -34,6 +43,12 @@ export default function POSContextPanel({
         <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
           Contexto
         </h2>
+        <SalesChannelSelector
+          channel={channel}
+          externalOrderId={externalOrderId}
+          onChannelChange={onChannelChange}
+          onExternalOrderIdChange={onExternalOrderIdChange}
+        />
 
         <div className="mt-3">
           <ClienteSelector

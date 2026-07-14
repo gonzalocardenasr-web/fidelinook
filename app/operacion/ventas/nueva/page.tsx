@@ -11,6 +11,7 @@ import { CartItem, OptionGroup, Product } from "../../../../types/sales";
 import POSLayout from "../../../../components/pos/POSLayout";
 import POSContextPanel from "../../../../components/pos/POSContextPanel";
 import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
+import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,6 +25,8 @@ export default function NuevaVentaPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [channel, setChannel] = useState<SalesChannel>("local");
+  const [externalOrderId, setExternalOrderId] = useState("");
 
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
@@ -35,6 +38,14 @@ export default function NuevaVentaPage() {
   useEffect(() => {
     cargarCatalogo();
   }, []);
+
+  useEffect(() => {
+    if (channel === "local") {
+      setPaymentMethod("efectivo");
+    } else {
+      setPaymentMethod("manual");
+    }
+  }, [channel]);
 
   async function cargarCatalogo() {
     try {
@@ -182,6 +193,10 @@ export default function NuevaVentaPage() {
       return "Agrega al menos un producto.";
     }
 
+    if (channel !== "local" && !externalOrderId.trim()) {
+      return "Ingresa el número externo del pedido digital.";
+    }
+
     for (const item of cart) {
       const isServedIceCream =
         item.product.category?.trim().toLowerCase() === "helados" &&
@@ -289,8 +304,8 @@ export default function NuevaVentaPage() {
       setMessage("");
 
       const payload = {
-        channel: "local",
-        externalOrderId: null,
+        channel,
+        externalOrderId: channel === "local" ? null : externalOrderId.trim(),
         paymentMethod,
         orderNotes,
         customerId: selectedCliente?.id || null,
@@ -345,6 +360,8 @@ export default function NuevaVentaPage() {
       setCart([]);
       setOrderNotes("");
       setSelectedCliente(null);
+      setChannel("local");
+      setExternalOrderId("");
       setClienteSelectorResetKey((current) => current + 1);
       setMessage(
         `Venta creada correctamente. Pedido ${data.result.display_order_code}.`,
@@ -418,8 +435,12 @@ export default function NuevaVentaPage() {
 
   return (
     <POSLayout
-      title="Venta local"
-      subtitle="POS Operacional Nook"
+      title={channel === "local" ? "Venta local" : "Pedido digital"}
+      subtitle={
+        channel === "local"
+          ? "POS Operacional Nook"
+          : "Ingreso manual multicanal"
+      }
       center={
         <div
           className={
@@ -488,6 +509,10 @@ export default function NuevaVentaPage() {
           message={message}
           onClienteChange={setSelectedCliente}
           clienteSelectorResetKey={clienteSelectorResetKey}
+          channel={channel}
+          externalOrderId={externalOrderId}
+          onChannelChange={setChannel}
+          onExternalOrderIdChange={setExternalOrderId}
         />
       }
     />
