@@ -230,6 +230,7 @@ export default function HistorialVentasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState("");
 
   const [page, setPage] = useState(1);
@@ -382,6 +383,99 @@ export default function HistorialVentasPage() {
       setMessage("Error cargando historial.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function exportarCsv() {
+    try {
+      setExporting(true);
+      setMessage("");
+
+      if (dateFrom && dateTo && dateFrom > dateTo) {
+        setMessage("La fecha inicial no puede ser posterior a la fecha final.");
+        return;
+      }
+
+      const params = new URLSearchParams();
+
+      if (dateFrom) {
+        const startDate = new Date(`${dateFrom}T00:00:00`);
+
+        params.set("dateFrom", startDate.toISOString());
+      }
+
+      if (dateTo) {
+        const endDateExclusive = new Date(`${dateTo}T00:00:00`);
+
+        endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+
+        params.set("dateTo", endDateExclusive.toISOString());
+      }
+
+      if (search.trim()) {
+        params.set("search", search.trim());
+      }
+
+      if (channelFilter !== "all") {
+        params.set("channel", channelFilter);
+      }
+
+      if (paymentFilter !== "all") {
+        params.set("paymentMethod", paymentFilter);
+      }
+
+      if (statusFilter !== "all") {
+        params.set("orderStatus", statusFilter);
+      }
+
+      if (customerFilter !== "all") {
+        params.set("customerType", customerFilter);
+      }
+
+      const queryString = params.toString();
+
+      const res = await fetch(
+        `/api/operacion/sales/export${queryString ? `?${queryString}` : ""}`,
+      );
+
+      if (!res.ok) {
+        let errorMessage = "No se pudo exportar el historial.";
+
+        try {
+          const data = await res.json();
+          errorMessage = data.message || errorMessage;
+        } catch {
+          // La respuesta podría no ser JSON.
+        }
+
+        setMessage(errorMessage);
+        return;
+      }
+
+      const blob = await res.blob();
+
+      const disposition = res.headers.get("Content-Disposition") || "";
+
+      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+
+      const filename = filenameMatch?.[1] || "ventas-nook.csv";
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error exportando ventas:", error);
+      setMessage("Error inesperado al exportar las ventas.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -680,6 +774,15 @@ export default function HistorialVentasPage() {
                 className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Limpiar
+              </button>
+
+              <button
+                type="button"
+                onClick={exportarCsv}
+                disabled={loading || exporting}
+                className="h-9 cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {exporting ? "Exportando..." : "Exportar CSV"}
               </button>
             </div>
 
