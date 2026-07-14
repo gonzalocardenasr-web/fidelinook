@@ -186,8 +186,49 @@ function getStatusClassName(value?: string | null) {
   return "bg-neutral-100 text-neutral-600";
 }
 
+function formatRepeatedNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+    .join(" + ");
+}
+
+function getItemOptions(item: SaleItem) {
+  const options = Array.isArray(item.sale_item_options)
+    ? item.sale_item_options
+    : [];
+
+  const flavors = options
+    .filter(
+      (option) =>
+        option.option_group_code === "flavor" ||
+        option.option_group_code === "sabor",
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  const toppings = options
+    .filter(
+      (option) =>
+        option.option_group_code === "topping" ||
+        option.option_group_code === "toppings",
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  return {
+    flavors,
+    toppings,
+  };
+}
+
 export default function HistorialVentasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -257,7 +298,15 @@ export default function HistorialVentasPage() {
         return;
       }
 
-      setSales(Array.isArray(data.sales) ? data.sales : []);
+      const nextSales = Array.isArray(data.sales) ? data.sales : [];
+
+      setSales(nextSales);
+
+      setSelectedSale((current) => {
+        if (!current) return null;
+
+        return nextSales.find((sale: Sale) => sale.id === current.id) || null;
+      });
 
       setPage(data.pagination?.page || targetPage);
       setTotalSales(data.pagination?.total || 0);
@@ -424,6 +473,9 @@ export default function HistorialVentasPage() {
     paymentFilter !== "all" ||
     statusFilter !== "all" ||
     customerFilter !== "all";
+
+  const selectedOrder = selectedSale?.orders?.[0] || null;
+  const selectedItems = selectedSale?.sale_items || [];
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-3">
@@ -822,9 +874,8 @@ export default function HistorialVentasPage() {
                         <td className="whitespace-nowrap px-3 py-2 text-center">
                           <button
                             type="button"
-                            disabled
-                            title="Disponible en DEV-024.1C"
-                            className="cursor-not-allowed rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-[10px] font-bold text-neutral-400"
+                            onClick={() => setSelectedSale(sale)}
+                            className="cursor-pointer rounded-md border border-violet-200 bg-white px-2 py-1 text-[10px] font-bold text-violet-700 transition hover:bg-violet-50 active:scale-[0.98]"
                           >
                             Ver
                           </button>
@@ -867,6 +918,261 @@ export default function HistorialVentasPage() {
           </footer>
         </section>
       </div>
+      {selectedSale && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/20">
+          <button
+            type="button"
+            aria-label="Cerrar detalle"
+            onClick={() => setSelectedSale(null)}
+            className="absolute inset-0 cursor-default"
+          />
+
+          <aside className="relative z-10 flex h-full w-full max-w-[460px] flex-col border-l border-neutral-200 bg-white shadow-2xl">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-violet-600">
+                  Detalle de venta
+                </p>
+
+                <h2 className="mt-0.5 text-lg font-black leading-tight text-neutral-900">
+                  {selectedOrder?.display_order_code ||
+                    selectedSale.sale_number ||
+                    `Venta #${selectedSale.id}`}
+                </h2>
+
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getChannelClassName(
+                      selectedSale.channel,
+                    )}`}
+                  >
+                    {getChannelLabel(selectedSale.channel)}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${getStatusClassName(
+                      selectedOrder?.status,
+                    )}`}
+                  >
+                    {getOrderStatusLabel(selectedOrder?.status)}
+                  </span>
+                </div>
+
+                {selectedSale.external_order_id && (
+                  <p className="mt-1 text-[10px] font-semibold text-neutral-500">
+                    Ref. externa: {selectedSale.external_order_id}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedSale(null)}
+                className="shrink-0 cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50"
+              >
+                Cerrar
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <section className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Fecha y hora
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {formatDateTime(
+                      selectedSale.confirmed_at || selectedSale.created_at,
+                    )}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Medio de pago
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {getPaymentMethodLabel(selectedSale.payment_method)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Estado del pago
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {selectedSale.payment_status || "—"}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Operador
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {selectedSale.actor_role || "—"}
+                  </p>
+                </div>
+              </section>
+
+              <section className="mt-3 rounded-lg border border-neutral-200 px-3 py-2.5">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                  Cliente
+                </p>
+
+                <p className="mt-0.5 text-[12px] font-black text-neutral-900">
+                  {selectedSale.clientes?.nombre || "Mostrador"}
+                </p>
+
+                {(selectedSale.clientes?.telefono ||
+                  selectedSale.clientes?.correo) && (
+                  <div className="mt-1 space-y-0.5 text-[10px] text-neutral-500">
+                    {selectedSale.clientes?.telefono && (
+                      <p>{selectedSale.clientes.telefono}</p>
+                    )}
+
+                    {selectedSale.clientes?.correo && (
+                      <p className="break-all">
+                        {selectedSale.clientes.correo}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              <section className="mt-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Productos
+                  </p>
+
+                  <span className="text-[10px] text-neutral-400">
+                    {selectedItems.reduce(
+                      (acc, item) => acc + item.quantity,
+                      0,
+                    )}{" "}
+                    ítems
+                  </span>
+                </div>
+
+                <div className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-neutral-50">
+                  {selectedItems.map((item) => {
+                    const { flavors, toppings } = getItemOptions(item);
+
+                    return (
+                      <div key={item.id} className="px-3 py-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-black text-neutral-900">
+                              {item.quantity}x {item.product_name}
+                            </p>
+
+                            {item.product_sku && (
+                              <p className="mt-0.5 text-[9px] text-neutral-400">
+                                SKU: {item.product_sku}
+                              </p>
+                            )}
+                          </div>
+
+                          <p className="shrink-0 text-[11px] font-black text-violet-700">
+                            {formatMoney(item.total_price)}
+                          </p>
+                        </div>
+
+                        <div className="mt-1 space-y-0.5 text-[10px] leading-snug text-neutral-600">
+                          {flavors.length > 0 && (
+                            <p>
+                              <span className="font-bold">Sabores:</span>{" "}
+                              {formatRepeatedNames(flavors)}
+                            </p>
+                          )}
+
+                          {toppings.length > 0 && (
+                            <p>
+                              <span className="font-bold">Toppings:</span>{" "}
+                              {formatRepeatedNames(toppings)}
+                            </p>
+                          )}
+
+                          {item.notes && (
+                            <p>
+                              <span className="font-bold">Detalle:</span>{" "}
+                              {item.notes}
+                            </p>
+                          )}
+
+                          <p className="text-neutral-400">
+                            Unitario: {formatMoney(item.unit_price)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {selectedOrder?.notes && (
+                <section className="mt-3 rounded-lg bg-amber-50 px-3 py-2.5 text-[10px] font-semibold leading-snug text-amber-800">
+                  <span className="font-black">Nota del pedido:</span>{" "}
+                  {selectedOrder.notes}
+                </section>
+              )}
+
+              <section className="mt-3 rounded-lg border border-neutral-200 bg-white p-3">
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex items-center justify-between gap-3 text-neutral-600">
+                    <span>Subtotal</span>
+                    <span className="font-bold">
+                      {formatMoney(selectedSale.subtotal)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 text-neutral-600">
+                    <span>Descuentos</span>
+                    <span className="font-bold">
+                      {formatMoney(selectedSale.discount_total)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
+                    <span className="text-[12px] font-black text-neutral-900">
+                      Total
+                    </span>
+
+                    <span className="text-base font-black text-violet-700">
+                      {formatMoney(selectedSale.total)}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-neutral-200 bg-white p-3">
+              <button
+                type="button"
+                disabled
+                title="Disponible en un desarrollo posterior"
+                className="cursor-not-allowed rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] font-bold text-neutral-400"
+              >
+                Reimprimir
+              </button>
+
+              <button
+                type="button"
+                disabled
+                title="Disponible en un desarrollo posterior"
+                className="cursor-not-allowed rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] font-bold text-neutral-400"
+              >
+                Anular
+              </button>
+            </footer>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
