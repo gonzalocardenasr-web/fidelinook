@@ -253,6 +253,22 @@ export default function HistorialVentasPage() {
     cargarVentas();
   }, []);
 
+  useEffect(() => {
+    if (!selectedSale) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedSale(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedSale]);
+
   async function cargarVentas(
     targetPage = page,
     filterOverrides?: {
@@ -551,15 +567,6 @@ export default function HistorialVentasPage() {
 
               <button
                 type="button"
-                onClick={applyFilters}
-                disabled={loading}
-                className="h-9 cursor-pointer rounded-lg bg-neutral-900 px-3 text-[11px] font-bold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Aplicar filtros
-              </button>
-
-              <button
-                type="button"
                 onClick={clearDateFilters}
                 disabled={loading || (!dateFrom && !dateTo)}
                 className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -656,6 +663,15 @@ export default function HistorialVentasPage() {
                   <option value="counter">Mostrador</option>
                 </select>
               </div>
+
+              <button
+                type="button"
+                onClick={applyFilters}
+                disabled={loading}
+                className="h-9 cursor-pointer rounded-lg bg-neutral-900 px-3 text-[11px] font-bold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Aplicar filtros
+              </button>
 
               <button
                 type="button"
