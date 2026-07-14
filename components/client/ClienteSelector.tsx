@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export type ClienteSelectorValue = {
   id: number;
@@ -24,12 +24,6 @@ export default function ClienteSelector({ value, onChange, resetKey }: Props) {
   const [clientes, setClientes] = useState<ClienteSelectorValue[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-
-  const premiosActivos = useMemo(() => {
-    if (!value || !Array.isArray(value.premios)) return 0;
-    return value.premios.filter((premio: any) => premio.estado === "activo")
-      .length;
-  }, [value]);
 
   useEffect(() => {
     if (value) return;
@@ -87,75 +81,90 @@ export default function ClienteSelector({ value, onChange, resetKey }: Props) {
 
   if (value) {
     return (
-      <div className="rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
-              Cliente
-            </p>
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-2">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+            Cliente seleccionado
+          </p>
 
-            <p className="truncate text-sm font-black text-neutral-900">
-              {value.nombre}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              onChange(null);
-              setQuery("");
-              setClientes([]);
-            }}
-            className="cursor-pointer rounded-lg bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 active:scale-95"
-          >
-            Cambiar
-          </button>
+          <p className="truncate text-[13px] font-black leading-tight text-neutral-900">
+            {value.nombre}
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            onChange(null);
+            setQuery("");
+            setClientes([]);
+            setMessage("");
+          }}
+          className="shrink-0 cursor-pointer rounded-md border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-violet-700 transition hover:bg-violet-100 active:scale-[0.98]"
+        >
+          Cambiar
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-      <label className="text-sm font-semibold text-neutral-700">Cliente</label>
+    <div className="relative">
+      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+        Cliente
+      </label>
 
       <input
         key={resetKey}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Buscar por nombre, teléfono o correo"
-        className="mt-2 w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+        placeholder="Buscar nombre, teléfono o correo"
+        className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
       />
 
-      <p className="mt-2 text-xs text-neutral-500">
-        Opcional. Puedes continuar la venta sin seleccionar cliente.
+      <p className="mt-1 text-[10px] leading-tight text-neutral-400">
+        Opcional · Sin cliente no acumula beneficios.
       </p>
 
-      {loading && <p className="mt-3 text-sm text-neutral-500">Buscando...</p>}
+      {loading && (
+        <p className="mt-1 text-[11px] text-neutral-500">Buscando...</p>
+      )}
 
-      {message && <p className="mt-3 text-sm text-red-600">{message}</p>}
+      {message && (
+        <p className="mt-1 text-[11px] font-semibold text-red-600">{message}</p>
+      )}
 
       {!loading && query.trim().length >= 2 && clientes.length === 0 && (
-        <p className="mt-3 text-sm text-neutral-500">
+        <p className="mt-1 text-[11px] text-neutral-500">
           No se encontraron clientes.
         </p>
       )}
 
       {clientes.length > 0 && (
-        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+        <div className="absolute left-0 right-0 z-30 mt-1 max-h-48 space-y-1 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1.5 shadow-xl">
           {clientes.map((cliente) => (
             <button
               key={cliente.id}
               type="button"
-              onClick={() => onChange(cliente)}
-              className="cursor-pointer w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-left transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
+              onClick={() => {
+                onChange(cliente);
+                setQuery("");
+                setClientes([]);
+                setMessage("");
+              }}
+              className="w-full cursor-pointer rounded-md border border-transparent px-2.5 py-2 text-left transition hover:border-violet-200 hover:bg-violet-50 active:scale-[0.99]"
             >
-              <p className="font-semibold text-neutral-900">{cliente.nombre}</p>
+              <p className="truncate text-[12px] font-bold leading-tight text-neutral-900">
+                {cliente.nombre}
+              </p>
 
-              <div className="mt-1 space-y-0.5 text-xs text-neutral-600">
-                {cliente.telefono && <p>{cliente.telefono}</p>}
-                {cliente.correo && <p>{cliente.correo}</p>}
-              </div>
+              {(cliente.telefono || cliente.correo) && (
+                <p className="mt-0.5 truncate text-[10px] leading-tight text-neutral-500">
+                  {[cliente.telefono, cliente.correo]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
             </button>
           ))}
         </div>

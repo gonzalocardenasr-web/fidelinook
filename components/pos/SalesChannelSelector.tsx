@@ -43,8 +43,8 @@ export default function SalesChannelSelector({
   }
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+    <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-2">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
         Origen de la venta
       </p>
 
@@ -52,7 +52,7 @@ export default function SalesChannelSelector({
         <button
           type="button"
           onClick={() => selectMode("local")}
-          className={`cursor-pointer rounded-lg border px-3 py-2 text-[12px] font-bold transition active:scale-[0.99] ${
+          className={`cursor-pointer rounded-md border px-2 py-1.5 text-[10px] font-bold transition active:scale-[0.99] ${
             !isDigital
               ? "border-violet-300 bg-violet-600 text-white"
               : "border-neutral-200 bg-white text-neutral-700 hover:border-violet-300 hover:bg-violet-50"
@@ -64,20 +64,20 @@ export default function SalesChannelSelector({
         <button
           type="button"
           onClick={() => selectMode("digital")}
-          className={`cursor-pointer rounded-lg border px-3 py-2 text-[12px] font-bold transition active:scale-[0.99] ${
+          className={`cursor-pointer rounded-md border px-2 py-1.5 text-[10px] font-bold transition active:scale-[0.99] ${
             isDigital
               ? "border-violet-300 bg-violet-600 text-white"
               : "border-neutral-200 bg-white text-neutral-700 hover:border-violet-300 hover:bg-violet-50"
           }`}
         >
-          Pedido digital
+          Digital
         </button>
       </div>
 
       {isDigital && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-1.5">
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+            <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
               Plataforma
             </label>
 
@@ -86,7 +86,7 @@ export default function SalesChannelSelector({
               onChange={(event) =>
                 onChannelChange(event.target.value as SalesChannel)
               }
-              className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              className="mt-1 h-8 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[12px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             >
               {digitalChannels.map((digitalChannel) => (
                 <option key={digitalChannel.value} value={digitalChannel.value}>
@@ -97,7 +97,7 @@ export default function SalesChannelSelector({
           </div>
 
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+            <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
               Número externo
             </label>
 
@@ -105,7 +105,7 @@ export default function SalesChannelSelector({
               value={externalOrderId}
               onChange={(event) => onExternalOrderIdChange(event.target.value)}
               placeholder="Ej: #1042"
-              className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              className="mt-1 h-8 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
         </div>
