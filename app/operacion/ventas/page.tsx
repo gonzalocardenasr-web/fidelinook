@@ -255,9 +255,14 @@ export default function HistorialVentasPage() {
 
   async function cargarVentas(
     targetPage = page,
-    dateOverrides?: {
-      from: string;
-      to: string;
+    filterOverrides?: {
+      dateFrom?: string;
+      dateTo?: string;
+      search?: string;
+      channel?: string;
+      paymentMethod?: string;
+      orderStatus?: string;
+      customerType?: string;
     },
   ) {
     try {
@@ -265,10 +270,35 @@ export default function HistorialVentasPage() {
       setMessage("");
 
       const effectiveDateFrom =
-        dateOverrides?.from !== undefined ? dateOverrides.from : dateFrom;
+        filterOverrides?.dateFrom !== undefined
+          ? filterOverrides.dateFrom
+          : dateFrom;
 
       const effectiveDateTo =
-        dateOverrides?.to !== undefined ? dateOverrides.to : dateTo;
+        filterOverrides?.dateTo !== undefined ? filterOverrides.dateTo : dateTo;
+
+      const effectiveSearch =
+        filterOverrides?.search !== undefined ? filterOverrides.search : search;
+
+      const effectiveChannel =
+        filterOverrides?.channel !== undefined
+          ? filterOverrides.channel
+          : channelFilter;
+
+      const effectivePaymentMethod =
+        filterOverrides?.paymentMethod !== undefined
+          ? filterOverrides.paymentMethod
+          : paymentFilter;
+
+      const effectiveOrderStatus =
+        filterOverrides?.orderStatus !== undefined
+          ? filterOverrides.orderStatus
+          : statusFilter;
+
+      const effectiveCustomerType =
+        filterOverrides?.customerType !== undefined
+          ? filterOverrides.customerType
+          : customerFilter;
 
       const params = new URLSearchParams({
         page: String(targetPage),
@@ -287,6 +317,26 @@ export default function HistorialVentasPage() {
         endDateExclusive.setDate(endDateExclusive.getDate() + 1);
 
         params.set("dateTo", endDateExclusive.toISOString());
+      }
+
+      if (effectiveSearch.trim()) {
+        params.set("search", effectiveSearch.trim());
+      }
+
+      if (effectiveChannel !== "all") {
+        params.set("channel", effectiveChannel);
+      }
+
+      if (effectivePaymentMethod !== "all") {
+        params.set("paymentMethod", effectivePaymentMethod);
+      }
+
+      if (effectiveOrderStatus !== "all") {
+        params.set("orderStatus", effectiveOrderStatus);
+      }
+
+      if (effectiveCustomerType !== "all") {
+        params.set("customerType", effectiveCustomerType);
       }
 
       const res = await fetch(`/api/operacion/sales?${params.toString()}`);
@@ -319,13 +369,14 @@ export default function HistorialVentasPage() {
     }
   }
 
-  function applyDateFilters() {
+  function applyFilters() {
     if (dateFrom && dateTo && dateFrom > dateTo) {
       setMessage("La fecha inicial no puede ser posterior a la fecha final.");
       return;
     }
 
     setPage(1);
+    setSelectedSale(null);
     cargarVentas(1);
   }
 
@@ -333,10 +384,11 @@ export default function HistorialVentasPage() {
     setDateFrom("");
     setDateTo("");
     setPage(1);
+    setSelectedSale(null);
 
     cargarVentas(1, {
-      from: "",
-      to: "",
+      dateFrom: "",
+      dateTo: "",
     });
   }
 
@@ -365,67 +417,26 @@ export default function HistorialVentasPage() {
     setPaymentFilter("all");
     setStatusFilter("all");
     setCustomerFilter("all");
+    setDateFrom("");
+    setDateTo("");
     setSortField("date");
     setSortDirection("desc");
+    setPage(1);
+    setSelectedSale(null);
+
+    cargarVentas(1, {
+      dateFrom: "",
+      dateTo: "",
+      search: "",
+      channel: "all",
+      paymentMethod: "all",
+      orderStatus: "all",
+      customerType: "all",
+    });
   }
 
   const filteredSales = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    const filtered = sales.filter((sale) => {
-      const order = sale.orders?.[0] || null;
-      const customer = sale.clientes;
-      const itemCount = (sale.sale_items || []).reduce(
-        (acc, item) => acc + item.quantity,
-        0,
-      );
-
-      const matchesSearch =
-        !normalizedSearch ||
-        [
-          sale.id,
-          sale.sale_number,
-          sale.channel,
-          getChannelLabel(sale.channel),
-          sale.external_order_id,
-          sale.payment_method,
-          order?.display_order_code,
-          order?.status,
-          customer?.nombre,
-          customer?.correo,
-          customer?.telefono,
-          itemCount,
-          sale.total,
-        ].some((value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(normalizedSearch),
-        );
-
-      const matchesChannel =
-        channelFilter === "all" || sale.channel === channelFilter;
-
-      const matchesPayment =
-        paymentFilter === "all" || sale.payment_method === paymentFilter;
-
-      const matchesStatus =
-        statusFilter === "all" || order?.status === statusFilter;
-
-      const matchesCustomer =
-        customerFilter === "all" ||
-        (customerFilter === "identified" && Boolean(sale.clientes)) ||
-        (customerFilter === "counter" && !sale.clientes);
-
-      return (
-        matchesSearch &&
-        matchesChannel &&
-        matchesPayment &&
-        matchesStatus &&
-        matchesCustomer
-      );
-    });
-
-    return [...filtered].sort((a, b) => {
+    return [...sales].sort((a, b) => {
       let comparison = 0;
 
       if (sortField === "date") {
@@ -456,23 +467,16 @@ export default function HistorialVentasPage() {
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [
-    sales,
-    search,
-    channelFilter,
-    paymentFilter,
-    statusFilter,
-    customerFilter,
-    sortField,
-    sortDirection,
-  ]);
+  }, [sales, sortField, sortDirection]);
 
   const hasActiveFilters =
     search.trim() !== "" ||
     channelFilter !== "all" ||
     paymentFilter !== "all" ||
     statusFilter !== "all" ||
-    customerFilter !== "all";
+    customerFilter !== "all" ||
+    dateFrom !== "" ||
+    dateTo !== "";
 
   const selectedOrder = selectedSale?.orders?.[0] || null;
   const selectedItems = selectedSale?.sale_items || [];
@@ -547,11 +551,11 @@ export default function HistorialVentasPage() {
 
               <button
                 type="button"
-                onClick={applyDateFilters}
+                onClick={applyFilters}
                 disabled={loading}
                 className="h-9 cursor-pointer rounded-lg bg-neutral-900 px-3 text-[11px] font-bold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Aplicar fechas
+                Aplicar filtros
               </button>
 
               <button
@@ -570,6 +574,11 @@ export default function HistorialVentasPage() {
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      applyFilters();
+                    }
+                  }}
                   placeholder="Pedido, cliente, canal, teléfono o referencia"
                   className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                 />
@@ -663,7 +672,7 @@ export default function HistorialVentasPage() {
                 <strong className="font-black text-neutral-900">
                   {filteredSales.length}
                 </strong>{" "}
-                visible{filteredSales.length === 1 ? "" : "s"} en esta página
+                resultado{filteredSales.length === 1 ? "" : "s"} en esta página
               </p>
 
               <p className="text-[10px] text-neutral-500">

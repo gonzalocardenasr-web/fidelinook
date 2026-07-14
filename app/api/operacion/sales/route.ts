@@ -30,14 +30,201 @@ export async function GET(req: Request) {
 
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
+    const search = String(searchParams.get("search") || "").trim();
+    const channel = String(searchParams.get("channel") || "").trim();
+    const paymentMethod = String(
+      searchParams.get("paymentMethod") || "",
+    ).trim();
+    const orderStatus = String(searchParams.get("orderStatus") || "").trim();
+    const customerType = String(searchParams.get("customerType") || "").trim();
 
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
 
-    let query = supabaseAdmin
-      .from("sales")
-      .select(
-        `
+    /*
+     * Algunos filtros dependen de tablas relacionadas:
+     * - estado del pedido → orders
+     * - búsqueda por cliente → clientes
+     * - búsqueda por código del pedido → orders
+     *
+     * Primero obtenemos los IDs de ventas candidatas y luego
+     * aplicamos esa lista a la consulta principal.
+     */
+    let candidateSaleIds: Set<number> | null = null;
+
+    function intersectCandidateIds(ids: number[]) {
+      const nextIds = new Set(ids);
+
+      if (candidateSaleIds === null) {
+        candidateSaleIds = nextIds;
+        return;
+      }
+
+      candidateSaleIds = new Set(
+        [...candidateSaleIds].filter((id) => nextIds.has(id)),
+      );
+    }
+
+    if (orderStatus) {
+      const { data: statusOrders, error: statusError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .eq("status", orderStatus);
+
+      if (statusError) {
+        return NextResponse.json(
+          { ok: false, message: statusError.message },
+          { status: 500 },
+        );
+      }
+
+      intersectCandidateIds(
+        (statusOrders || [])
+          .map((order) => Number(order.sale_id))
+          .filter((id) => Number.isFinite(id)),
+      );
+    }
+
+    if (search) {
+      const safeSearch = search.replace(/[,%()]/g, " ").trim();
+      const searchSaleIds = new Set<number>();
+
+      const { data: directSales, error: directSalesError } = await supabaseAdmin
+        .from("sales")
+        .select("id")
+        .or(
+          [
+            `sale_number.ilike.%${safeSearch}%`,
+            `external_order_id.ilike.%${safeSearch}%`,
+            `channel.ilike.%${safeSearch}%`,
+            `payment_method.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (directSalesError) {
+        return NextResponse.json(
+          { ok: false, message: directSalesError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const sale of directSales || []) {
+        searchSaleIds.add(Number(sale.id));
+      }
+
+      const numericSearch = Number(search);
+
+      if (Number.isInteger(numericSearch) && numericSearch > 0) {
+        const { data: numericSale, error: numericSaleError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .eq("id", numericSearch);
+
+        if (numericSaleError) {
+          return NextResponse.json(
+            { ok: false, message: numericSaleError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of numericSale || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingCustomers, error: customersError } =
+        await supabaseAdmin
+          .from("clientes")
+          .select("id")
+          .or(
+            [
+              `nombre.ilike.%${safeSearch}%`,
+              `correo.ilike.%${safeSearch}%`,
+              `telefono.ilike.%${safeSearch}%`,
+            ].join(","),
+          );
+
+      if (customersError) {
+        return NextResponse.json(
+          { ok: false, message: customersError.message },
+          { status: 500 },
+        );
+      }
+
+      const customerIds = (matchingCustomers || [])
+        .map((customer) => Number(customer.id))
+        .filter((id) => Number.isFinite(id));
+
+      if (customerIds.length > 0) {
+        const { data: customerSales, error: customerSalesError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .in("customer_id", customerIds);
+
+        if (customerSalesError) {
+          return NextResponse.json(
+            { ok: false, message: customerSalesError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of customerSales || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingOrders, error: ordersError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .or(
+          [
+            `display_order_code.ilike.%${safeSearch}%`,
+            `status.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (ordersError) {
+        return NextResponse.json(
+          { ok: false, message: ordersError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const order of matchingOrders || []) {
+        const saleId = Number(order.sale_id);
+
+        if (Number.isFinite(saleId)) {
+          searchSaleIds.add(saleId);
+        }
+      }
+
+      intersectCandidateIds([...searchSaleIds]);
+    }
+
+    /*
+     * Si los filtros relacionados no encontraron ninguna venta,
+     * respondemos inmediatamente sin ejecutar una consulta inválida
+     * con .in("id", []).
+     */
+    if (candidateSaleIds !== null && candidateSaleIds.size === 0) {
+      return NextResponse.json({
+        ok: true,
+        sales: [],
+        pagination: {
+          page: 1,
+          pageSize,
+          total: 0,
+          totalPages: 1,
+          from: 0,
+          to: 0,
+        },
+      });
+    }
+
+    let query = supabaseAdmin.from("sales").select(
+      `
         id,
         sale_number,
         channel,
@@ -85,12 +272,30 @@ export async function GET(req: Request) {
           )
         )
       `,
-        {
-          count: "exact",
-        },
-      )
-      .order("created_at", { ascending: false })
-      .range(rangeFrom, rangeTo);
+      {
+        count: "exact",
+      },
+    );
+
+    if (candidateSaleIds !== null) {
+      query = query.in("id", [...candidateSaleIds]);
+    }
+
+    if (channel) {
+      query = query.eq("channel", channel);
+    }
+
+    if (paymentMethod) {
+      query = query.eq("payment_method", paymentMethod);
+    }
+
+    if (customerType === "identified") {
+      query = query.not("customer_id", "is", null);
+    }
+
+    if (customerType === "counter") {
+      query = query.is("customer_id", null);
+    }
 
     if (dateFrom) {
       const parsedDateFrom = new Date(dateFrom);
@@ -118,7 +323,9 @@ export async function GET(req: Request) {
       query = query.lt("created_at", parsedDateTo.toISOString());
     }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(rangeFrom, rangeTo);
 
     if (error) {
       return NextResponse.json(
