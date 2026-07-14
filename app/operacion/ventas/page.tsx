@@ -3,30 +3,61 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type SaleItemOption = {
+  id: number;
+  option_group_code: string;
+  option_value_name: string;
+  quantity: number;
+};
+
+type SaleItem = {
+  id: number;
+  product_sku?: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes?: string | null;
+  sale_item_options?: SaleItemOption[];
+};
+
+type SaleOrder = {
+  id: number;
+  business_date?: string | null;
+  daily_order_number?: number | null;
+  display_order_code: string;
+  status: string;
+  notes?: string | null;
+  created_at?: string | null;
+};
+
+type SaleCustomer = {
+  id: number;
+  nombre?: string | null;
+  correo?: string | null;
+  telefono?: string | null;
+};
+
 type Sale = {
   id: number;
-  total: number;
-  payment_method: string;
+  sale_number?: string | null;
+  channel: string;
+  external_order_id?: string | null;
+  integration_source?: string | null;
+  received_at?: string | null;
+  customer_id?: number | null;
   status: string;
+  subtotal: number;
+  discount_total: number;
+  total: number;
+  payment_status: string;
+  payment_method: string;
+  actor_role?: string | null;
+  confirmed_at?: string | null;
   created_at: string;
-  clientes?: {
-    nombre?: string;
-  } | null;
-  orders?: {
-    id: number;
-    display_order_code: string;
-    status: string;
-  }[];
-  sale_items?: {
-    id: number;
-    product_name: string;
-    quantity: number;
-    total_price: number;
-    sale_item_options?: {
-      option_group_code: string;
-      option_value_name: string;
-    }[];
-  }[];
+  clientes?: SaleCustomer | null;
+  orders?: SaleOrder[];
+  sale_items?: SaleItem[];
 };
 
 export default function HistorialVentasPage() {
