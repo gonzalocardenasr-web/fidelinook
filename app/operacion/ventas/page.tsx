@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import ClienteSelector, {
+  ClienteSelectorValue,
+} from "../../../components/client/ClienteSelector";
+
 type SaleItemOption = {
   id: number;
   option_group_code: string;
@@ -229,6 +233,13 @@ function getItemOptions(item: SaleItem) {
 export default function HistorialVentasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [customerCandidate, setCustomerCandidate] =
+    useState<ClienteSelectorValue | null>(null);
+  const [customerChangeReason, setCustomerChangeReason] = useState("");
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerChangeMessage, setCustomerChangeMessage] = useState("");
+  const [customerSelectorResetKey, setCustomerSelectorResetKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState("");
@@ -255,10 +266,21 @@ export default function HistorialVentasPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedSale) return;
+    if (!selectedSale) {
+      setEditingCustomer(false);
+      setCustomerCandidate(null);
+      setCustomerChangeReason("");
+      setCustomerChangeMessage("");
+      return;
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        if (editingCustomer) {
+          cancelCustomerChange();
+          return;
+        }
+
         setSelectedSale(null);
       }
     }
@@ -268,7 +290,7 @@ export default function HistorialVentasPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedSale]);
+  }, [selectedSale, editingCustomer]);
 
   async function cargarVentas(
     targetPage = page,
@@ -476,6 +498,88 @@ export default function HistorialVentasPage() {
       setMessage("Error inesperado al exportar las ventas.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  function startCustomerChange() {
+    setCustomerCandidate(null);
+    setCustomerChangeReason("");
+    setCustomerChangeMessage("");
+    setCustomerSelectorResetKey((current) => current + 1);
+    setEditingCustomer(true);
+  }
+
+  function cancelCustomerChange() {
+    setEditingCustomer(false);
+    setCustomerCandidate(null);
+    setCustomerChangeReason("");
+    setCustomerChangeMessage("");
+    setCustomerSelectorResetKey((current) => current + 1);
+  }
+
+  async function saveCustomerChange() {
+    if (!selectedSale) return;
+
+    if (!customerCandidate) {
+      setCustomerChangeMessage("Selecciona un cliente.");
+      return;
+    }
+
+    try {
+      setSavingCustomer(true);
+      setCustomerChangeMessage("");
+
+      const res = await fetch("/api/operacion/sales/customer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          saleId: selectedSale.id,
+          customerId: customerCandidate.id,
+          reason: customerChangeReason.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomerChangeMessage(
+          data.message || "No se pudo asignar el cliente.",
+        );
+        return;
+      }
+
+      const updatedCustomer = data.sale?.clientes || null;
+      const updatedCustomerId = data.sale?.customer_id || null;
+
+      const updateSale = (sale: Sale): Sale => {
+        if (sale.id !== selectedSale.id) return sale;
+
+        return {
+          ...sale,
+          customer_id: updatedCustomerId,
+          clientes: updatedCustomer,
+        };
+      };
+
+      setSales((current) => current.map(updateSale));
+
+      setSelectedSale((current) => (current ? updateSale(current) : current));
+
+      setCustomerChangeMessage(
+        data.message || "Cliente asignado correctamente.",
+      );
+
+      setEditingCustomer(false);
+      setCustomerCandidate(null);
+      setCustomerChangeReason("");
+      setCustomerSelectorResetKey((current) => current + 1);
+    } catch (error) {
+      console.error("Error asignando cliente:", error);
+      setCustomerChangeMessage("Error inesperado al asignar el cliente.");
+    } finally {
+      setSavingCustomer(false);
     }
   }
 
@@ -1053,7 +1157,14 @@ export default function HistorialVentasPage() {
           <button
             type="button"
             aria-label="Cerrar detalle"
-            onClick={() => setSelectedSale(null)}
+            onClick={() => {
+              if (editingCustomer) {
+                cancelCustomerChange();
+                return;
+              }
+
+              setSelectedSale(null);
+            }}
             className="absolute inset-0 cursor-default"
           />
 
@@ -1097,7 +1208,14 @@ export default function HistorialVentasPage() {
 
               <button
                 type="button"
-                onClick={() => setSelectedSale(null)}
+                onClick={() => {
+                  if (editingCustomer) {
+                    cancelCustomerChange();
+                    return;
+                  }
+
+                  setSelectedSale(null);
+                }}
                 className="shrink-0 cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50"
               >
                 Cerrar
@@ -1150,27 +1268,99 @@ export default function HistorialVentasPage() {
               </section>
 
               <section className="mt-3 rounded-lg border border-neutral-200 px-3 py-2.5">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
-                  Cliente
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                      Cliente
+                    </p>
 
-                <p className="mt-0.5 text-[12px] font-black text-neutral-900">
-                  {selectedSale.clientes?.nombre || "Mostrador"}
-                </p>
+                    <p className="mt-0.5 truncate text-[12px] font-black text-neutral-900">
+                      {selectedSale.clientes?.nombre || "Mostrador"}
+                    </p>
 
-                {(selectedSale.clientes?.telefono ||
-                  selectedSale.clientes?.correo) && (
-                  <div className="mt-1 space-y-0.5 text-[10px] text-neutral-500">
-                    {selectedSale.clientes?.telefono && (
-                      <p>{selectedSale.clientes.telefono}</p>
-                    )}
+                    {(selectedSale.clientes?.telefono ||
+                      selectedSale.clientes?.correo) && (
+                      <div className="mt-1 space-y-0.5 text-[10px] text-neutral-500">
+                        {selectedSale.clientes?.telefono && (
+                          <p>{selectedSale.clientes.telefono}</p>
+                        )}
 
-                    {selectedSale.clientes?.correo && (
-                      <p className="break-all">
-                        {selectedSale.clientes.correo}
-                      </p>
+                        {selectedSale.clientes?.correo && (
+                          <p className="break-all">
+                            {selectedSale.clientes.correo}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
+
+                  {!editingCustomer && (
+                    <button
+                      type="button"
+                      onClick={startCustomerChange}
+                      className="shrink-0 cursor-pointer rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-black text-violet-700 transition hover:bg-violet-100 active:scale-[0.98]"
+                    >
+                      {selectedSale.clientes ? "Cambiar" : "Asignar"}
+                    </button>
+                  )}
+                </div>
+
+                {editingCustomer && (
+                  <div className="mt-3 border-t border-neutral-100 pt-3">
+                    <ClienteSelector
+                      value={customerCandidate}
+                      onChange={setCustomerCandidate}
+                      resetKey={customerSelectorResetKey}
+                    />
+
+                    <div className="mt-2">
+                      <label className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Motivo opcional
+                      </label>
+
+                      <input
+                        value={customerChangeReason}
+                        onChange={(event) =>
+                          setCustomerChangeReason(event.target.value)
+                        }
+                        maxLength={500}
+                        placeholder="Ej: cliente se registró después de la compra"
+                        className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                    </div>
+
+                    {customerChangeMessage && (
+                      <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[10px] font-semibold leading-snug text-amber-800">
+                        {customerChangeMessage}
+                      </p>
+                    )}
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={cancelCustomerChange}
+                        disabled={savingCustomer}
+                        className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={saveCustomerChange}
+                        disabled={!customerCandidate || savingCustomer}
+                        className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingCustomer ? "Guardando..." : "Asignar cliente"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!editingCustomer && customerChangeMessage && (
+                  <p className="mt-2 rounded-md bg-green-50 px-2 py-1.5 text-[10px] font-semibold leading-snug text-green-800">
+                    {customerChangeMessage}
+                  </p>
                 )}
               </section>
 
