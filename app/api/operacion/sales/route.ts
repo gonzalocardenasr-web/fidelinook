@@ -19,6 +19,9 @@ export async function GET() {
       id,
       sale_number,
       channel,
+      external_order_id,
+      integration_source,
+      received_at,
       customer_id,
       status,
       subtotal,
@@ -85,6 +88,37 @@ export async function POST(req: Request) {
 
     const orderNotes = String(body.orderNotes || "").trim();
 
+    const channel = String(body.channel || "local")
+      .trim()
+      .toLowerCase();
+
+    const externalOrderId = String(body.externalOrderId || "").trim();
+
+    const allowedChannels = [
+      "local",
+      "shopify",
+      "uber_eats",
+      "rappi",
+      "pedidosya",
+    ];
+
+    if (!allowedChannels.includes(channel)) {
+      return NextResponse.json(
+        { ok: false, message: "Canal de venta inválido." },
+        { status: 400 },
+      );
+    }
+
+    if (channel !== "local" && !externalOrderId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Los pedidos digitales requieren un número externo.",
+        },
+        { status: 400 },
+      );
+    }
+
     const customerId =
       body.customerId === null ||
       body.customerId === undefined ||
@@ -110,6 +144,8 @@ export async function POST(req: Request) {
         p_items: items,
         p_actor_role: session.role,
         p_order_notes: orderNotes || null,
+        p_channel: channel,
+        p_external_order_id: externalOrderId || null,
       },
     );
 

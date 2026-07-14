@@ -274,6 +274,8 @@ export default function NuevaVentaPage() {
       setMessage("");
 
       const payload = {
+        channel: "local",
+        externalOrderId: null,
         paymentMethod,
         orderNotes,
         customerId: selectedCliente?.id || null,
