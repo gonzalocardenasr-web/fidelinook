@@ -178,14 +178,29 @@ export default function NuevaVentaPage() {
   );
 
   function validarVenta() {
-    if (cart.length === 0) return "Agrega al menos un producto.";
+    if (cart.length === 0) {
+      return "Agrega al menos un producto.";
+    }
 
     for (const item of cart) {
-      if (item.product.has_flavors && item.flavorSelections.length === 0) {
+      const isServedIceCream =
+        item.product.category?.trim().toLowerCase() === "helados" &&
+        item.product.operational_type?.trim().toLowerCase() === "servido";
+
+      /*
+       * Los helados servidos no requieren sabor en caja.
+       * Los potes armados y demás productos configurables sí.
+       */
+      if (
+        !isServedIceCream &&
+        item.product.has_flavors &&
+        item.flavorSelections.length === 0
+      ) {
         return `Debes seleccionar sabor para ${item.product.name}.`;
       }
 
       if (
+        !isServedIceCream &&
         item.product.has_flavors &&
         item.flavorSelections.length > item.product.max_flavors
       ) {
