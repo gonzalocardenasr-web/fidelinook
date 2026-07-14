@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getOperationSession();
 
   if (!session.ok) {
@@ -13,7 +13,28 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
+    const { searchParams } = new URL(req.url);
+
+    const requestedPage = Number(searchParams.get("page") || 1);
+    const requestedPageSize = Number(searchParams.get("pageSize") || 50);
+
+    const page =
+      Number.isFinite(requestedPage) && requestedPage > 0
+        ? Math.floor(requestedPage)
+        : 1;
+
+    const pageSize =
+      Number.isFinite(requestedPageSize) && requestedPageSize > 0
+        ? Math.min(Math.floor(requestedPageSize), 100)
+        : 50;
+
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
+
+    const rangeFrom = (page - 1) * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+
+    let query = supabaseAdmin
       .from("sales")
       .select(
         `
@@ -64,9 +85,40 @@ export async function GET() {
           )
         )
       `,
+        {
+          count: "exact",
+        },
       )
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(rangeFrom, rangeTo);
+
+    if (dateFrom) {
+      const parsedDateFrom = new Date(dateFrom);
+
+      if (Number.isNaN(parsedDateFrom.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha inicial inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.gte("created_at", parsedDateFrom.toISOString());
+    }
+
+    if (dateTo) {
+      const parsedDateTo = new Date(dateTo);
+
+      if (Number.isNaN(parsedDateTo.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha final inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.lt("created_at", parsedDateTo.toISOString());
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       return NextResponse.json(
@@ -75,9 +127,20 @@ export async function GET() {
       );
     }
 
+    const total = count || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
     return NextResponse.json({
       ok: true,
       sales: data || [],
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        from: total === 0 ? 0 : rangeFrom + 1,
+        to: Math.min(rangeFrom + (data?.length || 0), total),
+      },
     });
   } catch (error) {
     console.error("Error cargando historial de ventas:", error);

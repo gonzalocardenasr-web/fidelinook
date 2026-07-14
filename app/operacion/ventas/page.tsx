@@ -191,6 +191,14 @@ export default function HistorialVentasPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -204,12 +212,44 @@ export default function HistorialVentasPage() {
     cargarVentas();
   }, []);
 
-  async function cargarVentas() {
+  async function cargarVentas(
+    targetPage = page,
+    dateOverrides?: {
+      from: string;
+      to: string;
+    },
+  ) {
     try {
       setLoading(true);
       setMessage("");
 
-      const res = await fetch("/api/operacion/sales");
+      const effectiveDateFrom =
+        dateOverrides?.from !== undefined ? dateOverrides.from : dateFrom;
+
+      const effectiveDateTo =
+        dateOverrides?.to !== undefined ? dateOverrides.to : dateTo;
+
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        pageSize: String(pageSize),
+      });
+
+      if (effectiveDateFrom) {
+        const startDate = new Date(`${effectiveDateFrom}T00:00:00`);
+
+        params.set("dateFrom", startDate.toISOString());
+      }
+
+      if (effectiveDateTo) {
+        const endDateExclusive = new Date(`${effectiveDateTo}T00:00:00`);
+
+        endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+
+        params.set("dateTo", endDateExclusive.toISOString());
+      }
+
+      const res = await fetch(`/api/operacion/sales?${params.toString()}`);
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -218,12 +258,46 @@ export default function HistorialVentasPage() {
       }
 
       setSales(Array.isArray(data.sales) ? data.sales : []);
+
+      setPage(data.pagination?.page || targetPage);
+      setTotalSales(data.pagination?.total || 0);
+      setTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando historial.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function applyDateFilters() {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setMessage("La fecha inicial no puede ser posterior a la fecha final.");
+      return;
+    }
+
+    setPage(1);
+    cargarVentas(1);
+  }
+
+  function clearDateFilters() {
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+
+    cargarVentas(1, {
+      from: "",
+      to: "",
+    });
+  }
+
+  function goToPage(nextPage: number) {
+    if (nextPage < 1 || nextPage > totalPages || loading) {
+      return;
+    }
+
+    setPage(nextPage);
+    cargarVentas(nextPage);
   }
 
   function changeSort(field: SortField) {
@@ -376,7 +450,7 @@ export default function HistorialVentasPage() {
 
           <button
             type="button"
-            onClick={cargarVentas}
+            onClick={() => cargarVentas(page)}
             disabled={loading}
             className="shrink-0 cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -393,6 +467,49 @@ export default function HistorialVentasPage() {
         <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
           <div className="shrink-0">
             <div className="flex flex-wrap items-end gap-2">
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Desde
+                </label>
+
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-2 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Hasta
+                </label>
+
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-2 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={applyDateFilters}
+                disabled={loading}
+                className="h-9 cursor-pointer rounded-lg bg-neutral-900 px-3 text-[11px] font-bold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Aplicar fechas
+              </button>
+
+              <button
+                type="button"
+                onClick={clearDateFilters}
+                disabled={loading || (!dateFrom && !dateTo)}
+                className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Todas las fechas
+              </button>
               <div className="min-w-[260px] flex-1">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Búsqueda general
@@ -494,12 +611,23 @@ export default function HistorialVentasPage() {
                 <strong className="font-black text-neutral-900">
                   {filteredSales.length}
                 </strong>{" "}
-                transacción
-                {filteredSales.length === 1 ? "" : "es"}
+                visible{filteredSales.length === 1 ? "" : "s"} en esta página
               </p>
 
-              <p className="text-[10px] text-neutral-400">
-                Últimas 50 ventas registradas
+              <p className="text-[10px] text-neutral-500">
+                Mostrando{" "}
+                <strong className="font-black text-neutral-800">
+                  {totalSales === 0 ? 0 : (page - 1) * pageSize + 1}
+                </strong>
+                {"–"}
+                <strong className="font-black text-neutral-800">
+                  {Math.min(page * pageSize, totalSales)}
+                </strong>{" "}
+                de{" "}
+                <strong className="font-black text-neutral-800">
+                  {totalSales}
+                </strong>{" "}
+                ventas
               </p>
             </div>
           </div>
@@ -708,6 +836,35 @@ export default function HistorialVentasPage() {
               </tbody>
             </table>
           </div>
+          <footer className="mt-2 flex shrink-0 items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1 || loading}
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Anterior
+            </button>
+
+            <div className="text-center">
+              <p className="text-[11px] font-bold text-neutral-700">
+                Página {page} de {totalPages}
+              </p>
+
+              <p className="text-[9px] text-neutral-400">
+                Hasta {pageSize} transacciones por página
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages || loading}
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Siguiente →
+            </button>
+          </footer>
         </section>
       </div>
     </main>
