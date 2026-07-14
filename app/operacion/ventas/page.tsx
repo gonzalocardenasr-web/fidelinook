@@ -614,14 +614,25 @@ export default function HistorialVentasPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => cargarVentas(page)}
-            disabled={loading}
-            className="shrink-0 cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Actualizando..." : "Actualizar"}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={exportarCsv}
+              disabled={loading || exporting}
+              className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[12px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting ? "Exportando..." : "Exportar CSV"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => cargarVentas(page)}
+              disabled={loading}
+              className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
         </header>
 
         {message && (
@@ -774,15 +785,6 @@ export default function HistorialVentasPage() {
                 className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Limpiar
-              </button>
-
-              <button
-                type="button"
-                onClick={exportarCsv}
-                disabled={loading || exporting}
-                className="h-9 cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {exporting ? "Exportando..." : "Exportar CSV"}
               </button>
             </div>
 
