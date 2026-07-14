@@ -12,65 +12,84 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("sales")
-    .select(
-      `
-      id,
-      sale_number,
-      channel,
-      external_order_id,
-      integration_source,
-      received_at,
-      customer_id,
-      status,
-      subtotal,
-      discount_total,
-      total,
-      payment_status,
-      payment_method,
-      confirmed_at,
-      created_at,
-      clientes (
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("sales")
+      .select(
+        `
         id,
-        nombre,
-        correo,
-        telefono
-      ),
-      orders (
-        id,
-        business_date,
-        daily_order_number,
-        display_order_code,
-        status
-      ),
-      sale_items (
-        id,
-        product_sku,
-        product_name,
-        quantity,
-        unit_price,
-        total_price,
-        sale_item_options (
+        sale_number,
+        channel,
+        external_order_id,
+        integration_source,
+        received_at,
+        customer_id,
+        status,
+        subtotal,
+        discount_total,
+        total,
+        payment_status,
+        payment_method,
+        actor_role,
+        confirmed_at,
+        created_at,
+        clientes (
           id,
-          option_group_code,
-          option_value_name,
-          quantity
+          nombre,
+          correo,
+          telefono
+        ),
+        orders (
+          id,
+          business_date,
+          daily_order_number,
+          display_order_code,
+          status,
+          notes,
+          created_at
+        ),
+        sale_items (
+          id,
+          product_sku,
+          product_name,
+          quantity,
+          unit_price,
+          total_price,
+          notes,
+          sale_item_options (
+            id,
+            option_group_code,
+            option_value_name,
+            quantity
+          )
         )
+      `,
       )
-    `,
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-  if (error) {
+    if (error) {
+      return NextResponse.json(
+        { ok: false, message: error.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      sales: data || [],
+    });
+  } catch (error) {
+    console.error("Error cargando historial de ventas:", error);
+
     return NextResponse.json(
-      { ok: false, message: error.message },
+      {
+        ok: false,
+        message: "Error inesperado al cargar el historial de ventas.",
+      },
       { status: 500 },
     );
   }
-
-  return NextResponse.json({ ok: true, sales: data || [] });
 }
 
 export async function POST(req: Request) {
