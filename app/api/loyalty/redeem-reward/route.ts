@@ -1,33 +1,42 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
-import {
-  buildCustomerEventIdempotencyKey,
-  recordCustomerEvent,
-} from "../../../../lib/customer-events";
 
-type LegacyReward = {
-  id: string | number;
-  nombre?: string;
-  descripcion?: string | null;
-  estado?: "activo" | "usado" | "caducado";
-  vencimiento?: string | null;
-  tipo?: string | null;
-  campana_id?: number | null;
-  fecha_canje?: string | null;
-  [key: string]: unknown;
+type RedeemRewardRpcResult = {
+  customer_id?: unknown;
+  reward_id?: unknown;
+  legacy_reward_id?: unknown;
+  reward_name?: unknown;
+  reward_type?: unknown;
+  campaign_id?: unknown;
+  redeemed_at?: unknown;
+  event_id?: unknown;
+  event_created?: unknown;
+  redeemed?: unknown;
+  already_redeemed?: unknown;
 };
 
-function isExpired(value?: string | null) {
-  if (!value) return false;
+function getErrorStatus(message: string) {
+  const normalized = message.toLowerCase();
 
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return false;
+  if (
+    normalized.includes("no se encontró") ||
+    normalized.includes("no existe")
+  ) {
+    return 404;
   }
 
-  return date.getTime() < Date.now();
+  if (
+    normalized.includes("no se encuentra activo") ||
+    normalized.includes("vencido") ||
+    normalized.includes("tarjeta activa") ||
+    normalized.includes("correo verificado") ||
+    normalized.includes("no es válido")
+  ) {
+    return 400;
+  }
+
+  return 500;
 }
 
 export async function POST(req: Request) {
@@ -35,7 +44,10 @@ export async function POST(req: Request) {
 
   if (!session.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
+      {
+        ok: false,
+        message: "No autenticado.",
+      },
       { status: 401 },
     );
   }
@@ -44,7 +56,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const customerId = Number(body.customerId);
-    const rewardId = String(body.rewardId || "").trim();
+    const rewardReference = String(body.rewardId || "").trim();
 
     if (!Number.isInteger(customerId) || customerId <= 0) {
       return NextResponse.json(
@@ -56,7 +68,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!rewardId) {
+    if (!rewardReference) {
       return NextResponse.json(
         {
           ok: false,
@@ -66,279 +78,133 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: customer, error: customerError } = await supabaseAdmin
-      .from("clientes")
-      .select(
-        `
-          id,
-          nombre,
-          correo,
-          public_token,
-          premios,
-          tarjeta_activa,
-          email_verificado,
-          fecha_ultimo_canje
-        `,
-      )
-      .eq("id", customerId)
-      .single();
+    const { data, error } = await supabaseAdmin.rpc("redeem_customer_reward", {
+      p_customer_id: customerId,
+      p_reward_reference: rewardReference,
+      p_actor_role: session.role,
+      p_actor_identifier: null,
+    });
 
-    if (customerError || !customer) {
+    if (error) {
+      console.error("Error canjeando premio:", error);
+
       return NextResponse.json(
         {
           ok: false,
-          message: "No se encontró el cliente.",
+          message: error.message || "No se pudo canjear el premio.",
         },
-        { status: 404 },
+        {
+          status: getErrorStatus(String(error.message || "")),
+        },
       );
     }
 
-    if (!customer.tarjeta_activa || !customer.email_verificado) {
+    if (!data || typeof data !== "object") {
       return NextResponse.json(
         {
           ok: false,
-          message:
-            "El cliente debe tener su tarjeta activa y correo verificado para canjear premios.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const previousRewards: LegacyReward[] = Array.isArray(customer.premios)
-      ? [...customer.premios]
-      : [];
-
-    const rewardIndex = previousRewards.findIndex(
-      (reward) =>
-        String(reward?.id) === rewardId && reward?.estado === "activo",
-    );
-
-    if (rewardIndex === -1) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "No se encontró un premio activo con el identificador indicado.",
-        },
-        { status: 404 },
-      );
-    }
-
-    const selectedReward = previousRewards[rewardIndex];
-
-    if (isExpired(selectedReward.vencimiento)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "El premio seleccionado está vencido y no puede canjearse.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const redeemedAt = new Date().toISOString();
-
-    const updatedRewards = previousRewards.map(
-      (reward, index): LegacyReward =>
-        index === rewardIndex
-          ? {
-              ...reward,
-              estado: "usado",
-              fecha_canje: redeemedAt,
-            }
-          : reward,
-    );
-
-    const { error: updateCustomerError } = await supabaseAdmin
-      .from("clientes")
-      .update({
-        premios: updatedRewards,
-        fecha_ultimo_canje: redeemedAt,
-      })
-      .eq("id", customerId);
-
-    if (updateCustomerError) {
-      console.error(
-        "Error actualizando premio del cliente:",
-        updateCustomerError,
-      );
-
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "No se pudo canjear el premio.",
+          message: "El canje no entregó una respuesta válida.",
         },
         { status: 500 },
       );
     }
 
-    const campaignId =
-      selectedReward.campana_id === null ||
-      selectedReward.campana_id === undefined
-        ? null
-        : Number(selectedReward.campana_id);
+    const result = data as RedeemRewardRpcResult;
 
-    let campaignTrackingUpdated = false;
+    const rewardId = Number(result.reward_id);
+    const rewardName = String(result.reward_name || "Premio Nook");
 
-    if (
-      selectedReward.tipo === "campana" &&
-      Number.isInteger(campaignId) &&
-      Number(campaignId) > 0
-    ) {
-      const { error: campaignTrackingError } = await supabaseAdmin
-        .from("campana_clientes")
-        .update({
-          estado: "canjeado",
-          canjeado_at: redeemedAt,
-        })
-        .eq("campana_id", campaignId)
-        .eq("cliente_id", customerId)
-        .eq("premio_id", rewardId);
-
-      if (campaignTrackingError) {
-        console.error(
-          "Error actualizando tracking de campaña:",
-          campaignTrackingError,
-        );
-
-        await rollbackCustomerReward({
-          customerId,
-          previousRewards,
-          previousRedeemedAt: customer.fecha_ultimo_canje,
-        });
-
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "No se pudo completar la trazabilidad del premio. El canje fue revertido.",
-          },
-          { status: 500 },
-        );
-      }
-
-      campaignTrackingUpdated = true;
-    }
-
-    try {
-      await recordCustomerEvent({
-        customerId,
-        eventType: "loyalty.reward_redeemed",
-        sourceModule: "loyalty",
-        sourceEntityType: "legacy_reward",
-        sourceEntityId: rewardId,
-        actorRole: session.role,
-        occurredAt: redeemedAt,
-        idempotencyKey: buildCustomerEventIdempotencyKey([
-          "reward-redeemed",
-          customerId,
-          rewardId,
-        ]),
-        metadata: {
-          rewardName: selectedReward.nombre || "Premio Nook",
-          rewardType: selectedReward.tipo || null,
-          campaignId,
-          expiresAt: selectedReward.vencimiento || null,
-          legacyRewardId: rewardId,
-        },
-      });
-    } catch (eventError) {
-      console.error(
-        "Premio canjeado, pero falló el registro del evento:",
-        eventError,
-      );
-
-      if (campaignTrackingUpdated && campaignId) {
-        const { error: campaignRollbackError } = await supabaseAdmin
-          .from("campana_clientes")
-          .update({
-            estado: "asignado",
-            canjeado_at: null,
-          })
-          .eq("campana_id", campaignId)
-          .eq("cliente_id", customerId)
-          .eq("premio_id", rewardId);
-
-        if (campaignRollbackError) {
-          console.error(
-            "No se pudo revertir el tracking de campaña:",
-            campaignRollbackError,
-          );
-        }
-      }
-
-      const rollbackCompleted = await rollbackCustomerReward({
-        customerId,
-        previousRewards,
-        previousRedeemedAt: customer.fecha_ultimo_canje,
-      });
-
-      if (!rollbackCompleted) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El premio fue canjeado, pero ocurrió un problema de trazabilidad. No repitas la operación y contacta al administrador.",
-          },
-          { status: 500 },
-        );
-      }
-
+    if (!Number.isInteger(rewardId) || rewardId <= 0) {
       return NextResponse.json(
         {
           ok: false,
-          message:
-            "No se pudo registrar el evento del canje. La operación fue revertida.",
+          message: "El canje no entregó un premio válido.",
         },
         { status: 500 },
       );
     }
 
     /*
-     * El correo es posterior al hecho de negocio.
-     * Si falla, el canje sigue siendo válido.
+     * El correo es posterior al canje.
+     * Si falla, el premio permanece correctamente canjeado.
      */
     let emailSent = false;
 
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
+    if (Boolean(result.redeemed)) {
+      try {
+        const { data: customer, error: customerError } = await supabaseAdmin
+          .from("clientes")
+          .select(
+            `
+              nombre,
+              correo,
+              public_token
+            `,
+          )
+          .eq("id", customerId)
+          .single();
 
-      if (!baseUrl) {
-        console.error("NEXT_PUBLIC_BASE_URL no está configurada.");
-      } else {
-        const emailResponse = await fetch(
-          `${baseUrl}/api/send-reward-redeemed`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: customer.correo,
-              nombre: customer.nombre,
-              premioNombre: selectedReward.nombre || "Premio Nook",
-              publicToken: customer.public_token,
-            }),
-          },
-        );
+        if (customerError || !customer) {
+          console.error(
+            "Premio canjeado, pero no se pudo cargar el cliente:",
+            customerError,
+          );
+        } else {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
 
-        emailSent = emailResponse.ok;
+          if (!baseUrl) {
+            console.error("NEXT_PUBLIC_BASE_URL no está configurada.");
+          } else {
+            const emailResponse = await fetch(
+              `${baseUrl}/api/send-reward-redeemed`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  email: customer.correo,
+                  nombre: customer.nombre,
+                  premioNombre: rewardName,
+                  publicToken: customer.public_token,
+                }),
+              },
+            );
+
+            emailSent = emailResponse.ok;
+
+            if (!emailResponse.ok) {
+              console.error(
+                "El correo de canje respondió con error:",
+                emailResponse.status,
+              );
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error("Error enviando correo de canje:", emailError);
       }
-    } catch (emailError) {
-      console.error("Error enviando correo de canje:", emailError);
     }
 
     return NextResponse.json({
       ok: true,
+
       reward: {
-        ...selectedReward,
-        estado: "usado",
-        fecha_canje: redeemedAt,
+        id: rewardId,
+        legacyRewardId: result.legacy_reward_id || null,
+        name: rewardName,
+        type: result.reward_type || null,
+        redeemedAt: result.redeemed_at || null,
       },
+
+      redeemed: Boolean(result.redeemed),
+      alreadyRedeemed: Boolean(result.already_redeemed),
+
       emailSent,
-      message: `Premio canjeado correctamente: ${
-        selectedReward.nombre || "Premio Nook"
-      }.`,
+
+      message: Boolean(result.already_redeemed)
+        ? "El premio ya había sido canjeado."
+        : `Premio canjeado correctamente: ${rewardName}.`,
     });
   } catch (error) {
     console.error("Error inesperado canjeando premio:", error);
@@ -351,34 +217,4 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
-}
-
-async function rollbackCustomerReward({
-  customerId,
-  previousRewards,
-  previousRedeemedAt,
-}: {
-  customerId: number;
-  previousRewards: LegacyReward[];
-  previousRedeemedAt?: string | null;
-}) {
-  const { error } = await supabaseAdmin
-    .from("clientes")
-    .update({
-      premios: previousRewards,
-      fecha_ultimo_canje: previousRedeemedAt || null,
-    })
-    .eq("id", customerId);
-
-  if (error) {
-    console.error(
-      "No se pudo revertir el premio del cliente:",
-      customerId,
-      error,
-    );
-
-    return false;
-  }
-
-  return true;
 }
