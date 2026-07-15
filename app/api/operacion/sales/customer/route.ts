@@ -5,6 +5,10 @@ import {
   buildCustomerEventIdempotencyKey,
   recordCustomerEvent,
 } from "../../../../../lib/customer-events";
+import {
+  getBusinessDateInTimezone,
+  rebuildDailyLoyaltyProjection,
+} from "../../../../../lib/daily-loyalty";
 
 type AssignCustomerResult = {
   sale_id: number;
@@ -27,6 +31,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    const warnings: string[] = [];
 
     const saleId = Number(body.saleId);
     const customerId = Number(body.customerId);
@@ -174,12 +180,135 @@ export async function POST(req: Request) {
       }
     }
 
+    /*
+     * Reconstrucción de fidelización por reasignación.
+     *
+     * Solo corresponde cuando la venta ya fue entregada.
+     * Si aún está pendiente, preparando o lista, la proyección se
+     * construirá normalmente cuando el pedido pase a delivered.
+     */
+    if (result.changed) {
+      const previousCustomerId =
+        result.previous_customer_id === null ||
+        result.previous_customer_id === undefined
+          ? null
+          : Number(result.previous_customer_id);
+
+      const { data: deliveredOrder, error: deliveredOrderError } =
+        await supabaseAdmin
+          .from("orders")
+          .select("id, delivered_at")
+          .eq("sale_id", saleId)
+          .eq("status", "delivered")
+          .not("delivered_at", "is", null)
+          .order("delivered_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (deliveredOrderError) {
+        console.error(
+          "Cliente reasignado, pero no se pudo revisar la entrega para recalcular fidelización:",
+          {
+            saleId,
+            previousCustomerId,
+            newCustomerId: customerId,
+            error: deliveredOrderError,
+          },
+        );
+
+        warnings.push(
+          "El cliente fue actualizado, pero no se pudo verificar si correspondía recalcular la fidelización.",
+        );
+      } else if (deliveredOrder?.delivered_at) {
+        const businessDate = getBusinessDateInTimezone({
+          value: deliveredOrder.delivered_at,
+          timezone: "America/Santiago",
+        });
+
+        /*
+         * Primero reconstruimos al cliente anterior.
+         *
+         * Como sales.customer_id ya fue actualizado por el RPC,
+         * la venta reasignada dejará automáticamente de formar parte
+         * de su acumulado diario.
+         */
+        if (
+          previousCustomerId !== null &&
+          Number.isInteger(previousCustomerId) &&
+          previousCustomerId > 0 &&
+          previousCustomerId !== customerId
+        ) {
+          try {
+            await rebuildDailyLoyaltyProjection({
+              customerId: previousCustomerId,
+              businessDate,
+              policyCode: "LOYALTY_POLICY_V1",
+              policyVersion: 1,
+              recalculationReason: "sale.customer_changed:previous_customer",
+            });
+          } catch (previousProjectionError) {
+            console.error(
+              "No se pudo reconstruir la fidelización del cliente anterior:",
+              {
+                saleId,
+                previousCustomerId,
+                businessDate,
+                error: previousProjectionError,
+              },
+            );
+
+            warnings.push(
+              "La fidelización del cliente anterior quedó pendiente de reconstrucción.",
+            );
+          }
+        }
+
+        /*
+         * Luego reconstruimos al cliente nuevo.
+         *
+         * La venta ya pertenece a este cliente y se combinará con
+         * sus demás ventas entregadas del mismo día comercial.
+         */
+        try {
+          await rebuildDailyLoyaltyProjection({
+            customerId,
+            businessDate,
+            policyCode: "LOYALTY_POLICY_V1",
+            policyVersion: 1,
+            recalculationReason:
+              previousCustomerId === null
+                ? "sale.customer_assigned:new_customer"
+                : "sale.customer_changed:new_customer",
+          });
+        } catch (newProjectionError) {
+          console.error(
+            "No se pudo reconstruir la fidelización del cliente nuevo:",
+            {
+              saleId,
+              previousCustomerId,
+              newCustomerId: customerId,
+              businessDate,
+              error: newProjectionError,
+            },
+          );
+
+          warnings.push(
+            "La fidelización del cliente asignado quedó pendiente de reconstrucción.",
+          );
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       changed: Boolean(result.changed),
       sale: updatedSale,
+      warnings,
       message: result.changed
-        ? "Cliente asignado correctamente."
+        ? warnings.length > 0
+          ? "Cliente asignado correctamente, con advertencias de fidelización."
+          : "Cliente asignado correctamente."
         : "La venta ya estaba asignada a este cliente.",
     });
   } catch (error) {
