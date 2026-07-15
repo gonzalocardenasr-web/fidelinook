@@ -1,6 +1,50 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import {
+  buildCustomerEventIdempotencyKey,
+  recordCustomerEvent,
+} from "../../../../lib/customer-events";
+
+function getCreatedSaleId(result: unknown): number | null {
+  if (!result) return null;
+
+  if (Array.isArray(result)) {
+    for (const item of result) {
+      const saleId = getCreatedSaleId(item);
+
+      if (saleId) return saleId;
+    }
+
+    return null;
+  }
+
+  if (typeof result !== "object") {
+    return null;
+  }
+
+  const record = result as Record<string, unknown>;
+
+  const directCandidates = [record.sale_id, record.saleId, record.id];
+
+  for (const candidate of directCandidates) {
+    const parsed = Number(candidate);
+
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  if (record.sale && typeof record.sale === "object") {
+    return getCreatedSaleId(record.sale);
+  }
+
+  if (record.result && typeof record.result === "object") {
+    return getCreatedSaleId(record.result);
+  }
+
+  return null;
+}
 
 export async function GET(req: Request) {
   const session = await getOperationSession();
@@ -442,6 +486,60 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, message: error.message },
         { status: 400 },
+      );
+    }
+
+    const createdSaleId = getCreatedSaleId(data);
+
+    if (!createdSaleId) {
+      console.error(
+        "Venta creada, pero el RPC no entregó un sale_id reconocible:",
+        data,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "La venta fue creada, pero no se pudo identificar su registro.",
+        },
+        { status: 500 },
+      );
+    }
+
+    try {
+      await recordCustomerEvent({
+        customerId,
+        eventType: "sale.created",
+        sourceModule: "sales",
+        sourceEntityType: "sale",
+        sourceEntityId: createdSaleId,
+        saleId: createdSaleId,
+        actorRole: session.role,
+        idempotencyKey: buildCustomerEventIdempotencyKey([
+          "sale-created",
+          createdSaleId,
+        ]),
+        metadata: {
+          channel,
+          externalOrderId: externalOrderId || null,
+          paymentMethod,
+          itemLines: items.length,
+          hasCustomer: customerId !== null,
+        },
+      });
+    } catch (eventError) {
+      console.error(
+        "Venta creada, pero falló el registro del evento sale.created:",
+        eventError,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La venta fue creada, pero no se pudo registrar su evento.",
+        },
+        { status: 500 },
       );
     }
 
