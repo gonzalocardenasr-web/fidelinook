@@ -1,61 +1,37 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../../lib/supabase";
+import {
+  activateCustomerByToken,
+  getCustomerActivationErrorResponse,
+} from "../../../../lib/customer-activation";
 
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    const { searchParams } = new URL(req.url);
+    const token = String(searchParams.get("token") || "").trim();
 
-    if (!token) {
-      return NextResponse.json(
-        { ok: false, message: "Token no encontrado." },
-        { status: 400 }
-      );
-    }
-
-    const { data: cliente, error: clienteError } = await supabase
-      .from("clientes")
-      .select("id, correo, public_token")
-      .eq("token_verificacion", token)
-      .maybeSingle();
-
-    if (clienteError || !cliente) {
-      return NextResponse.json(
-        { ok: false, message: "Token inválido o cliente no encontrado." },
-        { status: 404 }
-      );
-    }
-
-    const { error: updateError } = await supabase
-      .from("clientes")
-      .update({
-        email_verificado: true,
-        tarjeta_activa: true,
-        fecha_activacion: new Date().toISOString(),
-        token_verificacion: null,
-      })
-      .eq("id", cliente.id);
-
-    if (updateError) {
-      console.error("Error actualizando cliente en register/verify:", updateError);
-
-      return NextResponse.json(
-        { ok: false, message: "No se pudo verificar el correo." },
-        { status: 500 }
-      );
-    }
+    const customer = await activateCustomerByToken({
+      token,
+      source: "account_verification",
+    });
 
     return NextResponse.json({
       ok: true,
-      correo: cliente.correo,
-      public_token: cliente.public_token,
+      ya_verificado: customer.alreadyActive,
+      correo: customer.correo,
+      public_token: customer.publicToken,
     });
   } catch (error) {
-    console.error("ERROR VERIFY REGISTER:", error);
+    console.error("Error en /api/register/verify:", error);
+
+    const response = getCustomerActivationErrorResponse(error);
 
     return NextResponse.json(
-      { ok: false, message: "Error interno al verificar el registro." },
-      { status: 500 }
+      {
+        ok: false,
+        message: response.body.message,
+        code: response.body.code,
+      },
+      { status: response.status },
     );
   }
 }
