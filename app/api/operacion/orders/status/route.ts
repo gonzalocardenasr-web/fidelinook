@@ -5,6 +5,10 @@ import {
   buildCustomerEventIdempotencyKey,
   recordCustomerEvent,
 } from "../../../../../lib/customer-events";
+import {
+  getBusinessDateInTimezone,
+  rebuildDailyLoyaltyProjection,
+} from "../../../../../lib/daily-loyalty";
 
 const allowedStatuses = [
   "pending",
@@ -26,6 +30,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    const warnings: string[] = [];
 
     const orderId = Number(body.orderId);
     const newStatus = String(body.newStatus || "").trim();
@@ -93,9 +99,9 @@ export async function POST(req: Request) {
           .eq("id", orderId)
           .single();
 
-      if (deliveredOrderError) {
+      if (deliveredOrderError || !deliveredOrder) {
         console.error(
-          "Pedido entregado, pero no se pudo recargar para registrar el evento:",
+          "Pedido entregado, pero no se pudo recargar:",
           deliveredOrderError,
         );
 
@@ -103,7 +109,7 @@ export async function POST(req: Request) {
           {
             ok: false,
             message:
-              "El pedido fue entregado, pero no se pudo registrar su evento.",
+              "El pedido fue entregado, pero no se pudo completar su trazabilidad.",
           },
           { status: 500 },
         );
@@ -134,6 +140,12 @@ export async function POST(req: Request) {
         );
       }
 
+      const deliveredAt =
+        deliveredOrder.delivered_at || new Date().toISOString();
+
+      /*
+       * 1. Registrar el hecho transversal de entrega.
+       */
       try {
         await recordCustomerEvent({
           customerId,
@@ -143,7 +155,7 @@ export async function POST(req: Request) {
           sourceEntityId: orderId,
           saleId,
           actorRole: session.role,
-          occurredAt: deliveredOrder.delivered_at || new Date(),
+          occurredAt: deliveredAt,
           idempotencyKey: buildCustomerEventIdempotencyKey([
             "sale-delivered",
             saleId,
@@ -157,7 +169,7 @@ export async function POST(req: Request) {
         });
       } catch (eventError) {
         console.error(
-          "Pedido entregado, pero falló el registro de sale.delivered:",
+          "Pedido entregado, pero falló sale.delivered:",
           eventError,
         );
 
@@ -170,11 +182,64 @@ export async function POST(req: Request) {
           { status: 500 },
         );
       }
+
+      /*
+       * 2. Reconstruir la proyección diaria únicamente cuando
+       *    la venta ya tiene un cliente identificado.
+       *
+       * Si no tiene cliente, la venta podrá recalcularse cuando se
+       * asigne posteriormente desde el historial.
+       */
+      if (
+        customerId !== null &&
+        Number.isInteger(customerId) &&
+        customerId > 0
+      ) {
+        try {
+          const businessDate = getBusinessDateInTimezone({
+            value: deliveredAt,
+            timezone: "America/Santiago",
+          });
+
+          await rebuildDailyLoyaltyProjection({
+            customerId,
+            businessDate,
+            policyCode: "LOYALTY_POLICY_V1",
+            policyVersion: 1,
+            recalculationReason: "sale.delivered",
+          });
+        } catch (projectionError) {
+          /*
+           * La entrega y su evento ya ocurrieron correctamente.
+           * No devolvemos error operacional ni pedimos repetir la
+           * acción, porque eso podría generar confusión o duplicidad.
+           *
+           * La proyección puede reconstruirse posteriormente desde
+           * sus fuentes transaccionales.
+           */
+          console.error("Venta entregada, pero falló la proyección diaria:", {
+            orderId,
+            saleId,
+            customerId,
+            deliveredAt,
+            error: projectionError,
+          });
+
+          warnings.push(
+            "La venta fue entregada, pero la proyección de fidelización quedó pendiente de revisión.",
+          );
+        }
+      }
     }
 
     return NextResponse.json({
       ok: true,
       result: data,
+      warnings,
+      message:
+        warnings.length > 0
+          ? "Estado actualizado con advertencias."
+          : "Estado actualizado correctamente.",
     });
   } catch (error) {
     console.error("Error actualizando pedido:", error);
