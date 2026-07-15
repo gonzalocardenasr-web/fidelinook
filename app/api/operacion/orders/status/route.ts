@@ -9,6 +9,7 @@ import {
   getBusinessDateInTimezone,
   rebuildDailyLoyaltyProjection,
 } from "../../../../../lib/daily-loyalty";
+import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
 
 const allowedStatuses = [
   "pending",
@@ -201,13 +202,27 @@ export async function POST(req: Request) {
             timezone: "America/Santiago",
           });
 
-          await rebuildDailyLoyaltyProjection({
+          const projection = await rebuildDailyLoyaltyProjection({
             customerId,
             businessDate,
             policyCode: "LOYALTY_POLICY_V1",
             policyVersion: 1,
             recalculationReason: "sale.delivered",
           });
+
+          if (projection.pendingStampDelta > 0) {
+            const application = await applyDailyLoyaltyCredit({
+              dailyLoyaltyId: projection.dailyLoyaltyId,
+              actorRole: session.role,
+              reason: "Acreditación automática por venta entregada.",
+            });
+
+            if (!application.applied && application.appliedDelta > 0) {
+              warnings.push(
+                "La venta fue entregada, pero los sellos no pudieron acreditarse automáticamente.",
+              );
+            }
+          }
         } catch (projectionError) {
           /*
            * La entrega y su evento ya ocurrieron correctamente.
