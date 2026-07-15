@@ -10,6 +10,7 @@ import {
   rebuildDailyLoyaltyProjection,
 } from "../../../../../lib/daily-loyalty";
 import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
+import { convertLoyaltyStampsToRewards } from "../../../../../lib/loyalty-rewards";
 
 const allowedStatuses = [
   "pending",
@@ -210,6 +211,9 @@ export async function POST(req: Request) {
             recalculationReason: "sale.delivered",
           });
 
+          /*
+           * 1. Acreditar solo la diferencia positiva calculada para el día.
+           */
           if (projection.pendingStampDelta > 0) {
             const application = await applyDailyLoyaltyCredit({
               dailyLoyaltyId: projection.dailyLoyaltyId,
@@ -220,6 +224,172 @@ export async function POST(req: Request) {
             if (!application.applied && application.appliedDelta > 0) {
               warnings.push(
                 "La venta fue entregada, pero los sellos no pudieron acreditarse automáticamente.",
+              );
+            }
+          }
+
+          /*
+           * 2. Convertir cualquier grupo completo de siete sellos.
+           *
+           * Se ejecuta incluso si esta venta no generó una diferencia
+           * positiva, porque podría existir un saldo pendiente de
+           * conversión proveniente de una operación anterior.
+           */
+          let conversion;
+
+          try {
+            conversion = await convertLoyaltyStampsToRewards({
+              customerId,
+              actorRole: session.role,
+              reason: "Conversión automática posterior a una venta entregada.",
+            });
+          } catch (conversionError) {
+            console.error(
+              "Los sellos fueron procesados, pero falló la conversión en premios:",
+              {
+                orderId,
+                saleId,
+                customerId,
+                businessDate,
+                error: conversionError,
+              },
+            );
+
+            warnings.push(
+              "Los sellos fueron procesados, pero la generación del premio quedó pendiente de revisión.",
+            );
+          }
+
+          /*
+           * 3. Notificar los premios emitidos.
+           *
+           * El correo no forma parte de la transacción del beneficio.
+           * Si falla, el premio sigue activo y disponible para canje.
+           */
+          if (
+            conversion?.converted &&
+            conversion.rewardsIssued > 0 &&
+            conversion.rewardIds.length > 0
+          ) {
+            try {
+              const { data: customer, error: customerError } =
+                await supabaseAdmin
+                  .from("clientes")
+                  .select(
+                    `
+          id,
+          nombre,
+          correo,
+          public_token
+        `,
+                  )
+                  .eq("id", customerId)
+                  .single();
+
+              if (customerError || !customer) {
+                console.error(
+                  "Premio generado, pero no se pudo cargar el cliente para notificar:",
+                  customerError,
+                );
+
+                warnings.push(
+                  "El premio fue generado correctamente, pero no se pudo preparar su correo.",
+                );
+              } else {
+                const { data: issuedRewards, error: rewardsError } =
+                  await supabaseAdmin
+                    .from("customer_rewards")
+                    .select(
+                      `
+            id,
+            name,
+            expires_at
+          `,
+                    )
+                    .in("id", conversion.rewardIds)
+                    .order("id", { ascending: true });
+
+                if (rewardsError) {
+                  console.error(
+                    "Premios generados, pero no se pudieron cargar para notificar:",
+                    rewardsError,
+                  );
+
+                  warnings.push(
+                    "Los premios fueron generados, pero no se pudo preparar su notificación.",
+                  );
+                } else {
+                  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
+                    /\/$/,
+                    "",
+                  );
+
+                  if (!baseUrl) {
+                    console.error(
+                      "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de premios.",
+                    );
+
+                    warnings.push(
+                      "Los premios fueron generados, pero el correo no pudo enviarse por configuración.",
+                    );
+                  } else {
+                    const emailResults = await Promise.allSettled(
+                      (issuedRewards || []).map(async (reward) => {
+                        const emailResponse = await fetch(
+                          `${baseUrl}/api/send-prize`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              email: customer.correo,
+                              nombre: customer.nombre,
+                              premioNombre:
+                                reward.name || "Helado simple gratis",
+                              vencimiento: reward.expires_at,
+                              publicToken: customer.public_token,
+                            }),
+                          },
+                        );
+
+                        if (!emailResponse.ok) {
+                          throw new Error(
+                            `El correo del premio ${reward.id} respondió ${emailResponse.status}.`,
+                          );
+                        }
+
+                        return reward.id;
+                      }),
+                    );
+
+                    const failedEmails = emailResults.filter(
+                      (result) => result.status === "rejected",
+                    );
+
+                    if (failedEmails.length > 0) {
+                      console.error(
+                        "Uno o más correos de premio no pudieron enviarse:",
+                        failedEmails,
+                      );
+
+                      warnings.push(
+                        conversion.rewardsIssued === 1
+                          ? "El premio fue generado, pero su correo no pudo enviarse."
+                          : "Los premios fueron generados, pero uno o más correos no pudieron enviarse.",
+                      );
+                    }
+                  }
+                }
+              }
+            } catch (emailPreparationError) {
+              console.error(
+                "Error inesperado notificando premios:",
+                emailPreparationError,
+              );
+
+              warnings.push(
+                "El premio fue generado, pero ocurrió un problema al enviar su correo.",
               );
             }
           }
