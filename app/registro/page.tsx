@@ -3,10 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { supabase } from "../../lib/supabase";
-import { generateVerificationToken } from "../../lib/utils/generateVerificationToken";
-
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -48,117 +44,78 @@ export default function RegistroPage() {
     }
 
     if (!aceptaTerminos) {
-      setErrorRegistro("Debes aceptar los términos y condiciones para registrar tu tarjeta.");
+      setErrorRegistro(
+        "Debes aceptar los términos y condiciones para registrar tu tarjeta.",
+      );
       return;
     }
 
     try {
       setCargando(true);
 
-      const { data: existente, error: errorBusqueda } = await supabase
-        .from("clientes")
-        .select("id, nombre, correo, telefono")
-        .or(`correo.eq.${correoLimpio},telefono.eq.${telefonoLimpio}`);
+      const res = await fetch("/api/clientes/register-card", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: nombreLimpio,
+          correo: correoLimpio,
+          telefono: telefonoLimpio,
+          aceptaTerminos,
+          aceptaMarketing,
+        }),
+      });
 
-      if (errorBusqueda) {
-        console.error("Error al validar duplicados:", errorBusqueda);
-        setErrorRegistro("No se pudo validar si el cliente ya existe.");
-        return;
-      }
+      const data = await res.json();
 
-      if (existente && existente.length > 0) {
-        const correoDuplicado = existente.some(
-          (cliente) => cliente.correo?.trim().toLowerCase() === correoLimpio
-        );
-
-        const telefonoDuplicado = existente.some(
-          (cliente) => cliente.telefono?.trim() === telefonoLimpio
-        );
-
-        if (correoDuplicado && telefonoDuplicado) {
-          setErrorRegistro("Ya existe un cliente registrado con ese correo y teléfono.");
+      if (!res.ok) {
+        if (data.code === "CUSTOMER_EMAIL_AND_PHONE_EXISTS") {
+          setErrorRegistro(
+            "Ya existe un cliente registrado con ese correo y teléfono.",
+          );
           return;
         }
 
-        if (correoDuplicado) {
+        if (data.code === "CUSTOMER_EMAIL_EXISTS") {
           setErrorRegistro("Ya existe un cliente registrado con ese correo.");
           return;
         }
 
-        if (telefonoDuplicado) {
+        if (data.code === "CUSTOMER_PHONE_EXISTS") {
           setErrorRegistro("Ya existe un cliente registrado con ese teléfono.");
           return;
         }
-      }
 
-      const public_token = crypto.randomUUID();
-      const token_verificacion = generateVerificationToken();
-
-      const { data, error } = await supabase
-        .from("clientes")
-        .insert([
-          {
-            nombre: nombreLimpio,
-            correo: correoLimpio,
-            telefono: telefonoLimpio,
-            sellos: 0,
-            premios: [],
-            public_token,
-            email_verificado: false,
-            tarjeta_activa: false,
-            token_verificacion,
-            token_verificacion_creado_en: new Date().toISOString(),
-            acepta_terminos: true,
-            acepta_marketing: aceptaMarketing,
-            fecha_aceptacion: new Date().toISOString(),
-            version_terminos: "v1.0",
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error al registrar cliente:", error);
-        setErrorRegistro("Hubo un error al registrar el cliente.");
+        setErrorRegistro(data.message || "No se pudo registrar la tarjeta.");
         return;
       }
 
-      localStorage.setItem("clienteId", String(data.id));
-
-      try {
-       
-        await fetch("/api/send-verification", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: correoLimpio,
-            nombre: nombreLimpio,
-            token: token_verificacion,
-          }),
-        });
-      
-      } catch (emailError) {
-        console.error("Error enviando correo:", emailError);
-        setMensajeRegistro(
-          "Tu tarjeta fue creada, pero no pudimos enviar el correo de verificación en este momento."
-        );
+      if (data.customerId) {
+        localStorage.setItem("clienteId", String(data.customerId));
       }
 
       setRegistroExitoso(true);
       setCorreoPendiente(correoLimpio);
-      setMensajeRegistro("Te enviamos un correo para activar tu tarjeta Fideli-NooK.");
+
+      if (data.emailSent) {
+        setMensajeRegistro(
+          "Te enviamos un correo para activar tu tarjeta Fideli-NooK.",
+        );
+      } else {
+        setMensajeRegistro(
+          "Tu tarjeta fue creada, pero no pudimos enviar el correo de verificación. Puedes intentar reenviarlo.",
+        );
+      }
 
       setNombre("");
       setCorreo("");
       setTelefono("");
       setAceptaTerminos(false);
       setAceptaMarketing(false);
-
-      
     } catch (error) {
       console.error("Error inesperado en registro:", error);
+
       setErrorRegistro("Ocurrió un error inesperado al registrar la tarjeta.");
     } finally {
       setCargando(false);
@@ -187,7 +144,9 @@ export default function RegistroPage() {
       }
 
       setErrorRegistro("");
-      setMensajeRegistro("Correo reenviado. Revisa tu bandeja de entrada o spam.");
+      setMensajeRegistro(
+        "Correo reenviado. Revisa tu bandeja de entrada o spam.",
+      );
       setCooldown(60);
 
       const interval = setInterval(() => {
@@ -208,7 +167,7 @@ export default function RegistroPage() {
   };
 
   const handleRecuperarTarjeta = async (
-    e: React.FormEvent<HTMLFormElement>
+    e: React.FormEvent<HTMLFormElement>,
   ) => {
     e.preventDefault();
 
@@ -239,15 +198,13 @@ export default function RegistroPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorRecuperacion(
-          data.error || "No se pudo recuperar la tarjeta."
-        );
+        setErrorRecuperacion(data.error || "No se pudo recuperar la tarjeta.");
         return;
       }
 
       setMensajeRecuperacion(
         data.message ||
-          "Si existe una tarjeta asociada a este correo, te enviaremos un acceso."
+          "Si existe una tarjeta asociada a este correo, te enviaremos un acceso.",
       );
       setCorreoRecuperacion("");
     } catch (error) {
@@ -372,7 +329,8 @@ export default function RegistroPage() {
                       className="mt-1 h-4 w-4 accent-[#4c00f7]"
                     />
                     <span>
-                      Quiero recibir promociones, beneficios y comunicaciones de Nook.
+                      Quiero recibir promociones, beneficios y comunicaciones de
+                      Nook.
                     </span>
                   </label>
                 </div>
@@ -392,8 +350,10 @@ export default function RegistroPage() {
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-[#555]">
-                  Te enviamos un correo a <span className="font-semibold">{correoPendiente}</span> para activar tu tarjeta.
-                  Revisa tu bandeja de entrada, spam o promociones.
+                  Te enviamos un correo a{" "}
+                  <span className="font-semibold">{correoPendiente}</span> para
+                  activar tu tarjeta. Revisa tu bandeja de entrada, spam o
+                  promociones.
                 </p>
 
                 <button
@@ -405,8 +365,8 @@ export default function RegistroPage() {
                   {reenviando
                     ? "Reenviando..."
                     : cooldown > 0
-                    ? `Reintentar en ${cooldown}s`
-                    : "Reenviar correo"}
+                      ? `Reintentar en ${cooldown}s`
+                      : "Reenviar correo"}
                 </button>
               </div>
             )}
@@ -421,7 +381,8 @@ export default function RegistroPage() {
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-[#555]">
-                Si ya registraste tu tarjeta antes, ingresa tu correo y te enviaremos un acceso directo para volver a verla.
+                Si ya registraste tu tarjeta antes, ingresa tu correo y te
+                enviaremos un acceso directo para volver a verla.
               </p>
 
               {errorRecuperacion && (
@@ -436,7 +397,10 @@ export default function RegistroPage() {
                 </div>
               )}
 
-              <form onSubmit={handleRecuperarTarjeta} className="mt-5 space-y-4">
+              <form
+                onSubmit={handleRecuperarTarjeta}
+                className="mt-5 space-y-4"
+              >
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[#444]">
                     Correo
@@ -467,8 +431,14 @@ export default function RegistroPage() {
 
               <div className="mt-4 space-y-3 text-sm leading-6 text-[#555]">
                 <p>Registra tu tarjeta con tu nombre, correo y teléfono.</p>
-                <p>Recibirás un correo para activarla y acceder a tu tarjeta digital.</p>
-                <p>Desde tu tarjeta podrás revisar tus premios activos y acceder luego a tu cuenta.</p>
+                <p>
+                  Recibirás un correo para activarla y acceder a tu tarjeta
+                  digital.
+                </p>
+                <p>
+                  Desde tu tarjeta podrás revisar tus premios activos y acceder
+                  luego a tu cuenta.
+                </p>
               </div>
             </div>
           </div>

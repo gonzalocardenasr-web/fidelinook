@@ -41,8 +41,6 @@ export type CreatedCustomer = {
   auth_user_id?: string | null;
   email_verificado?: boolean | null;
   tarjeta_activa?: boolean | null;
-  created_at?: string | null;
-  created_At?: string | null;
 };
 
 export type CustomerRegisteredEventInput = {
@@ -248,16 +246,14 @@ export async function createCustomerRecord(
     })
     .select(
       `
-      id,
-      nombre,
-      correo,
-      telefono,
-      public_token,
-      auth_user_id,
-      email_verificado,
-      tarjeta_activa,
-      created_at,
-      created_At
+    id,
+    nombre,
+    correo,
+    telefono,
+    public_token,
+    auth_user_id,
+    email_verificado,
+    tarjeta_activa
     `,
     )
     .single();
@@ -351,7 +347,7 @@ export async function recordCustomerRegisteredEvent({
     sourceEntityId: customer.id,
     actorRole,
     actorIdentifier,
-    occurredAt: customer.created_at || customer.created_At || new Date(),
+    occurredAt: new Date(),
     idempotencyKey: buildCustomerEventIdempotencyKey([
       "customer-registered",
       customer.id,
