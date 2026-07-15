@@ -488,7 +488,7 @@ export default function OperacionPage() {
       const nuevosSellos = sellosActuales + sellosAAgregar;
 
       let sellosFinales = nuevosSellos;
-      let premiosFinales = [...premiosActuales];
+      const premiosFinales = [...premiosActuales];
       let mensajeFinal = esPrimeraCompraHistorica
         ? "Primera compra registrada. Se sumaron 2 sellos."
         : "Compra validada correctamente. Se sumó 1 sello.";
@@ -587,90 +587,63 @@ export default function OperacionPage() {
       return;
     }
 
+    const premiosActuales = Array.isArray(cliente.premios)
+      ? cliente.premios
+      : [];
+
+    const premioActivo = premiosActuales.find(
+      (premio: Premio) =>
+        String(premio.id) === String(premioId) && premio.estado === "activo",
+    );
+
+    if (!premioActivo) {
+      setTipoMensaje("error");
+      setMensaje("No se encontró un premio activo para canjear.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Confirmas el canje del premio "${premioActivo.nombre}"?`,
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
     try {
       setProcesandoCanje(true);
       setMensaje("");
       setTipoMensaje("info");
 
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? [...cliente.premios]
-        : [];
+      const res = await fetch("/api/loyalty/redeem-reward", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerId: cliente.id,
+          rewardId: premioActivo.id,
+        }),
+      });
 
-      const indexPremioActivo = premiosActuales.findIndex(
-        (premio: Premio) =>
-          String(premio.id) === String(premioId) && premio.estado === "activo",
-      );
+      const data = await res.json();
 
-      if (indexPremioActivo === -1) {
+      if (!res.ok) {
         setTipoMensaje("error");
-        setMensaje("No se encontró un premio activo para canjear.");
+        setMensaje(data.message || "No se pudo completar el canje del premio.");
         return;
-      }
-
-      const premioActivo = premiosActuales[indexPremioActivo];
-
-      premiosActuales[indexPremioActivo] = {
-        ...premiosActuales[indexPremioActivo],
-        estado: "usado",
-        fecha_canje: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          premios: premiosActuales,
-          fecha_ultimo_canje: new Date().toISOString(),
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al canjear premio:", error);
-        setTipoMensaje("error");
-        setMensaje("Hubo un error al canjear el premio.");
-        return;
-      }
-
-      if (premioActivo?.tipo === "campana" && premioActivo?.campana_id) {
-        const { error: trackingError } = await supabase
-          .from("campana_clientes")
-          .update({
-            estado: "canjeado",
-            canjeado_at: new Date().toISOString(),
-          })
-          .eq("campana_id", premioActivo.campana_id)
-          .eq("cliente_id", cliente.id)
-          .eq("premio_id", String(premioActivo.id));
-
-        if (trackingError) {
-          console.error(
-            "Error actualizando trazabilidad de campaña:",
-            trackingError,
-          );
-        }
-      }
-
-      try {
-        await fetch("/api/send-reward-redeemed", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: cliente.correo,
-            nombre: cliente.nombre,
-            premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
-            publicToken: cliente.public_token,
-          }),
-        });
-      } catch (emailError) {
-        console.error("Error enviando correo de canje:", emailError);
       }
 
       await cargarDatos(true);
+
       setTipoMensaje("success");
-      setMensaje(`Premio canjeado correctamente: ${premioActivo.nombre}.`);
-    } catch (err) {
-      console.error("Error inesperado al canjear premio:", err);
+      setMensaje(
+        data.message ||
+          `Premio canjeado correctamente: ${premioActivo.nombre}.`,
+      );
+    } catch (error) {
+      console.error("Error canjeando premio:", error);
+
       setTipoMensaje("error");
       setMensaje("Ocurrió un error inesperado al canjear el premio.");
     } finally {
