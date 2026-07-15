@@ -1,206 +1,372 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../lib/supabase";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
 import { sendRegisterVerificationEmail } from "../../../lib/email/sendRegisterVerificationEmail";
-
-function generarPublicToken() {
-  return crypto.randomUUID();
-}
+import {
+  createCustomerRecord,
+  deleteCustomerRecord,
+  getCustomerRegistrationErrorResponse,
+  linkCustomerAuthUser,
+  recordCustomerRegisteredEvent,
+} from "../../../lib/customer-registration";
 
 export async function POST(req: Request) {
-  let clienteIdCreado: string | null = null;
-  let authUserIdCreado: string | null = null;
+  let customerIdCreated: number | null = null;
+  let authUserIdCreated: string | null = null;
 
   try {
-    const {
-      nombre,
-      correo,
-      telefono,
-      password,
-      aceptaTerminos,
-      aceptaMarketing,
-      marketingPreferenciaDefinida,
-    } = await req.json();
+    const body = await req.json();
+
+    const nombre = String(body.nombre || "").trim();
+    const correo = String(body.correo || "")
+      .trim()
+      .toLowerCase();
+    const telefono = String(body.telefono || "").trim();
+    const password = String(body.password || "");
+
+    const aceptaTerminos = Boolean(body.aceptaTerminos);
+    const aceptaMarketing = Boolean(body.aceptaMarketing);
+    const marketingPreferenciaDefinida = Boolean(
+      body.marketingPreferenciaDefinida,
+    );
 
     if (!nombre || !correo || !telefono || !password) {
-      return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Faltan datos.",
+          code: "INVALID_REGISTER_DATA",
+        },
+        { status: 400 },
+      );
     }
 
     if (!aceptaTerminos) {
       return NextResponse.json(
-        { error: "Debes aceptar los términos y condiciones." },
-        { status: 400 }
+        {
+          ok: false,
+          error: "Debes aceptar los términos y condiciones.",
+          code: "TERMS_NOT_ACCEPTED",
+        },
+        { status: 400 },
       );
     }
 
-    const nombreLimpio = String(nombre).trim();
-    const email = String(correo).trim().toLowerCase();
-    const telefonoLimpio = String(telefono).trim();
-
-    // 1. Buscar cliente existente por correo
-    const { data: clienteExistente, error: clienteExistenteError } = await supabase
-      .from("clientes")
-      .select("*")
-      .eq("correo", email)
-      .maybeSingle();
-
-    if (clienteExistenteError) {
-      console.error("Error buscando cliente existente:", clienteExistenteError);
-      return NextResponse.json(
-        { error: "Error buscando cliente existente" },
-        { status: 500 }
-      );
-    }
-
-    // 2. Si ya existe un cliente con este correo, el usuario debe continuar desde su tarjeta
-    if (clienteExistente) {
+    if (password.length < 6) {
       return NextResponse.json(
         {
-          error: "Este correo ya tiene una tarjeta activa.",
-          code: "CLIENT_EXISTS_WITH_CARD",
+          ok: false,
+          error: "La contraseña debe tener al menos 6 caracteres.",
+          code: "INVALID_PASSWORD",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 3. Crear cliente nuevo
-    const { data: nuevoCliente, error: nuevoClienteError } = await supabase
-      .from("clientes")
-      .insert({
-        nombre: nombreLimpio,
-        correo: email,
-        telefono: telefonoLimpio,
-        public_token: generarPublicToken(),
-        email_verificado: false,
-        tarjeta_activa: false,
-        acepta_terminos: true,
-        acepta_marketing: Boolean(aceptaMarketing),
-        marketing_preferencia_definida: Boolean(marketingPreferenciaDefinida),
-        fecha_aceptacion: new Date().toISOString(),
-        version_terminos: "v1.0", 
-      })
-      .select()
-      .single();
+    const verificationToken = generateVerificationToken();
+    const registrationDate = new Date().toISOString();
 
-    if (nuevoClienteError || !nuevoCliente) {
-      console.error("Error creando cliente:", nuevoClienteError);
-      return NextResponse.json(
-        { error: "Error creando cliente" },
-        { status: 500 }
-      );
-    }
+    /*
+     * 1. Crear el registro comercial del cliente usando el
+     *    servicio común. Todavía no emitimos el evento porque
+     *    falta crear y vincular la cuenta Auth.
+     */
+    const createdCustomer = await createCustomerRecord({
+      nombre,
+      correo,
+      telefono,
 
-    clienteIdCreado = nuevoCliente.id;
+      emailVerified: false,
+      cardActive: false,
 
-    // 4. Crear usuario auth
+      acceptsTerms: aceptaTerminos,
+      acceptsMarketing: aceptaMarketing,
+      marketingPreferenceDefined: marketingPreferenciaDefinida,
+
+      termsVersion: "v1.0",
+      acceptedAt: registrationDate,
+    });
+
+    customerIdCreated = createdCustomer.id;
+
+    /*
+     * 2. Crear el usuario de autenticación.
+     *
+     * Se conserva email_confirm=true porque el flujo vigente
+     * utiliza su propio token para activar la cuenta Nook.
+     */
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: correo,
         password,
         email_confirm: true,
       });
 
     if (authError || !authData.user) {
-      console.error("Error creando auth user:", authError);
+      console.error("Error creando usuario de autenticación:", authError);
 
-      if (clienteIdCreado) {
-        const { error: rollbackClienteError } = await supabase
-          .from("clientes")
-          .delete()
-          .eq("id", clienteIdCreado);
+      const customerRollbackCompleted = await deleteCustomerRecord(
+        createdCustomer.id,
+      );
 
-        if (rollbackClienteError) {
-          console.error("Error eliminando cliente tras fallo de auth:", rollbackClienteError);
-        }
+      if (!customerRollbackCompleted) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "No se pudo crear la cuenta de acceso y el registro del cliente requiere revisión.",
+            code: "AUTH_CREATE_FAILED_ROLLBACK_FAILED",
+          },
+          { status: 500 },
+        );
       }
 
+      customerIdCreated = null;
+
       return NextResponse.json(
-        { error: authError?.message || "No se pudo crear la cuenta de acceso." },
-        { status: 500 }
+        {
+          ok: false,
+          error: authError?.message || "No se pudo crear la cuenta de acceso.",
+          code: "AUTH_CREATE_FAILED",
+        },
+        { status: 500 },
       );
     }
 
-    authUserIdCreado = authData.user.id;
+    authUserIdCreated = authData.user.id;
 
-    // 5. Generar token de verificación del flujo de cuenta
-    const token = generateVerificationToken();
+    /*
+     * 3. Vincular el usuario Auth con el cliente y almacenar
+     *    el token del flujo de verificación Nook.
+     */
+    let linkedCustomer;
 
-    const { error: vinculoError } = await supabase
-      .from("clientes")
-      .update({
-        auth_user_id: authUserIdCreado,
-        token_verificacion: token,
-        token_verificacion_creado_en: new Date().toISOString(),
-      })
-      .eq("id", clienteIdCreado);
-
-    if (vinculoError) {
-      console.error("Error vinculando auth_user_id al cliente:", vinculoError);
-
-      if (authUserIdCreado) {
-        const { error: rollbackAuthError } =
-          await supabaseAdmin.auth.admin.deleteUser(authUserIdCreado);
-
-        if (rollbackAuthError) {
-          console.error("Error eliminando auth user tras fallo de vínculo:", rollbackAuthError);
-        }
-      }
-
-      if (clienteIdCreado) {
-        const { error: rollbackClienteError } = await supabase
-          .from("clientes")
-          .delete()
-          .eq("id", clienteIdCreado);
-
-        if (rollbackClienteError) {
-          console.error("Error eliminando cliente tras fallo de vínculo:", rollbackClienteError);
-        }
-      }
-
-      return NextResponse.json(
-        { error: "No se pudo vincular la cuenta al cliente." },
-        { status: 500 }
-      );
-    }
-
-    // 6. Enviar correo del flujo de cuenta
     try {
-      await sendRegisterVerificationEmail(email, nombreLimpio, token);
+      linkedCustomer = await linkCustomerAuthUser({
+        customerId: createdCustomer.id,
+        authUserId: authData.user.id,
+        verificationToken,
+        verificationTokenCreatedAt: registrationDate,
+      });
+    } catch (linkError) {
+      console.error("Error vinculando usuario Auth con cliente:", linkError);
+
+      const rollbackResult = await rollbackAccountRegistration({
+        customerId: createdCustomer.id,
+        authUserId: authData.user.id,
+      });
+
+      if (rollbackResult.authDeleted) {
+        authUserIdCreated = null;
+      }
+
+      if (rollbackResult.customerDeleted) {
+        customerIdCreated = null;
+      }
+
+      if (!rollbackResult.authDeleted || !rollbackResult.customerDeleted) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "No se pudo vincular la cuenta y algunos registros requieren revisión administrativa.",
+            code: "AUTH_LINK_FAILED_ROLLBACK_FAILED",
+          },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No se pudo vincular la cuenta al cliente.",
+          code: "AUTH_LINK_FAILED",
+        },
+        { status: 500 },
+      );
+    }
+
+    /*
+     * 4. El registro se considera completo únicamente después
+     *    de emitir el evento transversal.
+     */
+    try {
+      await recordCustomerRegisteredEvent({
+        customer: linkedCustomer,
+        source: "account_registration",
+        actorIdentifier: authData.user.id,
+        metadata: {
+          acceptsMarketing: aceptaMarketing,
+          marketingPreferenceDefined: marketingPreferenciaDefinida,
+          termsVersion: "v1.0",
+          registrationFlow: "account",
+        },
+      });
+    } catch (eventError) {
+      console.error(
+        "Cuenta creada, pero falló customer.registered:",
+        eventError,
+      );
+
+      const rollbackResult = await rollbackAccountRegistration({
+        customerId: createdCustomer.id,
+        authUserId: authData.user.id,
+      });
+
+      if (rollbackResult.authDeleted) {
+        authUserIdCreated = null;
+      }
+
+      if (rollbackResult.customerDeleted) {
+        customerIdCreated = null;
+      }
+
+      if (!rollbackResult.authDeleted || !rollbackResult.customerDeleted) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "La cuenta fue creada, pero ocurrió un problema de trazabilidad. No repitas el registro y contacta al administrador.",
+            code: "CUSTOMER_EVENT_FAILED_ROLLBACK_FAILED",
+          },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "No se pudo completar el registro. La operación fue revertida.",
+          code: "CUSTOMER_EVENT_FAILED",
+        },
+        { status: 500 },
+      );
+    }
+
+    /*
+     * 5. El correo es un efecto posterior.
+     *
+     * Si falla, mantenemos cliente, usuario Auth y evento para
+     * permitir que el correo sea reenviado posteriormente.
+     */
+    try {
+      await sendRegisterVerificationEmail(correo, nombre, verificationToken);
     } catch (emailError) {
-      console.error("Error enviando correo de verificación de registro:", emailError);
+      console.error(
+        "Error enviando correo de verificación de registro:",
+        emailError,
+      );
 
       return NextResponse.json({
         ok: true,
-        warning: "La cuenta fue creada, pero no se pudo enviar el correo de verificación.",
+        customerId: linkedCustomer.id,
+        warning:
+          "La cuenta fue creada, pero no se pudo enviar el correo de verificación.",
         code: "REGISTER_EMAIL_SEND_FAILED",
       });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      customerId: linkedCustomer.id,
+      code: "ACCOUNT_REGISTERED",
+    });
   } catch (error) {
     console.error("Error en /api/register:", error);
 
-    if (authUserIdCreado) {
-      const { error: rollbackAuthError } =
-        await supabaseAdmin.auth.admin.deleteUser(authUserIdCreado);
+    /*
+     * Esta sección protege fallos inesperados posteriores a una
+     * creación parcial. Si el flujo ya fue revertido, los IDs
+     * correspondientes estarán en null.
+     */
+    if (authUserIdCreated || customerIdCreated) {
+      const rollbackResult = await rollbackAccountRegistration({
+        customerId: customerIdCreated,
+        authUserId: authUserIdCreated,
+      });
 
-      if (rollbackAuthError) {
-        console.error("Error eliminando auth user en catch general:", rollbackAuthError);
+      if (
+        (authUserIdCreated && !rollbackResult.authDeleted) ||
+        (customerIdCreated && !rollbackResult.customerDeleted)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Ocurrió un error y algunos registros requieren revisión administrativa. No repitas el registro.",
+            code: "UNEXPECTED_REGISTER_ROLLBACK_FAILED",
+          },
+          { status: 500 },
+        );
       }
     }
 
-    if (clienteIdCreado) {
-      const { error: rollbackClienteError } = await supabase
-        .from("clientes")
-        .delete()
-        .eq("id", clienteIdCreado);
+    const registrationError = getCustomerRegistrationErrorResponse(error);
 
-      if (rollbackClienteError) {
-        console.error("Error eliminando cliente en catch general:", rollbackClienteError);
-      }
+    /*
+     * Conservamos el código que app/register/page.tsx ya entiende
+     * cuando el correo pertenece a una tarjeta existente.
+     */
+    if (
+      registrationError.body.code === "CUSTOMER_EMAIL_EXISTS" ||
+      registrationError.body.code === "CUSTOMER_EMAIL_AND_PHONE_EXISTS"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Este correo ya tiene una tarjeta activa.",
+          code: "CLIENT_EXISTS_WITH_CARD",
+        },
+        { status: 400 },
+      );
     }
 
-    return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: registrationError.body.message,
+        code: registrationError.body.code,
+      },
+      { status: registrationError.status },
+    );
   }
+}
+
+async function rollbackAccountRegistration({
+  customerId,
+  authUserId,
+}: {
+  customerId?: number | null;
+  authUserId?: string | null;
+}) {
+  let authDeleted = !authUserId;
+  let customerDeleted = !customerId;
+
+  /*
+   * Eliminamos primero Auth. Así evitamos dejar un usuario de
+   * acceso activo apuntando a un cliente que ya no existe.
+   */
+  if (authUserId) {
+    const { error: authDeleteError } =
+      await supabaseAdmin.auth.admin.deleteUser(authUserId);
+
+    if (authDeleteError) {
+      console.error(
+        "Error eliminando usuario Auth durante rollback:",
+        authDeleteError,
+      );
+    } else {
+      authDeleted = true;
+    }
+  }
+
+  if (customerId) {
+    customerDeleted = await deleteCustomerRecord(customerId);
+  }
+
+  return {
+    authDeleted,
+    customerDeleted,
+  };
 }
