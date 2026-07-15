@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import {
+  buildCustomerEventIdempotencyKey,
+  recordCustomerEvent,
+} from "../../../../../lib/customer-events";
+
+type AssignCustomerResult = {
+  sale_id: number;
+  change_id?: number | null;
+  previous_customer_id?: number | null;
+  customer_id: number;
+  customer_name?: string | null;
+  changed: boolean;
+};
 
 export async function POST(req: Request) {
   const session = await getOperationSession();
@@ -60,7 +73,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = data && typeof data === "object" ? data : null;
+    const result =
+      data && typeof data === "object" ? (data as AssignCustomerResult) : null;
 
     if (!result) {
       return NextResponse.json(
@@ -98,6 +112,66 @@ export async function POST(req: Request) {
         },
         { status: 500 },
       );
+    }
+
+    if (result.changed) {
+      const changeId = Number(result.change_id);
+      const previousCustomerId =
+        result.previous_customer_id === null ||
+        result.previous_customer_id === undefined
+          ? null
+          : Number(result.previous_customer_id);
+
+      if (!Number.isInteger(changeId) || changeId <= 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "El cliente fue asignado, pero no se pudo identificar el cambio auditado.",
+          },
+          { status: 500 },
+        );
+      }
+
+      const eventType =
+        previousCustomerId === null
+          ? "sale.customer_assigned"
+          : "sale.customer_changed";
+
+      try {
+        await recordCustomerEvent({
+          customerId,
+          eventType,
+          sourceModule: "sales",
+          sourceEntityType: "sale_customer_change",
+          sourceEntityId: changeId,
+          saleId,
+          actorRole: session.role,
+          idempotencyKey: buildCustomerEventIdempotencyKey([
+            "sale-customer-change",
+            changeId,
+          ]),
+          metadata: {
+            previousCustomerId,
+            newCustomerId: customerId,
+            reason: reason || null,
+          },
+        });
+      } catch (eventError) {
+        console.error(
+          "El cliente fue asignado, pero falló el registro del evento:",
+          eventError,
+        );
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "El cliente fue asignado correctamente, pero no se pudo registrar su evento.",
+          },
+          { status: 500 },
+        );
+      }
     }
 
     return NextResponse.json({
