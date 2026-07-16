@@ -149,13 +149,13 @@ export default function CustomerOrderTicket80mm({ document }: Props) {
 
         <div className="mt-[0.5mm] border-t border-dashed border-black" />
 
-        <div className="flex items-end justify-between gap-3 py-[1.5mm]">
-          <p className="text-[30px] font-black leading-none tracking-tight">
+        <div className="relative py-[1.5mm]">
+          <p className="text-center text-[30px] font-black leading-none tracking-tight">
             {displayOrderNumber}
           </p>
 
           {orderTime && (
-            <p className="pb-[1mm] text-[10px] font-bold leading-none">
+            <p className="absolute right-0 bottom-[2mm] text-[10px] font-bold leading-none">
               {orderTime}
             </p>
           )}
