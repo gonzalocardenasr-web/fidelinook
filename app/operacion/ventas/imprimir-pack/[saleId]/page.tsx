@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import CustomerOrderTicket80mm from "../../../../../components/documents/CustomerOrderTicket80mm";
@@ -11,6 +11,8 @@ import { SaleDocument } from "../../../../../lib/documents/sales/types";
 export default function ImprimirPackVentaPage() {
   const params = useParams();
   const saleId = Number(params.saleId);
+  const searchParams = useSearchParams();
+  const autoPrint = searchParams.get("autoPrint") === "1";
 
   const [document, setDocument] = useState<SaleDocument | null>(null);
 
@@ -30,14 +32,34 @@ export default function ImprimirPackVentaPage() {
   }, [saleId]);
 
   useEffect(() => {
-    if (!document || automaticPrintStarted.current) {
+    if (!document || !autoPrint || automaticPrintStarted.current) {
       return;
     }
 
     automaticPrintStarted.current = true;
 
     void imprimirCuandoEsteListo();
-  }, [document]);
+  }, [document, autoPrint]);
+
+  useEffect(() => {
+    function handleAfterPrint() {
+      if (window.parent !== window) {
+        window.parent.postMessage(
+          {
+            type: "NOOK_PRINT_COMPLETED",
+            saleId,
+          },
+          window.location.origin,
+        );
+      }
+    }
+
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, [saleId]);
 
   async function cargarDocumento() {
     try {

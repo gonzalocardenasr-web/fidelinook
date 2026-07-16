@@ -291,58 +291,80 @@ export default function NuevaVentaPage() {
     setConfiguringProduct(null);
   }
 
+  function imprimirVentaEnSegundoPlano(saleId: number) {
+    const iframe = window.document.createElement("iframe");
+
+    const printId = `nook-print-${saleId}-${Date.now()}`;
+
+    iframe.id = printId;
+    iframe.title = "Impresión Nook";
+    iframe.setAttribute("aria-hidden", "true");
+
+    iframe.src = `/operacion/ventas/imprimir-pack/${saleId}` + "?autoPrint=1";
+
+    /*
+     * No usamos display:none porque algunos navegadores no
+     * imprimen el contenido de elementos completamente ocultos.
+     */
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "80mm",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
+    });
+
+    let cleaned = false;
+
+    function cleanup() {
+      if (cleaned) return;
+
+      cleaned = true;
+
+      window.clearTimeout(cleanupTimeout);
+
+      window.removeEventListener("message", handlePrintMessage);
+
+      iframe.remove();
+    }
+
+    function handlePrintMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "NOOK_PRINT_COMPLETED" &&
+        Number(event.data?.saleId) === saleId
+      ) {
+        /*
+         * Damos un margen breve después del diálogo para evitar
+         * retirar el iframe antes de que el driver finalice.
+         */
+        window.setTimeout(cleanup, 500);
+      }
+    }
+
+    window.addEventListener("message", handlePrintMessage);
+
+    /*
+     * Contingencia: si el navegador no emite afterprint,
+     * el iframe se elimina igualmente después de un minuto.
+     */
+    const cleanupTimeout = window.setTimeout(cleanup, 60000);
+
+    window.document.body.appendChild(iframe);
+  }
+
   async function confirmarVenta() {
     const error = validarVenta();
 
     if (error) {
       setMessage(error);
       return;
-    }
-
-    /*
-     * La pestaña debe abrirse directamente desde el clic del
-     * operador. Si se abre después del await, el navegador puede
-     * interpretarla como popup y bloquearla.
-     */
-    const printWindow = window.open("about:blank", "_blank");
-
-    if (printWindow) {
-      printWindow.opener = null;
-
-      printWindow.document.write(`
-      <!doctype html>
-      <html lang="es">
-        <head>
-          <meta charset="utf-8" />
-          <title>Preparando impresión · Nook</title>
-          <style>
-            body {
-              margin: 0;
-              min-height: 100vh;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-family: Arial, sans-serif;
-              background: #f6f3ff;
-              color: #262626;
-            }
-
-            div {
-              padding: 24px;
-              text-align: center;
-            }
-          </style>
-        </head>
-
-        <body>
-          <div>
-            <strong>Preparando comprobante y ticket...</strong>
-          </div>
-        </body>
-      </html>
-    `);
-
-      printWindow.document.close();
     }
 
     try {
@@ -399,10 +421,6 @@ export default function NuevaVentaPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (printWindow && !printWindow.closed) {
-          printWindow.close();
-        }
-
         setMessage(data.message || "No se pudo crear la venta.");
 
         return;
@@ -411,10 +429,6 @@ export default function NuevaVentaPage() {
       const createdSaleId = Number(data.saleId);
 
       if (!Number.isInteger(createdSaleId) || createdSaleId <= 0) {
-        if (printWindow && !printWindow.closed) {
-          printWindow.close();
-        }
-
         setMessage(
           "La venta fue creada, pero no se pudo identificar para imprimir.",
         );
@@ -425,22 +439,21 @@ export default function NuevaVentaPage() {
       const displayOrderCode =
         data.result?.display_order_code ||
         data.result?.order?.display_order_code ||
-        `Venta #${createdSaleId}`;
+        `Pedido creado`;
 
-      const printUrl = `/operacion/ventas/imprimir-pack/${createdSaleId}`;
+      imprimirVentaEnSegundoPlano(createdSaleId);
 
-      if (printWindow && !printWindow.closed) {
-        printWindow.location.replace(printUrl);
-      } else {
-        /*
-         * Si el navegador bloqueó la pestaña, no perdemos la venta.
-         * Dejamos un enlace directo disponible en el mensaje.
-         */
-        setMessage(
-          `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
-            "El navegador bloqueó la impresión automática; puedes reimprimirla desde Historial.",
-        );
-      }
+      setCart([]);
+      setOrderNotes("");
+      setSelectedCliente(null);
+      setChannel("local");
+      setExternalOrderId("");
+      setClienteSelectorResetKey((current) => current + 1);
+
+      setMessage(
+        `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+          "Preparando impresión.",
+      );
 
       setCart([]);
       setOrderNotes("");
@@ -456,10 +469,6 @@ export default function NuevaVentaPage() {
         );
       }
     } catch (error) {
-      if (printWindow && !printWindow.closed) {
-        printWindow.close();
-      }
-
       console.error(error);
 
       setMessage("Error inesperado al confirmar venta.");
