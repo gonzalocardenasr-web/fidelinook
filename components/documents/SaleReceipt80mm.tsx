@@ -43,18 +43,18 @@ export default function SaleReceipt80mm({ document }: Props) {
   return (
     <article className="sale-receipt mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">
       <header className="text-center">
-        <div className="flex justify-center">
+        <div className="flex h-[17mm] items-center justify-center overflow-hidden">
           <Image
             src="/nook-logo-negro.png"
             alt="Nook"
             width={190}
             height={80}
             priority
-            className="h-auto w-[42mm] object-contain"
+            className="block h-auto w-[42mm] object-contain"
           />
         </div>
 
-        <div className="my-[3mm] border-t border-dashed border-black" />
+        <div className="mb-[3mm] mt-[1mm] border-t border-dashed border-black" />
 
         <p className="text-[13px] font-black uppercase">Comprobante de venta</p>
 
