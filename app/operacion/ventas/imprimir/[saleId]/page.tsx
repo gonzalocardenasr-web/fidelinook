@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import SaleReceipt80mm from "../../../../../components/documents/SaleReceipt80mm";
 import { SaleDocument } from "../../../../../lib/documents/sales/types";
@@ -11,6 +11,11 @@ export default function ImprimirVentaPage() {
   const params = useParams();
 
   const saleId = Number(params.saleId);
+
+  const searchParams = useSearchParams();
+  const autoPrint = searchParams.get("autoPrint") === "1";
+
+  const automaticPrintStarted = useRef(false);
 
   const [document, setDocument] = useState<SaleDocument | null>(null);
 
@@ -25,6 +30,37 @@ export default function ImprimirVentaPage() {
     }
 
     void cargarDocumento();
+  }, [saleId]);
+
+  useEffect(() => {
+    if (!document || !autoPrint || automaticPrintStarted.current) {
+      return;
+    }
+
+    automaticPrintStarted.current = true;
+
+    void imprimirCuandoEsteListo();
+  }, [document, autoPrint]);
+
+  useEffect(() => {
+    function handleAfterPrint() {
+      if (window.parent !== window) {
+        window.parent.postMessage(
+          {
+            type: "NOOK_PRINT_COMPLETED",
+            saleId,
+            documentType: "receipt",
+          },
+          window.location.origin,
+        );
+      }
+    }
+
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
   }, [saleId]);
 
   async function cargarDocumento() {
@@ -53,6 +89,47 @@ export default function ImprimirVentaPage() {
       setMessage("Ocurrió un error al cargar el comprobante.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function esperarImagenes() {
+    const images = Array.from(window.document.images);
+
+    await Promise.all(
+      images.map(
+        (image) =>
+          new Promise<void>((resolve) => {
+            if (image.complete) {
+              resolve();
+              return;
+            }
+
+            const finish = () => resolve();
+
+            image.addEventListener("load", finish, {
+              once: true,
+            });
+
+            image.addEventListener("error", finish, {
+              once: true,
+            });
+          }),
+      ),
+    );
+  }
+
+  async function imprimirCuandoEsteListo() {
+    try {
+      await esperarImagenes();
+
+      window.setTimeout(() => {
+        window.print();
+      }, 350);
+    } catch (error) {
+      console.error(
+        "No se pudo iniciar la impresión automática del comprobante:",
+        error,
+      );
     }
   }
 

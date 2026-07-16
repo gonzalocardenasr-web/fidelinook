@@ -695,6 +695,78 @@ export default function HistorialVentasPage() {
   const selectedOrder = selectedSale?.orders?.[0] || null;
   const selectedItems = selectedSale?.sale_items || [];
 
+  function imprimirDocumentoEnSegundoPlano({
+    saleId,
+    documentType,
+  }: {
+    saleId: number;
+    documentType: "receipt" | "ticket";
+  }) {
+    const iframe = window.document.createElement("iframe");
+
+    const printId = `nook-print-${documentType}-${saleId}-${Date.now()}`;
+
+    iframe.id = printId;
+    iframe.title =
+      documentType === "receipt"
+        ? "Impresión de comprobante Nook"
+        : "Impresión de ticket Nook";
+
+    iframe.setAttribute("aria-hidden", "true");
+
+    const route =
+      documentType === "receipt"
+        ? `/operacion/ventas/imprimir/${saleId}`
+        : `/operacion/ventas/ticket/${saleId}`;
+
+    iframe.src = `${route}?autoPrint=1`;
+
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "80mm",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
+    });
+
+    let cleaned = false;
+
+    function cleanup() {
+      if (cleaned) return;
+
+      cleaned = true;
+
+      window.clearTimeout(cleanupTimeout);
+
+      window.removeEventListener("message", handlePrintMessage);
+
+      iframe.remove();
+    }
+
+    function handlePrintMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "NOOK_PRINT_COMPLETED" &&
+        Number(event.data?.saleId) === saleId &&
+        event.data?.documentType === documentType
+      ) {
+        window.setTimeout(cleanup, 500);
+      }
+    }
+
+    window.addEventListener("message", handlePrintMessage);
+
+    const cleanupTimeout = window.setTimeout(cleanup, 60000);
+
+    window.document.body.appendChild(iframe);
+  }
+
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-3">
       <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1600px] flex-col">
@@ -1472,23 +1544,31 @@ export default function HistorialVentasPage() {
             </div>
 
             <footer className="grid shrink-0 grid-cols-3 gap-2 border-t border-neutral-200 bg-white p-3">
-              <Link
-                href={`/operacion/ventas/imprimir/${selectedSale.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() =>
+                  imprimirDocumentoEnSegundoPlano({
+                    saleId: selectedSale.id,
+                    documentType: "receipt",
+                  })
+                }
                 className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 py-2 text-center text-[10px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
               >
                 Comprobante
-              </Link>
+              </button>
 
-              <Link
-                href={`/operacion/ventas/ticket/${selectedSale.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() =>
+                  imprimirDocumentoEnSegundoPlano({
+                    saleId: selectedSale.id,
+                    documentType: "ticket",
+                  })
+                }
                 className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 py-2 text-center text-[10px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
               >
                 Ticket atención
-              </Link>
+              </button>
 
               <button
                 type="button"
