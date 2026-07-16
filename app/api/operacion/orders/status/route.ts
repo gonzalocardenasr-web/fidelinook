@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
+
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
+
 import {
   buildCustomerEventIdempotencyKey,
   recordCustomerEvent,
 } from "../../../../../lib/customer-events";
+
 import {
   getBusinessDateInTimezone,
   rebuildDailyLoyaltyProjection,
 } from "../../../../../lib/daily-loyalty";
+
 import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
 import { convertLoyaltyStampsToRewards } from "../../../../../lib/loyalty-rewards";
+
 import {
-  buildAuditIdempotencyKey,
   createCorrelationId,
   recordAuditLogSafely,
 } from "../../../../../lib/audit-logs";
@@ -23,14 +27,23 @@ const allowedStatuses = [
   "ready",
   "delivered",
   "cancelled",
-];
+] as const;
+
+type AllowedStatus = (typeof allowedStatuses)[number];
+
+function isAllowedStatus(value: string): value is AllowedStatus {
+  return allowedStatuses.includes(value as AllowedStatus);
+}
 
 export async function POST(req: Request) {
   const session = await getOperationSession();
 
   if (!session.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
+      {
+        ok: false,
+        message: "No autenticado.",
+      },
       { status: 401 },
     );
   }
@@ -41,49 +54,135 @@ export async function POST(req: Request) {
     const warnings: string[] = [];
 
     const orderId = Number(body.orderId);
-    const newStatus = String(body.newStatus || "").trim();
-    const notes = body.notes ? String(body.notes) : null;
 
-    if (!orderId || Number.isNaN(orderId)) {
+    const newStatus = String(body.newStatus || "")
+      .trim()
+      .toLowerCase();
+
+    const normalizedNotes = String(body.notes || "").trim();
+    const notes = normalizedNotes || null;
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
       return NextResponse.json(
-        { ok: false, message: "orderId inválido." },
+        {
+          ok: false,
+          message: "orderId inválido.",
+        },
         { status: 400 },
       );
     }
 
-    if (!allowedStatuses.includes(newStatus)) {
+    if (!isAllowedStatus(newStatus)) {
       return NextResponse.json(
-        { ok: false, message: "Estado inválido." },
+        {
+          ok: false,
+          message: "Estado inválido.",
+        },
         { status: 400 },
       );
     }
 
     const correlationId = createCorrelationId("order-status");
 
+    /*
+     * 1. Cargar el estado previo.
+     */
     const { data: currentOrder, error: currentOrderError } = await supabaseAdmin
       .from("orders")
       .select(
         `
-      id,
-      sale_id,
-      status,
-      display_order_code,
-      updated_at
-    `,
+          id,
+          sale_id,
+          status,
+          display_order_code
+        `,
       )
       .eq("id", orderId)
       .single();
 
-    if (currentOrderError || !currentOrder) {
+    if (currentOrderError) {
+      console.error(
+        "Error cargando pedido antes de cambiar estado:",
+        currentOrderError,
+      );
+
+      const notFound = currentOrderError.code === "PGRST116";
+
       return NextResponse.json(
         {
           ok: false,
-          message: "No se pudo cargar el estado actual del pedido.",
+          message: notFound
+            ? "No se encontró el pedido indicado."
+            : "No se pudo cargar el estado actual del pedido.",
+        },
+        {
+          status: notFound ? 404 : 500,
+        },
+      );
+    }
+
+    if (!currentOrder) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No se encontró el pedido indicado.",
         },
         { status: 404 },
       );
     }
 
+    const currentStatus = String(currentOrder.status || "")
+      .trim()
+      .toLowerCase();
+
+    /*
+     * 2. Proteger contra doble clic o reintento.
+     *
+     * Esta validación debe ocurrir ANTES del RPC.
+     */
+    if (currentStatus === newStatus) {
+      await recordAuditLogSafely({
+        module: "operations",
+        action: "order.status_change_ignored",
+
+        entityType: "order",
+        entityId: orderId,
+
+        actorRole: session.role,
+        actorIdentifier: null,
+
+        result: "warning",
+
+        reason: "El pedido ya se encontraba en el estado solicitado.",
+
+        previousState: {
+          status: currentOrder.status,
+          saleId: currentOrder.sale_id,
+          displayOrderCode: currentOrder.display_order_code,
+        },
+
+        newState: {
+          requestedStatus: newStatus,
+        },
+
+        metadata: {
+          notes,
+        },
+
+        correlationId,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        result: null,
+        warnings: ["El pedido ya se encontraba en ese estado."],
+        message: "El pedido ya se encontraba en ese estado.",
+      });
+    }
+
+    /*
+     * 3. Ejecutar cambio transaccional.
+     */
     const rpcName =
       newStatus === "cancelled"
         ? "cancel_order_and_sale"
@@ -103,11 +202,19 @@ export async function POST(req: Request) {
             p_notes: notes,
           };
 
-    const { data, error } = await supabaseAdmin.rpc(rpcName, rpcPayload);
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      rpcName,
+      rpcPayload,
+    );
 
-    if (error) {
+    /*
+     * Si el RPC falla, el cambio operacional no ocurrió.
+     * En este caso sí corresponde responder ok: false.
+     */
+    if (rpcError) {
       await recordAuditLogSafely({
-        module: "pos",
+        module: "operations",
+
         action:
           newStatus === "cancelled"
             ? "order.cancel_failed"
@@ -120,11 +227,12 @@ export async function POST(req: Request) {
         actorIdentifier: null,
 
         result: "failure",
-        reason: error.message,
+        reason: rpcError.message,
 
         previousState: {
           status: currentOrder.status,
           saleId: currentOrder.sale_id,
+          displayOrderCode: currentOrder.display_order_code,
         },
 
         newState: {
@@ -138,18 +246,25 @@ export async function POST(req: Request) {
 
         correlationId,
       });
+
       return NextResponse.json(
-        { ok: false, message: error.message },
+        {
+          ok: false,
+          message: rpcError.message,
+        },
         { status: 400 },
       );
     }
 
-    const auditAction =
-      newStatus === "cancelled" ? "order.cancelled" : "order.status_changed";
-
+    /*
+     * Desde este punto, el cambio ya ocurrió.
+     * Cualquier problema posterior debe convertirse en warning.
+     */
     await recordAuditLogSafely({
-      module: "pos",
-      action: auditAction,
+      module: "operations",
+
+      action:
+        newStatus === "cancelled" ? "order.cancelled" : "order.status_changed",
 
       entityType: "order",
       entityId: orderId,
@@ -177,32 +292,27 @@ export async function POST(req: Request) {
       },
 
       correlationId,
-
-      idempotencyKey: buildAuditIdempotencyKey([
-        "audit",
-        "order",
-        orderId,
-        currentOrder.status,
-        newStatus,
-      ]),
     });
 
+    /*
+     * 4. Procesamiento posterior exclusivo de entregas.
+     */
     if (newStatus === "delivered") {
       const { data: deliveredOrder, error: deliveredOrderError } =
         await supabaseAdmin
           .from("orders")
           .select(
             `
-        id,
-        sale_id,
-        delivered_at,
-        sales (
-          id,
-          customer_id,
-          channel,
-          external_order_id
-        )
-      `,
+            id,
+            sale_id,
+            delivered_at,
+            sales (
+              id,
+              customer_id,
+              channel,
+              external_order_id
+            )
+          `,
           )
           .eq("id", orderId)
           .single();
@@ -213,320 +323,310 @@ export async function POST(req: Request) {
           deliveredOrderError,
         );
 
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El pedido fue entregado, pero no se pudo completar su trazabilidad.",
-          },
-          { status: 500 },
+        warnings.push(
+          "El pedido fue entregado, pero su procesamiento posterior quedó pendiente de revisión.",
         );
-      }
+      } else {
+        const saleRelation = Array.isArray(deliveredOrder.sales)
+          ? deliveredOrder.sales[0] || null
+          : deliveredOrder.sales || null;
 
-      const saleRelation = Array.isArray(deliveredOrder.sales)
-        ? deliveredOrder.sales[0] || null
-        : deliveredOrder.sales || null;
+        const saleId = Number(deliveredOrder.sale_id || saleRelation?.id);
 
-      const saleId = Number(deliveredOrder.sale_id || saleRelation?.id);
+        const customerId =
+          saleRelation?.customer_id === null ||
+          saleRelation?.customer_id === undefined
+            ? null
+            : Number(saleRelation.customer_id);
 
-      const customerId =
-        saleRelation?.customer_id === null ||
-        saleRelation?.customer_id === undefined
-          ? null
-          : Number(saleRelation.customer_id);
+        if (!Number.isInteger(saleId) || saleId <= 0) {
+          console.error("Pedido entregado sin sale_id válido:", deliveredOrder);
 
-      if (!Number.isInteger(saleId) || saleId <= 0) {
-        console.error("Pedido entregado sin sale_id válido:", deliveredOrder);
-
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El pedido fue entregado, pero no se pudo identificar su venta.",
-          },
-          { status: 500 },
-        );
-      }
-
-      const deliveredAt =
-        deliveredOrder.delivered_at || new Date().toISOString();
-
-      /*
-       * 1. Registrar el hecho transversal de entrega.
-       */
-      try {
-        await recordCustomerEvent({
-          customerId,
-          eventType: "sale.delivered",
-          sourceModule: "operations",
-          sourceEntityType: "order",
-          sourceEntityId: orderId,
-          saleId,
-          actorRole: session.role,
-          occurredAt: deliveredAt,
-          idempotencyKey: buildCustomerEventIdempotencyKey([
-            "sale-delivered",
-            saleId,
-          ]),
-          metadata: {
-            orderId,
-            channel: saleRelation?.channel || null,
-            externalOrderId: saleRelation?.external_order_id || null,
-            notes,
-          },
-        });
-      } catch (eventError) {
-        console.error(
-          "Pedido entregado, pero falló sale.delivered:",
-          eventError,
-        );
-
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El pedido fue entregado, pero no se pudo registrar su evento.",
-          },
-          { status: 500 },
-        );
-      }
-
-      /*
-       * 2. Reconstruir la proyección diaria únicamente cuando
-       *    la venta ya tiene un cliente identificado.
-       *
-       * Si no tiene cliente, la venta podrá recalcularse cuando se
-       * asigne posteriormente desde el historial.
-       */
-      if (
-        customerId !== null &&
-        Number.isInteger(customerId) &&
-        customerId > 0
-      ) {
-        try {
-          const businessDate = getBusinessDateInTimezone({
-            value: deliveredAt,
-            timezone: "America/Santiago",
-          });
-
-          const projection = await rebuildDailyLoyaltyProjection({
-            customerId,
-            businessDate,
-            policyCode: "LOYALTY_POLICY_V1",
-            policyVersion: 1,
-            recalculationReason: "sale.delivered",
-          });
+          warnings.push(
+            "El pedido fue entregado, pero no se pudo identificar su venta para completar la trazabilidad.",
+          );
+        } else {
+          const deliveredAt =
+            deliveredOrder.delivered_at || new Date().toISOString();
 
           /*
-           * 1. Acreditar solo la diferencia positiva calculada para el día.
+           * 4.1 Registrar evento transversal.
            */
-          if (projection.pendingStampDelta > 0) {
-            const application = await applyDailyLoyaltyCredit({
-              dailyLoyaltyId: projection.dailyLoyaltyId,
-              actorRole: session.role,
-              reason: "Acreditación automática por venta entregada.",
-            });
-
-            if (!application.applied && application.appliedDelta > 0) {
-              warnings.push(
-                "La venta fue entregada, pero los sellos no pudieron acreditarse automáticamente.",
-              );
-            }
-          }
-
-          /*
-           * 2. Convertir cualquier grupo completo de siete sellos.
-           *
-           * Se ejecuta incluso si esta venta no generó una diferencia
-           * positiva, porque podría existir un saldo pendiente de
-           * conversión proveniente de una operación anterior.
-           */
-          let conversion;
-
           try {
-            conversion = await convertLoyaltyStampsToRewards({
+            await recordCustomerEvent({
               customerId,
+              eventType: "sale.delivered",
+
+              sourceModule: "operations",
+              sourceEntityType: "order",
+              sourceEntityId: orderId,
+
+              saleId,
               actorRole: session.role,
-              reason: "Conversión automática posterior a una venta entregada.",
-            });
-          } catch (conversionError) {
-            console.error(
-              "Los sellos fueron procesados, pero falló la conversión en premios:",
-              {
-                orderId,
+              occurredAt: deliveredAt,
+
+              idempotencyKey: buildCustomerEventIdempotencyKey([
+                "sale-delivered",
                 saleId,
-                customerId,
-                businessDate,
-                error: conversionError,
+              ]),
+
+              metadata: {
+                orderId,
+                channel: saleRelation?.channel || null,
+                externalOrderId: saleRelation?.external_order_id || null,
+                notes,
               },
+            });
+          } catch (eventError) {
+            console.error(
+              "Pedido entregado, pero falló sale.delivered:",
+              eventError,
             );
 
             warnings.push(
-              "Los sellos fueron procesados, pero la generación del premio quedó pendiente de revisión.",
+              "El pedido fue entregado, pero su evento de trazabilidad quedó pendiente de revisión.",
             );
           }
 
           /*
-           * 3. Notificar los premios emitidos.
-           *
-           * El correo no forma parte de la transacción del beneficio.
-           * Si falla, el premio sigue activo y disponible para canje.
+           * 4.2 Procesar fidelización únicamente
+           * cuando existe cliente identificado.
            */
           if (
-            conversion?.converted &&
-            conversion.rewardsIssued > 0 &&
-            conversion.rewardIds.length > 0
+            customerId !== null &&
+            Number.isInteger(customerId) &&
+            customerId > 0
           ) {
             try {
-              const { data: customer, error: customerError } =
-                await supabaseAdmin
-                  .from("clientes")
-                  .select(
-                    `
-          id,
-          nombre,
-          correo,
-          public_token
-        `,
-                  )
-                  .eq("id", customerId)
-                  .single();
+              const businessDate = getBusinessDateInTimezone({
+                value: deliveredAt,
+                timezone: "America/Santiago",
+              });
 
-              if (customerError || !customer) {
+              const projection = await rebuildDailyLoyaltyProjection({
+                customerId,
+                businessDate,
+                policyCode: "LOYALTY_POLICY_V1",
+                policyVersion: 1,
+                recalculationReason: "sale.delivered",
+              });
+
+              /*
+               * 4.2.1 Acreditar diferencia positiva.
+               */
+              if (projection.pendingStampDelta > 0) {
+                const application = await applyDailyLoyaltyCredit({
+                  dailyLoyaltyId: projection.dailyLoyaltyId,
+
+                  actorRole: session.role,
+
+                  reason: "Acreditación automática por venta entregada.",
+                });
+
+                if (!application.applied) {
+                  warnings.push(
+                    "La venta fue entregada, pero los sellos no pudieron acreditarse automáticamente.",
+                  );
+                }
+              }
+
+              /*
+               * 4.2.2 Convertir sellos en premios.
+               */
+              let conversion:
+                | Awaited<ReturnType<typeof convertLoyaltyStampsToRewards>>
+                | undefined;
+
+              try {
+                conversion = await convertLoyaltyStampsToRewards({
+                  customerId,
+                  actorRole: session.role,
+                  reason:
+                    "Conversión automática posterior a una venta entregada.",
+                });
+              } catch (conversionError) {
                 console.error(
-                  "Premio generado, pero no se pudo cargar el cliente para notificar:",
-                  customerError,
+                  "Los sellos fueron procesados, pero falló la conversión en premios:",
+                  {
+                    orderId,
+                    saleId,
+                    customerId,
+                    businessDate,
+                    error: conversionError,
+                  },
                 );
 
                 warnings.push(
-                  "El premio fue generado correctamente, pero no se pudo preparar su correo.",
+                  "Los sellos fueron procesados, pero la generación del premio quedó pendiente de revisión.",
                 );
-              } else {
-                const { data: issuedRewards, error: rewardsError } =
-                  await supabaseAdmin
-                    .from("customer_rewards")
-                    .select(
-                      `
-            id,
-            name,
-            expires_at
-          `,
-                    )
-                    .in("id", conversion.rewardIds)
-                    .order("id", { ascending: true });
+              }
 
-                if (rewardsError) {
-                  console.error(
-                    "Premios generados, pero no se pudieron cargar para notificar:",
-                    rewardsError,
-                  );
+              /*
+               * 4.2.3 Notificar premios emitidos.
+               *
+               * El correo nunca invalida el premio.
+               */
+              if (
+                conversion?.converted &&
+                conversion.rewardsIssued > 0 &&
+                conversion.rewardIds.length > 0
+              ) {
+                try {
+                  const { data: customer, error: customerError } =
+                    await supabaseAdmin
+                      .from("clientes")
+                      .select(
+                        `
+                        id,
+                        nombre,
+                        correo,
+                        public_token
+                      `,
+                      )
+                      .eq("id", customerId)
+                      .single();
 
-                  warnings.push(
-                    "Los premios fueron generados, pero no se pudo preparar su notificación.",
-                  );
-                } else {
-                  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
-                    /\/$/,
-                    "",
-                  );
-
-                  if (!baseUrl) {
+                  if (customerError || !customer) {
                     console.error(
-                      "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de premios.",
+                      "Premio generado, pero no se pudo cargar el cliente para notificar:",
+                      customerError,
                     );
 
                     warnings.push(
-                      "Los premios fueron generados, pero el correo no pudo enviarse por configuración.",
+                      "El premio fue generado correctamente, pero no se pudo preparar su correo.",
                     );
                   } else {
-                    const emailResults = await Promise.allSettled(
-                      (issuedRewards || []).map(async (reward) => {
-                        const emailResponse = await fetch(
-                          `${baseUrl}/api/send-prize`,
-                          {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              email: customer.correo,
-                              nombre: customer.nombre,
-                              premioNombre:
-                                reward.name || "Helado simple gratis",
-                              vencimiento: reward.expires_at,
-                              publicToken: customer.public_token,
-                            }),
-                          },
-                        );
+                    const { data: issuedRewards, error: rewardsError } =
+                      await supabaseAdmin
+                        .from("customer_rewards")
+                        .select(
+                          `
+                          id,
+                          name,
+                          expires_at
+                        `,
+                        )
+                        .in("id", conversion.rewardIds)
+                        .order("id", {
+                          ascending: true,
+                        });
 
-                        if (!emailResponse.ok) {
-                          throw new Error(
-                            `El correo del premio ${reward.id} respondió ${emailResponse.status}.`,
-                          );
-                        }
-
-                        return reward.id;
-                      }),
-                    );
-
-                    const failedEmails = emailResults.filter(
-                      (result) => result.status === "rejected",
-                    );
-
-                    if (failedEmails.length > 0) {
+                    if (rewardsError) {
                       console.error(
-                        "Uno o más correos de premio no pudieron enviarse:",
-                        failedEmails,
+                        "Premios generados, pero no se pudieron cargar para notificar:",
+                        rewardsError,
                       );
 
                       warnings.push(
-                        conversion.rewardsIssued === 1
-                          ? "El premio fue generado, pero su correo no pudo enviarse."
-                          : "Los premios fueron generados, pero uno o más correos no pudieron enviarse.",
+                        "Los premios fueron generados, pero no se pudo preparar su notificación.",
                       );
+                    } else {
+                      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
+                        /\/$/,
+                        "",
+                      );
+
+                      if (!baseUrl) {
+                        console.error(
+                          "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de premios.",
+                        );
+
+                        warnings.push(
+                          "Los premios fueron generados, pero el correo no pudo enviarse por configuración.",
+                        );
+                      } else {
+                        const emailResults = await Promise.allSettled(
+                          (issuedRewards || []).map(async (reward) => {
+                            const emailResponse = await fetch(
+                              `${baseUrl}/api/send-prize`,
+                              {
+                                method: "POST",
+
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+
+                                body: JSON.stringify({
+                                  email: customer.correo,
+
+                                  nombre: customer.nombre,
+
+                                  premioNombre:
+                                    reward.name || "Helado simple gratis",
+
+                                  vencimiento: reward.expires_at,
+
+                                  publicToken: customer.public_token,
+                                }),
+                              },
+                            );
+
+                            if (!emailResponse.ok) {
+                              throw new Error(
+                                `El correo del premio ${reward.id} respondió ${emailResponse.status}.`,
+                              );
+                            }
+
+                            return reward.id;
+                          }),
+                        );
+
+                        const failedEmails = emailResults.filter(
+                          (result) => result.status === "rejected",
+                        );
+
+                        if (failedEmails.length > 0) {
+                          console.error(
+                            "Uno o más correos de premio no pudieron enviarse:",
+                            failedEmails,
+                          );
+
+                          warnings.push(
+                            conversion.rewardsIssued === 1
+                              ? "El premio fue generado, pero su correo no pudo enviarse."
+                              : "Los premios fueron generados, pero uno o más correos no pudieron enviarse.",
+                          );
+                        }
+                      }
                     }
                   }
+                } catch (emailPreparationError) {
+                  console.error(
+                    "Error inesperado notificando premios:",
+                    emailPreparationError,
+                  );
+
+                  warnings.push(
+                    "El premio fue generado, pero ocurrió un problema al enviar su correo.",
+                  );
                 }
               }
-            } catch (emailPreparationError) {
+            } catch (projectionError) {
               console.error(
-                "Error inesperado notificando premios:",
-                emailPreparationError,
+                "Venta entregada, pero falló la proyección diaria:",
+                {
+                  orderId,
+                  saleId,
+                  customerId,
+                  deliveredAt,
+                  error: projectionError,
+                },
               );
 
               warnings.push(
-                "El premio fue generado, pero ocurrió un problema al enviar su correo.",
+                "La venta fue entregada, pero la proyección de fidelización quedó pendiente de revisión.",
               );
             }
           }
-        } catch (projectionError) {
-          /*
-           * La entrega y su evento ya ocurrieron correctamente.
-           * No devolvemos error operacional ni pedimos repetir la
-           * acción, porque eso podría generar confusión o duplicidad.
-           *
-           * La proyección puede reconstruirse posteriormente desde
-           * sus fuentes transaccionales.
-           */
-          console.error("Venta entregada, pero falló la proyección diaria:", {
-            orderId,
-            saleId,
-            customerId,
-            deliveredAt,
-            error: projectionError,
-          });
-
-          warnings.push(
-            "La venta fue entregada, pero la proyección de fidelización quedó pendiente de revisión.",
-          );
         }
       }
     }
 
     return NextResponse.json({
       ok: true,
-      result: data,
+      result: rpcResult,
       warnings,
+
       message:
         warnings.length > 0
           ? "Estado actualizado con advertencias."
@@ -536,7 +636,10 @@ export async function POST(req: Request) {
     console.error("Error actualizando pedido:", error);
 
     return NextResponse.json(
-      { ok: false, message: "Error inesperado al actualizar pedido." },
+      {
+        ok: false,
+        message: "Error inesperado al actualizar pedido.",
+      },
       { status: 500 },
     );
   }
