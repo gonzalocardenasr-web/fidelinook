@@ -11,6 +11,11 @@ import {
 } from "../../../../../lib/daily-loyalty";
 import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
 import { convertLoyaltyStampsToRewards } from "../../../../../lib/loyalty-rewards";
+import {
+  buildAuditIdempotencyKey,
+  createCorrelationId,
+  recordAuditLogSafely,
+} from "../../../../../lib/audit-logs";
 
 const allowedStatuses = [
   "pending",
@@ -53,6 +58,32 @@ export async function POST(req: Request) {
       );
     }
 
+    const correlationId = createCorrelationId("order-status");
+
+    const { data: currentOrder, error: currentOrderError } = await supabaseAdmin
+      .from("orders")
+      .select(
+        `
+      id,
+      sale_id,
+      status,
+      display_order_code,
+      updated_at
+    `,
+      )
+      .eq("id", orderId)
+      .single();
+
+    if (currentOrderError || !currentOrder) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No se pudo cargar el estado actual del pedido.",
+        },
+        { status: 404 },
+      );
+    }
+
     const rpcName =
       newStatus === "cancelled"
         ? "cancel_order_and_sale"
@@ -75,11 +106,86 @@ export async function POST(req: Request) {
     const { data, error } = await supabaseAdmin.rpc(rpcName, rpcPayload);
 
     if (error) {
+      await recordAuditLogSafely({
+        module: "pos",
+        action:
+          newStatus === "cancelled"
+            ? "order.cancel_failed"
+            : "order.status_change_failed",
+
+        entityType: "order",
+        entityId: orderId,
+
+        actorRole: session.role,
+        actorIdentifier: null,
+
+        result: "failure",
+        reason: error.message,
+
+        previousState: {
+          status: currentOrder.status,
+          saleId: currentOrder.sale_id,
+        },
+
+        newState: {
+          requestedStatus: newStatus,
+        },
+
+        metadata: {
+          notes,
+          rpcName,
+        },
+
+        correlationId,
+      });
       return NextResponse.json(
         { ok: false, message: error.message },
         { status: 400 },
       );
     }
+
+    const auditAction =
+      newStatus === "cancelled" ? "order.cancelled" : "order.status_changed";
+
+    await recordAuditLogSafely({
+      module: "pos",
+      action: auditAction,
+
+      entityType: "order",
+      entityId: orderId,
+
+      actorRole: session.role,
+      actorIdentifier: null,
+
+      result: "success",
+      reason: notes,
+
+      previousState: {
+        status: currentOrder.status,
+        saleId: currentOrder.sale_id,
+        displayOrderCode: currentOrder.display_order_code,
+      },
+
+      newState: {
+        status: newStatus,
+        saleId: currentOrder.sale_id,
+        displayOrderCode: currentOrder.display_order_code,
+      },
+
+      metadata: {
+        rpcName,
+      },
+
+      correlationId,
+
+      idempotencyKey: buildAuditIdempotencyKey([
+        "audit",
+        "order",
+        orderId,
+        currentOrder.status,
+        newStatus,
+      ]),
+    });
 
     if (newStatus === "delivered") {
       const { data: deliveredOrder, error: deliveredOrderError } =

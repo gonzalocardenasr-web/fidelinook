@@ -5,6 +5,11 @@ import {
   buildCustomerEventIdempotencyKey,
   recordCustomerEvent,
 } from "../../../../lib/customer-events";
+import {
+  buildAuditIdempotencyKey,
+  createCorrelationId,
+  recordAuditLogSafely,
+} from "../../../../lib/audit-logs";
 
 function getCreatedSaleId(result: unknown): number | null {
   if (!result) return null;
@@ -419,6 +424,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    const correlationId = createCorrelationId("sale-create");
+
     const orderNotes = String(body.orderNotes || "").trim();
 
     const channel = String(body.channel || "local")
@@ -483,6 +490,29 @@ export async function POST(req: Request) {
     );
 
     if (error) {
+      await recordAuditLogSafely({
+        module: "pos",
+        action: "sale.create_failed",
+
+        entityType: "sale",
+        entityId: null,
+
+        actorRole: session.role,
+        actorIdentifier: null,
+
+        result: "failure",
+        reason: error.message,
+
+        newState: {
+          customerId,
+          channel,
+          externalOrderId: externalOrderId || null,
+          paymentMethod,
+          itemLines: items.length,
+        },
+
+        correlationId,
+      });
       return NextResponse.json(
         { ok: false, message: error.message },
         { status: 400 },
@@ -490,6 +520,41 @@ export async function POST(req: Request) {
     }
 
     const createdSaleId = getCreatedSaleId(data);
+
+    await recordAuditLogSafely({
+      module: "pos",
+      action: "sale.created",
+
+      entityType: "sale",
+      entityId: createdSaleId,
+
+      actorRole: session.role,
+      actorIdentifier: null,
+
+      result: "success",
+
+      newState: {
+        saleId: createdSaleId,
+        customerId,
+        channel,
+        externalOrderId: externalOrderId || null,
+        paymentMethod,
+        itemLines: items.length,
+      },
+
+      metadata: {
+        orderNotes: orderNotes || null,
+        hasCustomer: customerId !== null,
+      },
+
+      correlationId,
+
+      idempotencyKey: buildAuditIdempotencyKey([
+        "audit",
+        "sale-created",
+        createdSaleId,
+      ]),
+    });
 
     if (!createdSaleId) {
       console.error(
