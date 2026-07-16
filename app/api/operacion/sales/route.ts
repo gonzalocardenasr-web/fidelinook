@@ -521,6 +521,22 @@ export async function POST(req: Request) {
 
     const createdSaleId = getCreatedSaleId(data);
 
+    if (!createdSaleId) {
+      console.error(
+        "Venta creada, pero el RPC no entregó un sale_id reconocible:",
+        data,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "La venta fue creada, pero no se pudo identificar su registro.",
+        },
+        { status: 500 },
+      );
+    }
+
     await recordAuditLogSafely({
       module: "pos",
       action: "sale.created",
@@ -556,22 +572,14 @@ export async function POST(req: Request) {
       ]),
     });
 
-    if (!createdSaleId) {
-      console.error(
-        "Venta creada, pero el RPC no entregó un sale_id reconocible:",
-        data,
-      );
+    const warnings: string[] = [];
 
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "La venta fue creada, pero no se pudo identificar su registro.",
-        },
-        { status: 500 },
-      );
-    }
-
+    /*
+     * La venta ya fue creada correctamente.
+     * El registro del evento es trazabilidad secundaria:
+     * si falla, no debemos informar al cajero que la venta falló,
+     * porque eso podría provocar una venta duplicada.
+     */
     try {
       await recordCustomerEvent({
         customerId,
@@ -599,12 +607,8 @@ export async function POST(req: Request) {
         eventError,
       );
 
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "La venta fue creada, pero no se pudo registrar su evento.",
-        },
-        { status: 500 },
+      warnings.push(
+        "La venta fue creada, pero su trazabilidad quedó pendiente de revisión.",
       );
     }
 
@@ -612,12 +616,20 @@ export async function POST(req: Request) {
       ok: true,
       saleId: createdSaleId,
       result: data,
+      warnings,
+      message:
+        warnings.length > 0
+          ? "Venta creada correctamente, con advertencias."
+          : "Venta creada correctamente.",
     });
   } catch (error) {
     console.error("Error creando venta:", error);
 
     return NextResponse.json(
-      { ok: false, message: "Error inesperado al crear la venta." },
+      {
+        ok: false,
+        message: "Error inesperado al crear la venta.",
+      },
       { status: 500 },
     );
   }
