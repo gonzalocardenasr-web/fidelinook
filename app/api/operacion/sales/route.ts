@@ -545,6 +545,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
+      saleId: createdSaleId,
       result: data,
     });
   } catch (error) {

@@ -1471,14 +1471,23 @@ export default function HistorialVentasPage() {
               </section>
             </div>
 
-            <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-neutral-200 bg-white p-3">
+            <footer className="grid shrink-0 grid-cols-3 gap-2 border-t border-neutral-200 bg-white p-3">
               <Link
                 href={`/operacion/ventas/imprimir/${selectedSale.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-center text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
               >
-                Reimprimir
+                Comprobante
+              </Link>
+
+              <Link
+                href={`/operacion/ventas/ticket/${selectedSale.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-center text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
+              >
+                Ticket pedido
               </Link>
 
               <button
