@@ -1,4 +1,6 @@
 import { SaleDocument } from "../../lib/documents/sales/types";
+import Image from "next/image";
+import { SaleDocument } from "../../lib/documents/sales/types";
 
 type Props = {
   document: SaleDocument;
@@ -41,13 +43,16 @@ export default function SaleReceipt80mm({ document }: Props) {
   return (
     <article className="sale-receipt mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">
       <header className="text-center">
-        <p className="text-[22px] font-black leading-none tracking-[0.12em]">
-          NOOK
-        </p>
-
-        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-          Helados &amp; momentos felices
-        </p>
+        <div className="flex justify-center">
+          <Image
+            src="/nook-logo-negro.png"
+            alt="Nook"
+            width={190}
+            height={80}
+            priority
+            className="h-auto w-[42mm] object-contain"
+          />
+        </div>
 
         <div className="my-[3mm] border-t border-dashed border-black" />
 
@@ -63,13 +68,6 @@ export default function SaleReceipt80mm({ document }: Props) {
           <span className="font-bold">Pedido</span>
           <span className="text-right font-black">
             {document.order.displayOrderCode}
-          </span>
-        </div>
-
-        <div className="flex justify-between gap-3">
-          <span className="font-bold">Venta</span>
-          <span className="text-right">
-            {document.saleNumber || `#${document.saleId}`}
           </span>
         </div>
 
@@ -162,21 +160,31 @@ export default function SaleReceipt80mm({ document }: Props) {
       <div className="my-[3mm] border-t border-dashed border-black" />
 
       <section className="space-y-[1mm] text-[10px]">
-        <div className="flex justify-between gap-3">
-          <span>Subtotal</span>
-          <span className="font-bold">{formatMoney(document.subtotal)}</span>
-        </div>
-
         {document.discountTotal > 0 && (
-          <div className="flex justify-between gap-3">
-            <span>Descuentos</span>
-            <span className="font-bold">
-              -{formatMoney(document.discountTotal)}
-            </span>
-          </div>
+          <>
+            <div className="flex justify-between gap-3">
+              <span>Subtotal</span>
+
+              <span className="font-bold">
+                {formatMoney(document.subtotal)}
+              </span>
+            </div>
+
+            <div className="flex justify-between gap-3">
+              <span>Descuentos</span>
+
+              <span className="font-bold">
+                -{formatMoney(document.discountTotal)}
+              </span>
+            </div>
+          </>
         )}
 
-        <div className="mt-[2mm] flex items-end justify-between gap-3 border-t border-black pt-[2mm]">
+        <div
+          className={`flex items-end justify-between gap-3 pt-[2mm] ${
+            document.discountTotal > 0 ? "mt-[2mm] border-t border-black" : ""
+          }`}
+        >
           <span className="text-[12px] font-black uppercase">Total</span>
 
           <span className="text-[17px] font-black">
@@ -200,13 +208,13 @@ export default function SaleReceipt80mm({ document }: Props) {
       <div className="my-[3mm] border-t border-dashed border-black" />
 
       <footer className="text-center text-[9px] leading-tight">
-        <p className="font-bold">Gracias por preferir Nook</p>
-
-        <p className="mt-1">
-          Este documento es un comprobante interno de venta.
+        <p className="font-bold">
+          Gracias por preferir Nook. Esperamos verte pronto! =)
         </p>
 
-        <p className="mt-[2mm] text-[8px]">Venta #{document.saleId}</p>
+        <p className="mt-1">
+          Comprobante interno de venta. Conservalo para cualquier consulta.
+        </p>
       </footer>
     </article>
   );
