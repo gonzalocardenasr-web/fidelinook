@@ -6,35 +6,6 @@ type Props = {
   document: SaleDocument;
 };
 
-function formatOptionNames(
-  options: SaleDocument["items"][number]["options"],
-  groupCodes: string[],
-) {
-  const normalizedCodes = groupCodes.map((code) => code.toLowerCase());
-
-  const names = options
-    .filter((option) =>
-      normalizedCodes.includes(String(option.groupCode || "").toLowerCase()),
-    )
-    .flatMap((option) =>
-      Array.from(
-        {
-          length: Math.max(Number(option.quantity || 1), 1),
-        },
-        () => option.name,
-      ),
-    );
-
-  const counts = names.reduce<Record<string, number>>((acc, name) => {
-    acc[name] = (acc[name] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(counts)
-    .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
-    .join(" + ");
-}
-
 function getDisplayOrderNumber(document: SaleDocument) {
   if (
     document.order.dailyOrderNumber !== null &&
@@ -52,132 +23,169 @@ function getDisplayOrderNumber(document: SaleDocument) {
   return document.order.displayOrderCode;
 }
 
+function getOrderTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("es-CL", {
+    timeZone: "America/Santiago",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function normalizeText(value?: string | null) {
+  return String(value || "").trim();
+}
+
+function getRepeatedOptionNames(
+  options: SaleDocument["items"][number]["options"],
+) {
+  const expandedNames = options.flatMap((option) => {
+    const name = normalizeText(option.name);
+
+    if (!name) return [];
+
+    return Array.from(
+      {
+        length: Math.max(Number(option.quantity || 1), 1),
+      },
+      () => name,
+    );
+  });
+
+  const counts = expandedNames.reduce<Record<string, number>>(
+    (accumulator, name) => {
+      accumulator[name] = (accumulator[name] || 0) + 1;
+      return accumulator;
+    },
+    {},
+  );
+
+  return Object.entries(counts).map(([name, count]) =>
+    count > 1 ? `${name} x${count}` : name,
+  );
+}
+
+function getNoteParts(notes?: string | null) {
+  const normalized = normalizeText(notes);
+
+  if (!normalized) return [];
+
+  return normalized
+    .split("·")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function removeRepeatedValues(values: string[]) {
+  const seen = new Set<string>();
+
+  return values.filter((value) => {
+    const comparisonKey = value.toLocaleLowerCase("es-CL");
+
+    if (seen.has(comparisonKey)) {
+      return false;
+    }
+
+    seen.add(comparisonKey);
+    return true;
+  });
+}
+
+function getItemAdditions(item: SaleDocument["items"][number]) {
+  /*
+   * El ticket no distingue visualmente entre sabores,
+   * toppings, baños, formatos u otros extras.
+   *
+   * Todo se presenta como configuración del producto principal.
+   *
+   * Los helados simple y doble no mostrarán sabores porque
+   * el POS no registra esa selección.
+   *
+   * El pote mixto sí mostrará los sabores realmente guardados
+   * en sale_item_options.
+   *
+   * Los potes armados normalmente no requieren configuraciones:
+   * su composición ya está expresada en el nombre del producto.
+   */
+  const optionNames = getRepeatedOptionNames(item.options);
+  const noteParts = getNoteParts(item.notes);
+
+  return removeRepeatedValues([...optionNames, ...noteParts]);
+}
+
+function formatItemLine(item: SaleDocument["items"][number]) {
+  const additions = getItemAdditions(item);
+  const baseLabel = `${item.quantity}x ${item.name}`;
+
+  if (additions.length === 0) {
+    return baseLabel;
+  }
+
+  return `${baseLabel} (${additions.join(", ")})`;
+}
+
 export default function CustomerOrderTicket80mm({ document }: Props) {
   const displayOrderNumber = getDisplayOrderNumber(document);
+  const orderTime = getOrderTime(document.confirmedAt);
 
   return (
-    <article className="customer-order-ticket mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">
-      <header className="text-center">
-        <div className="flex h-[17mm] items-center justify-center overflow-hidden">
+    <article className="customer-order-ticket mx-auto w-[72mm] bg-white px-[2mm] py-[1.5mm] font-sans text-black">
+      <header>
+        <div className="flex h-[10mm] items-center justify-center overflow-hidden">
           <Image
             src="/nook-logo-negro.png"
             alt="Nook"
-            width={190}
-            height={80}
+            width={150}
+            height={60}
             priority
-            className="block h-auto w-[42mm] object-contain"
+            className="block h-auto w-[29mm] object-contain"
           />
         </div>
 
-        <div className="mb-[3mm] mt-[1mm] border-t border-dashed border-black" />
+        <div className="mt-[0.5mm] border-t border-dashed border-black" />
 
-        <p className="text-[11px] font-black uppercase tracking-wide">
-          Tu número de pedido
-        </p>
+        <div className="flex items-end justify-between gap-3 py-[1.5mm]">
+          <p className="text-[30px] font-black leading-none tracking-tight">
+            {displayOrderNumber}
+          </p>
 
-        <p className="mt-[1mm] text-[38px] font-black leading-none tracking-tight">
-          {displayOrderNumber}
-        </p>
+          {orderTime && (
+            <p className="pb-[1mm] text-[10px] font-bold leading-none">
+              {orderTime}
+            </p>
+          )}
+        </div>
 
-        <p className="mt-[2mm] text-[9px] leading-tight">
-          {document.confirmedAtChile}
-        </p>
+        <div className="border-t border-dashed border-black" />
       </header>
 
-      <div className="my-[3mm] border-t border-dashed border-black" />
-
-      <section className="space-y-[1mm] text-[10px] leading-tight">
-        <div className="flex justify-between gap-3">
-          <span className="font-bold">Canal</span>
-
-          <span className="text-right">{document.channelLabel}</span>
+      <section className="py-[1.5mm]">
+        <div className="space-y-[1.3mm]">
+          {document.items.map((item) => (
+            <p key={item.id} className="text-[10px] font-bold leading-[1.2]">
+              {formatItemLine(item)}
+            </p>
+          ))}
         </div>
 
-        {document.externalOrderId && (
-          <div className="flex justify-between gap-3">
-            <span className="font-bold">Referencia</span>
-
-            <span className="max-w-[44mm] break-words text-right">
-              {document.externalOrderId}
-            </span>
-          </div>
+        {document.order.notes && (
+          <p className="mt-[1.5mm] text-[9px] leading-[1.2]">
+            <span className="font-black">Nota:</span> {document.order.notes}
+          </p>
         )}
-
-        <div className="flex justify-between gap-3">
-          <span className="font-bold">Cliente</span>
-
-          <span className="max-w-[44mm] break-words text-right">
-            {document.customer.name}
-          </span>
-        </div>
       </section>
 
-      <div className="my-[3mm] border-t border-dashed border-black" />
+      <div className="border-t border-dashed border-black" />
 
-      <section>
-        <p className="mb-[2mm] text-[9px] font-black uppercase">Tu pedido</p>
-
-        <div className="space-y-[3mm]">
-          {document.items.map((item) => {
-            const flavors = formatOptionNames(item.options, [
-              "flavor",
-              "sabor",
-            ]);
-
-            const toppings = formatOptionNames(item.options, [
-              "topping",
-              "toppings",
-            ]);
-
-            return (
-              <div key={item.id} className="text-[10px] leading-tight">
-                <p className="font-black">
-                  {item.quantity}x {item.name}
-                </p>
-
-                {flavors && (
-                  <p className="mt-[0.8mm] pl-[3mm] text-[9px]">
-                    Sabores: {flavors}
-                  </p>
-                )}
-
-                {toppings && (
-                  <p className="mt-[0.8mm] pl-[3mm] text-[9px]">
-                    Toppings: {toppings}
-                  </p>
-                )}
-
-                {item.notes && (
-                  <p className="mt-[0.8mm] pl-[3mm] text-[9px]">{item.notes}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {document.order.notes && (
-        <>
-          <div className="my-[3mm] border-t border-dashed border-black" />
-
-          <section className="text-[9px] leading-tight">
-            <p className="font-black uppercase">Observación</p>
-
-            <p className="mt-1">{document.order.notes}</p>
-          </section>
-        </>
-      )}
-
-      <div className="my-[3mm] border-t border-dashed border-black" />
-
-      <footer className="text-center text-[9px] leading-tight">
-        <p className="font-black">Conserva este ticket</p>
-
-        <p className="mt-1">
-          Te llamaremos por tu número cuando el pedido esté listo.
+      <footer className="py-[1.5mm] text-center">
+        <p className="text-[9px] font-black leading-tight">
+          Te llamaremos por este número cuando esté listo.
         </p>
-
-        <p className="mt-[2mm] font-bold">Gracias por preferir Nook. =)</p>
       </footer>
     </article>
   );
