@@ -12,6 +12,7 @@ import POSLayout from "../../../../components/pos/POSLayout";
 import POSContextPanel from "../../../../components/pos/POSContextPanel";
 import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
 import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
+import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
 
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -34,6 +35,8 @@ export default function NuevaVentaPage() {
   const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
     null,
   );
+
+  const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
 
   useEffect(() => {
     cargarCatalogo();
@@ -537,87 +540,95 @@ export default function NuevaVentaPage() {
   }
 
   return (
-    <POSLayout
-      title={channel === "local" ? "Venta local" : "Pedido digital"}
-      subtitle={
-        channel === "local"
-          ? "POS Operacional Nook"
-          : "Ingreso manual multicanal"
-      }
-      center={
-        <div
-          className={
-            configuringProduct
-              ? "grid h-full min-h-0 grid-cols-[minmax(280px,0.85fr)_minmax(360px,1.15fr)] gap-2"
-              : "grid h-full min-h-0 grid-cols-1 gap-2"
-          }
-        >
-          <ProductGrid
-            products={filteredProducts}
-            loading={loading}
-            getPrice={getPrice}
-            onAdd={addProduct}
-            search={productSearch}
-            onSearchChange={setProductSearch}
-            compact={Boolean(configuringProduct)}
-          />
-
-          {configuringProduct && (
-            <ProductConfigurator
-              product={configuringProduct}
-              editingItem={editingItem}
-              flavors={flavors}
-              toppings={toppings}
+    <>
+      <POSLayout
+        title={channel === "local" ? "Venta local" : "Pedido digital"}
+        subtitle={
+          channel === "local"
+            ? "POS Operacional Nook"
+            : "Ingreso manual multicanal"
+        }
+        center={
+          <div
+            className={
+              configuringProduct
+                ? "grid h-full min-h-0 grid-cols-[minmax(280px,0.85fr)_minmax(360px,1.15fr)] gap-2"
+                : "grid h-full min-h-0 grid-cols-1 gap-2"
+            }
+          >
+            <ProductGrid
+              products={filteredProducts}
+              loading={loading}
               getPrice={getPrice}
-              onCancel={() => {
-                setConfiguringProduct(null);
-                setEditingItem(null);
-              }}
-              onAddConfigured={addConfiguredProduct}
-              onUpdateConfigured={updateConfiguredProduct}
+              onAdd={addProduct}
+              search={productSearch}
+              onSearchChange={setProductSearch}
+              compact={Boolean(configuringProduct)}
             />
-          )}
-        </div>
-      }
-      right={
-        <OrderBuilder
-          cart={cart}
-          flavors={flavors}
-          toppings={toppings}
-          selectedCliente={selectedCliente}
-          paymentMethod={paymentMethod}
-          orderNotes={orderNotes}
-          clienteSelectorResetKey={clienteSelectorResetKey}
-          total={total}
-          saving={saving}
-          getPrice={getPrice}
-          onClienteChange={setSelectedCliente}
-          onPaymentMethodChange={setPaymentMethod}
-          onOrderNotesChange={setOrderNotes}
-          onRemoveItem={removeItem}
-          onUpdateItem={updateItem}
-          onToggleFlavor={toggleFlavor}
-          onToggleTopping={toggleTopping}
-          onRemoveFlavorSelection={removeFlavorSelection}
-          onConfirm={confirmarVenta}
-          onDuplicateItem={duplicateItem}
-          onReconfigureItem={reconfigureItem}
-        />
-      }
-      context={
-        <POSContextPanel
-          selectedCliente={selectedCliente}
-          cart={cart}
-          total={total}
-          message={message}
-          onClienteChange={setSelectedCliente}
-          clienteSelectorResetKey={clienteSelectorResetKey}
-          channel={channel}
-          externalOrderId={externalOrderId}
-          onChannelChange={setChannel}
-          onExternalOrderIdChange={setExternalOrderId}
-        />
-      }
-    />
+
+            {configuringProduct && (
+              <ProductConfigurator
+                product={configuringProduct}
+                editingItem={editingItem}
+                flavors={flavors}
+                toppings={toppings}
+                getPrice={getPrice}
+                onCancel={() => {
+                  setConfiguringProduct(null);
+                  setEditingItem(null);
+                }}
+                onAddConfigured={addConfiguredProduct}
+                onUpdateConfigured={updateConfiguredProduct}
+              />
+            )}
+          </div>
+        }
+        right={
+          <OrderBuilder
+            cart={cart}
+            flavors={flavors}
+            toppings={toppings}
+            selectedCliente={selectedCliente}
+            paymentMethod={paymentMethod}
+            orderNotes={orderNotes}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            total={total}
+            saving={saving}
+            getPrice={getPrice}
+            onClienteChange={setSelectedCliente}
+            onPaymentMethodChange={setPaymentMethod}
+            onOrderNotesChange={setOrderNotes}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
+            onToggleFlavor={toggleFlavor}
+            onToggleTopping={toggleTopping}
+            onRemoveFlavorSelection={removeFlavorSelection}
+            onConfirm={confirmarVenta}
+            onDuplicateItem={duplicateItem}
+            onReconfigureItem={reconfigureItem}
+          />
+        }
+        context={
+          <POSContextPanel
+            selectedCliente={selectedCliente}
+            cart={cart}
+            total={total}
+            message={message}
+            onClienteChange={setSelectedCliente}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            channel={channel}
+            externalOrderId={externalOrderId}
+            onChannelChange={setChannel}
+            onExternalOrderIdChange={setExternalOrderId}
+            onOpenCustomMessage={() => setCustomMessageModalOpen(true)}
+          />
+        }
+      />
+
+      <CustomMessagePrintModal
+        open={customMessageModalOpen}
+        onClose={() => setCustomMessageModalOpen(false)}
+      />
+    </>
   );
 }

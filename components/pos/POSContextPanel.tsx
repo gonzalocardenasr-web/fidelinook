@@ -15,6 +15,7 @@ type Props = {
   externalOrderId: string;
   onChannelChange: (channel: SalesChannel) => void;
   onExternalOrderIdChange: (value: string) => void;
+  onOpenCustomMessage: () => void;
 };
 
 export default function POSContextPanel({
@@ -28,6 +29,7 @@ export default function POSContextPanel({
   externalOrderId,
   onChannelChange,
   onExternalOrderIdChange,
+  onOpenCustomMessage,
 }: Props) {
   const premiosActivos = Array.isArray(selectedCliente?.premios)
     ? selectedCliente.premios.filter(
@@ -149,6 +151,16 @@ export default function POSContextPanel({
             </span>
           </div>
         </div>
+      </section>
+
+      <section className="mt-2 shrink-0">
+        <button
+          type="button"
+          onClick={onOpenCustomMessage}
+          className="w-full cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
+        >
+          Mensaje personalizado
+        </button>
       </section>
 
       <div className="mt-2 min-h-0 flex-1">
