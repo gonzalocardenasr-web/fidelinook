@@ -261,6 +261,10 @@ export default function HistorialVentasPage() {
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(
+    null,
+  );
+
   useEffect(() => {
     cargarVentas();
   }, []);
@@ -765,6 +769,89 @@ export default function HistorialVentasPage() {
     const cleanupTimeout = window.setTimeout(cleanup, 60000);
 
     window.document.body.appendChild(iframe);
+  }
+
+  async function cancelarPedidoSeleccionado() {
+    if (!selectedSale || !selectedOrder) {
+      setMessage("No se pudo identificar el pedido que deseas anular.");
+      return;
+    }
+
+    const cancellableStatuses = ["pending", "preparing", "ready"];
+
+    if (
+      !cancellableStatuses.includes(
+        String(selectedOrder.status || "").toLowerCase(),
+      )
+    ) {
+      setMessage(
+        selectedOrder.status === "delivered"
+          ? "Los pedidos entregados requieren un proceso de devolución y no pueden anularse desde esta acción."
+          : "Este pedido ya no se encuentra disponible para anulación.",
+      );
+      return;
+    }
+
+    const reason = window.prompt(
+      `Indica el motivo de anulación del pedido ${selectedOrder.display_order_code}:`,
+    );
+
+    if (reason === null) {
+      return;
+    }
+
+    const normalizedReason = reason.trim();
+
+    if (!normalizedReason) {
+      setMessage("Debes ingresar un motivo para anular el pedido.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Confirmas la anulación de ${selectedOrder.display_order_code}?\n\nEsta acción cancelará el pedido y la venta asociada.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingOrderId(selectedOrder.id);
+      setMessage("");
+
+      const res = await fetch("/api/operacion/orders/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: selectedOrder.id,
+          newStatus: "cancelled",
+          notes: normalizedReason,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo anular el pedido.");
+        return;
+      }
+
+      setSelectedSale(null);
+
+      await cargarVentas(page);
+
+      setMessage(
+        `Pedido ${selectedOrder.display_order_code} anulado correctamente.`,
+      );
+    } catch (error) {
+      console.error("Error anulando pedido:", error);
+
+      setMessage("Ocurrió un error inesperado al anular el pedido.");
+    } finally {
+      setCancellingOrderId(null);
+    }
   }
 
   return (
@@ -1572,11 +1659,26 @@ export default function HistorialVentasPage() {
 
               <button
                 type="button"
-                disabled
-                title="Disponible en un desarrollo posterior"
-                className="cursor-not-allowed rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-2 text-[10px] font-bold text-neutral-400"
+                onClick={cancelarPedidoSeleccionado}
+                disabled={
+                  !selectedOrder ||
+                  !["pending", "preparing", "ready"].includes(
+                    String(selectedOrder?.status || "").toLowerCase(),
+                  ) ||
+                  cancellingOrderId === selectedOrder?.id
+                }
+                title={
+                  selectedOrder?.status === "delivered"
+                    ? "Los pedidos entregados requieren una devolución auditada."
+                    : selectedOrder?.status === "cancelled"
+                      ? "El pedido ya está cancelado."
+                      : "Anular pedido y venta."
+                }
+                className="cursor-pointer rounded-lg border border-red-200 bg-red-50 px-2 py-2 text-[10px] font-black text-red-700 transition hover:border-red-300 hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400"
               >
-                Anular
+                {cancellingOrderId === selectedOrder?.id
+                  ? "Anulando..."
+                  : "Anular"}
               </button>
             </footer>
           </aside>
