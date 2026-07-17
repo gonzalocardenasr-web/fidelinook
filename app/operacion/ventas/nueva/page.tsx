@@ -381,8 +381,8 @@ export default function NuevaVentaPage() {
         channel,
         externalOrderId: channel === "local" ? null : externalOrderId.trim(),
         paymentMethod,
-        orderNotes,
-        customerId: selectedCliente?.id || null,
+        orderNotes: orderNotes.trim() || null,
+        customerId: selectedCliente?.id ?? null,
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
