@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase";
 
 export type InventoryReceiptListItem = {
   id: number;
@@ -49,8 +49,6 @@ function getSupplierName(supplier: ReceiptRow["suppliers"]): string | null {
 export async function getInventoryReceipts(): Promise<
   InventoryReceiptListItem[]
 > {
-  const supabase = await createClient();
-
   const { data, error } = await supabase
     .from("inventory_transactions")
     .select(
