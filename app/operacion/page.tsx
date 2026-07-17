@@ -701,7 +701,7 @@ export default function OperacionPage() {
 
         <OperationSummary />
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-5">
           <Link
             href="/operacion/ventas/nueva"
             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
@@ -745,6 +745,17 @@ export default function OperacionPage() {
 
             <p className="mt-2 text-sm text-neutral-500">
               Productos, precios y opciones activas.
+            </p>
+          </Link>
+
+          <Link
+            href="/operacion/inventario"
+            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+          >
+            <p className="text-lg font-bold text-neutral-900">Inventario</p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Recepciones, stock y movimientos de productos.
             </p>
           </Link>
         </section>

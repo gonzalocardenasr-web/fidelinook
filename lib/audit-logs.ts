@@ -1,3 +1,7 @@
+import "server-only";
+
+import { randomUUID } from "node:crypto";
+
 import { supabaseAdmin } from "./supabase-admin";
 
 export type AuditResult = "success" | "failure" | "warning";
@@ -36,8 +40,8 @@ type AuditRpcResult = {
   duplicate?: unknown;
 };
 
-function normalizeRequiredText(value: unknown, fieldName: string) {
-  const normalized = String(value || "").trim();
+function normalizeRequiredText(value: unknown, fieldName: string): string {
+  const normalized = String(value ?? "").trim();
 
   if (!normalized) {
     throw new Error(`${fieldName} es obligatorio.`);
@@ -61,12 +65,58 @@ function normalizeEntityId(value: unknown): string | null {
     return null;
   }
 
-  return String(value).trim() || null;
+  const normalized = String(value).trim();
+
+  return normalized || null;
+}
+
+function normalizeAuditResult(value: unknown): AuditResult {
+  const normalized = String(value ?? "success")
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized !== "success" &&
+    normalized !== "failure" &&
+    normalized !== "warning"
+  ) {
+    throw new Error("El resultado de auditoría no es válido.");
+  }
+
+  return normalized;
+}
+
+function normalizeRpcResponse(data: unknown): AuditRpcResult {
+  /*
+   * record_audit_log retorna jsonb y normalmente Supabase
+   * lo entrega como un objeto. Se admite también un arreglo
+   * de una posición para evitar depender del formato exacto
+   * del cliente RPC.
+   */
+  const candidate = Array.isArray(data) ? data[0] : data;
+
+  if (!candidate || typeof candidate !== "object") {
+    throw new Error("La auditoría no entregó una respuesta válida.");
+  }
+
+  return candidate as AuditRpcResult;
+}
+
+function normalizeRpcBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return value.trim().toLowerCase() === "true";
+  }
+
+  return Boolean(value);
 }
 
 export function buildAuditIdempotencyKey(
   parts: Array<string | number | null | undefined>,
-) {
+): string {
   return parts
     .filter(
       (part) =>
@@ -76,14 +126,19 @@ export function buildAuditIdempotencyKey(
     .join(":");
 }
 
-export function createCorrelationId(prefix = "operation") {
-  return `${prefix}:${crypto.randomUUID()}`;
+export function createCorrelationId(prefix = "operation"): string {
+  const normalizedPrefix = normalizeRequiredText(
+    prefix,
+    "El prefijo de correlación",
+  );
+
+  return `${normalizedPrefix}:${randomUUID()}`;
 }
 
 export async function recordAuditLog(
   input: RecordAuditLogInput,
 ): Promise<RecordAuditLogResult> {
-  const { data, error } = await supabaseAdmin.rpc("record_audit_log", {
+  const rpcPayload = {
     p_module: normalizeRequiredText(input.module, "El módulo"),
 
     p_action: normalizeRequiredText(input.action, "La acción"),
@@ -99,32 +154,34 @@ export async function recordAuditLog(
 
     p_actor_identifier: normalizeOptionalText(input.actorIdentifier),
 
-    p_result: input.result || "success",
+    p_result: normalizeAuditResult(input.result),
 
     p_reason: normalizeOptionalText(input.reason),
 
-    p_previous_state: input.previousState || null,
+    p_previous_state: input.previousState ?? null,
 
-    p_new_state: input.newState || null,
+    p_new_state: input.newState ?? null,
 
-    p_metadata: input.metadata || {},
+    p_metadata: input.metadata ?? {},
 
     p_correlation_id: normalizeOptionalText(input.correlationId),
 
     p_idempotency_key: normalizeOptionalText(input.idempotencyKey),
 
     p_occurred_at: normalizeOptionalText(input.occurredAt),
-  });
+  };
+
+  const { data, error } = await supabaseAdmin.rpc(
+    "record_audit_log",
+    rpcPayload,
+  );
 
   if (error) {
     throw new Error(`No se pudo registrar la auditoría: ${error.message}`);
   }
 
-  if (!data || typeof data !== "object") {
-    throw new Error("La auditoría no entregó una respuesta válida.");
-  }
+  const result = normalizeRpcResponse(data);
 
-  const result = data as AuditRpcResult;
   const auditLogId = Number(result.audit_log_id);
 
   if (!Number.isInteger(auditLogId) || auditLogId <= 0) {
@@ -133,14 +190,16 @@ export async function recordAuditLog(
 
   return {
     auditLogId,
-    created: Boolean(result.created),
-    duplicate: Boolean(result.duplicate),
+    created: normalizeRpcBoolean(result.created),
+    duplicate: normalizeRpcBoolean(result.duplicate),
   };
 }
 
 /*
- * La auditoría no debe bloquear una operación principal.
- * Esta variante registra el error y permite continuar.
+ * La auditoría es secundaria respecto de la operación
+ * principal. Un fallo de auditoría se registra en logs,
+ * pero no debe provocar que una venta, entrega o anulación
+ * ya ejecutada sea informada como fallida.
  */
 export async function recordAuditLogSafely(
   input: RecordAuditLogInput,
@@ -152,7 +211,8 @@ export async function recordAuditLogSafely(
       module: input.module,
       action: input.action,
       entityType: input.entityType,
-      entityId: input.entityId,
+      entityId: input.entityId ?? null,
+      correlationId: input.correlationId ?? null,
       error,
     });
 
