@@ -363,6 +363,9 @@ export default function NuevaVentaPage() {
   }
 
   async function confirmarVenta() {
+    if (saving) {
+      return;
+    }
     const error = validarVenta();
 
     if (error) {
@@ -453,24 +456,19 @@ export default function NuevaVentaPage() {
       setExternalOrderId("");
       setClienteSelectorResetKey((current) => current + 1);
 
+      const warnings = Array.isArray(data.warnings)
+        ? data.warnings.filter(
+            (warning: unknown) => typeof warning === "string" && warning.trim(),
+          )
+        : [];
+
       setMessage(
-        `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
-          "Preparando impresión.",
+        warnings.length > 0
+          ? `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              `Preparando impresión. Advertencia: ${warnings.join(" ")}`
+          : `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              "Preparando impresión.",
       );
-
-      setCart([]);
-      setOrderNotes("");
-      setSelectedCliente(null);
-      setChannel("local");
-      setExternalOrderId("");
-      setClienteSelectorResetKey((current) => current + 1);
-
-      if (printWindow && !printWindow.closed) {
-        setMessage(
-          `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
-            "Se abrió la impresión del comprobante y ticket.",
-        );
-      }
     } catch (error) {
       console.error(error);
 
