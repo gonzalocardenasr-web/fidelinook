@@ -31,11 +31,9 @@ export default function POSContextPanel({
   onExternalOrderIdChange,
   onOpenCustomMessage,
 }: Props) {
-  const premiosActivos = Array.isArray(selectedCliente?.premios)
-    ? selectedCliente.premios.filter(
-        (premio: any) => premio.estado === "activo",
-      ).length
-    : 0;
+  const premiosActivos = selectedCliente?.loyalty?.activeRewardsCount ?? 0;
+
+  const sellosDisponibles = selectedCliente?.loyalty?.currentStampBalance ?? 0;
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -88,7 +86,7 @@ export default function POSContextPanel({
                 </span>
 
                 <span className="text-[13px] font-black text-violet-700">
-                  {selectedCliente.sellos ?? 0}
+                  {sellosDisponibles}
                 </span>
               </div>
 
