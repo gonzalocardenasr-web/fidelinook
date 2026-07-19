@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { getCustomerLoyalty } from "../../../../lib/loyalty";
 
 export async function GET(req: Request) {
   const session = await getOperationSession();
@@ -23,9 +24,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseAdmin
     .from("clientes")
-    .select(
-      "id, nombre, correo, telefono, sellos, premios, tarjeta_activa, email_verificado",
-    )
+    .select("id, nombre, correo, telefono, tarjeta_activa, email_verificado")
     .or(
       `nombre.ilike.%${normalized}%,correo.ilike.%${normalized}%,telefono.ilike.%${normalized}%`,
     )
@@ -38,8 +37,29 @@ export async function GET(req: Request) {
     );
   }
 
+  const clientes = await Promise.all(
+    (
+      (data || []) as {
+        id: number;
+        nombre: string | null;
+        correo: string | null;
+        telefono: string | null;
+        tarjeta_activa: boolean | null;
+        email_verificado: boolean | null;
+      }[]
+    ).map(async (cliente) => {
+      const loyalty = await getCustomerLoyalty(cliente.id);
+
+      return {
+        ...cliente,
+        sellos: loyalty.currentStampBalance,
+        premios: loyalty.activeRewards,
+      };
+    }),
+  );
+
   return NextResponse.json({
     ok: true,
-    clientes: data || [],
+    clientes,
   });
 }

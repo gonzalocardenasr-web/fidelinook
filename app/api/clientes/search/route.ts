@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { getCustomerLoyalty } from "../../../../lib/loyalty";
 
 type Cliente = {
   id: number;
   nombre: string | null;
   correo: string | null;
   telefono: string | null;
-  sellos: number | null;
-  premios: unknown;
   tarjeta_activa: boolean | null;
   email_verificado: boolean | null;
 };
@@ -42,9 +41,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseAdmin
     .from("clientes")
-    .select(
-      "id, nombre, correo, telefono, sellos, premios, tarjeta_activa, email_verificado",
-    )
+    .select("id, nombre, correo, telefono, tarjeta_activa, email_verificado")
     .order("nombre", { ascending: true });
 
   if (error) {
@@ -54,19 +51,30 @@ export async function GET(req: Request) {
     );
   }
 
-  const clientes = ((data || []) as Cliente[])
-    .filter((cliente) => {
-      const nombre = normalizarTexto(cliente.nombre);
-      const correo = normalizarTexto(cliente.correo);
-      const telefono = normalizarTexto(cliente.telefono);
+  const clientes = await Promise.all(
+    ((data || []) as Cliente[])
+      .filter((cliente) => {
+        const nombre = normalizarTexto(cliente.nombre);
+        const correo = normalizarTexto(cliente.correo);
+        const telefono = normalizarTexto(cliente.telefono);
 
-      return (
-        nombre.includes(queryNormalizada) ||
-        correo.includes(queryNormalizada) ||
-        telefono.includes(queryNormalizada)
-      );
-    })
-    .slice(0, 10);
+        return (
+          nombre.includes(queryNormalizada) ||
+          correo.includes(queryNormalizada) ||
+          telefono.includes(queryNormalizada)
+        );
+      })
+      .slice(0, 10)
+      .map(async (cliente) => {
+        const loyalty = await getCustomerLoyalty(cliente.id);
+
+        return {
+          ...cliente,
+          sellos: loyalty.currentStampBalance,
+          premios: loyalty.activeRewards,
+        };
+      }),
+  );
 
   return NextResponse.json({
     ok: true,
