@@ -70,6 +70,11 @@ export async function GET(req: Request) {
 
         return {
           ...cliente,
+          loyalty: {
+            currentStampBalance: loyalty.currentStampBalance,
+            activeRewards: loyalty.activeRewards,
+            activeRewardsCount: loyalty.activeRewards.length,
+          },
           sellos: loyalty.currentStampBalance,
           premios: loyalty.activeRewards,
         };

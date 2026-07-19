@@ -2,13 +2,34 @@
 
 import { useEffect, useState } from "react";
 
+type ClienteSelectorReward = {
+  id: number;
+  customerId: number;
+  rewardType: string;
+  name: string;
+  description: string | null;
+  status: "active" | "redeemed" | "expired" | "cancelled";
+  issuedAt: string;
+  expiresAt: string | null;
+  redeemedAt: string | null;
+  cancelledAt: string | null;
+  campaignId: number | null;
+  source: string;
+  sourceReference: string | null;
+  legacyRewardId: string | null;
+  metadata: Record<string, unknown>;
+};
+
 export type ClienteSelectorValue = {
   id: number;
   nombre: string;
   correo?: string | null;
   telefono?: string | null;
-  sellos?: number | null;
-  premios?: any;
+  loyalty?: {
+    currentStampBalance: number;
+    activeRewards: ClienteSelectorReward[];
+    activeRewardsCount: number;
+  };
   tarjeta_activa?: boolean | null;
   email_verificado?: boolean | null;
 };
@@ -90,6 +111,18 @@ export default function ClienteSelector({ value, onChange, resetKey }: Props) {
           <p className="truncate text-[13px] font-black leading-tight text-neutral-900">
             {value.nombre}
           </p>
+
+          {value.loyalty && (
+            <p className="mt-0.5 text-[10px] font-semibold leading-tight text-violet-700">
+              {value.loyalty.currentStampBalance}{" "}
+              {value.loyalty.currentStampBalance === 1 ? "sello" : "sellos"}
+              {" · "}
+              {value.loyalty.activeRewardsCount}{" "}
+              {value.loyalty.activeRewardsCount === 1
+                ? "premio activo"
+                : "premios activos"}
+            </p>
+          )}
         </div>
 
         <button
@@ -163,6 +196,20 @@ export default function ClienteSelector({ value, onChange, resetKey }: Props) {
                   {[cliente.telefono, cliente.correo]
                     .filter(Boolean)
                     .join(" · ")}
+                </p>
+              )}
+
+              {cliente.loyalty && (
+                <p className="mt-1 text-[10px] font-semibold leading-tight text-violet-700">
+                  {cliente.loyalty.currentStampBalance}{" "}
+                  {cliente.loyalty.currentStampBalance === 1
+                    ? "sello"
+                    : "sellos"}
+                  {" · "}
+                  {cliente.loyalty.activeRewardsCount}{" "}
+                  {cliente.loyalty.activeRewardsCount === 1
+                    ? "premio activo"
+                    : "premios activos"}
                 </p>
               )}
             </button>
