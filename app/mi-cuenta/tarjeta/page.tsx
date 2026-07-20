@@ -1,33 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import QRCode from "react-qr-code";
 import ClienteLogoutButton from "../components/ClienteLogoutButton";
-
-type Premio = {
-  id: number | string;
-  nombre: string;
-  descripcion?: string;
-  estado: "activo" | "usado" | "caducado";
-  vencimiento?: string;
-  tipo?: string;
-  campana_id?: number;
-  fecha_canje?: string;
-};
+import type {
+  CustomerLoyaltySummary,
+  CustomerRewardSummary,
+} from "../../../lib/loyalty/customer-loyalty.types";
 
 type Cliente = {
   id: number;
   nombre: string;
   correo: string;
   telefono: string;
-  sellos: number;
-  premios: Premio[] | null;
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
   auth_user_id?: string | null;
+  loyalty?: CustomerLoyaltySummary;
 };
 
 const META_SELLOS = 7;
@@ -47,16 +39,6 @@ function formatearFecha(fecha?: string) {
     minute: "2-digit",
     hour12: true,
   });
-}
-
-function estaVencido(fecha?: string) {
-  if (!fecha) return false;
-
-  const date = new Date(fecha);
-
-  if (Number.isNaN(date.getTime())) return false;
-
-  return date.getTime() < Date.now();
 }
 
 export default function MiTarjetaPage() {
@@ -91,39 +73,46 @@ export default function MiTarjetaPage() {
         return;
       }
 
-      setCliente(data as Cliente);
+      const loyaltyRes = await fetch("/api/mi-cuenta/loyalty", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      const loyaltyData = await loyaltyRes.json();
+
+      if (!loyaltyRes.ok) {
+        setError(
+          loyaltyData.message ?? "No fue posible cargar la fidelización.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      setCliente({
+        ...(data as Cliente),
+        loyalty: loyaltyData.loyalty,
+      });
+
       setLoading(false);
     };
 
     cargarTarjeta();
   }, [router]);
 
-  const premiosActivos = useMemo(() => {
-    if (!cliente || !Array.isArray(cliente.premios)) return [];
-    return cliente.premios.filter(
-      (premio) => premio.estado === "activo" && !estaVencido(premio.vencimiento)
-    );
-  }, [cliente]);
+  const premiosActivos = cliente?.loyalty?.activeRewards ?? [];
 
-  const premiosUsados = useMemo(() => {
-    if (!cliente || !Array.isArray(cliente.premios)) return [];
-    return cliente.premios.filter((premio) => premio.estado === "usado");
-  }, [cliente]);
+  const premiosUsados = cliente?.loyalty?.redeemedRewards ?? [];
 
-  const premiosCaducados = useMemo(() => {
-    if (!cliente || !Array.isArray(cliente.premios)) return [];
-    return cliente.premios.filter(
-      (premio) =>
-        premio.estado === "caducado" ||
-        (premio.estado === "activo" && estaVencido(premio.vencimiento))
-    );
-  }, [cliente]);
+  const premiosCaducados = cliente?.loyalty?.expiredRewards ?? [];
 
-  const sellos = cliente?.sellos ?? 0;
+  const sellos = cliente?.loyalty?.currentStampBalance ?? 0;
   const faltantes = Math.max(META_SELLOS - sellos, 0);
   const premioActivo =
-    premiosActivos.find(
-      (premio) => premio.tipo === "campana" || premio.tipo === "campana_prueba"
+    premiosActivos.find((premio) =>
+      premio.source.toLowerCase().includes("campaign"),
     ) ||
     premiosActivos[0] ||
     null;
@@ -161,26 +150,25 @@ export default function MiTarjetaPage() {
 
   return (
     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
-          <div className="mx-auto max-w-2xl">
-            <div className="overflow-hidden rounded-[28px] bg-white shadow">
-              <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-white/80">
-                      Mi cuenta
-                    </p>
-                    <h1 className="mt-2 text-2xl font-bold leading-tight">
-                      Tu tarjeta
-                    </h1>
-                    <p className="mt-2 text-sm text-white/85">
-                      Consulta tus sellos, premios e historial de canjes
-                    </p>
-                  </div>
-    
-                  <ClienteLogoutButton />
-                  
-                </div>
+      <div className="mx-auto max-w-2xl">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow">
+          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+                  Mi cuenta
+                </p>
+                <h1 className="mt-2 text-2xl font-bold leading-tight">
+                  Tu tarjeta
+                </h1>
+                <p className="mt-2 text-sm text-white/85">
+                  Consulta tus sellos, premios e historial de canjes
+                </p>
               </div>
+
+              <ClienteLogoutButton />
+            </div>
+          </div>
 
           <div className="space-y-6 px-6 py-6">
             <div>
@@ -193,31 +181,31 @@ export default function MiTarjetaPage() {
             </div>
 
             <div>
-                <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
-                    Cliente
-                </p>
-                <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
-                    {cliente.nombre}
-                </h2>
-                <p className="mt-2 text-sm text-neutral-600">{cliente.correo}</p>
-                <p className="text-sm text-neutral-600">{cliente.telefono}</p>
+              <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
+                Cliente
+              </p>
+              <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+                {cliente.nombre}
+              </h2>
+              <p className="mt-2 text-sm text-neutral-600">{cliente.correo}</p>
+              <p className="text-sm text-neutral-600">{cliente.telefono}</p>
             </div>
 
-                <details className="mt-2 rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
-                    <summary className="cursor-pointer list-none text-center text-sm font-semibold uppercase tracking-[0.14em] text-[#4C00F7] hover:opacity-80 transition">
-                        Ver mi código QR
-                    </summary>
+            <details className="mt-2 rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
+              <summary className="cursor-pointer list-none text-center text-sm font-semibold uppercase tracking-[0.14em] text-[#4C00F7] hover:opacity-80 transition">
+                Ver mi código QR
+              </summary>
 
-                    <div className="mt-4">
-                        <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-sm">
-                        <QRCode value={urlTarjeta} size={180} />
-                        </div>
+              <div className="mt-4">
+                <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-sm">
+                  <QRCode value={urlTarjeta} size={180} />
+                </div>
 
-                        <p className="mt-4 text-center text-xs text-neutral-500">
-                        Muéstralo en caja para identificar tu tarjeta
-                        </p>
-                    </div>
-                </details>
+                <p className="mt-4 text-center text-xs text-neutral-500">
+                  Muéstralo en caja para identificar tu tarjeta
+                </p>
+              </div>
+            </details>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 p-5">
               <div className="flex items-center justify-between gap-4">
@@ -260,12 +248,12 @@ export default function MiTarjetaPage() {
                 <p className="mt-2 text-2xl font-bold">🎉 ¡Tienes un premio!</p>
 
                 <p className="mt-2 text-lg leading-7">
-                  {premioActivo.descripcion || premioActivo.nombre}
+                  {premioActivo.description || premioActivo.name}
                 </p>
 
-                {premioActivo.vencimiento && (
+                {premioActivo.expiresAt && (
                   <p className="mt-2 text-sm text-white/80">
-                    Vence: {formatearFecha(premioActivo.vencimiento)}
+                    Vence: {formatearFecha(premioActivo.expiresAt)}
                   </p>
                 )}
 
@@ -275,120 +263,137 @@ export default function MiTarjetaPage() {
               </div>
             )}
           </div>
-        <div className="space-y-4 px-6 pb-6">
+          <div className="space-y-4 px-6 pb-6">
+            <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+                <span>Premios activos ({premiosActivos.length})</span>
+                <span className="text-2xl leading-none group-open:hidden">
+                  +
+                </span>
+                <span className="hidden text-2xl leading-none group-open:inline">
+                  −
+                </span>
+              </summary>
 
-        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            <span>Premios activos ({premiosActivos.length})</span>
-            <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
-          </summary>
+              <div className="border-t border-neutral-200 px-6 py-5">
+                {premiosActivos.length === 0 ? (
+                  <p className="text-neutral-600">No tienes premios activos.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {premiosActivos.map((premio: CustomerRewardSummary) => (
+                      <div
+                        key={premio.id}
+                        className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/35 p-4"
+                      >
+                        <p className="font-semibold text-[#4C00F7]">
+                          {premio.name}
+                        </p>
 
-          <div className="border-t border-neutral-200 px-6 py-5">
-            {premiosActivos.length === 0 ? (
-              <p className="text-neutral-600">No tienes premios activos.</p>
-            ) : (
-              <div className="space-y-3">
-                {premiosActivos.map((premio: Premio) => (
-                  <div
-                    key={premio.id}
-                    className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/35 p-4"
-                  >
-                    <p className="font-semibold text-[#4C00F7]">
-                      {premio.nombre}
-                    </p>
+                        {premio.description && (
+                          <p className="mt-2 text-sm leading-6 text-neutral-700">
+                            {premio.description}
+                          </p>
+                        )}
 
-                    {premio.descripcion && (
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">
-                        {premio.descripcion}
-                      </p>
-                    )}
-
-                    <p className="mt-2 text-sm text-neutral-600">
-                      Estado: activo
-                    </p>
-                    <p className="text-sm text-neutral-600">
-                      Vence: {formatearFecha(premio.vencimiento)}
-                    </p>
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Estado: activo
+                        </p>
+                        <p className="text-sm text-neutral-600">
+                          Vence: {formatearFecha(premio.expiresAt ?? undefined)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
-        </details>
+            </details>
 
-        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            <span>Historial de premios usados ({premiosUsados.length})</span>
-            <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
-          </summary>
+            <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+                <span>
+                  Historial de premios usados ({premiosUsados.length})
+                </span>
+                <span className="text-2xl leading-none group-open:hidden">
+                  +
+                </span>
+                <span className="hidden text-2xl leading-none group-open:inline">
+                  −
+                </span>
+              </summary>
 
-          <div className="border-t border-neutral-200 px-6 py-5">
-            {premiosUsados.length === 0 ? (
-              <p className="text-neutral-600">
-                Todavía no has canjeado premios.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {premiosUsados.map((premio: Premio) => (
-                  <div
-                    key={premio.id}
-                    className="rounded-2xl border border-neutral-200 p-4"
-                  >
-                    <p className="font-semibold text-[#4C00F7]">
-                      {premio.nombre}
-                    </p>                    
+              <div className="border-t border-neutral-200 px-6 py-5">
+                {premiosUsados.length === 0 ? (
+                  <p className="text-neutral-600">
+                    Todavía no has canjeado premios.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {premiosUsados.map((premio: CustomerRewardSummary) => (
+                      <div
+                        key={premio.id}
+                        className="rounded-2xl border border-neutral-200 p-4"
+                      >
+                        <p className="font-semibold text-[#4C00F7]">
+                          {premio.name}
+                        </p>
 
-                    <p className="mt-2 text-sm text-neutral-600">
-                      Estado: usado
-                    </p>
-                    <p className="text-sm text-neutral-600">
-                      Vencía: {formatearFecha(premio.vencimiento)}
-                    </p>
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Estado: usado
+                        </p>
+                        <p className="text-sm text-neutral-600">
+                          Canjeado:{" "}
+                          {formatearFecha(premio.redeemedAt ?? undefined)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
-        </details>
+            </details>
 
-        <details className="group overflow-hidden rounded-[24px] bg-white shadow">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            <span>Historial de premios caducados ({premiosCaducados.length})</span>
-            <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
-          </summary>
+            <details className="group overflow-hidden rounded-[24px] bg-white shadow">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
+                <span>
+                  Historial de premios caducados ({premiosCaducados.length})
+                </span>
+                <span className="text-2xl leading-none group-open:hidden">
+                  +
+                </span>
+                <span className="hidden text-2xl leading-none group-open:inline">
+                  −
+                </span>
+              </summary>
 
-          <div className="border-t border-neutral-200 px-6 py-5">
-            {premiosCaducados.length === 0 ? (
-              <p className="text-neutral-600">
-                No tienes premios caducados.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {premiosCaducados.map((premio: Premio) => (
-                  <div
-                    key={premio.id}
-                    className="rounded-2xl border border-neutral-200 p-4"
-                  >
-                    <p className="font-semibold text-[#4C00F7]">
-                      {premio.nombre}
-                    </p>                    
+              <div className="border-t border-neutral-200 px-6 py-5">
+                {premiosCaducados.length === 0 ? (
+                  <p className="text-neutral-600">
+                    No tienes premios caducados.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {premiosCaducados.map((premio: CustomerRewardSummary) => (
+                      <div
+                        key={premio.id}
+                        className="rounded-2xl border border-neutral-200 p-4"
+                      >
+                        <p className="font-semibold text-[#4C00F7]">
+                          {premio.name}
+                        </p>
 
-                    <p className="mt-2 text-sm text-neutral-600">
-                      Estado: caducado
-                    </p>
-                    <p className="text-sm text-neutral-600">
-                      Venció: {formatearFecha(premio.vencimiento)}
-                    </p>
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Estado: caducado
+                        </p>
+                        <p className="text-sm text-neutral-600">
+                          Venció:{" "}
+                          {formatearFecha(premio.expiresAt ?? undefined)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </details>
           </div>
-        </details>
-        </div>
         </div>
       </div>
     </main>
