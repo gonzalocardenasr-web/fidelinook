@@ -69,7 +69,6 @@ export default function OperacionPage() {
     "info",
   );
   const [cargando, setCargando] = useState(true);
-  const [procesandoCompra, setProcesandoCompra] = useState(false);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
@@ -457,120 +456,6 @@ export default function OperacionPage() {
   const premiosActivos = premiosArray.filter(
     (premio: Premio) => premio.estado === "activo",
   );
-
-  const validarCompra = async () => {
-    if (!cliente) {
-      setTipoMensaje("error");
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setTipoMensaje("error");
-      setMensaje(
-        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.",
-      );
-      return;
-    }
-
-    try {
-      setProcesandoCompra(true);
-      setMensaje("");
-      setTipoMensaje("info");
-
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? cliente.premios
-        : [];
-      const sellosActuales = cliente.sellos ?? 0;
-      const esPrimeraCompraHistorica =
-        sellosActuales === 0 && premiosActuales.length === 0;
-      const sellosAAgregar = esPrimeraCompraHistorica ? 2 : 1;
-      const nuevosSellos = sellosActuales + sellosAAgregar;
-
-      let sellosFinales = nuevosSellos;
-      const premiosFinales = [...premiosActuales];
-      let mensajeFinal = esPrimeraCompraHistorica
-        ? "Primera compra registrada. Se sumaron 2 sellos."
-        : "Compra validada correctamente. Se sumó 1 sello.";
-
-      let premioGenerado: Premio | null = null;
-
-      if (nuevosSellos >= META_SELLOS) {
-        premioGenerado = {
-          id: Date.now(),
-          nombre: "Helado simple gratis",
-          estado: "activo",
-          vencimiento: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-        };
-
-        premiosFinales.push(premioGenerado);
-        sellosFinales = 0;
-        mensajeFinal = `¡Cliente completó ${META_SELLOS} sellos! Premio generado automáticamente.`;
-      }
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          sellos: sellosFinales,
-          premios: premiosFinales,
-          fecha_ultimo_sello: new Date().toISOString(),
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al validar compra:", error);
-        setTipoMensaje("error");
-        setMensaje("Hubo un error al validar la compra.");
-        return;
-      }
-
-      try {
-        if (premioGenerado) {
-          await fetch("/api/send-prize", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: cliente.correo,
-              nombre: cliente.nombre,
-              premioNombre: premioGenerado.nombre,
-              vencimiento: premioGenerado.vencimiento,
-              publicToken: cliente.public_token,
-            }),
-          });
-        } else {
-          await fetch("/api/send-stamp", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: cliente.correo,
-              nombre: cliente.nombre,
-              sellosActuales: nuevosSellos,
-              metaSellos: META_SELLOS,
-              publicToken: cliente.public_token,
-            }),
-          });
-        }
-      } catch (emailError) {
-        console.error("Error enviando correo:", emailError);
-      }
-
-      await cargarDatos(true);
-      setTipoMensaje("success");
-      setMensaje(mensajeFinal);
-    } catch (err) {
-      console.error("Error inesperado al validar compra:", err);
-      setTipoMensaje("error");
-      setMensaje("Ocurrió un error inesperado al validar la compra.");
-    } finally {
-      setProcesandoCompra(false);
-    }
-  };
 
   const canjearPremioPorId = async (premioId: number | string) => {
     if (!cliente) {
@@ -1075,11 +960,9 @@ export default function OperacionPage() {
                   mensaje={mensaje}
                   tipoMensaje={tipoMensaje}
                   setMensaje={setMensaje}
-                  procesandoCompra={procesandoCompra}
                   procesandoCanje={procesandoCanje}
                   reiniciando={false}
                   rol={rol}
-                  validarCompra={validarCompra}
                   canjearPremioPorId={canjearPremioPorId}
                   eliminarClienteSeleccionado={undefined}
                   reiniciarDatos={undefined}

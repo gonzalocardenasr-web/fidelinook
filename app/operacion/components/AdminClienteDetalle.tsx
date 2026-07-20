@@ -31,11 +31,9 @@ type Props = {
   mensaje: string;
   tipoMensaje: "success" | "error" | "info";
   setMensaje: (value: string) => void;
-  procesandoCompra: boolean;
   procesandoCanje: boolean;
   reiniciando: boolean;
   rol: "admin" | "superadmin" | null;
-  validarCompra: () => Promise<void>;
   canjearPremioPorId: (premioId: number | string) => Promise<void>;
   eliminarClienteSeleccionado?: () => void;
   reiniciarDatos?: () => void;
@@ -51,11 +49,9 @@ export default function AdminClienteDetalle({
   mensaje,
   tipoMensaje,
   setMensaje,
-  procesandoCompra,
   procesandoCanje,
   reiniciando,
   rol,
-  validarCompra,
   canjearPremioPorId,
   eliminarClienteSeleccionado,
   reiniciarDatos,
@@ -67,7 +63,7 @@ export default function AdminClienteDetalle({
   const premiosArray = Array.isArray(cliente.premios) ? cliente.premios : [];
 
   const premiosUsados = premiosArray.filter(
-    (premio) => premio.estado === "usado"
+    (premio) => premio.estado === "usado",
   ).length;
 
   const formatearFecha = (fecha?: string | null) => {
@@ -144,12 +140,11 @@ export default function AdminClienteDetalle({
               </p>
               <p className="mt-1 text-xl font-bold text-pink-700">
                 {premiosActivos.length}
-              </p>          
-
-            </div>           
+              </p>
+            </div>
           </div>
         </div>
-        
+
         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
           <p className="mb-3 text-sm font-medium text-neutral-700">
             Premios activos
@@ -215,7 +210,9 @@ export default function AdminClienteDetalle({
         </div>
 
         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-          <p className="mb-3 text-sm font-medium text-neutral-700">QR tarjeta</p>
+          <p className="mb-3 text-sm font-medium text-neutral-700">
+            QR tarjeta
+          </p>
 
           <div className="inline-block rounded-lg bg-white p-3 shadow-sm">
             <QRCode
@@ -271,23 +268,11 @@ export default function AdminClienteDetalle({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4">
-        <button
-          onClick={validarCompra}
-          disabled={
-            procesandoCompra || procesandoCanje || reiniciando || !cliente
-          }
-          className="cursor-pointer rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-white shadow hover:opacity-90 disabled:opacity-60"
-        >
-          {procesandoCompra ? "Validando..." : "Validar compra"}
-        </button>
-        
         {mostrarAccionesAdministrativas && rol === "superadmin" && (
           <>
             <button
               onClick={eliminarClienteSeleccionado}
-              disabled={
-                reiniciando || procesandoCompra || procesandoCanje || !cliente
-              }
+              disabled={reiniciando || procesandoCanje || !cliente}
               className="cursor-pointer rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
             >
               {reiniciando ? "Procesando..." : "Eliminar cliente"}
@@ -295,7 +280,7 @@ export default function AdminClienteDetalle({
 
             <button
               onClick={reiniciarDatos}
-              disabled={reiniciando || procesandoCompra || procesandoCanje}
+              disabled={reiniciando || procesandoCanje}
               className="cursor-pointer rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
               {reiniciando ? "Procesando..." : "Eliminar todos"}
@@ -303,7 +288,7 @@ export default function AdminClienteDetalle({
 
             <button
               onClick={exportarCSV}
-              disabled={reiniciando || procesandoCompra || procesandoCanje}
+              disabled={reiniciando || procesandoCanje}
               className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
             >
               Exportar clientes CSV
@@ -318,14 +303,13 @@ export default function AdminClienteDetalle({
             tipoMensaje === "success"
               ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
               : tipoMensaje === "error"
-              ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
-              : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+                ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+                : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
           }`}
         >
           {mensaje}
         </div>
       )}
-
     </>
   );
 }
