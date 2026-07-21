@@ -5,6 +5,11 @@ import {
   type InventoryReceiptListItem,
 } from "@/lib/inventory/receipts";
 
+import {
+  getInventoryReferenceTypeBadgeClasses,
+  getInventoryReferenceTypeLabel,
+} from "@/lib/inventory/referenceType";
+
 export const dynamic = "force-dynamic";
 
 const dateFormatter = new Intl.DateTimeFormat("es-CL", {
@@ -113,6 +118,10 @@ export default async function InventoryReceiptsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                    Tipo
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-600">
                     Documento
                   </th>
 
@@ -151,6 +160,16 @@ export default async function InventoryReceiptsPage() {
 
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-neutral-700">
                       {receipt.supplierName ?? "Sin proveedor"}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getInventoryReferenceTypeBadgeClasses(
+                          receipt.referenceType,
+                        )}`}
+                      >
+                        {getInventoryReferenceTypeLabel(receipt.referenceType)}
+                      </span>
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-neutral-700">

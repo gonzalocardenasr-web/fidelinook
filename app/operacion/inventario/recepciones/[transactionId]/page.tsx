@@ -17,6 +17,10 @@ import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";
 import { postInventoryReceipt } from "@/lib/inventory/postReceipt";
 import { deleteInventoryReceiptItem } from "@/lib/inventory/deleteReceiptItem";
 import { cancelInventoryReceipt } from "@/lib/inventory/cancelReceipt";
+import {
+  getInventoryReferenceTypeBadgeClasses,
+  getInventoryReferenceTypeLabel,
+} from "@/lib/inventory/referenceType";
 
 type ReceiptItemForm = {
   inventoryItemCode: string;
@@ -597,8 +601,15 @@ export default function InventoryReceiptDetailPage() {
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Tipo de movimiento
               </dt>
-              <dd className="mt-0.5 text-sm font-medium text-neutral-900">
-                Compra
+
+              <dd className="mt-1">
+                <span
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getInventoryReferenceTypeBadgeClasses(
+                    receipt.referenceType,
+                  )}`}
+                >
+                  {getInventoryReferenceTypeLabel(receipt.referenceType)}
+                </span>
               </dd>
             </div>
 
