@@ -268,7 +268,49 @@ export async function createCustomerRecord(
     });
   }
 
-  return data as CreatedCustomer;
+  const createdCustomer = data as CreatedCustomer;
+
+  const { error: loyaltyAccountError } = await supabaseAdmin
+    .from("loyalty_accounts")
+    .insert({
+      customer_id: createdCustomer.id,
+      current_stamp_balance: 0,
+      lifetime_stamps_earned: 0,
+      lifetime_stamps_reversed: 0,
+      lifetime_rewards_issued: 0,
+      lifetime_rewards_redeemed: 0,
+      active_rewards_count: 0,
+      last_movement_id: null,
+      last_movement_at: null,
+      projection_version: 1,
+    });
+
+  if (loyaltyAccountError) {
+    console.error(
+      "Cliente creado, pero falló la creación de loyalty_accounts:",
+      {
+        customerId: createdCustomer.id,
+        error: loyaltyAccountError,
+      },
+    );
+
+    const customerDeleted = await deleteCustomerRecord(createdCustomer.id);
+
+    if (!customerDeleted) {
+      console.error(
+        "ALERTA CRÍTICA: no fue posible revertir el cliente sin cuenta de fidelización:",
+        createdCustomer.id,
+      );
+    }
+
+    throw new CustomerRegistrationError({
+      code: "LOYALTY_ACCOUNT_CREATE_FAILED",
+      message: "No se pudo completar el registro de fidelización del cliente.",
+      status: 500,
+    });
+  }
+
+  return createdCustomer;
 }
 
 export async function linkCustomerAuthUser({
