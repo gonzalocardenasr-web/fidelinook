@@ -14,6 +14,7 @@ import {
   type ActiveInventoryItem,
 } from "@/lib/inventory/items";
 import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";
+import { postInventoryReceipt } from "@/lib/inventory/postReceipt";
 
 type ReceiptItemForm = {
   inventoryItemCode: string;
@@ -104,6 +105,11 @@ export default function InventoryReceiptDetailPage() {
   const [itemForm, setItemForm] = useState<ReceiptItemForm>(initialItemForm);
   const [itemErrorMessage, setItemErrorMessage] = useState("");
   const [savingItem, setSavingItem] = useState(false);
+
+  const [showPostConfirmation, setShowPostConfirmation] = useState(false);
+  const [postingReceipt, setPostingReceipt] = useState(false);
+  const [postErrorMessage, setPostErrorMessage] = useState("");
+  const [postSuccessMessage, setPostSuccessMessage] = useState("");
 
   const loadReceipt = useCallback(async () => {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
@@ -302,6 +308,75 @@ export default function InventoryReceiptDetailPage() {
     }
   }
 
+  function openPostConfirmation() {
+    if (!receipt) {
+      return;
+    }
+
+    if (receipt.status !== "DRAFT") {
+      setPostErrorMessage("Solo pueden publicarse recepciones en borrador.");
+      return;
+    }
+
+    if (receipt.items.length === 0) {
+      setPostErrorMessage(
+        "Debes agregar al menos un producto antes de publicar la recepción.",
+      );
+      return;
+    }
+
+    setPostErrorMessage("");
+    setPostSuccessMessage("");
+    setShowPostConfirmation(true);
+  }
+
+  function closePostConfirmation() {
+    if (postingReceipt) {
+      return;
+    }
+
+    setShowPostConfirmation(false);
+    setPostErrorMessage("");
+  }
+
+  async function handlePostReceipt() {
+    if (!receipt) {
+      return;
+    }
+
+    if (receipt.status !== "DRAFT") {
+      setPostErrorMessage("La recepción ya no se encuentra en borrador.");
+      return;
+    }
+
+    if (receipt.items.length === 0) {
+      setPostErrorMessage("La recepción debe contener al menos un producto.");
+      return;
+    }
+
+    try {
+      setPostingReceipt(true);
+      setPostErrorMessage("");
+      setPostSuccessMessage("");
+
+      await postInventoryReceipt(receipt.id);
+      await loadReceipt();
+
+      setShowPostConfirmation(false);
+      setPostSuccessMessage(
+        "Recepción publicada correctamente. El inventario fue actualizado.",
+      );
+    } catch (error) {
+      setPostErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al publicar la recepción.",
+      );
+    } finally {
+      setPostingReceipt(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
@@ -428,6 +503,18 @@ export default function InventoryReceiptDetailPage() {
             </div>
           </dl>
         </section>
+
+        {postSuccessMessage && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+            {postSuccessMessage}
+          </div>
+        )}
+
+        {postErrorMessage && !showPostConfirmation && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {postErrorMessage}
+          </div>
+        )}
 
         <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
@@ -574,18 +661,25 @@ export default function InventoryReceiptDetailPage() {
             Volver al listado
           </Link>
 
-          <button
-            type="button"
-            disabled
-            title={
-              isDraft
-                ? "Se habilitará después del desarrollo de publicación."
-                : "La recepción ya no se encuentra en borrador."
-            }
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Publicar recepción
-          </button>
+          {isDraft ? (
+            <button
+              type="button"
+              onClick={openPostConfirmation}
+              disabled={postingReceipt || receipt.items.length === 0}
+              title={
+                receipt.items.length === 0
+                  ? "Agrega al menos un producto antes de publicar."
+                  : "Publicar y actualizar el inventario."
+              }
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Publicar recepción
+            </button>
+          ) : (
+            <div className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+              Recepción publicada
+            </div>
+          )}
         </section>
       </div>
 
@@ -825,6 +919,101 @@ export default function InventoryReceiptDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showPostConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="post-receipt-title"
+            className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl"
+          >
+            <div>
+              <h2
+                id="post-receipt-title"
+                className="text-lg font-semibold text-neutral-950"
+              >
+                Publicar recepción
+              </h2>
+
+              <p className="mt-2 text-sm text-neutral-600">
+                Estás a punto de publicar la recepción{" "}
+                <span className="font-semibold text-neutral-900">
+                  #{receipt.id}
+                </span>
+                .
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+              <p className="text-sm font-semibold text-amber-800">
+                Esta acción es definitiva
+              </p>
+
+              <ul className="mt-2 space-y-1 text-xs text-amber-700">
+                <li>• Se actualizará el stock disponible.</li>
+                <li>• Se generarán los movimientos de inventario.</li>
+                <li>• La recepción ya no podrá modificarse.</li>
+              </ul>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-neutral-50 px-3 py-3">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Líneas
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-neutral-950">
+                  {receipt.items.length}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Unidades
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-neutral-950">
+                  {formatQuantity(receipt.totalUnits)}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Total c/IVA
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-neutral-950">
+                  {formatCurrency(receipt.totalCost)}
+                </dd>
+              </div>
+            </dl>
+
+            {postErrorMessage && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {postErrorMessage}
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closePostConfirmation}
+                disabled={postingReceipt}
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handlePostReceipt()}
+                disabled={postingReceipt}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {postingReceipt ? "Publicando..." : "Confirmar publicación"}
+              </button>
+            </div>
           </div>
         </div>
       )}
