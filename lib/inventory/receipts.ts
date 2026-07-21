@@ -4,6 +4,7 @@ export type InventoryReceiptListItem = {
   id: number;
   transactionDate: string;
   status: "DRAFT" | "POSTED" | "CANCELLED";
+  referenceType: string | null;
   referenceNumber: string | null;
   supplierName: string | null;
   itemCount: number;
@@ -18,6 +19,7 @@ type ReceiptRow = {
   status: "DRAFT" | "POSTED" | "CANCELLED";
   reference_number: string | null;
   created_at: string;
+  reference_type: string | null;
   suppliers:
     | {
         name: string;
@@ -57,6 +59,7 @@ export async function getInventoryReceipts(): Promise<
       transaction_date,
       status,
       reference_number,
+      reference_type,
       created_at,
       suppliers (
         name
@@ -97,6 +100,7 @@ export async function getInventoryReceipts(): Promise<
       transactionDate: receipt.transaction_date,
       status: receipt.status,
       referenceNumber: receipt.reference_number,
+      referenceType: receipt.reference_type,
       supplierName: getSupplierName(receipt.suppliers),
       itemCount: items.length,
       totalUnits,

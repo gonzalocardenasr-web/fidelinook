@@ -1,4 +1,6 @@
-export function getInventoryReferenceTypeLabel(referenceType: string): string {
+export function getInventoryReferenceTypeLabel(
+  referenceType: string | null | undefined,
+): string {
   switch (referenceType) {
     case "PURCHASE":
       return "Compra";
@@ -7,12 +9,12 @@ export function getInventoryReferenceTypeLabel(referenceType: string): string {
       return "Stock inicial";
 
     default:
-      return referenceType;
+      return "Tipo no informado";
   }
 }
 
 export function getInventoryReferenceTypeBadgeClasses(
-  referenceType: string,
+  referenceType: string | null | undefined,
 ): string {
   switch (referenceType) {
     case "PURCHASE":
