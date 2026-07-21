@@ -103,34 +103,36 @@ export default function NewInventoryReceiptPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] px-4 py-6">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <header>
-          <Link
-            href="/operacion/inventario/recepciones"
-            className="text-sm font-medium text-neutral-600 hover:text-neutral-900"
-          >
-            ← Volver a Recepciones
-          </Link>
+    <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+        <header className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <Link
+              href="/operacion/inventario/recepciones"
+              className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
+            >
+              ← Volver a Recepciones
+            </Link>
 
-          <h1 className="mt-3 text-2xl font-semibold text-neutral-950">
-            Nueva recepción
-          </h1>
+            <h1 className="mt-1 text-xl font-semibold text-neutral-950">
+              Nueva recepción
+            </h1>
+          </div>
 
-          <p className="mt-1 text-sm text-neutral-600">
-            Registra el encabezado de una recepción de mercadería.
+          <p className="text-xs text-neutral-500">
+            Registra el ingreso de mercadería al inventario.
           </p>
         </header>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+          className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
         >
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="md:col-span-2">
               <label
                 htmlFor="supplier"
-                className="mb-2 block text-sm font-semibold text-neutral-800"
+                className="mb-1 block text-xs font-semibold text-neutral-700"
               >
                 Proveedor
               </label>
@@ -146,7 +148,7 @@ export default function NewInventoryReceiptPage() {
                 }
                 disabled={loadingSuppliers || suppliers.length === 0}
                 required
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-100"
+                className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-neutral-100"
               >
                 {loadingSuppliers ? (
                   <option value={0}>Cargando proveedores...</option>
@@ -165,7 +167,7 @@ export default function NewInventoryReceiptPage() {
             <div className="md:col-span-2">
               <label
                 htmlFor="transactionDate"
-                className="mb-2 block text-sm font-semibold text-neutral-800"
+                className="mb-1 block text-xs font-semibold text-neutral-700"
               >
                 Fecha de recepción
               </label>
@@ -181,14 +183,14 @@ export default function NewInventoryReceiptPage() {
                   }))
                 }
                 required
-                className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>
 
             <div className="md:col-span-2">
               <label
                 htmlFor="referenceNumber"
-                className="mb-2 block text-sm font-semibold text-neutral-800"
+                className="mb-1 block text-xs font-semibold text-neutral-700"
               >
                 Número de documento
               </label>
@@ -205,14 +207,14 @@ export default function NewInventoryReceiptPage() {
                 }
                 placeholder="Ejemplo: 1542"
                 maxLength={100}
-                className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>
 
             <div className="md:col-span-2">
               <label
                 htmlFor="notes"
-                className="mb-2 block text-sm font-semibold text-neutral-800"
+                className="mb-1 block text-xs font-semibold text-neutral-700"
               >
                 Observaciones
               </label>
@@ -226,24 +228,24 @@ export default function NewInventoryReceiptPage() {
                     notes: event.target.value,
                   }))
                 }
-                rows={4}
+                rows={2}
                 maxLength={1000}
                 placeholder="Información adicional de la recepción."
-                className="w-full resize-y rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                className="w-full resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>
           </div>
 
           {errorMessage && (
-            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
               {errorMessage}
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Link
               href="/operacion/inventario/recepciones"
-              className="rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
             >
               Cancelar
             </Link>
@@ -253,7 +255,7 @@ export default function NewInventoryReceiptPage() {
               disabled={
                 submitting || loadingSuppliers || suppliers.length === 0
               }
-              className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Guardando..." : "Guardar y agregar productos"}
             </button>

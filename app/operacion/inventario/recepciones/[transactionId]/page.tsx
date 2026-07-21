@@ -83,7 +83,7 @@ export default function InventoryReceiptDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F6F3FF] px-4 py-6">
+      <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
         <div className="mx-auto w-full max-w-6xl">
           <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
             <p className="text-sm font-medium text-neutral-600">
@@ -97,7 +97,7 @@ export default function InventoryReceiptDetailPage() {
 
   if (errorMessage || !receipt) {
     return (
-      <main className="min-h-screen bg-[#F6F3FF] px-4 py-6">
+      <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
           <Link
             href="/operacion/inventario/recepciones"
@@ -124,48 +124,48 @@ export default function InventoryReceiptDetailPage() {
   const isDraft = receipt.status === "DRAFT";
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] px-4 py-6">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <header>
-          <Link
-            href="/operacion/inventario/recepciones"
-            className="text-sm font-medium text-neutral-600 hover:text-neutral-900"
-          >
-            ← Volver a Recepciones
-          </Link>
+    <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <Link
+              href="/operacion/inventario/recepciones"
+              className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
+            >
+              ← Volver a Recepciones
+            </Link>
 
-          <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-neutral-950">
+            <div className="mt-1 flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-neutral-950">
                 Recepción #{receipt.id}
               </h1>
 
-              <p className="mt-1 text-sm text-neutral-600">
-                Detalle de la recepción de inventario.
-              </p>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusClasses(
+                  receipt.status,
+                )}`}
+              >
+                {getStatusLabel(receipt.status)}
+              </span>
             </div>
-
-            <span
-              className={`rounded-full border px-3 py-1 text-sm font-semibold ${getStatusClasses(
-                receipt.status,
-              )}`}
-            >
-              {getStatusLabel(receipt.status)}
-            </span>
           </div>
+
+          <p className="text-xs text-neutral-500">
+            Detalle del ingreso de inventario
+          </p>
         </header>
 
-        <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-neutral-950">
+        <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-neutral-950">
             Información de la recepción
           </h2>
 
-          <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Proveedor
               </dt>
-              <dd className="mt-1 text-sm font-medium text-neutral-900">
+              <dd className="mt-0.5 text-sm font-medium text-neutral-900">
                 {receipt.supplierName ?? "Sin proveedor"}
               </dd>
             </div>
@@ -174,7 +174,7 @@ export default function InventoryReceiptDetailPage() {
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Fecha de recepción
               </dt>
-              <dd className="mt-1 text-sm font-medium text-neutral-900">
+              <dd className="mt-0.5 text-sm font-medium text-neutral-900">
                 {formatDateTime(receipt.transactionDate)}
               </dd>
             </div>
@@ -183,7 +183,7 @@ export default function InventoryReceiptDetailPage() {
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Tipo de movimiento
               </dt>
-              <dd className="mt-1 text-sm font-medium text-neutral-900">
+              <dd className="mt-0.5 text-sm font-medium text-neutral-900">
                 Compra
               </dd>
             </div>
@@ -192,16 +192,16 @@ export default function InventoryReceiptDetailPage() {
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Número de documento
               </dt>
-              <dd className="mt-1 text-sm font-medium text-neutral-900">
+              <dd className="mt-0.5 text-sm font-medium text-neutral-900">
                 {receipt.referenceNumber || "Sin número"}
               </dd>
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-4">
+            <div className="sm:col-span-2 lg:col-span-4 border-t border-neutral-100 pt-2">
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Observaciones
               </dt>
-              <dd className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">
+              <dd className="mt-0.5 line-clamp-2 whitespace-pre-wrap text-sm text-neutral-700">
                 {receipt.notes || "Sin observaciones"}
               </dd>
             </div>
@@ -209,13 +209,13 @@ export default function InventoryReceiptDetailPage() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
             <div>
-              <h2 className="text-lg font-semibold text-neutral-950">
+              <h2 className="text-sm font-semibold text-neutral-950">
                 Productos recibidos
               </h2>
 
-              <p className="mt-1 text-sm text-neutral-600">
+              <p className="mt-0.5 text-xs text-neutral-500">
                 {receipt.items.length === 1
                   ? "1 producto registrado"
                   : `${receipt.items.length} productos registrados`}
@@ -230,14 +230,14 @@ export default function InventoryReceiptDetailPage() {
                   ? "Se habilitará en el siguiente desarrollo."
                   : "Una recepción publicada no puede modificarse."
               }
-              className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Agregar producto
             </button>
           </div>
 
           {receipt.items.length === 0 ? (
-            <div className="px-6 py-12 text-center">
+            <div className="px-4 py-6 text-center">
               <p className="text-sm font-semibold text-neutral-700">
                 Esta recepción todavía no tiene productos.
               </p>
@@ -252,19 +252,19 @@ export default function InventoryReceiptDetailPage() {
               <table className="min-w-full divide-y divide-neutral-200">
                 <thead className="bg-neutral-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Producto
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Cantidad
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Costo unitario
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Costo total
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Acciones
                     </th>
                   </tr>
@@ -273,7 +273,7 @@ export default function InventoryReceiptDetailPage() {
                 <tbody className="divide-y divide-neutral-100 bg-white">
                   {receipt.items.map((item) => (
                     <tr key={item.id}>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-2.5">
                         <p className="text-sm font-semibold text-neutral-900">
                           {item.inventoryItemName}
                         </p>
@@ -283,21 +283,21 @@ export default function InventoryReceiptDetailPage() {
                         </p>
                       </td>
 
-                      <td className="px-6 py-4 text-right text-sm font-medium text-neutral-900">
+                      <td className="px-4 py-2.5 text-right text-sm font-medium text-neutral-900">
                         {item.quantity} {item.unit}
                       </td>
 
-                      <td className="px-6 py-4 text-right text-sm text-neutral-700">
+                      <td className="px-4 py-2.5 text-right text-sm text-neutral-700">
                         {item.unitCost === null
                           ? "Sin costo"
                           : formatCurrency(item.unitCost)}
                       </td>
 
-                      <td className="px-6 py-4 text-right text-sm font-semibold text-neutral-900">
+                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-neutral-900">
                         {formatCurrency(item.totalCost)}
                       </td>
 
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           type="button"
                           disabled
@@ -313,12 +313,12 @@ export default function InventoryReceiptDetailPage() {
             </div>
           )}
 
-          <div className="grid gap-4 border-t border-neutral-200 bg-neutral-50 px-6 py-5 sm:grid-cols-3">
+          <div className="grid gap-3 border-t border-neutral-200 bg-neutral-50 px-4 py-3 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Líneas
               </p>
-              <p className="mt-1 text-lg font-bold text-neutral-950">
+              <p className="mt-0.5 text-base font-bold text-neutral-950">
                 {receipt.items.length}
               </p>
             </div>
@@ -327,7 +327,7 @@ export default function InventoryReceiptDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Unidades totales
               </p>
-              <p className="mt-1 text-lg font-bold text-neutral-950">
+              <p className="mt-0.5 text-base font-bold text-neutral-950">
                 {receipt.totalUnits}
               </p>
             </div>
@@ -336,14 +336,14 @@ export default function InventoryReceiptDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Costo total
               </p>
-              <p className="mt-1 text-lg font-bold text-neutral-950">
+              <p className="mt-0.5 text-base font-bold text-neutral-950">
                 {formatCurrency(receipt.totalCost)}
               </p>
             </div>
           </div>
         </section>
 
-        <section className="flex flex-wrap justify-between gap-3">
+        <section className="flex flex-wrap justify-between gap-2">
           <Link
             href="/operacion/inventario/recepciones"
             className="rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
@@ -359,7 +359,7 @@ export default function InventoryReceiptDetailPage() {
                 ? "Se habilitará después de incorporar productos."
                 : "La recepción ya no se encuentra en borrador."
             }
-            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             Publicar recepción
           </button>
