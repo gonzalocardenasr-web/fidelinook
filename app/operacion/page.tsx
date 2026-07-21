@@ -8,30 +8,19 @@ import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
 import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
 import UltimosMovimientos from "./components/UltimosMovimientos";
 import OperationSummary from "../../components/operations/OperationSummary";
-
-type Premio = {
-  id: number | string;
-  nombre: string;
-  descripcion?: string;
-  estado: "activo" | "usado" | "caducado";
-  vencimiento?: string;
-  tipo?: string;
-  campana_id?: number;
-  fecha_canje?: string;
-};
+import type {
+  CustomerLoyaltySummary,
+  CustomerRewardSummary,
+} from "../../lib/loyalty/customer-loyalty.types";
 
 type Cliente = {
   id: number;
   nombre: string;
   correo: string;
   telefono: string;
-  sellos: number;
-  premios: Premio[] | number | null;
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
-  fecha_ultimo_sello?: string | null;
-  fecha_ultimo_canje?: string | null;
   created_At?: string | null;
   fecha_activacion?: string | null;
 };
@@ -70,6 +59,9 @@ export default function OperacionPage() {
   );
   const [cargando, setCargando] = useState(true);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
+  const [customerLoyalty, setCustomerLoyalty] =
+    useState<CustomerLoyaltySummary | null>(null);
+  const [cargandoFidelizacion, setCargandoFidelizacion] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -94,10 +86,14 @@ export default function OperacionPage() {
       setSubscriptions([]);
       setSubscriptionSeleccionada(null);
       setMensajeSuscripcion("");
+      setCustomerLoyalty(null);
       return;
     }
 
-    cargarSuscripcionActiva(Number(clienteSeleccionadoId));
+    const customerId = Number(clienteSeleccionadoId);
+
+    void cargarSuscripcionActiva(customerId);
+    void cargarFidelizacionCliente(customerId);
   }, [clienteSeleccionadoId]);
 
   async function cargarSuscripcionActiva(clienteId: number) {
@@ -128,6 +124,37 @@ export default function OperacionPage() {
       console.error(error);
     } finally {
       setCargandoSuscripcion(false);
+    }
+  }
+
+  async function cargarFidelizacionCliente(clienteId: number) {
+    try {
+      setCargandoFidelizacion(true);
+      setCustomerLoyalty(null);
+
+      const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(
+          data.message || "No se pudo cargar la fidelización del cliente.",
+        );
+        return;
+      }
+
+      setCustomerLoyalty(data.loyalty as CustomerLoyaltySummary);
+    } catch (error) {
+      console.error("Error cargando fidelización del cliente:", error);
+
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error al cargar la fidelización del cliente.");
+    } finally {
+      setCargandoFidelizacion(false);
     }
   }
 
@@ -452,12 +479,9 @@ export default function OperacionPage() {
     clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
     null;
 
-  const premiosArray = Array.isArray(cliente?.premios) ? cliente.premios : [];
-  const premiosActivos = premiosArray.filter(
-    (premio: Premio) => premio.estado === "activo",
-  );
+  const premiosActivos = customerLoyalty?.activeRewards ?? [];
 
-  const canjearPremioPorId = async (premioId: number | string) => {
+  const canjearPremioPorId = async (premioId: number) => {
     if (!cliente) {
       setTipoMensaje("error");
       setMensaje("Debes seleccionar un cliente.");
@@ -472,13 +496,9 @@ export default function OperacionPage() {
       return;
     }
 
-    const premiosActuales = Array.isArray(cliente.premios)
-      ? cliente.premios
-      : [];
-
-    const premioActivo = premiosActuales.find(
-      (premio: Premio) =>
-        String(premio.id) === String(premioId) && premio.estado === "activo",
+    const premioActivo = premiosActivos.find(
+      (premio: CustomerRewardSummary) =>
+        premio.id === premioId && premio.status === "active",
     );
 
     if (!premioActivo) {
@@ -488,7 +508,7 @@ export default function OperacionPage() {
     }
 
     const confirmar = window.confirm(
-      `¿Confirmas el canje del premio "${premioActivo.nombre}"?`,
+      `¿Confirmas el canje del premio "${premioActivo.name}"?`,
     );
 
     if (!confirmar) {
@@ -519,12 +539,11 @@ export default function OperacionPage() {
         return;
       }
 
-      await cargarDatos(true);
+      await cargarFidelizacionCliente(cliente.id);
 
       setTipoMensaje("success");
       setMensaje(
-        data.message ||
-          `Premio canjeado correctamente: ${premioActivo.nombre}.`,
+        data.message || `Premio canjeado correctamente: ${premioActivo.name}.`,
       );
     } catch (error) {
       console.error("Error canjeando premio:", error);
@@ -956,7 +975,9 @@ export default function OperacionPage() {
 
                 <AdminClienteDetalle
                   cliente={cliente}
+                  loyalty={customerLoyalty}
                   premiosActivos={premiosActivos}
+                  cargandoFidelizacion={cargandoFidelizacion}
                   mensaje={mensaje}
                   tipoMensaje={tipoMensaje}
                   setMensaje={setMensaje}

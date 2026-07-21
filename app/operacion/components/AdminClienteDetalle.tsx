@@ -1,40 +1,32 @@
 import QRCode from "react-qr-code";
 
-type Premio = {
-  id: number | string;
-  nombre: string;
-  descripcion?: string;
-  estado: "activo" | "usado" | "caducado";
-  vencimiento?: string;
-  tipo?: string;
-  campana_id?: number;
-  fecha_canje?: string;
-};
+import type {
+  CustomerLoyaltySummary,
+  CustomerRewardSummary,
+} from "../../../lib/loyalty/customer-loyalty.types";
 
 type Cliente = {
   id: number;
   nombre: string;
   correo: string;
   telefono: string;
-  sellos: number;
-  premios: Premio[] | number | null;
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
-  fecha_ultimo_sello?: string | null;
-  fecha_ultimo_canje?: string | null;
 };
 
 type Props = {
   cliente: Cliente | null;
-  premiosActivos: Premio[];
+  loyalty: CustomerLoyaltySummary | null;
+  premiosActivos: CustomerRewardSummary[];
+  cargandoFidelizacion: boolean;
   mensaje: string;
   tipoMensaje: "success" | "error" | "info";
   setMensaje: (value: string) => void;
   procesandoCanje: boolean;
   reiniciando: boolean;
   rol: "admin" | "superadmin" | null;
-  canjearPremioPorId: (premioId: number | string) => Promise<void>;
+  canjearPremioPorId: (premioId: number) => Promise<void>;
   eliminarClienteSeleccionado?: () => void;
   reiniciarDatos?: () => void;
   exportarCSV?: () => void;
@@ -45,7 +37,9 @@ const META_SELLOS = 7;
 
 export default function AdminClienteDetalle({
   cliente,
+  loyalty,
   premiosActivos,
+  cargandoFidelizacion,
   mensaje,
   tipoMensaje,
   setMensaje,
@@ -60,11 +54,22 @@ export default function AdminClienteDetalle({
 }: Props) {
   if (!cliente) return null;
 
-  const premiosArray = Array.isArray(cliente.premios) ? cliente.premios : [];
+  const sellos = loyalty?.currentStampBalance ?? 0;
+  const premiosUsados = loyalty?.redeemedRewards.length ?? 0;
 
-  const premiosUsados = premiosArray.filter(
-    (premio) => premio.estado === "usado",
-  ).length;
+  const ultimoCanje = loyalty?.redeemedRewards.reduce<string | null>(
+    (fechaMasReciente, premio) => {
+      if (!premio.redeemedAt) return fechaMasReciente;
+
+      if (!fechaMasReciente) return premio.redeemedAt;
+
+      return new Date(premio.redeemedAt).getTime() >
+        new Date(fechaMasReciente).getTime()
+        ? premio.redeemedAt
+        : fechaMasReciente;
+    },
+    null,
+  );
 
   const formatearFecha = (fecha?: string | null) => {
     if (!fecha) return "Sin registro";
@@ -130,7 +135,7 @@ export default function AdminClienteDetalle({
                 Sellos
               </p>
               <p className="mt-1 text-xl font-bold text-violet-700">
-                {cliente.sellos ?? 0} / {META_SELLOS}
+                {cargandoFidelizacion ? "..." : `${sellos} / ${META_SELLOS}`}
               </p>
             </div>
 
@@ -163,12 +168,12 @@ export default function AdminClienteDetalle({
                 >
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">
-                      {premio.nombre}
+                      {premio.name}
                     </p>
 
-                    {premio.vencimiento && (
+                    {premio.expiresAt && (
                       <p className="mt-1 text-xs text-neutral-500">
-                        Vence: {formatearFecha(premio.vencimiento)}
+                        Vence: {formatearFecha(premio.expiresAt)}
                       </p>
                     )}
                   </div>
@@ -230,10 +235,10 @@ export default function AdminClienteDetalle({
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg bg-white p-3 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Último sello
+                Último movimiento
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-800">
-                {formatearFecha(cliente.fecha_ultimo_sello)}
+                {formatearFecha(loyalty?.lastMovementAt)}
               </p>
             </div>
 
@@ -242,7 +247,7 @@ export default function AdminClienteDetalle({
                 Último canje
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-800">
-                {formatearFecha(cliente.fecha_ultimo_canje)}
+                {formatearFecha(ultimoCanje)}{" "}
               </p>
             </div>
 
@@ -251,7 +256,9 @@ export default function AdminClienteDetalle({
                 Sellos actuales
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-800">
-                {cliente.sellos ?? 0} / {META_SELLOS}
+                {cargandoFidelizacion
+                  ? "Cargando..."
+                  : `${sellos} / ${META_SELLOS}`}
               </p>
             </div>
 
