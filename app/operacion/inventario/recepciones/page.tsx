@@ -131,6 +131,10 @@ export default async function InventoryReceiptsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-600">
                     Estado
                   </th>
+
+                  <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
 
@@ -173,6 +177,15 @@ export default async function InventoryReceiptsPage() {
                       >
                         {getStatusLabel(receipt.status)}
                       </span>
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-4 text-right">
+                      <Link
+                        href={`/operacion/inventario/recepciones/${receipt.id}`}
+                        className="inline-flex rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                      >
+                        {receipt.status === "DRAFT" ? "Continuar" : "Ver"}
+                      </Link>
                     </td>
                   </tr>
                 ))}
