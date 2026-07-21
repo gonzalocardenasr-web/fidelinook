@@ -44,21 +44,6 @@ function getStatusClasses(status: InventoryReceiptStatus): string {
   return classes[status];
 }
 
-function getReferenceTypeLabel(referenceType: string | null): string {
-  if (!referenceType) {
-    return "Sin documento";
-  }
-
-  const labels: Record<string, string> = {
-    INVOICE: "Factura",
-    RECEIPT: "Boleta",
-    DISPATCH_NOTE: "Guía de despacho",
-    OTHER: "Otro",
-  };
-
-  return labels[referenceType] ?? referenceType;
-}
-
 export default function InventoryReceiptDetailPage() {
   const params = useParams<{ transactionId: string }>();
 
@@ -196,10 +181,10 @@ export default function InventoryReceiptDetailPage() {
 
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Tipo de documento
+                Tipo de movimiento
               </dt>
               <dd className="mt-1 text-sm font-medium text-neutral-900">
-                {getReferenceTypeLabel(receipt.referenceType)}
+                Compra
               </dd>
             </div>
 

@@ -21,7 +21,7 @@ function getCurrentLocalDateTime(): string {
 
 const initialForm: CreateInventoryReceiptInput = {
   supplierId: 0,
-  referenceType: "",
+  referenceType: "PURCHASE",
   referenceNumber: "",
   transactionDate: getCurrentLocalDateTime(),
   notes: "",
@@ -79,19 +79,13 @@ export default function NewInventoryReceiptPage() {
       return;
     }
 
-    if (form.referenceNumber.trim() && !form.referenceType) {
-      setErrorMessage(
-        "Debes seleccionar el tipo de documento cuando ingresas un número.",
-      );
-      return;
-    }
-
     try {
       setSubmitting(true);
       setErrorMessage("");
 
       const transactionId = await createInventoryReceipt({
         ...form,
+        referenceType: "PURCHASE",
         referenceNumber: form.referenceNumber.trim(),
         notes: form.notes.trim(),
       });
@@ -168,7 +162,7 @@ export default function NewInventoryReceiptPage() {
               </select>
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <label
                 htmlFor="transactionDate"
                 className="mb-2 block text-sm font-semibold text-neutral-800"
@@ -189,33 +183,6 @@ export default function NewInventoryReceiptPage() {
                 required
                 className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
               />
-            </div>
-
-            <div>
-              <label
-                htmlFor="referenceType"
-                className="mb-2 block text-sm font-semibold text-neutral-800"
-              >
-                Tipo de documento
-              </label>
-
-              <select
-                id="referenceType"
-                value={form.referenceType}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    referenceType: event.target.value,
-                  }))
-                }
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-              >
-                <option value="">Sin documento</option>
-                <option value="INVOICE">Factura</option>
-                <option value="RECEIPT">Boleta</option>
-                <option value="DISPATCH_NOTE">Guía de despacho</option>
-                <option value="OTHER">Otro</option>
-              </select>
             </div>
 
             <div className="md:col-span-2">
