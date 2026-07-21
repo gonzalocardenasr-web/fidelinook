@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   getInventoryReceiptById,
@@ -16,6 +16,7 @@ import {
 import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";
 import { postInventoryReceipt } from "@/lib/inventory/postReceipt";
 import { deleteInventoryReceiptItem } from "@/lib/inventory/deleteReceiptItem";
+import { cancelInventoryReceipt } from "@/lib/inventory/cancelReceipt";
 
 type ReceiptItemForm = {
   inventoryItemCode: string;
@@ -87,6 +88,7 @@ function getItemTypeLabel(itemType: string): string {
 }
 
 export default function InventoryReceiptDetailPage() {
+  const router = useRouter();
   const params = useParams<{ transactionId: string }>();
   const transactionId = Number(params.transactionId);
 
@@ -117,6 +119,13 @@ export default function InventoryReceiptDetailPage() {
 
   const [deletingItem, setDeletingItem] = useState(false);
   const [deleteItemErrorMessage, setDeleteItemErrorMessage] = useState("");
+
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+
+  const [cancellingReceipt, setCancellingReceipt] = useState(false);
+
+  const [cancelReceiptErrorMessage, setCancelReceiptErrorMessage] =
+    useState("");
 
   const loadReceipt = useCallback(async () => {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
@@ -430,6 +439,62 @@ export default function InventoryReceiptDetailPage() {
     }
   }
 
+  function openCancelReceiptConfirmation() {
+    if (!receipt) {
+      return;
+    }
+
+    if (receipt.status !== "DRAFT") {
+      setCancelReceiptErrorMessage(
+        "Solo pueden cancelarse recepciones en borrador.",
+      );
+      return;
+    }
+
+    setCancelReceiptErrorMessage("");
+    setShowCancelConfirmation(true);
+  }
+
+  function closeCancelReceiptConfirmation() {
+    if (cancellingReceipt) {
+      return;
+    }
+
+    setShowCancelConfirmation(false);
+    setCancelReceiptErrorMessage("");
+  }
+
+  async function handleCancelReceipt() {
+    if (!receipt) {
+      return;
+    }
+
+    if (receipt.status !== "DRAFT") {
+      setCancelReceiptErrorMessage(
+        "La recepción ya no se encuentra en borrador.",
+      );
+      return;
+    }
+
+    try {
+      setCancellingReceipt(true);
+      setCancelReceiptErrorMessage("");
+
+      await cancelInventoryReceipt(receipt.id);
+
+      router.push("/operacion/inventario/recepciones");
+      router.refresh();
+    } catch (error) {
+      setCancelReceiptErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al cancelar la recepción.",
+      );
+    } finally {
+      setCancellingReceipt(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
@@ -734,19 +799,39 @@ export default function InventoryReceiptDetailPage() {
           </Link>
 
           {isDraft ? (
-            <button
-              type="button"
-              onClick={openPostConfirmation}
-              disabled={postingReceipt || receipt.items.length === 0}
-              title={
-                receipt.items.length === 0
-                  ? "Agrega al menos un producto antes de publicar."
-                  : "Publicar y actualizar el inventario."
-              }
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Publicar recepción
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openCancelReceiptConfirmation}
+                disabled={
+                  cancellingReceipt ||
+                  postingReceipt ||
+                  savingItem ||
+                  deletingItem
+                }
+                className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancelar borrador
+              </button>
+
+              <button
+                type="button"
+                onClick={openPostConfirmation}
+                disabled={
+                  postingReceipt ||
+                  cancellingReceipt ||
+                  receipt.items.length === 0
+                }
+                title={
+                  receipt.items.length === 0
+                    ? "Agrega al menos un producto antes de publicar."
+                    : "Publicar y actualizar el inventario."
+                }
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Publicar recepción
+              </button>
+            </div>
           ) : (
             <div className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
               Recepción publicada
@@ -1140,6 +1225,89 @@ export default function InventoryReceiptDetailPage() {
                 className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deletingItem ? "Eliminando..." : "Eliminar producto"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-receipt-title"
+            className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl"
+          >
+            <h2
+              id="cancel-receipt-title"
+              className="text-lg font-semibold text-neutral-950"
+            >
+              Cancelar borrador
+            </h2>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Se eliminará definitivamente la recepción{" "}
+              <span className="font-semibold text-neutral-900">
+                #{receipt.id}
+              </span>{" "}
+              y todas sus líneas.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+              <p className="text-sm font-semibold text-amber-800">
+                Esta acción no puede deshacerse
+              </p>
+
+              <p className="mt-1 text-xs text-amber-700">
+                No se modificará el stock porque esta recepción todavía no ha
+                sido publicada.
+              </p>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-neutral-50 px-3 py-3">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Líneas
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-neutral-950">
+                  {receipt.items.length}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Unidades
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-neutral-950">
+                  {formatQuantity(receipt.totalUnits)}
+                </dd>
+              </div>
+            </dl>
+
+            {cancelReceiptErrorMessage && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {cancelReceiptErrorMessage}
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeCancelReceiptConfirmation}
+                disabled={cancellingReceipt}
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Volver
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleCancelReceipt()}
+                disabled={cancellingReceipt}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cancellingReceipt ? "Cancelando..." : "Eliminar borrador"}
               </button>
             </div>
           </div>
