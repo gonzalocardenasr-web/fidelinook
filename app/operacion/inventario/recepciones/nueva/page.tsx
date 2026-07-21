@@ -85,7 +85,6 @@ export default function NewInventoryReceiptPage() {
 
       const transactionId = await createInventoryReceipt({
         ...form,
-        referenceType: "PURCHASE",
         referenceNumber: form.referenceNumber.trim(),
         notes: form.notes.trim(),
       });
@@ -129,7 +128,33 @@ export default function NewInventoryReceiptPage() {
           className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
+            <div>
+              <label
+                htmlFor="referenceType"
+                className="mb-1 block text-xs font-semibold text-neutral-700"
+              >
+                Tipo de movimiento
+              </label>
+
+              <select
+                id="referenceType"
+                value={form.referenceType}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    referenceType: event.target.value as
+                      | "PURCHASE"
+                      | "INITIAL_STOCK",
+                  }))
+                }
+                className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="PURCHASE">Compra</option>
+                <option value="INITIAL_STOCK">Stock inicial</option>
+              </select>
+            </div>
+
+            <div>
               <label
                 htmlFor="supplier"
                 className="mb-1 block text-xs font-semibold text-neutral-700"

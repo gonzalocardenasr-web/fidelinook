@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 
 export type CreateInventoryReceiptInput = {
   supplierId: number;
-  referenceType: string;
+  referenceType: "PURCHASE" | "INITIAL_STOCK";
   referenceNumber: string;
   transactionDate: string;
   notes: string;
