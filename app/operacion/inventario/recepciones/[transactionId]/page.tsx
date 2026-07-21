@@ -19,6 +19,7 @@ type ReceiptItemForm = {
   inventoryItemCode: string;
   quantity: string;
   unitCost: string;
+  costIncludesVat: boolean;
   notes: string;
 };
 
@@ -26,8 +27,11 @@ const initialItemForm: ReceiptItemForm = {
   inventoryItemCode: "",
   quantity: "1",
   unitCost: "",
+  costIncludesVat: false,
   notes: "",
 };
+
+const VAT_RATE = 0.19;
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("es-CL", {
@@ -200,6 +204,7 @@ export default function InventoryReceiptDetailPage() {
       inventoryItemCode: item.inventoryItemCode,
       quantity: String(item.quantity),
       unitCost: item.unitCost === null ? "" : String(item.unitCost),
+      costIncludesVat: true,
       notes: item.notes ?? "",
     });
     setItemErrorMessage("");
@@ -242,20 +247,32 @@ export default function InventoryReceiptDetailPage() {
 
     const quantity = Number(itemForm.quantity);
 
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setItemErrorMessage("La cantidad debe ser un número mayor que cero.");
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setItemErrorMessage(
+        "La cantidad debe ser un número entero igual o mayor que 1.",
+      );
       return;
     }
 
-    const unitCost =
+    const enteredUnitCost =
       itemForm.unitCost.trim() === "" ? null : Number(itemForm.unitCost);
 
-    if (unitCost !== null && (!Number.isFinite(unitCost) || unitCost < 0)) {
+    if (
+      enteredUnitCost !== null &&
+      (!Number.isFinite(enteredUnitCost) || enteredUnitCost < 0)
+    ) {
       setItemErrorMessage(
         "El costo unitario debe ser cero o un número positivo.",
       );
       return;
     }
+
+    const unitCostWithVat =
+      enteredUnitCost === null
+        ? null
+        : itemForm.costIncludesVat
+          ? Math.round(enteredUnitCost)
+          : Math.round(enteredUnitCost * (1 + VAT_RATE));
 
     try {
       setSavingItem(true);
@@ -265,7 +282,7 @@ export default function InventoryReceiptDetailPage() {
         transactionId: receipt.id,
         inventoryItemCode: itemForm.inventoryItemCode,
         quantity,
-        unitCost,
+        unitCost: unitCostWithVat,
         notes: itemForm.notes,
       });
 
@@ -463,10 +480,10 @@ export default function InventoryReceiptDetailPage() {
                       Cantidad
                     </th>
                     <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      Costo unitario
+                      Costo unitario c/IVA
                     </th>
                     <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      Costo total
+                      Costo total c/IVA
                     </th>
                     <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Acciones
@@ -540,7 +557,7 @@ export default function InventoryReceiptDetailPage() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Costo total
+                Costo total IVA incluido
               </p>
               <p className="mt-0.5 text-base font-bold text-neutral-950">
                 {formatCurrency(receipt.totalCost)}
@@ -664,8 +681,9 @@ export default function InventoryReceiptDetailPage() {
                   <input
                     id="quantity"
                     type="number"
-                    min="0.001"
-                    step="0.001"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
                     value={itemForm.quantity}
                     onChange={(event) =>
                       setItemForm((current) => ({
@@ -693,22 +711,59 @@ export default function InventoryReceiptDetailPage() {
                     Costo unitario
                   </label>
 
-                  <input
-                    id="unitCost"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={itemForm.unitCost}
-                    onChange={(event) =>
-                      setItemForm((current) => ({
-                        ...current,
-                        unitCost: event.target.value,
-                      }))
-                    }
-                    disabled={savingItem}
-                    placeholder="Opcional"
-                    className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                  />
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <input
+                      id="unitCost"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={itemForm.unitCost}
+                      onChange={(event) =>
+                        setItemForm((current) => ({
+                          ...current,
+                          unitCost: event.target.value,
+                        }))
+                      }
+                      disabled={savingItem}
+                      placeholder="Opcional"
+                      className="h-10 min-w-0 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    />
+
+                    <select
+                      aria-label="Tratamiento del IVA"
+                      value={
+                        itemForm.costIncludesVat ? "WITH_VAT" : "WITHOUT_VAT"
+                      }
+                      onChange={(event) =>
+                        setItemForm((current) => ({
+                          ...current,
+                          costIncludesVat: event.target.value === "WITH_VAT",
+                        }))
+                      }
+                      disabled={savingItem}
+                      className="h-10 rounded-xl border border-neutral-200 bg-white px-2 text-xs font-semibold text-neutral-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    >
+                      <option value="WITHOUT_VAT">Sin IVA</option>
+                      <option value="WITH_VAT">Con IVA</option>
+                    </select>
+                  </div>
+
+                  {itemForm.unitCost.trim() !== "" &&
+                    Number.isFinite(Number(itemForm.unitCost)) &&
+                    Number(itemForm.unitCost) >= 0 && (
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Costo final IVA incluido:{" "}
+                        <span className="font-semibold text-neutral-700">
+                          {formatCurrency(
+                            itemForm.costIncludesVat
+                              ? Math.round(Number(itemForm.unitCost))
+                              : Math.round(
+                                  Number(itemForm.unitCost) * (1 + VAT_RATE),
+                                ),
+                          )}
+                        </span>
+                      </p>
+                    )}
                 </div>
 
                 <div className="sm:col-span-2">
