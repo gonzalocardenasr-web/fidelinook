@@ -15,6 +15,7 @@ import {
 } from "@/lib/inventory/items";
 import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";
 import { postInventoryReceipt } from "@/lib/inventory/postReceipt";
+import { deleteInventoryReceiptItem } from "@/lib/inventory/deleteReceiptItem";
 
 type ReceiptItemForm = {
   inventoryItemCode: string;
@@ -110,6 +111,12 @@ export default function InventoryReceiptDetailPage() {
   const [postingReceipt, setPostingReceipt] = useState(false);
   const [postErrorMessage, setPostErrorMessage] = useState("");
   const [postSuccessMessage, setPostSuccessMessage] = useState("");
+
+  const [itemPendingDeletion, setItemPendingDeletion] =
+    useState<InventoryReceiptItem | null>(null);
+
+  const [deletingItem, setDeletingItem] = useState(false);
+  const [deleteItemErrorMessage, setDeleteItemErrorMessage] = useState("");
 
   const loadReceipt = useCallback(async () => {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
@@ -377,6 +384,52 @@ export default function InventoryReceiptDetailPage() {
     }
   }
 
+  function openDeleteItemConfirmation(item: InventoryReceiptItem) {
+    if (!receipt || receipt.status !== "DRAFT") {
+      setDeleteItemErrorMessage(
+        "Solo pueden eliminarse productos de una recepción en borrador.",
+      );
+      return;
+    }
+
+    setDeleteItemErrorMessage("");
+    setItemPendingDeletion(item);
+  }
+
+  function closeDeleteItemConfirmation() {
+    if (deletingItem) {
+      return;
+    }
+
+    setItemPendingDeletion(null);
+    setDeleteItemErrorMessage("");
+  }
+
+  async function handleDeleteItem() {
+    if (!itemPendingDeletion) {
+      return;
+    }
+
+    try {
+      setDeletingItem(true);
+      setDeleteItemErrorMessage("");
+
+      await deleteInventoryReceiptItem(itemPendingDeletion.id);
+
+      await loadReceipt();
+
+      setItemPendingDeletion(null);
+    } catch (error) {
+      setDeleteItemErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al eliminar el producto.",
+      );
+    } finally {
+      setDeletingItem(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
@@ -607,14 +660,33 @@ export default function InventoryReceiptDetailPage() {
                       </td>
 
                       <td className="px-4 py-2.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => void openEditItemForm(item)}
-                          disabled={!isDraft}
-                          className="text-sm font-semibold text-violet-600 hover:text-violet-800 disabled:cursor-not-allowed disabled:text-neutral-400"
-                        >
-                          Editar
-                        </button>
+                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                          {isDraft ? (
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditItemForm(item)}
+                                disabled={savingItem || deletingItem}
+                                className="text-xs font-semibold text-violet-700 hover:text-violet-900 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openDeleteItemConfirmation(item)}
+                                disabled={savingItem || deletingItem}
+                                className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-neutral-400">
+                              Sin acciones
+                            </span>
+                          )}
+                        </td>
                       </td>
                     </tr>
                   ))}
@@ -1012,6 +1084,62 @@ export default function InventoryReceiptDetailPage() {
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {postingReceipt ? "Publicando..." : "Confirmar publicación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {itemPendingDeletion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-receipt-item-title"
+            className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl"
+          >
+            <h2
+              id="delete-receipt-item-title"
+              className="text-lg font-semibold text-neutral-950"
+            >
+              Eliminar producto
+            </h2>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Se eliminará{" "}
+              <span className="font-semibold text-neutral-900">
+                {itemPendingDeletion.inventoryItemName}
+              </span>{" "}
+              de esta recepción.
+            </p>
+
+            <p className="mt-2 text-xs text-neutral-500">
+              Los totales se recalcularán automáticamente.
+            </p>
+
+            {deleteItemErrorMessage && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {deleteItemErrorMessage}
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteItemConfirmation}
+                disabled={deletingItem}
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleDeleteItem()}
+                disabled={deletingItem}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deletingItem ? "Eliminando..." : "Eliminar producto"}
               </button>
             </div>
           </div>
