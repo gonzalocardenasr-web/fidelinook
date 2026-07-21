@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import {
   createInventoryReceipt,
@@ -27,14 +28,13 @@ const initialForm: CreateInventoryReceiptInput = {
 };
 
 export default function NewInventoryReceiptPage() {
+  const router = useRouter();
+
   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([]);
   const [form, setForm] = useState<CreateInventoryReceiptInput>(initialForm);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [createdTransactionId, setCreatedTransactionId] = useState<
-    number | null
-  >(null);
 
   useEffect(() => {
     async function loadSuppliers() {
@@ -96,27 +96,16 @@ export default function NewInventoryReceiptPage() {
         notes: form.notes.trim(),
       });
 
-      setCreatedTransactionId(transactionId);
+      router.push(`/operacion/inventario/recepciones/${transactionId}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Ocurrió un error al crear la recepción.",
       );
-    } finally {
+
       setSubmitting(false);
     }
-  }
-
-  function resetForm() {
-    setCreatedTransactionId(null);
-    setErrorMessage("");
-
-    setForm({
-      ...initialForm,
-      supplierId: suppliers[0]?.id ?? 0,
-      transactionDate: getCurrentLocalDateTime(),
-    });
   }
 
   return (
@@ -139,204 +128,170 @@ export default function NewInventoryReceiptPage() {
           </p>
         </header>
 
-        {createdTransactionId ? (
-          <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold text-emerald-700">
-              Recepción creada correctamente
-            </p>
-
-            <h2 className="mt-2 text-xl font-bold text-neutral-950">
-              Borrador #{createdTransactionId}
-            </h2>
-
-            <p className="mt-2 text-sm text-neutral-600">
-              La recepción quedó guardada en estado DRAFT. En el siguiente
-              desarrollo se agregarán los productos recibidos.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+        >
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label
+                htmlFor="supplier"
+                className="mb-2 block text-sm font-semibold text-neutral-800"
               >
-                Crear otra recepción
-              </button>
+                Proveedor
+              </label>
 
-              <Link
-                href="/operacion/inventario/recepciones"
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
-              >
-                Volver al listado
-              </Link>
-            </div>
-          </section>
-        ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
-          >
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="supplier"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Proveedor
-                </label>
-
-                <select
-                  id="supplier"
-                  value={form.supplierId}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      supplierId: Number(event.target.value),
-                    }))
-                  }
-                  disabled={loadingSuppliers || suppliers.length === 0}
-                  required
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-100"
-                >
-                  {loadingSuppliers ? (
-                    <option value={0}>Cargando proveedores...</option>
-                  ) : suppliers.length === 0 ? (
-                    <option value={0}>No hay proveedores activos</option>
-                  ) : (
-                    suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name} · {supplier.code}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="transactionDate"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Fecha de recepción
-                </label>
-
-                <input
-                  id="transactionDate"
-                  type="datetime-local"
-                  value={form.transactionDate}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      transactionDate: event.target.value,
-                    }))
-                  }
-                  required
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="referenceType"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Tipo de documento
-                </label>
-
-                <select
-                  id="referenceType"
-                  value={form.referenceType}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      referenceType: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                >
-                  <option value="">Sin documento</option>
-                  <option value="INVOICE">Factura</option>
-                  <option value="RECEIPT">Boleta</option>
-                  <option value="DISPATCH_NOTE">Guía de despacho</option>
-                  <option value="OTHER">Otro</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="referenceNumber"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Número de documento
-                </label>
-
-                <input
-                  id="referenceNumber"
-                  type="text"
-                  value={form.referenceNumber}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      referenceNumber: event.target.value,
-                    }))
-                  }
-                  placeholder="Ejemplo: 1542"
-                  maxLength={100}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="notes"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Observaciones
-                </label>
-
-                <textarea
-                  id="notes"
-                  value={form.notes}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      notes: event.target.value,
-                    }))
-                  }
-                  rows={4}
-                  maxLength={1000}
-                  placeholder="Información adicional de la recepción."
-                  className="w-full resize-y rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                />
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {errorMessage}
-              </div>
-            )}
-
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <Link
-                href="/operacion/inventario/recepciones"
-                className="rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
-              >
-                Cancelar
-              </Link>
-
-              <button
-                type="submit"
-                disabled={
-                  submitting || loadingSuppliers || suppliers.length === 0
+              <select
+                id="supplier"
+                value={form.supplierId}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    supplierId: Number(event.target.value),
+                  }))
                 }
-                className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={loadingSuppliers || suppliers.length === 0}
+                required
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-100"
               >
-                {submitting ? "Guardando..." : "Guardar borrador"}
-              </button>
+                {loadingSuppliers ? (
+                  <option value={0}>Cargando proveedores...</option>
+                ) : suppliers.length === 0 ? (
+                  <option value={0}>No hay proveedores activos</option>
+                ) : (
+                  suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name} · {supplier.code}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
-          </form>
-        )}
+
+            <div>
+              <label
+                htmlFor="transactionDate"
+                className="mb-2 block text-sm font-semibold text-neutral-800"
+              >
+                Fecha de recepción
+              </label>
+
+              <input
+                id="transactionDate"
+                type="datetime-local"
+                value={form.transactionDate}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    transactionDate: event.target.value,
+                  }))
+                }
+                required
+                className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="referenceType"
+                className="mb-2 block text-sm font-semibold text-neutral-800"
+              >
+                Tipo de documento
+              </label>
+
+              <select
+                id="referenceType"
+                value={form.referenceType}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    referenceType: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              >
+                <option value="">Sin documento</option>
+                <option value="INVOICE">Factura</option>
+                <option value="RECEIPT">Boleta</option>
+                <option value="DISPATCH_NOTE">Guía de despacho</option>
+                <option value="OTHER">Otro</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="referenceNumber"
+                className="mb-2 block text-sm font-semibold text-neutral-800"
+              >
+                Número de documento
+              </label>
+
+              <input
+                id="referenceNumber"
+                type="text"
+                value={form.referenceNumber}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    referenceNumber: event.target.value,
+                  }))
+                }
+                placeholder="Ejemplo: 1542"
+                maxLength={100}
+                className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="notes"
+                className="mb-2 block text-sm font-semibold text-neutral-800"
+              >
+                Observaciones
+              </label>
+
+              <textarea
+                id="notes"
+                value={form.notes}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }))
+                }
+                rows={4}
+                maxLength={1000}
+                placeholder="Información adicional de la recepción."
+                className="w-full resize-y rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              />
+            </div>
+          </div>
+
+          {errorMessage && (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <Link
+              href="/operacion/inventario/recepciones"
+              className="rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+            >
+              Cancelar
+            </Link>
+
+            <button
+              type="submit"
+              disabled={
+                submitting || loadingSuppliers || suppliers.length === 0
+              }
+              className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Guardando..." : "Guardar y agregar productos"}
+            </button>
+          </div>
+        </form>
       </div>
     </main>
   );
