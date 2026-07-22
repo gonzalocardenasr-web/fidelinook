@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getInventoryAdjustmentItems,
@@ -12,27 +12,22 @@ import {
 const OPERATION_OPTIONS: Array<{
   value: InventoryAdjustmentKind;
   label: string;
-  description: string;
 }> = [
   {
     value: "ADJUSTMENT_POSITIVE",
     label: "Ajuste positivo",
-    description: "Aumenta el stock para corregir una diferencia.",
   },
   {
     value: "ADJUSTMENT_NEGATIVE",
     label: "Ajuste negativo",
-    description: "Disminuye el stock para corregir una diferencia.",
   },
   {
     value: "WASTE",
     label: "Merma",
-    description: "Registra una pérdida operativa identificada.",
   },
   {
     value: "INTERNAL_CONSUMPTION",
     label: "Consumo interno",
-    description: "Registra degustación, control de calidad u otro uso interno.",
   },
 ];
 
@@ -41,6 +36,7 @@ const REASONS: Record<InventoryAdjustmentKind, string[]> = {
     "Diferencia de conteo",
     "Ingreso no registrado",
     "Corrección de carga",
+    "Devolución de cliente",
     "Otro",
   ],
   ADJUSTMENT_NEGATIVE: [
@@ -59,30 +55,42 @@ const REASONS: Record<InventoryAdjustmentKind, string[]> = {
 };
 
 function formatQuantity(value: number): string {
-  return value.toLocaleString("es-CL", { maximumFractionDigits: 3 });
+  return value.toLocaleString("es-CL", {
+    maximumFractionDigits: 3,
+  });
 }
 
 export default function InventoryAdjustmentPanel() {
   const [items, setItems] = useState<InventoryAdjustmentItem[]>([]);
+
   const [kind, setKind] = useState<InventoryAdjustmentKind>(
     "ADJUSTMENT_POSITIVE",
   );
+
   const [category, setCategory] = useState("ALL");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const quantityInputRef = useRef<HTMLInputElement>(null);
 
   async function loadItems() {
     try {
       setLoading(true);
       setErrorMessage("");
-      setItems(await getInventoryAdjustmentItems());
+
+      const loadedItems = await getInventoryAdjustmentItems();
+
+      setItems(loadedItems);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -100,6 +108,8 @@ export default function InventoryAdjustmentPanel() {
 
   useEffect(() => {
     setReason("");
+    setErrorMessage("");
+    setSuccessMessage("");
   }, [kind]);
 
   const categories = useMemo(
@@ -112,6 +122,7 @@ export default function InventoryAdjustmentPanel() {
 
     return items.filter((item) => {
       const matchesCategory = category === "ALL" || item.itemType === category;
+
       const matchesQuery =
         !normalizedQuery ||
         item.code.toLocaleLowerCase("es-CL").includes(normalizedQuery) ||
@@ -126,6 +137,16 @@ export default function InventoryAdjustmentPanel() {
     [items, selectedId],
   );
 
+  function selectItem(item: InventoryAdjustmentItem) {
+    setSelectedId(item.inventoryItemId);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    window.setTimeout(() => {
+      quantityInputRef.current?.focus();
+    }, 0);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -138,28 +159,42 @@ export default function InventoryAdjustmentPanel() {
 
     if (!Number.isFinite(numericQuantity) || numericQuantity <= 0) {
       setErrorMessage("La cantidad debe ser mayor que cero.");
+      quantityInputRef.current?.focus();
+      return;
+    }
+
+    if (!reason) {
+      setErrorMessage("Selecciona un motivo.");
+      return;
+    }
+
+    if (!comment.trim()) {
+      setErrorMessage("Ingresa un comentario que explique el movimiento.");
       return;
     }
 
     const stockDecreases = kind !== "ADJUSTMENT_POSITIVE";
+
     if (stockDecreases && numericQuantity > selectedItem.stock) {
       setErrorMessage(
-        `Stock insuficiente. Disponible: ${formatQuantity(selectedItem.stock)} ${selectedItem.unit}.`,
+        `Stock insuficiente. Disponible: ${formatQuantity(
+          selectedItem.stock,
+        )} ${selectedItem.unit}.`,
       );
       return;
     }
 
     const operationLabel =
       OPERATION_OPTIONS.find((option) => option.value === kind)?.label ??
-      "movimiento";
+      "Movimiento";
 
-    if (
-      !window.confirm(
-        `Registrar ${operationLabel.toLowerCase()} de ${formatQuantity(numericQuantity)} ${selectedItem.unit} para ${selectedItem.name}?`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = window.confirm(
+      `Registrar ${operationLabel.toLowerCase()} de ${formatQuantity(
+        numericQuantity,
+      )} ${selectedItem.unit} para ${selectedItem.name}?`,
+    );
+
+    if (!confirmed) return;
 
     try {
       setSubmitting(true);
@@ -171,15 +206,24 @@ export default function InventoryAdjustmentPanel() {
         inventoryItemId: selectedItem.inventoryItemId,
         quantity: numericQuantity,
         reason,
-        comment,
+        comment: comment.trim(),
       });
 
       await loadItems();
+
       setQuantity("");
+      setReason("");
       setComment("");
+
       setSuccessMessage(
-        `${operationLabel} registrado. Stock resultante: ${formatQuantity(result.remainingStock ?? 0)} ${selectedItem.unit}.`,
+        `${operationLabel} registrado correctamente. Stock actual: ${formatQuantity(
+          result.remainingStock ?? 0,
+        )} ${selectedItem.unit}.`,
       );
+
+      window.setTimeout(() => {
+        quantityInputRef.current?.focus();
+      }, 0);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -192,15 +236,16 @@ export default function InventoryAdjustmentPanel() {
   }
 
   return (
-    <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.75fr)]">
-      <section className="min-h-0 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="grid gap-3 border-b border-neutral-200 p-4 sm:grid-cols-[180px_minmax(0,1fr)_auto]">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.72fr)]">
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="grid shrink-0 gap-2 border-b border-neutral-200 p-3 sm:grid-cols-[190px_minmax(0,1fr)_auto]">
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="min-h-10 rounded-lg border border-neutral-300 bg-white px-3 text-sm"
+            className="min-h-9 rounded-lg border border-neutral-300 bg-white px-3 text-sm"
           >
             <option value="ALL">Todas las categorías</option>
+
             {categories.map((value) => (
               <option key={value} value={value}>
                 {value}
@@ -212,34 +257,37 @@ export default function InventoryAdjustmentPanel() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por SKU o nombre"
-            className="min-h-10 rounded-lg border border-neutral-300 px-3 text-sm"
+            className="min-h-9 rounded-lg border border-neutral-300 px-3 text-sm"
           />
 
           <button
             type="button"
             onClick={() => void loadItems()}
             disabled={loading}
-            className="min-h-10 rounded-lg border border-neutral-200 px-4 text-sm font-semibold hover:bg-neutral-50 disabled:opacity-50"
+            className="min-h-9 rounded-lg border border-neutral-200 px-4 text-sm font-semibold hover:bg-neutral-50 disabled:opacity-50"
           >
             Actualizar
           </button>
         </div>
 
-        <div className="max-h-[calc(100vh-215px)] overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <table className="min-w-full divide-y divide-neutral-200">
-            <thead className="sticky top-0 bg-neutral-50">
+            <thead className="sticky top-0 z-10 bg-neutral-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-neutral-600">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase text-neutral-600">
                   SKU / Nombre
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-neutral-600">
+
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase text-neutral-600">
                   Categoría
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-neutral-600">
+
+                <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase text-neutral-600">
                   Stock
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-neutral-100">
               {loading ? (
                 <tr>
@@ -262,24 +310,30 @@ export default function InventoryAdjustmentPanel() {
               ) : (
                 filteredItems.map((item) => {
                   const selected = item.inventoryItemId === selectedId;
+
                   return (
                     <tr
                       key={item.inventoryItemId}
-                      onClick={() => setSelectedId(item.inventoryItemId)}
-                      className={`cursor-pointer ${selected ? "bg-neutral-100" : "hover:bg-neutral-50"}`}
+                      onClick={() => selectItem(item)}
+                      className={`cursor-pointer ${
+                        selected ? "bg-neutral-100" : "hover:bg-neutral-50"
+                      }`}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <div className="text-sm font-semibold text-neutral-950">
                           {item.code}
                         </div>
-                        <div className="mt-0.5 text-sm text-neutral-600">
+
+                        <div className="mt-0.5 text-xs text-neutral-600">
                           {item.name}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-neutral-600">
+
+                      <td className="px-4 py-2.5 text-sm text-neutral-600">
                         {item.itemType}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-neutral-950">
+
+                      <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm font-semibold text-neutral-950">
                         {formatQuantity(item.stock)} {item.unit}
                       </td>
                     </tr>
@@ -291,118 +345,146 @@ export default function InventoryAdjustmentPanel() {
         </div>
       </section>
 
-      <aside className="min-h-0 overflow-auto rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div>
-            <h2 className="font-semibold text-neutral-950">
-              Registrar movimiento
-            </h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              Selecciona un SKU desde la tabla y completa los datos.
-            </p>
-          </div>
+      <aside className="min-h-0 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="grid gap-3">
+              <div>
+                <h2 className="font-semibold text-neutral-950">
+                  Registrar movimiento
+                </h2>
 
-          {errorMessage ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {errorMessage}
-            </div>
-          ) : null}
-
-          {successMessage ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {successMessage}
-            </div>
-          ) : null}
-
-          <fieldset className="grid grid-cols-2 gap-2">
-            {OPERATION_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                className={`cursor-pointer rounded-lg border p-3 ${kind === option.value ? "border-neutral-950 bg-neutral-50" : "border-neutral-200"}`}
-              >
-                <input
-                  type="radio"
-                  name="kind"
-                  value={option.value}
-                  checked={kind === option.value}
-                  onChange={() => setKind(option.value)}
-                  className="sr-only"
-                />
-                <div className="text-sm font-semibold text-neutral-950">
-                  {option.label}
-                </div>
-                <div className="mt-1 text-xs text-neutral-500">
-                  {option.description}
-                </div>
-              </label>
-            ))}
-          </fieldset>
-
-          <div className="rounded-lg bg-neutral-50 p-3">
-            {selectedItem ? (
-              <>
-                <div className="text-sm font-semibold text-neutral-950">
-                  {selectedItem.name}
-                </div>
-                <div className="mt-1 text-xs text-neutral-600">
-                  {selectedItem.code} · Stock{" "}
-                  {formatQuantity(selectedItem.stock)} {selectedItem.unit}
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-neutral-500">
-                Ningún SKU seleccionado.
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  Selecciona un SKU y completa los datos.
+                </p>
               </div>
-            )}
+
+              {errorMessage ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              {successMessage ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  {successMessage}
+                </div>
+              ) : null}
+
+              <fieldset className="grid grid-cols-2 gap-2">
+                {OPERATION_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`cursor-pointer rounded-lg border px-3 py-2.5 transition ${
+                      kind === option.value
+                        ? "border-neutral-950 bg-neutral-100"
+                        : "border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="kind"
+                      value={option.value}
+                      checked={kind === option.value}
+                      onChange={() => setKind(option.value)}
+                      className="sr-only"
+                    />
+
+                    <div className="text-sm font-semibold text-neutral-950">
+                      {option.label}
+                    </div>
+                  </label>
+                ))}
+              </fieldset>
+
+              <div className="rounded-lg bg-neutral-50 px-3 py-2.5">
+                {selectedItem ? (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-neutral-950">
+                        {selectedItem.name}
+                      </div>
+
+                      <div
+                        className="mt-0.5 truncate text-xs text-neutral-500"
+                        title={selectedItem.code}
+                      >
+                        {selectedItem.code}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                        Stock
+                      </div>
+
+                      <div className="text-sm font-bold text-neutral-950">
+                        {formatQuantity(selectedItem.stock)} {selectedItem.unit}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-neutral-500">
+                    Ningún SKU seleccionado.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[110px_minmax(0,1fr)]">
+                <label className="grid gap-1 text-sm font-medium text-neutral-800">
+                  Cantidad
+                  <input
+                    ref={quantityInputRef}
+                    value={quantity}
+                    onChange={(event) => setQuantity(event.target.value)}
+                    inputMode="decimal"
+                    placeholder="0"
+                    className="min-h-10 rounded-lg border border-neutral-300 px-3 font-normal"
+                  />
+                </label>
+
+                <label className="grid gap-1 text-sm font-medium text-neutral-800">
+                  Motivo
+                  <select
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    required
+                    className="min-h-10 rounded-lg border border-neutral-300 bg-white px-3 font-normal"
+                  >
+                    <option value="">Seleccionar motivo</option>
+
+                    {REASONS[kind].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="grid gap-1 text-sm font-medium text-neutral-800">
+                Comentario
+                <textarea
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  required
+                  rows={2}
+                  placeholder="Describe brevemente el origen del movimiento"
+                  className="min-h-[68px] resize-none rounded-lg border border-neutral-300 px-3 py-2 font-normal"
+                />
+              </label>
+            </div>
           </div>
 
-          <label className="grid gap-1 text-sm font-medium text-neutral-800">
-            Cantidad
-            <input
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              inputMode="decimal"
-              placeholder="0"
-              className="min-h-10 rounded-lg border border-neutral-300 px-3 font-normal"
-            />
-          </label>
-
-          <label className="grid gap-1 text-sm font-medium text-neutral-800">
-            Motivo
-            <select
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              required
-              className="min-h-10 rounded-lg border border-neutral-300 bg-white px-3 font-normal"
+          <div className="shrink-0 border-t border-neutral-200 bg-white p-3">
+            <button
+              type="submit"
+              disabled={submitting || !selectedItem}
+              className="min-h-11 w-full rounded-lg bg-neutral-950 px-4 text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
             >
-              <option value="">Seleccionar motivo</option>
-              {REASONS[kind].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-1 text-sm font-medium text-neutral-800">
-            Comentario
-            <textarea
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              required
-              rows={3}
-              placeholder="Describe brevemente el origen del movimiento"
-              className="resize-none rounded-lg border border-neutral-300 px-3 py-2 font-normal"
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={submitting || !selectedItem}
-            className="min-h-11 rounded-lg bg-neutral-950 px-4 text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
-          >
-            {submitting ? "Registrando..." : "Registrar movimiento"}
-          </button>
+              {submitting ? "Registrando..." : "Registrar movimiento"}
+            </button>
+          </div>
         </form>
       </aside>
     </div>
