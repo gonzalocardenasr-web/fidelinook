@@ -101,17 +101,17 @@ export async function GET(req: Request) {
      */
     let candidateSaleIds: Set<number> | null = null;
 
-    function intersectCandidateIds(ids: number[]) {
+    function intersectCandidateIds(
+      currentIds: Set<number> | null,
+      ids: number[],
+    ): Set<number> {
       const nextIds = new Set(ids);
 
-      if (candidateSaleIds === null) {
-        candidateSaleIds = nextIds;
-        return;
+      if (currentIds === null) {
+        return nextIds;
       }
 
-      candidateSaleIds = new Set(
-        [...candidateSaleIds].filter((id) => nextIds.has(id)),
-      );
+      return new Set([...currentIds].filter((id) => nextIds.has(id)));
     }
 
     if (orderStatus) {
@@ -127,7 +127,8 @@ export async function GET(req: Request) {
         );
       }
 
-      intersectCandidateIds(
+      candidateSaleIds = intersectCandidateIds(
+        candidateSaleIds,
         (statusOrders || [])
           .map((order) => Number(order.sale_id))
           .filter((id) => Number.isFinite(id)),
@@ -224,44 +225,6 @@ export async function GET(req: Request) {
         }
       }
 
-      const promotionalStamps = Number(body.promotionalStamps ?? 0);
-
-      const promotionReason = String(body.promotionReason || "").trim() || null;
-
-      if (
-        !Number.isInteger(promotionalStamps) ||
-        promotionalStamps < 0 ||
-        promotionalStamps > 5
-      ) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: "Los sellos promocionales deben estar entre 0 y 5.",
-          },
-          { status: 400 },
-        );
-      }
-
-      if (promotionalStamps > 0 && customerId === null) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: "Los sellos promocionales requieren un cliente.",
-          },
-          { status: 400 },
-        );
-      }
-
-      if (promotionalStamps > 0 && !promotionReason) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: "El motivo de los sellos promocionales es obligatorio.",
-          },
-          { status: 400 },
-        );
-      }
-
       const { data: matchingOrders, error: ordersError } = await supabaseAdmin
         .from("orders")
         .select("sale_id")
@@ -287,7 +250,9 @@ export async function GET(req: Request) {
         }
       }
 
-      intersectCandidateIds([...searchSaleIds]);
+      candidateSaleIds = intersectCandidateIds(candidateSaleIds, [
+        ...searchSaleIds,
+      ]);
     }
 
     /*
@@ -510,6 +475,47 @@ export async function POST(req: Request) {
     if (items.length === 0) {
       return NextResponse.json(
         { ok: false, message: "La venta debe tener al menos un producto." },
+        { status: 400 },
+      );
+    }
+
+    const promotionalStamps = Number(body.promotionalStamps ?? 0);
+
+    const promotionReason =
+      typeof body.promotionReason === "string"
+        ? body.promotionReason.trim() || null
+        : null;
+
+    if (
+      !Number.isInteger(promotionalStamps) ||
+      promotionalStamps < 0 ||
+      promotionalStamps > 5
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Los sellos promocionales deben estar entre 0 y 5.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (promotionalStamps > 0 && customerId === null) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Los sellos promocionales requieren un cliente.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (promotionalStamps > 0 && !promotionReason) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Debe indicar el motivo de la promoción.",
+        },
         { status: 400 },
       );
     }
