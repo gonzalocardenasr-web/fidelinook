@@ -44,6 +44,19 @@ export default function InventoryPage() {
             Abrir sabores disponibles y consultar las bachas activas.
           </p>
         </Link>
+
+        <Link
+          href="/operacion/inventario/ajustes"
+          className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-neutral-300 hover:shadow"
+        >
+          <h2 className="font-semibold text-neutral-950">
+            Movimientos internos
+          </h2>
+
+          <p className="mt-2 text-sm text-neutral-600">
+            Registrar ajustes positivos, negativos, mermas y consumo interno.
+          </p>
+        </Link>
       </section>
     </main>
   );
