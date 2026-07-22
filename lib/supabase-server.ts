@@ -13,6 +13,6 @@ export async function createSupabaseServerClient() {
           return cookieStore.get(name)?.value;
         },
       },
-    }
+    },
   );
 }

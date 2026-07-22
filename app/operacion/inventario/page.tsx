@@ -33,6 +33,17 @@ export default function InventoryPage() {
             Registrar compras recibidas desde proveedores.
           </p>
         </Link>
+
+        <Link
+          href="/operacion/inventario/bachas"
+          className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-neutral-300 hover:shadow"
+        >
+          <h2 className="font-semibold text-neutral-950">Apertura de bachas</h2>
+
+          <p className="mt-2 text-sm text-neutral-600">
+            Abrir sabores disponibles y consultar las bachas activas.
+          </p>
+        </Link>
       </section>
     </main>
   );
