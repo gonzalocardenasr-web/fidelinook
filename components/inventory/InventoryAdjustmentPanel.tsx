@@ -430,26 +430,28 @@ export default function InventoryAdjustmentPanel() {
                 )}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-[110px_minmax(0,1fr)]">
-                <label className="grid gap-1 text-sm font-medium text-neutral-800">
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <label className="grid min-w-0 gap-1 text-sm font-medium text-neutral-800">
                   Cantidad
                   <input
                     ref={quantityInputRef}
+                    type="number"
+                    min="0.001"
+                    step="0.001"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value)}
-                    inputMode="decimal"
                     placeholder="0"
-                    className="min-h-10 rounded-lg border border-neutral-300 px-3 font-normal"
+                    className="h-10 w-full min-w-0 rounded-lg border border-neutral-300 px-3 font-normal"
                   />
                 </label>
 
-                <label className="grid gap-1 text-sm font-medium text-neutral-800">
+                <label className="grid min-w-0 gap-1 text-sm font-medium text-neutral-800">
                   Motivo
                   <select
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                     required
-                    className="min-h-10 rounded-lg border border-neutral-300 bg-white px-3 font-normal"
+                    className="h-10 w-full min-w-0 rounded-lg border border-neutral-300 bg-white px-3 font-normal"
                   >
                     <option value="">Seleccionar motivo</option>
 
