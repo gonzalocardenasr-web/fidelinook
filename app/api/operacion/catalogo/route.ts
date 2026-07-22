@@ -64,9 +64,58 @@ export async function GET() {
     );
   }
 
+  const { data: openBatchRows, error: openBatchError } = await supabaseAdmin
+    .from("inventory_batches")
+    .select(
+      `
+    inventory_items!inner (
+      option_value_id,
+      inventory_stock (
+        quantity
+      )
+    )
+  `,
+    )
+    .eq("status", "OPEN");
+
+  if (openBatchError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: openBatchError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  const openBatchFlavorIds = [
+    ...new Set(
+      (openBatchRows || [])
+        .flatMap((row: any) => {
+          const item = Array.isArray(row.inventory_items)
+            ? row.inventory_items[0]
+            : row.inventory_items;
+
+          if (!item) return [];
+
+          const stock = Array.isArray(item.inventory_stock)
+            ? item.inventory_stock[0]
+            : item.inventory_stock;
+
+          if (!stock || Number(stock.quantity) <= 0) {
+            return [];
+          }
+
+          return [Number(item.option_value_id)];
+        })
+        .filter(Number.isInteger),
+    ),
+  ];
+
   return NextResponse.json({
     ok: true,
     products: products || [],
     optionGroups: optionGroups || [],
+    openBatchFlavorIds,
   });
 }

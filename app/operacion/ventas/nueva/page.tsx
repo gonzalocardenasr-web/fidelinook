@@ -40,6 +40,8 @@ export default function NuevaVentaPage() {
 
   const [promotionalStamps, setPromotionalStamps] = useState(0);
 
+  const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
+
   useEffect(() => {
     if (!selectedCliente) {
       setPromotionalStamps(0);
@@ -72,6 +74,7 @@ export default function NuevaVentaPage() {
 
       setProducts(data.products || []);
       setOptionGroups(data.optionGroups || []);
+      setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -112,6 +115,10 @@ export default function NuevaVentaPage() {
       .filter((option) => option.is_active)
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [optionGroups]);
+
+  const openBatchFlavors = useMemo(() => {
+    return flavors.filter((flavor) => openBatchFlavorIds.includes(flavor.id));
+  }, [flavors, openBatchFlavorIds]);
 
   const toppings = useMemo(() => {
     return (
@@ -591,7 +598,11 @@ export default function NuevaVentaPage() {
               <ProductConfigurator
                 product={configuringProduct}
                 editingItem={editingItem}
-                flavors={flavors}
+                flavors={
+                  configuringProduct?.sku === "POT-16-ARMADO"
+                    ? openBatchFlavors
+                    : flavors
+                }
                 toppings={toppings}
                 getPrice={getPrice}
                 onCancel={() => {
