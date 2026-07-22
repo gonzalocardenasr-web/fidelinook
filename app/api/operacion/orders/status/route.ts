@@ -310,7 +310,9 @@ export async function POST(req: Request) {
               id,
               customer_id,
               channel,
-              external_order_id
+              external_order_id,
+              promotional_stamps,
+              promotion_reason
             )
           `,
           )
@@ -338,6 +340,13 @@ export async function POST(req: Request) {
           saleRelation?.customer_id === undefined
             ? null
             : Number(saleRelation.customer_id);
+
+        const promotionalStamps = Number(saleRelation?.promotional_stamps ?? 0);
+
+        const promotionReason =
+          typeof saleRelation?.promotion_reason === "string"
+            ? saleRelation.promotion_reason.trim() || null
+            : null;
 
         if (!Number.isInteger(saleId) || saleId <= 0) {
           console.error("Pedido entregado sin sale_id válido:", deliveredOrder);
@@ -403,13 +412,79 @@ export async function POST(req: Request) {
                 timezone: "America/Santiago",
               });
 
-              const projection = await rebuildDailyLoyaltyProjection({
+              let projection = await rebuildDailyLoyaltyProjection({
                 customerId,
                 businessDate,
                 policyCode: "LOYALTY_POLICY_V1",
                 policyVersion: 1,
                 recalculationReason: "sale.delivered",
               });
+
+              if (
+                Number.isInteger(promotionalStamps) &&
+                promotionalStamps > 0
+              ) {
+                const promotionIdempotencyKey = `pos-sale-promotion:${saleId}`;
+
+                const { error: promotionError } = await supabaseAdmin
+                  .from("customer_daily_loyalty_promotions")
+                  .upsert(
+                    {
+                      daily_loyalty_id: projection.dailyLoyaltyId,
+                      customer_id: customerId,
+                      business_date: businessDate,
+                      loyalty_rule_id: null,
+                      promotion_code: "POS_RRSS",
+                      effect_type: "fixed_stamp_bonus",
+                      multiplier: null,
+                      fixed_stamp_bonus: promotionalStamps,
+                      applied_stamp_bonus: promotionalStamps,
+                      actor_role: session.role,
+                      actor_identifier: null,
+                      evidence_reference: `sale:${saleId}`,
+                      idempotency_key: promotionIdempotencyKey,
+                      metadata: {
+                        saleId,
+                        orderId,
+                        reason: promotionReason,
+                        source: "pos",
+                      },
+                    },
+                    {
+                      onConflict: "idempotency_key",
+                      ignoreDuplicates: true,
+                    },
+                  );
+
+                if (promotionError) {
+                  console.error(
+                    "Venta entregada, pero no se pudo registrar la promoción:",
+                    {
+                      orderId,
+                      saleId,
+                      customerId,
+                      promotionalStamps,
+                      error: promotionError,
+                    },
+                  );
+
+                  warnings.push(
+                    "El pedido fue entregado, pero los sellos promocionales quedaron pendientes de revisión.",
+                  );
+                } else {
+                  /*
+                   * La primera proyección se creó antes de registrar la promoción.
+                   * La reconstruimos para incorporar el bono fijo.
+                   */
+                  projection = await rebuildDailyLoyaltyProjection({
+                    customerId,
+                    businessDate,
+                    policyCode: "LOYALTY_POLICY_V1",
+                    policyVersion: 1,
+                    recalculationReason: "sale.promotion_registered",
+                  });
+                }
+              }
 
               /*
                * 4.2.1 Acreditar diferencia positiva.

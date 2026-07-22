@@ -38,6 +38,14 @@ export default function NuevaVentaPage() {
 
   const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
 
+  const [promotionalStamps, setPromotionalStamps] = useState(0);
+
+  useEffect(() => {
+    if (!selectedCliente) {
+      setPromotionalStamps(0);
+    }
+  }, [selectedCliente]);
+
   useEffect(() => {
     cargarCatalogo();
   }, []);
@@ -198,6 +206,18 @@ export default function NuevaVentaPage() {
 
     if (channel !== "local" && !externalOrderId.trim()) {
       return "Ingresa el número externo del pedido digital.";
+    }
+
+    if (
+      !Number.isInteger(promotionalStamps) ||
+      promotionalStamps < 0 ||
+      promotionalStamps > 5
+    ) {
+      return "La cantidad de sellos promocionales no es válida.";
+    }
+
+    if (promotionalStamps > 0 && !selectedCliente) {
+      return "Selecciona un cliente para asignar sellos promocionales.";
     }
 
     for (const item of cart) {
@@ -383,6 +403,8 @@ export default function NuevaVentaPage() {
         paymentMethod,
         orderNotes: orderNotes.trim() || null,
         customerId: selectedCliente?.id ?? null,
+        promotionalStamps,
+        promotionReason: promotionalStamps > 0 ? "Promoción RRSS" : null,
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -455,6 +477,7 @@ export default function NuevaVentaPage() {
       setChannel("local");
       setExternalOrderId("");
       setClienteSelectorResetKey((current) => current + 1);
+      setPromotionalStamps(0);
 
       const warnings = Array.isArray(data.warnings)
         ? data.warnings.filter(
@@ -619,6 +642,8 @@ export default function NuevaVentaPage() {
             onChannelChange={setChannel}
             onExternalOrderIdChange={setExternalOrderId}
             onOpenCustomMessage={() => setCustomMessageModalOpen(true)}
+            promotionalStamps={promotionalStamps}
+            onPromotionalStampsChange={setPromotionalStamps}
           />
         }
       />

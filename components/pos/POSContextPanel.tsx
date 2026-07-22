@@ -16,6 +16,8 @@ type Props = {
   onChannelChange: (channel: SalesChannel) => void;
   onExternalOrderIdChange: (value: string) => void;
   onOpenCustomMessage: () => void;
+  promotionalStamps: number;
+  onPromotionalStampsChange: (value: number) => void;
 };
 
 export default function POSContextPanel({
@@ -30,6 +32,8 @@ export default function POSContextPanel({
   onChannelChange,
   onExternalOrderIdChange,
   onOpenCustomMessage,
+  promotionalStamps,
+  onPromotionalStampsChange,
 }: Props) {
   const premiosActivos = selectedCliente?.loyalty?.activeRewardsCount ?? 0;
 
@@ -127,6 +131,54 @@ export default function POSContextPanel({
               </span>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="mt-2 shrink-0 rounded-lg border border-violet-100 bg-violet-50 p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
+              Sellos promocionales
+            </p>
+
+            <p className="mt-0.5 text-[9px] leading-tight text-neutral-500">
+              Promoción RRSS
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={!selectedCliente || promotionalStamps <= 0}
+              onClick={() =>
+                onPromotionalStampsChange(Math.max(0, promotionalStamps - 1))
+              }
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-violet-200 bg-white text-sm font-black text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              −
+            </button>
+
+            <span className="flex h-7 min-w-8 items-center justify-center rounded-md bg-white px-2 text-sm font-black text-violet-700">
+              {promotionalStamps}
+            </span>
+
+            <button
+              type="button"
+              disabled={!selectedCliente || promotionalStamps >= 5}
+              onClick={() =>
+                onPromotionalStampsChange(Math.min(5, promotionalStamps + 1))
+              }
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-violet-200 bg-white text-sm font-black text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        {!selectedCliente && (
+          <p className="mt-1.5 text-[9px] font-semibold text-amber-700">
+            Selecciona un cliente para asignar sellos.
+          </p>
         )}
       </section>
 

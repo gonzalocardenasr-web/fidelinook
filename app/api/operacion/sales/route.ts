@@ -224,6 +224,44 @@ export async function GET(req: Request) {
         }
       }
 
+      const promotionalStamps = Number(body.promotionalStamps ?? 0);
+
+      const promotionReason = String(body.promotionReason || "").trim() || null;
+
+      if (
+        !Number.isInteger(promotionalStamps) ||
+        promotionalStamps < 0 ||
+        promotionalStamps > 5
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Los sellos promocionales deben estar entre 0 y 5.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (promotionalStamps > 0 && customerId === null) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Los sellos promocionales requieren un cliente.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (promotionalStamps > 0 && !promotionReason) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "El motivo de los sellos promocionales es obligatorio.",
+          },
+          { status: 400 },
+        );
+      }
+
       const { data: matchingOrders, error: ordersError } = await supabaseAdmin
         .from("orders")
         .select("sale_id")
@@ -486,6 +524,8 @@ export async function POST(req: Request) {
         p_order_notes: orderNotes || null,
         p_channel: channel,
         p_external_order_id: externalOrderId || null,
+        p_promotional_stamps: promotionalStamps,
+        p_promotion_reason: promotionalStamps > 0 ? promotionReason : null,
       },
     );
 
@@ -509,6 +549,8 @@ export async function POST(req: Request) {
           externalOrderId: externalOrderId || null,
           paymentMethod,
           itemLines: items.length,
+          promotionalStamps,
+          promotionReason: promotionalStamps > 0 ? promotionReason : null,
         },
 
         correlationId,
@@ -556,11 +598,15 @@ export async function POST(req: Request) {
         externalOrderId: externalOrderId || null,
         paymentMethod,
         itemLines: items.length,
+        promotionalStamps,
+        promotionReason: promotionalStamps > 0 ? promotionReason : null,
       },
 
       metadata: {
         orderNotes: orderNotes || null,
         hasCustomer: customerId !== null,
+        promotionalStamps,
+        promotionReason: promotionalStamps > 0 ? promotionReason : null,
       },
 
       correlationId,
