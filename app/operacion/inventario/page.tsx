@@ -57,6 +57,19 @@ export default function InventoryPage() {
             Registrar ajustes positivos, negativos, mermas y consumo interno.
           </p>
         </Link>
+
+        <Link
+          href="/operacion/inventario/movimientos"
+          className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-neutral-300 hover:shadow"
+        >
+          <h2 className="font-semibold text-neutral-950">
+            Historial de movimientos
+          </h2>
+
+          <p className="mt-2 text-sm text-neutral-600">
+            Consultar movimientos, responsables, referencias y saldos.
+          </p>
+        </Link>
       </section>
     </main>
   );
