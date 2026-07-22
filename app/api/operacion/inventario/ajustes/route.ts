@@ -127,6 +127,16 @@ export async function POST(request: Request) {
     const reason = String(body.reason ?? "").trim();
     const comment = String(body.comment ?? "").trim();
 
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La cantidad debe ser un número entero mayor que cero.",
+        },
+        { status: 400 },
+      );
+    }
+
     if (!VALID_KINDS.has(kind)) {
       return NextResponse.json(
         { ok: false, message: "El tipo de movimiento no es válido." },
