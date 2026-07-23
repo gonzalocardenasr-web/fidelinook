@@ -197,8 +197,6 @@ export default function ProductConfigurator({
               {product.name}
             </h2>
 
-            <p className="text-xs text-red-600">SKU: [{product.sku}]</p>
-
             <p className="text-[13px] font-bold text-violet-700">
               ${unitPrice.toLocaleString("es-CL")}
             </p>
