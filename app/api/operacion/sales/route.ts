@@ -671,10 +671,7 @@ export async function POST(req: Request) {
             `
           id,
           option_value_id,
-          inventory_stock (
-            quantity
-          ),
-          catalog_option_values!inventory_items_option_value_id_fkey (
+                    catalog_option_values!inventory_items_option_value_id_fkey (
             id,
             name
           )
@@ -741,7 +738,6 @@ export async function POST(req: Request) {
         const inventoryItemId = Number(row.id);
         const optionValueId = Number(row.option_value_id);
 
-        const stock = firstRelation(row.inventory_stock);
         const optionValue = firstRelation(row.catalog_option_values);
 
         if (
@@ -754,13 +750,10 @@ export async function POST(req: Request) {
 
         const hasOpenBatch = openInventoryItemIds.has(inventoryItemId);
 
-        const hasAvailableStock = Number(stock?.quantity ?? 0) > 0;
-
         if (
           Number.isInteger(optionValueId) &&
           optionValueId > 0 &&
-          hasOpenBatch &&
-          hasAvailableStock
+          hasOpenBatch
         ) {
           availableFlavorIds.add(optionValueId);
         }

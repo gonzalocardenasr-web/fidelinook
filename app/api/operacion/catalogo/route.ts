@@ -98,15 +98,13 @@ export async function GET() {
 
           if (!item) return [];
 
-          const stock = Array.isArray(item.inventory_stock)
-            ? item.inventory_stock[0]
-            : item.inventory_stock;
+          const optionValueId = Number(item.option_value_id);
 
-          if (!stock || Number(stock.quantity) <= 0) {
+          if (!Number.isInteger(optionValueId) || optionValueId <= 0) {
             return [];
           }
 
-          return [Number(item.option_value_id)];
+          return [optionValueId];
         })
         .filter(Number.isInteger),
     ),
