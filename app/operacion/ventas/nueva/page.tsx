@@ -42,6 +42,8 @@ export default function NuevaVentaPage() {
 
   const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
 
+  const [readyPotFlavorIds, setReadyPotFlavorIds] = useState<number[]>([]);
+
   useEffect(() => {
     if (!selectedCliente) {
       setPromotionalStamps(0);
@@ -75,6 +77,7 @@ export default function NuevaVentaPage() {
       setProducts(data.products || []);
       setOptionGroups(data.optionGroups || []);
       setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
+      setReadyPotFlavorIds(data.readyPotFlavorIds || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -118,6 +121,18 @@ export default function NuevaVentaPage() {
 
   const openBatchFlavors = useMemo(() => {
     return flavors.filter((flavor) => openBatchFlavorIds.includes(flavor.id));
+  }, [flavors, openBatchFlavorIds]);
+
+  const readyPotFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(readyPotFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
+  }, [flavors, readyPotFlavorIds]);
+
+  const openBatchFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(openBatchFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
   }, [flavors, openBatchFlavorIds]);
 
   const toppings = useMemo(() => {
@@ -601,7 +616,9 @@ export default function NuevaVentaPage() {
                 flavors={
                   configuringProduct?.sku === "POT-16-ARMADO"
                     ? openBatchFlavors
-                    : flavors
+                    : configuringProduct?.sku === "POT-16-LISTO"
+                      ? readyPotFlavors
+                      : flavors
                 }
                 toppings={toppings}
                 getPrice={getPrice}
