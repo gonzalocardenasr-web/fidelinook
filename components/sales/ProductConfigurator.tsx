@@ -5,7 +5,6 @@ type Props = {
   product: Product | null;
   editingItem: CartItem | null;
   flavors: OptionValue[];
-  toppings: OptionValue[];
   getPrice: (product: Product) => number;
   onCancel: () => void;
   onAddConfigured: (item: Omit<CartItem, "localId">) => void;
@@ -13,18 +12,21 @@ type Props = {
     localId: string,
     item: Omit<CartItem, "localId">,
   ) => void;
+  brownieVarieties: OptionValue[];
 };
 
 export default function ProductConfigurator({
   product,
   editingItem,
   flavors,
+  brownieVarieties,
   getPrice,
   onCancel,
   onAddConfigured,
   onUpdateConfigured,
 }: Props) {
   const [flavorSelections, setFlavorSelections] = useState<number[]>([]);
+  const [brownieVarietyId, setBrownieVarietyId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [chocolateDip, setChocolateDip] = useState(false);
   const [toppingEnabled, setToppingEnabled] = useState(false);
@@ -38,11 +40,21 @@ export default function ProductConfigurator({
     );
   }, [product]);
 
+  const requiresBrownieVariety = useMemo(() => {
+    const sku = String(product?.sku ?? "")
+      .trim()
+      .toUpperCase();
+
+    return sku === "BROWNIE" || sku === "BROWNIE-HELADO";
+  }, [product]);
+
   useEffect(() => {
     if (editingItem) {
       setFlavorSelections(
         isServedIceCream ? [] : editingItem.flavorSelections || [],
       );
+
+      setBrownieVarietyId(editingItem.brownieVarietyId ?? null);
 
       setNotes(editingItem.notes || "");
 
@@ -88,7 +100,10 @@ export default function ProductConfigurator({
   const hasRequiredFlavors =
     !requiresFlavorSelection || flavorSelections.length > 0;
 
-  const canAdd = hasRequiredFlavors;
+  const hasRequiredBrownieVariety =
+    !requiresBrownieVariety || Boolean(brownieVarietyId);
+
+  const canAdd = hasRequiredFlavors && hasRequiredBrownieVariety;
 
   const unitPrice = getPrice(product);
   const chocolateDipPrice = isServedIceCream && chocolateDip ? 500 : 0;
@@ -104,6 +119,7 @@ export default function ProductConfigurator({
 
   function resetConfig() {
     setFlavorSelections([]);
+    setBrownieVarietyId(null);
     setNotes("");
     setChocolateDip(false);
     setToppingEnabled(false);
@@ -137,6 +153,7 @@ export default function ProductConfigurator({
       flavorSelections: isServedIceCream ? [] : flavorSelections,
 
       toppingIds: [],
+      brownieVarietyId: requiresBrownieVariety ? brownieVarietyId : null,
       notes: notes.trim(),
       extraUnitPrice,
       extraLabels,
@@ -180,6 +197,8 @@ export default function ProductConfigurator({
               {product.name}
             </h2>
 
+            <p className="text-xs text-red-600">SKU: [{product.sku}]</p>
+
             <p className="text-[13px] font-bold text-violet-700">
               ${unitPrice.toLocaleString("es-CL")}
             </p>
@@ -195,6 +214,37 @@ export default function ProductConfigurator({
 
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg bg-neutral-50 p-2.5">
         <div className="space-y-2">
+          {requiresBrownieVariety && (
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                Variedad de brownie
+              </label>
+
+              <select
+                value={brownieVarietyId ?? ""}
+                onChange={(event) =>
+                  setBrownieVarietyId(
+                    event.target.value ? Number(event.target.value) : null,
+                  )
+                }
+                className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="">Seleccionar variedad</option>
+
+                {brownieVarieties.map((variety) => (
+                  <option key={variety.id} value={variety.id}>
+                    {variety.name}
+                  </option>
+                ))}
+              </select>
+
+              {brownieVarieties.length === 0 && (
+                <p className="mt-1 text-[11px] font-bold text-red-600">
+                  No existen variedades con stock disponible.
+                </p>
+              )}
+            </div>
+          )}
           {requiresFlavorSelection && (
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -270,11 +320,13 @@ export default function ProductConfigurator({
             </div>
           )}
 
-          {!requiresFlavorSelection && !isServedIceCream && (
-            <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-500">
-              Este producto no requiere configuración adicional.
-            </p>
-          )}
+          {!requiresFlavorSelection &&
+            !requiresBrownieVariety &&
+            !isServedIceCream && (
+              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-500">
+                Este producto no requiere configuración adicional.
+              </p>
+            )}
 
           <div>
             <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">

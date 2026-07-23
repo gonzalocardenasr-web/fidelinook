@@ -44,6 +44,10 @@ export default function NuevaVentaPage() {
 
   const [readyPotFlavorIds, setReadyPotFlavorIds] = useState<number[]>([]);
 
+  const [availableBrownieVarietyIds, setAvailableBrownieVarietyIds] = useState<
+    number[]
+  >([]);
+
   useEffect(() => {
     if (!selectedCliente) {
       setPromotionalStamps(0);
@@ -78,6 +82,7 @@ export default function NuevaVentaPage() {
       setOptionGroups(data.optionGroups || []);
       setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
       setReadyPotFlavorIds(data.readyPotFlavorIds || []);
+      setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -130,6 +135,17 @@ export default function NuevaVentaPage() {
 
     return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
   }, [flavors, readyPotFlavorIds]);
+
+  const brownieVarieties = useMemo(() => {
+    const availableIds = new Set(availableBrownieVarietyIds);
+
+    return (
+      optionGroups.find((group) => group.code === "brownie_variety")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [optionGroups, availableBrownieVarietyIds]);
 
   const toppings = useMemo(() => {
     return (
@@ -247,6 +263,17 @@ export default function NuevaVentaPage() {
        * Los helados servidos no requieren sabor en caja.
        * Los potes armados y demás productos configurables sí.
        */
+      const requiresBrownieVariety =
+        item.product.sku === "BROWNIE" || item.product.sku === "BROWNIE-HELADO";
+
+      if (
+        requiresBrownieVariety &&
+        (!Number.isInteger(item.brownieVarietyId) ||
+          Number(item.brownieVarietyId) <= 0)
+      ) {
+        return `Debes seleccionar una variedad para ${item.product.name}.`;
+      }
+
       if (
         !isServedIceCream &&
         item.product.has_flavors &&
@@ -283,6 +310,8 @@ export default function NuevaVentaPage() {
       ),
 
       toppingIds: [...(item.toppingIds || [])].sort((a, b) => a - b),
+
+      brownieVarietyId: item.brownieVarietyId ?? null,
 
       serviceFormat: item.serviceFormat || null,
 
@@ -447,6 +476,17 @@ export default function NuevaVentaPage() {
               option_value_id: id,
               quantity: 1,
             })),
+
+            ...(item.brownieVarietyId
+              ? [
+                  {
+                    option_group_code: "brownie_variety",
+                    option_value_id: item.brownieVarietyId,
+                    quantity: 1,
+                  },
+                ]
+              : []),
+
             ...item.toppingIds.map((id) => ({
               option_group_code: "topping",
               option_value_id: id,
@@ -610,13 +650,14 @@ export default function NuevaVentaPage() {
                 product={configuringProduct}
                 editingItem={editingItem}
                 flavors={
-                  configuringProduct?.sku === "POT-16-ARMADO"
+                  configuringProduct?.sku === "POT-16-ARMADO" ||
+                  configuringProduct?.sku === "BROWNIE-HELADO"
                     ? openBatchFlavors
                     : configuringProduct?.sku === "POT-16-LISTO"
                       ? readyPotFlavors
                       : flavors
                 }
-                toppings={toppings}
+                brownieVarieties={brownieVarieties}
                 getPrice={getPrice}
                 onCancel={() => {
                   setConfiguringProduct(null);

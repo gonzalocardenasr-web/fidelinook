@@ -37,6 +37,7 @@ export type CartItem = {
   quantity: number;
   flavorSelections: number[];
   toppingIds: number[];
+  brownieVarietyId?: number | null;
   notes: string;
   extraUnitPrice: number;
   extraLabels: string[];

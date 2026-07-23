@@ -165,6 +165,18 @@ export async function GET() {
    */
   const readyPotFlavorIds = new Set<number>();
 
+  const availableBrownieVarietyIds = new Set<number>();
+
+  const brownieProduct = (products ?? []).find(
+    (product) => String(product.sku || "").trim() === "BROWNIE",
+  );
+
+  const brownieProductId = Number(brownieProduct?.id);
+
+  /*
+   * Variedades de brownie con stock unitario disponible.
+   */
+
   for (const row of (inventoryRows ?? []) as InventoryItemRow[]) {
     const productId = Number(row.product_id);
     const optionValueId = Number(row.option_value_id);
@@ -191,6 +203,19 @@ export async function GET() {
       quantity > 0
     ) {
       readyPotFlavorIds.add(optionValueId);
+    }
+
+    /*
+     * Cada inventario de brownie está asociado a una variedad.
+     */
+    if (
+      Number.isInteger(brownieProductId) &&
+      productId === brownieProductId &&
+      Number.isInteger(optionValueId) &&
+      optionValueId > 0 &&
+      quantity > 0
+    ) {
+      availableBrownieVarietyIds.add(optionValueId);
     }
   }
 
@@ -224,6 +249,16 @@ export async function GET() {
       return readyPotFlavorIds.size > 0;
     }
 
+    if (sku === "BROWNIE") {
+      return availableBrownieVarietyIds.size > 0;
+    }
+
+    if (sku === "BROWNIE-HELADO") {
+      return (
+        availableBrownieVarietyIds.size > 0 && openBatchFlavorIds.length > 0
+      );
+    }
+
     const baseProductSku = compositeBaseSkuBySku.get(sku);
 
     if (baseProductSku) {
@@ -248,5 +283,6 @@ export async function GET() {
     optionGroups: optionGroups || [],
     openBatchFlavorIds,
     readyPotFlavorIds: [...readyPotFlavorIds],
+    availableBrownieVarietyIds: [...availableBrownieVarietyIds],
   });
 }
