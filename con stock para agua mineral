@@ -188,4 +188,304 @@
  };[m
  [m
  export default function ProductConfigurator({[m
-[36m@@ -20,16 +21,56 @@[m [mexport default func
+[36m@@ -20,16 +21,56 @@[m [mexport default function ProductConfigurator({[m
+   editingItem,[m
+   flavors,[m
+   brownieVarieties,[m
+[32m+[m[32m  mineralWaterTypes,[m
+   getPrice,[m
+   onCancel,[m
+   onAddConfigured,[m
+   onUpdateConfigured,[m
+ }: Props) {[m
+[31m-  const [flavorSelections, setFlavorSelections] = useState<number[]>([]);[m
+[31m-  const [brownieVarietyId, setBrownieVarietyId] = useState<number | null>(null);[m
+[31m-  const [notes, setNotes] = useState("");[m
+[31m-  const [chocolateDip, setChocolateDip] = useState(false);[m
+[31m-  const [toppingEnabled, setToppingEnabled] = useState(false);[m
+[32m+[m[32m  /*[m
+[32m+[m[32m   * Este valor se utiliza únicamente para definir el estado inicial.[m
+[32m+[m[32m   * El componente debe recibir una key desde page.tsx para reiniciarse[m
+[32m+[m[32m   * cuando cambia el producto o la línea del carrito que se está editando.[m
+[32m+[m[32m   */[m
+[32m+[m[32m  const initialIsServedIceCream =[m
+[32m+[m[32m    product?.category?.trim().toLowerCase() === "helados" &&[m
+[32m+[m[32m    product?.operational_type?.trim().toLowerCase() === "servido";[m
+[32m+[m
+[32m+[m[32m  /*[m
+[32m+[m[32m   * Los estados se inicializan directamente desde editingItem.[m
+[32m+[m[32m   * No se utiliza useEffect, evitando actualizaciones de estado[m
+[32m+[m[32m   * síncronas dentro de un efecto.[m
+[32m+[m[32m   */[m
+[32m+[m[32m  const [flavorSelections, setFlavorSelections] = useState<number[]>([m
+[32m+[m[32m    initialIsServedIceCream ? [] : editingItem?.flavorSelections || [],[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  const [brownieVarietyId, setBrownieVarietyId] = useState<number | null>([m
+[32m+[m[32m    editingItem?.brownieVarietyId ?? null,[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  const [mineralWaterTypeId, setMineralWaterTypeId] = useState<number | null>([m
+[32m+[m[32m    editingItem?.mineralWaterTypeId ?? null,[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  const [notes, setNotes] = useState(editingItem?.notes || "");[m
+[32m+[m
+[32m+[m[32m  const [chocolateDip, setChocolateDip] = useState([m
+[32m+[m[32m    Boolean(editingItem?.chocolateDip) ||[m
+[32m+[m[32m      Boolean([m
+[32m+[m[32m        editingItem?.extraLabels?.some([m
+[32m+[m[32m          (label) => label.toLowerCase() === "baño chocolate",[m
+[32m+[m[32m        ),[m
+[32m+[m[32m      ),[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  const [toppingEnabled, setToppingEnabled] = useState([m
+[32m+[m[32m    Boolean([m
+[32m+[m[32m      editingItem?.extraLabels?.some((label) =>[m
+[32m+[m[32m        label.toLowerCase().startsWith("topping"),[m
+[32m+[m[32m      ),[m
+[32m+[m[32m    ),[m
+[32m+[m[32m  );[m
+ [m
+   const isServedIceCream = useMemo(() => {[m
+     if (!product) return false;[m
+[36m@@ -48,38 +89,13 @@[m [mexport default function ProductConfigurator({[m
+     return sku === "BROWNIE" || sku === "BROWNIE-HELADO";[m
+   }, [product]);[m
+ [m
+[31m-  useEffect(() => {[m
+[31m-    if (editingItem) {[m
+[31m-      setFlavorSelections([m
+[31m-        isServedIceCream ? [] : editingItem.flavorSelections || [],[m
+[31m-      );[m
+[31m-[m
+[31m-      setBrownieVarietyId(editingItem.brownieVarietyId ?? null);[m
+[31m-[m
+[31m-      setNotes(editingItem.notes || "");[m
+[31m-[m
+[31m-      setChocolateDip([m
+[31m-        Boolean(editingItem.chocolateDip) ||[m
+[31m-          Boolean([m
+[31m-            editingItem.extraLabels?.some([m
+[31m-              (label) => label.toLowerCase() === "baño chocolate",[m
+[31m-            ),[m
+[31m-          ),[m
+[31m-      );[m
+[31m-[m
+[31m-      setToppingEnabled([m
+[31m-        Boolean([m
+[31m-          editingItem.extraLabels?.some((label) =>[m
+[31m-            label.toLowerCase().startsWith("topping"),[m
+[31m-          ),[m
+[31m-        ),[m
+[31m-      );[m
+[31m-[m
+[31m-      return;[m
+[31m-    }[m
+[32m+[m[32m  const requiresMineralWaterType = useMemo(() => {[m
+[32m+[m[32m    const sku = String(product?.sku ?? "")[m
+[32m+[m[32m      .trim()[m
+[32m+[m[32m      .toUpperCase();[m
+ [m
+[31m-    resetConfig();[m
+[31m-  }, [product?.id, editingItem?.localId, isServedIceCream]);[m
+[32m+[m[32m    return sku === "AGUA-MINERAL-500CC";[m
+[32m+[m[32m  }, [product]);[m
+ [m
+   if (!product) {[m
+     return ([m
+[36m@@ -90,8 +106,8 @@[m [mexport default function ProductConfigurator({[m
+   }[m
+ [m
+   /*[m
+[31m-   * Los helados servidos ya no solicitan sabores en caja.[m
+[31m-   * Los demás productos configurables, como los potes armados,[m
+[32m+[m[32m   * Los helados servidos no solicitan sabores en caja.[m
+[32m+[m[32m   * Los potes armados y otros productos configurables[m
+    * mantienen su selección de sabores.[m
+    */[m
+   const requiresFlavorSelection =[m
+[36m@@ -103,11 +119,20 @@[m [mexport default function ProductConfigurator({[m
+   const hasRequiredBrownieVariety =[m
+     !requiresBrownieVariety || Boolean(brownieVarietyId);[m
+ [m
+[31m-  const canAdd = hasRequiredFlavors && hasRequiredBrownieVariety;[m
+[32m+[m[32m  const hasRequiredMineralWaterType =[m
+[32m+[m[32m    !requiresMineralWaterType || Boolean(mineralWaterTypeId);[m
+[32m+[m
+[32m+[m[32m  const canAdd =[m
+[32m+[m[32m    hasRequiredFlavors &&[m
+[32m+[m[32m    hasRequiredBrownieVariety &&[m
+[32m+[m[32m    hasRequiredMineralWaterType;[m
+ [m
+   const unitPrice = getPrice(product);[m
+[32m+[m
+   const chocolateDipPrice = isServedIceCream && chocolateDip ? 500 : 0;[m
+[32m+[m
+   const toppingPrice = isServedIceCream && toppingEnabled ? 500 : 0;[m
+[32m+[m
+   const extraUnitPrice = chocolateDipPrice + toppingPrice;[m
+ [m
+   const extraLabels = [[m
+[36m@@ -120,6 +145,7 @@[m [mexport default function ProductConfigurator({[m
+   function resetConfig() {[m
+     setFlavorSelections([]);[m
+     setBrownieVarietyId(null);[m
+[32m+[m[32m    setMineralWaterTypeId(null);[m
+     setNotes("");[m
+     setChocolateDip(false);[m
+     setToppingEnabled(false);[m
+[36m@@ -140,29 +166,30 @@[m [mexport default function ProductConfigurator({[m
+   }[m
+ [m
+   function addProduct() {[m
+[31m-    if (!product || !canAdd) return;[m
+[32m+[m[32m    if (!product || !canAdd) {[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+ [m
+     const configuredItem: Omit<CartItem, "localId"> = {[m
+       product,[m
+       quantity: 1,[m
+ [m
+       /*[m
+[31m-       * En helados servidos no se registra sabor.[m
+[31m-       * En potes armados y otros productos configurables sí.[m
+[32m+[m[32m       * Los helados servidos no registran sabor.[m
+[32m+[m[32m       * Los potes armados y productos configurables sí.[m
+        */[m
+       flavorSelections: isServedIceCream ? [] : flavorSelections,[m
+ [m
+       toppingIds: [],[m
+[32m+[m
+       brownieVarietyId: requiresBrownieVariety ? brownieVarietyId : null,[m
+[32m+[m
+[32m+[m[32m      mineralWaterTypeId: requiresMineralWaterType ? mineralWaterTypeId : null,[m
+[32m+[m
+       notes: notes.trim(),[m
+       extraUnitPrice,[m
+       extraLabels,[m
+ [m
+[31m-      /*[m
+[31m-       * Se mantienen los campos estructurados para compatibilidad,[m
+[31m-       * pero no se capturan formato, galleta ni detalle de topping[m
+[31m-       * en helados servidos.[m
+[31m-       */[m
+       serviceFormat: undefined,[m
+       includesCookie: false,[m
+       chocolateDip: isServedIceCream && chocolateDip,[m
+[36m@@ -243,6 +270,39 @@[m [mexport default function ProductConfigurator({[m
+               )}[m
+             </div>[m
+           )}[m
+[32m+[m
+[32m+[m[32m          {requiresMineralWaterType && ([m
+[32m+[m[32m            <div>[m
+[32m+[m[32m              <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">[m
+[32m+[m[32m                Tipo de agua mineral[m
+[32m+[m[32m              </label>[m
+[32m+[m
+[32m+[m[32m              <select[m
+[32m+[m[32m                value={mineralWaterTypeId ?? ""}[m
+[32m+[m[32m                onChange={(event) =>[m
+[32m+[m[32m                  setMineralWaterTypeId([m
+[32m+[m[32m                    event.target.value ? Number(event.target.value) : null,[m
+[32m+[m[32m                  )[m
+[32m+[m[32m                }[m
+[32m+[m[32m                className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"[m
+[32m+[m[32m              >[m
+[32m+[m[32m                <option value="">Seleccionar tipo</option>[m
+[32m+[m
+[32m+[m[32m                {mineralWaterTypes.map((waterType) => ([m
+[32m+[m[32m                  <option key={waterType.id} value={waterType.id}>[m
+[32m+[m[32m                    {waterType.name}[m
+[32m+[m[32m                  </option>[m
+[32m+[m[32m                ))}[m
+[32m+[m[32m              </select>[m
+[32m+[m
+[32m+[m[32m              {mineralWaterTypes.length === 0 && ([m
+[32m+[m[32m                <p className="mt-1 text-[11px] font-bold text-red-600">[m
+[32m+[m[32m                  No existen tipos de agua mineral con stock disponible.[m
+[32m+[m[32m                </p>[m
+[32m+[m[32m              )}[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+[32m+[m
+           {requiresFlavorSelection && ([m
+             <div>[m
+               <div className="mb-1 flex items-center justify-between gap-2">[m
+[36m@@ -256,30 +316,30 @@[m [mexport default function ProductConfigurator({[m
+               </div>[m
+ [m
+               <div className="space-y-2">[m
+[31m-                {Array.from({ length: product.max_flavors }).map([m
+[31m-                  (_item, index) => ([m
+[31m-                    <select[m
+[31m-                      key={index}[m
+[31m-                      value={flavorSelections[index] || ""}[m
+[31m-                      onChange={(event) =>[m
+[31m-                        updateFlavorSelection(index, event.target.value)[m
+[31m-                      }[m
+[31m-                      className="h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"[m
+[31m-                    >[m
+[31m-                      <option value="">[m
+[31m-                        {product.max_flavors === 1[m
+[31m-                          ? "Seleccionar sabor"[m
+[31m-                          : `Sabor ${index + 1}`}[m
+[32m+[m[32m                {Array.from({[m
+[32m+[m[32m                  length: product.max_flavors,[m
+[32m+[m[32m                }).map((_item, index) => ([m
+[32m+[m[32m                  <select[m
+[32m+[m[32m                    key={index}[m
+[32m+[m[32m                    value={flavorSelections[index] || ""}[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      updateFlavorSelection(index, event.target.value)[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    className="h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"[m
+[32m+[m[32m                  >[m
+[32m+[m[32m                    <option value="">[m
+[32m+[m[32m                      {product.max_flavors === 1[m
+[32m+[m[32m                        ? "Seleccionar sabor"[m
+[32m+[m[32m                        : `Sabor ${index + 1}`}[m
+[32m+[m[32m                    </option>[m
+[32m+[m
+[32m+[m[32m                    {flavors.map((flavor) => ([m
+[32m+[m[32m                      <option key={flavor.id} value={flavor.id}>[m
+[32m+[m[32m                        {flavor.name}[m
+                       </option>[m
+[31m-[m
+[31m-                      {flavors.map((flavor) => ([m
+[31m-                        <option key={flavor.id} value={flavor.id}>[m
+[31m-                          {flavor.name}[m
+[31m-                        </option>[m
+[31m-                      ))}[m
+[31m-                    </select>[m
+[31m-                  ),[m
+[31m-                )}[m
+[32m+[m[32m                    ))}[m
+[32m+[m[32m                  </select>[m
+[32m+[m[32m                ))}[m
+               </div>[m
+             </div>[m
+           )}[m
+[36m@@ -320,6 +380,7 @@[m [mexport default function ProductConfigurator({[m
+ [m
+           {!requiresFlavorSelection &&[m
+             !requiresBrownieVariety &&[m
+[32m+[m[32m            !requiresMineralWaterType &&[m
+             !isServedIceCream && ([m
+               <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-500">[m
+                 Este producto no requiere configuración adicional.[m
+[1mdiff --git a/types/sales.ts b/types/sales.ts[m
+[1mindex 680e29a..a9cf5ca 100644[m
+[1m--- a/types/sales.ts[m
+[1m+++ b/types/sales.ts[m
+[36m@@ -38,6 +38,7 @@[m [mexport type CartItem = {[m
+   flavorSelections: number[];[m
+   toppingIds: number[];[m
+   brownieVarietyId?: number | null;[m
+[32m+[m[32m  mineralWaterTypeId?: number | null;[m
+   notes: string;[m
+   extraUnitPrice: number;[m
+   extraLabels: string[];[m

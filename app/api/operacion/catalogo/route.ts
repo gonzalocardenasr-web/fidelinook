@@ -240,7 +240,12 @@ export async function GET() {
     }
   }
 
-  const alwaysVisibleSkus = new Set(["HEL-SIMPLE", "HEL-DOBLE"]);
+  const alwaysVisibleSkus = new Set([
+    "HEL-SIMPLE",
+    "HEL-DOBLE",
+    "ADIC-BANO-CHOCOLATE",
+    "ADIC-TOPPING",
+  ]);
 
   const productsBySku = new Map(
     (products ?? []).map((product) => [product.sku, product]),
