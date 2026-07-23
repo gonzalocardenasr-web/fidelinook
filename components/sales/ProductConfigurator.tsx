@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Product, OptionValue, CartItem } from "../../types/sales";
 
 type Props = {
   product: Product | null;
   editingItem: CartItem | null;
   flavors: OptionValue[];
+  brownieVarieties: OptionValue[];
+  mineralWaterTypes: OptionValue[];
   getPrice: (product: Product) => number;
   onCancel: () => void;
   onAddConfigured: (item: Omit<CartItem, "localId">) => void;
@@ -12,7 +14,6 @@ type Props = {
     localId: string,
     item: Omit<CartItem, "localId">,
   ) => void;
-  brownieVarieties: OptionValue[];
 };
 
 export default function ProductConfigurator({
@@ -20,16 +21,56 @@ export default function ProductConfigurator({
   editingItem,
   flavors,
   brownieVarieties,
+  mineralWaterTypes,
   getPrice,
   onCancel,
   onAddConfigured,
   onUpdateConfigured,
 }: Props) {
-  const [flavorSelections, setFlavorSelections] = useState<number[]>([]);
-  const [brownieVarietyId, setBrownieVarietyId] = useState<number | null>(null);
-  const [notes, setNotes] = useState("");
-  const [chocolateDip, setChocolateDip] = useState(false);
-  const [toppingEnabled, setToppingEnabled] = useState(false);
+  /*
+   * Este valor se utiliza únicamente para definir el estado inicial.
+   * El componente debe recibir una key desde page.tsx para reiniciarse
+   * cuando cambia el producto o la línea del carrito que se está editando.
+   */
+  const initialIsServedIceCream =
+    product?.category?.trim().toLowerCase() === "helados" &&
+    product?.operational_type?.trim().toLowerCase() === "servido";
+
+  /*
+   * Los estados se inicializan directamente desde editingItem.
+   * No se utiliza useEffect, evitando actualizaciones de estado
+   * síncronas dentro de un efecto.
+   */
+  const [flavorSelections, setFlavorSelections] = useState<number[]>(
+    initialIsServedIceCream ? [] : editingItem?.flavorSelections || [],
+  );
+
+  const [brownieVarietyId, setBrownieVarietyId] = useState<number | null>(
+    editingItem?.brownieVarietyId ?? null,
+  );
+
+  const [mineralWaterTypeId, setMineralWaterTypeId] = useState<number | null>(
+    editingItem?.mineralWaterTypeId ?? null,
+  );
+
+  const [notes, setNotes] = useState(editingItem?.notes || "");
+
+  const [chocolateDip, setChocolateDip] = useState(
+    Boolean(editingItem?.chocolateDip) ||
+      Boolean(
+        editingItem?.extraLabels?.some(
+          (label) => label.toLowerCase() === "baño chocolate",
+        ),
+      ),
+  );
+
+  const [toppingEnabled, setToppingEnabled] = useState(
+    Boolean(
+      editingItem?.extraLabels?.some((label) =>
+        label.toLowerCase().startsWith("topping"),
+      ),
+    ),
+  );
 
   const isServedIceCream = useMemo(() => {
     if (!product) return false;
@@ -48,38 +89,13 @@ export default function ProductConfigurator({
     return sku === "BROWNIE" || sku === "BROWNIE-HELADO";
   }, [product]);
 
-  useEffect(() => {
-    if (editingItem) {
-      setFlavorSelections(
-        isServedIceCream ? [] : editingItem.flavorSelections || [],
-      );
+  const requiresMineralWaterType = useMemo(() => {
+    const sku = String(product?.sku ?? "")
+      .trim()
+      .toUpperCase();
 
-      setBrownieVarietyId(editingItem.brownieVarietyId ?? null);
-
-      setNotes(editingItem.notes || "");
-
-      setChocolateDip(
-        Boolean(editingItem.chocolateDip) ||
-          Boolean(
-            editingItem.extraLabels?.some(
-              (label) => label.toLowerCase() === "baño chocolate",
-            ),
-          ),
-      );
-
-      setToppingEnabled(
-        Boolean(
-          editingItem.extraLabels?.some((label) =>
-            label.toLowerCase().startsWith("topping"),
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    resetConfig();
-  }, [product?.id, editingItem?.localId, isServedIceCream]);
+    return sku === "AGUA-MINERAL-500CC";
+  }, [product]);
 
   if (!product) {
     return (
@@ -90,8 +106,8 @@ export default function ProductConfigurator({
   }
 
   /*
-   * Los helados servidos ya no solicitan sabores en caja.
-   * Los demás productos configurables, como los potes armados,
+   * Los helados servidos no solicitan sabores en caja.
+   * Los potes armados y otros productos configurables
    * mantienen su selección de sabores.
    */
   const requiresFlavorSelection =
@@ -103,11 +119,20 @@ export default function ProductConfigurator({
   const hasRequiredBrownieVariety =
     !requiresBrownieVariety || Boolean(brownieVarietyId);
 
-  const canAdd = hasRequiredFlavors && hasRequiredBrownieVariety;
+  const hasRequiredMineralWaterType =
+    !requiresMineralWaterType || Boolean(mineralWaterTypeId);
+
+  const canAdd =
+    hasRequiredFlavors &&
+    hasRequiredBrownieVariety &&
+    hasRequiredMineralWaterType;
 
   const unitPrice = getPrice(product);
+
   const chocolateDipPrice = isServedIceCream && chocolateDip ? 500 : 0;
+
   const toppingPrice = isServedIceCream && toppingEnabled ? 500 : 0;
+
   const extraUnitPrice = chocolateDipPrice + toppingPrice;
 
   const extraLabels = [
@@ -120,6 +145,7 @@ export default function ProductConfigurator({
   function resetConfig() {
     setFlavorSelections([]);
     setBrownieVarietyId(null);
+    setMineralWaterTypeId(null);
     setNotes("");
     setChocolateDip(false);
     setToppingEnabled(false);
@@ -140,29 +166,30 @@ export default function ProductConfigurator({
   }
 
   function addProduct() {
-    if (!product || !canAdd) return;
+    if (!product || !canAdd) {
+      return;
+    }
 
     const configuredItem: Omit<CartItem, "localId"> = {
       product,
       quantity: 1,
 
       /*
-       * En helados servidos no se registra sabor.
-       * En potes armados y otros productos configurables sí.
+       * Los helados servidos no registran sabor.
+       * Los potes armados y productos configurables sí.
        */
       flavorSelections: isServedIceCream ? [] : flavorSelections,
 
       toppingIds: [],
+
       brownieVarietyId: requiresBrownieVariety ? brownieVarietyId : null,
+
+      mineralWaterTypeId: requiresMineralWaterType ? mineralWaterTypeId : null,
+
       notes: notes.trim(),
       extraUnitPrice,
       extraLabels,
 
-      /*
-       * Se mantienen los campos estructurados para compatibilidad,
-       * pero no se capturan formato, galleta ni detalle de topping
-       * en helados servidos.
-       */
       serviceFormat: undefined,
       includesCookie: false,
       chocolateDip: isServedIceCream && chocolateDip,
@@ -243,6 +270,39 @@ export default function ProductConfigurator({
               )}
             </div>
           )}
+
+          {requiresMineralWaterType && (
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                Tipo de agua mineral
+              </label>
+
+              <select
+                value={mineralWaterTypeId ?? ""}
+                onChange={(event) =>
+                  setMineralWaterTypeId(
+                    event.target.value ? Number(event.target.value) : null,
+                  )
+                }
+                className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="">Seleccionar tipo</option>
+
+                {mineralWaterTypes.map((waterType) => (
+                  <option key={waterType.id} value={waterType.id}>
+                    {waterType.name}
+                  </option>
+                ))}
+              </select>
+
+              {mineralWaterTypes.length === 0 && (
+                <p className="mt-1 text-[11px] font-bold text-red-600">
+                  No existen tipos de agua mineral con stock disponible.
+                </p>
+              )}
+            </div>
+          )}
+
           {requiresFlavorSelection && (
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -256,30 +316,30 @@ export default function ProductConfigurator({
               </div>
 
               <div className="space-y-2">
-                {Array.from({ length: product.max_flavors }).map(
-                  (_item, index) => (
-                    <select
-                      key={index}
-                      value={flavorSelections[index] || ""}
-                      onChange={(event) =>
-                        updateFlavorSelection(index, event.target.value)
-                      }
-                      className="h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                    >
-                      <option value="">
-                        {product.max_flavors === 1
-                          ? "Seleccionar sabor"
-                          : `Sabor ${index + 1}`}
-                      </option>
+                {Array.from({
+                  length: product.max_flavors,
+                }).map((_item, index) => (
+                  <select
+                    key={index}
+                    value={flavorSelections[index] || ""}
+                    onChange={(event) =>
+                      updateFlavorSelection(index, event.target.value)
+                    }
+                    className="h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  >
+                    <option value="">
+                      {product.max_flavors === 1
+                        ? "Seleccionar sabor"
+                        : `Sabor ${index + 1}`}
+                    </option>
 
-                      {flavors.map((flavor) => (
-                        <option key={flavor.id} value={flavor.id}>
-                          {flavor.name}
-                        </option>
-                      ))}
-                    </select>
-                  ),
-                )}
+                    {flavors.map((flavor) => (
+                      <option key={flavor.id} value={flavor.id}>
+                        {flavor.name}
+                      </option>
+                    ))}
+                  </select>
+                ))}
               </div>
             </div>
           )}
@@ -320,6 +380,7 @@ export default function ProductConfigurator({
 
           {!requiresFlavorSelection &&
             !requiresBrownieVariety &&
+            !requiresMineralWaterType &&
             !isServedIceCream && (
               <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-500">
                 Este producto no requiere configuración adicional.

@@ -1,0 +1,191 @@
+[1mdiff --git a/app/api/operacion/catalogo/route.ts b/app/api/operacion/catalogo/route.ts[m
+[1mindex bf29c7f..a5a2758 100644[m
+[1m--- a/app/api/operacion/catalogo/route.ts[m
+[1m+++ b/app/api/operacion/catalogo/route.ts[m
+[36m@@ -166,6 +166,7 @@[m [mexport async function GET() {[m
+   const readyPotFlavorIds = new Set<number>();[m
+ [m
+   const availableBrownieVarietyIds = new Set<number>();[m
+[32m+[m[32m  const availableMineralWaterTypeIds = new Set<number>();[m
+ [m
+   const brownieProduct = (products ?? []).find([m
+     (product) => String(product.sku || "").trim() === "BROWNIE",[m
+[36m@@ -173,6 +174,12 @@[m [mexport async function GET() {[m
+ [m
+   const brownieProductId = Number(brownieProduct?.id);[m
+ [m
+[32m+[m[32m  const mineralWaterProduct = (products ?? []).find([m
+[32m+[m[32m    (product) => String(product.sku || "").trim() === "AGUA-MINERAL-500CC",[m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  const mineralWaterProductId = Number(mineralWaterProduct?.id);[m
+[32m+[m
+   /*[m
+    * Variedades de brownie con stock unitario disponible.[m
+    */[m
+[36m@@ -217,6 +224,20 @@[m [mexport async function GET() {[m
+     ) {[m
+       availableBrownieVarietyIds.add(optionValueId);[m
+     }[m
+[32m+[m
+[32m+[m[32m    /*[m
+[32m+[m[32m     * Cada inventario de agua mineral está asociado a su tipo:[m
+[32m+[m[32m     * con gas o sin gas.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    if ([m
+[32m+[m[32m      Number.isInteger(mineralWaterProductId) &&[m
+[32m+[m[32m      productId === mineralWaterProductId &&[m
+[32m+[m[32m      Number.isInteger(optionValueId) &&[m
+[32m+[m[32m      optionValueId > 0 &&[m
+[32m+[m[32m      quantity > 0[m
+[32m+[m[32m    ) {[m
+[32m+[m[32m      availableMineralWaterTypeIds.add(optionValueId);[m
+[32m+[m[32m    }[m
+   }[m
+ [m
+   const alwaysVisibleSkus = new Set(["HEL-SIMPLE", "HEL-DOBLE"]);[m
+[36m@@ -259,6 +280,10 @@[m [mexport async function GET() {[m
+       );[m
+     }[m
+ [m
+[32m+[m[32m    if (sku === "AGUA-MINERAL-500CC") {[m
+[32m+[m[32m      return availableMineralWaterTypeIds.size > 0;[m
+[32m+[m[32m    }[m
+[32m+[m
+     const baseProductSku = compositeBaseSkuBySku.get(sku);[m
+ [m
+     if (baseProductSku) {[m
+[36m@@ -284,5 +309,6 @@[m [mexport async function GET() {[m
+     openBatchFlavorIds,[m
+     readyPotFlavorIds: [...readyPotFlavorIds],[m
+     availableBrownieVarietyIds: [...availableBrownieVarietyIds],[m
+[32m+[m[32m    availableMineralWaterTypeIds: [...availableMineralWaterTypeIds],[m
+   });[m
+ }[m
+[1mdiff --git a/app/operacion/ventas/nueva/page.tsx b/app/operacion/ventas/nueva/page.tsx[m
+[1mindex 29aa443..027e6aa 100644[m
+[1m--- a/app/operacion/ventas/nueva/page.tsx[m
+[1m+++ b/app/operacion/ventas/nueva/page.tsx[m
+[36m@@ -48,6 +48,9 @@[m [mexport default function NuevaVentaPage() {[m
+     number[][m
+   >([]);[m
+ [m
+[32m+[m[32m  const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =[m
+[32m+[m[32m    useState<number[]>([]);[m
+[32m+[m
+   useEffect(() => {[m
+     if (!selectedCliente) {[m
+       setPromotionalStamps(0);[m
+[36m@@ -83,6 +86,7 @@[m [mexport default function NuevaVentaPage() {[m
+       setOpenBatchFlavorIds(data.openBatchFlavorIds || []);[m
+       setReadyPotFlavorIds(data.readyPotFlavorIds || []);[m
+       setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);[m
+[32m+[m[32m      setAvailableMineralWaterTypeIds(data.availableMineralWaterTypeIds || []);[m
+     } catch (error) {[m
+       console.error(error);[m
+       setMessage("Error cargando catálogo.");[m
+[36m@@ -147,6 +151,17 @@[m [mexport default function NuevaVentaPage() {[m
+       .sort((a, b) => a.sort_order - b.sort_order);[m
+   }, [optionGroups, availableBrownieVarietyIds]);[m
+ [m
+[32m+[m[32m  const mineralWaterTypes = useMemo(() => {[m
+[32m+[m[32m    const availableIds = new Set(availableMineralWaterTypeIds);[m
+[32m+[m
+[32m+[m[32m    return ([m
+[32m+[m[32m      optionGroups.find((group) => group.code === "mineral_water_type")[m
+[32m+[m[32m        ?.catalog_option_values || [][m
+[32m+[m[32m    )[m
+[32m+[m[32m      .filter((option) => option.is_active && availableIds.has(option.id))[m
+[32m+[m[32m      .sort((a, b) => a.sort_order - b.sort_order);[m
+[32m+[m[32m  }, [optionGroups, availableMineralWaterTypeIds]);[m
+[32m+[m
+   const toppings = useMemo(() => {[m
+     return ([m
+       optionGroups.find((group) => group.code === "topping")[m
+[36m@@ -296,6 +311,17 @@[m [mexport default function NuevaVentaPage() {[m
+       ) {[m
+         return `${item.product.name} supera el máximo de toppings.`;[m
+       }[m
+[32m+[m
+[32m+[m[32m      const requiresMineralWaterType =[m
+[32m+[m[32m        item.product.sku === "AGUA-MINERAL-500CC";[m
+[32m+[m
+[32m+[m[32m      if ([m
+[32m+[m[32m        requiresMineralWaterType &&[m
+[32m+[m[32m        (!Number.isInteger(item.mineralWaterTypeId) ||[m
+[32m+[m[32m          Number(item.mineralWaterTypeId) <= 0)[m
+[32m+[m[32m      ) {[m
+[32m+[m[32m        return `Debes seleccionar el tipo para ${item.product.name}.`;[m
+[32m+[m[32m      }[m
+     }[m
+ [m
+     return null;[m
+[36m@@ -326,6 +352,8 @@[m [mexport default function NuevaVentaPage() {[m
+       notes: item.notes?.trim() || "",[m
+ [m
+       extraUnitPrice: item.extraUnitPrice || 0,[m
+[32m+[m
+[32m+[m[32m      mineralWaterTypeId: item.mineralWaterTypeId ?? null,[m
+     });[m
+   }[m
+ [m
+[36m@@ -487,6 +515,16 @@[m [mexport default function NuevaVentaPage() {[m
+                 ][m
+               : []),[m
+ [m
+[32m+[m[32m            ...(item.mineralWaterTypeId[m
+[32m+[m[32m              ? [[m
+[32m+[m[32m                  {[m
+[32m+[m[32m                    option_group_code: "mineral_water_type",[m
+[32m+[m[32m                    option_value_id: item.mineralWaterTypeId,[m
+[32m+[m[32m                    quantity: 1,[m
+[32m+[m[32m                  },[m
+[32m+[m[32m                ][m
+[32m+[m[32m              : []),[m
+[32m+[m
+             ...item.toppingIds.map((id) => ({[m
+               option_group_code: "topping",[m
+               option_value_id: id,[m
+[36m@@ -647,6 +685,7 @@[m [mexport default function NuevaVentaPage() {[m
+ [m
+             {configuringProduct && ([m
+               <ProductConfigurator[m
+[32m+[m[32m                key={`${configuringProduct.id}-${editingItem?.localId ?? "new"}`}[m
+                 product={configuringProduct}[m
+                 editingItem={editingItem}[m
+                 flavors={[m
+[36m@@ -658,6 +697,7 @@[m [mexport default function NuevaVentaPage() {[m
+                       : flavors[m
+                 }[m
+                 brownieVarieties={brownieVarieties}[m
+[32m+[m[32m                mineralWaterTypes={mineralWaterTypes}[m
+                 getPrice={getPrice}[m
+                 onCancel={() => {[m
+                   setConfiguringProduct(null);[m
+[1mdiff --git a/components/sales/ProductConfigurator.tsx b/components/sales/ProductConfigurator.tsx[m
+[1mindex e0b7000..103f2ca 100644[m
+[1m--- a/components/sales/ProductConfigurator.tsx[m
+[1m+++ b/components/sales/ProductConfigurator.tsx[m
+[36m@@ -1,10 +1,12 @@[m
+[31m-import { useEffect, useMemo, useState } from "react";[m
+[32m+[m[32mimport { useMemo, useState } from "react";[m
+ import { Product, OptionValue, CartItem } from "../../types/sales";[m
+ [m
+ type Props = {[m
+   product: Product | null;[m
+   editingItem: CartItem | null;[m
+   flavors: OptionValue[];[m
+[32m+[m[32m  brownieVarieties: OptionValue[];[m
+[32m+[m[32m  mineralWaterTypes: OptionValue[];[m
+   getPrice: (product: Product) => number;[m
+   onCancel: () => void;[m
+   onAddConfigured: (item: Omit<CartItem, "localId">) => void;[m
+[36m@@ -12,7 +14,6 @@[m [mtype Props = {[m
+     localId: string,[m
+     item: Omit<CartItem, "localId">,[m
+   ) => void;[m
+[31m-  brownieVarieties: OptionValue[];[m
+ };[m
+ [m
+ export default function ProductConfigurator({[m
+[36m@@ -20,16 +21,56 @@[m [mexport default func

@@ -38,6 +38,7 @@ export type CartItem = {
   flavorSelections: number[];
   toppingIds: number[];
   brownieVarietyId?: number | null;
+  mineralWaterTypeId?: number | null;
   notes: string;
   extraUnitPrice: number;
   extraLabels: string[];

@@ -166,12 +166,19 @@ export async function GET() {
   const readyPotFlavorIds = new Set<number>();
 
   const availableBrownieVarietyIds = new Set<number>();
+  const availableMineralWaterTypeIds = new Set<number>();
 
   const brownieProduct = (products ?? []).find(
     (product) => String(product.sku || "").trim() === "BROWNIE",
   );
 
   const brownieProductId = Number(brownieProduct?.id);
+
+  const mineralWaterProduct = (products ?? []).find(
+    (product) => String(product.sku || "").trim() === "AGUA-MINERAL-500CC",
+  );
+
+  const mineralWaterProductId = Number(mineralWaterProduct?.id);
 
   /*
    * Variedades de brownie con stock unitario disponible.
@@ -217,6 +224,20 @@ export async function GET() {
     ) {
       availableBrownieVarietyIds.add(optionValueId);
     }
+
+    /*
+     * Cada inventario de agua mineral está asociado a su tipo:
+     * con gas o sin gas.
+     */
+    if (
+      Number.isInteger(mineralWaterProductId) &&
+      productId === mineralWaterProductId &&
+      Number.isInteger(optionValueId) &&
+      optionValueId > 0 &&
+      quantity > 0
+    ) {
+      availableMineralWaterTypeIds.add(optionValueId);
+    }
   }
 
   const alwaysVisibleSkus = new Set(["HEL-SIMPLE", "HEL-DOBLE"]);
@@ -259,6 +280,10 @@ export async function GET() {
       );
     }
 
+    if (sku === "AGUA-MINERAL-500CC") {
+      return availableMineralWaterTypeIds.size > 0;
+    }
+
     const baseProductSku = compositeBaseSkuBySku.get(sku);
 
     if (baseProductSku) {
@@ -284,5 +309,6 @@ export async function GET() {
     openBatchFlavorIds,
     readyPotFlavorIds: [...readyPotFlavorIds],
     availableBrownieVarietyIds: [...availableBrownieVarietyIds],
+    availableMineralWaterTypeIds: [...availableMineralWaterTypeIds],
   });
 }

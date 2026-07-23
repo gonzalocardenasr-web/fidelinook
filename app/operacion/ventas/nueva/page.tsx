@@ -48,6 +48,9 @@ export default function NuevaVentaPage() {
     number[]
   >([]);
 
+  const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =
+    useState<number[]>([]);
+
   useEffect(() => {
     if (!selectedCliente) {
       setPromotionalStamps(0);
@@ -83,6 +86,7 @@ export default function NuevaVentaPage() {
       setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
       setReadyPotFlavorIds(data.readyPotFlavorIds || []);
       setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);
+      setAvailableMineralWaterTypeIds(data.availableMineralWaterTypeIds || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -146,6 +150,17 @@ export default function NuevaVentaPage() {
       .filter((option) => option.is_active && availableIds.has(option.id))
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [optionGroups, availableBrownieVarietyIds]);
+
+  const mineralWaterTypes = useMemo(() => {
+    const availableIds = new Set(availableMineralWaterTypeIds);
+
+    return (
+      optionGroups.find((group) => group.code === "mineral_water_type")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [optionGroups, availableMineralWaterTypeIds]);
 
   const toppings = useMemo(() => {
     return (
@@ -296,6 +311,17 @@ export default function NuevaVentaPage() {
       ) {
         return `${item.product.name} supera el máximo de toppings.`;
       }
+
+      const requiresMineralWaterType =
+        item.product.sku === "AGUA-MINERAL-500CC";
+
+      if (
+        requiresMineralWaterType &&
+        (!Number.isInteger(item.mineralWaterTypeId) ||
+          Number(item.mineralWaterTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo para ${item.product.name}.`;
+      }
     }
 
     return null;
@@ -326,6 +352,8 @@ export default function NuevaVentaPage() {
       notes: item.notes?.trim() || "",
 
       extraUnitPrice: item.extraUnitPrice || 0,
+
+      mineralWaterTypeId: item.mineralWaterTypeId ?? null,
     });
   }
 
@@ -482,6 +510,16 @@ export default function NuevaVentaPage() {
                   {
                     option_group_code: "brownie_variety",
                     option_value_id: item.brownieVarietyId,
+                    quantity: 1,
+                  },
+                ]
+              : []),
+
+            ...(item.mineralWaterTypeId
+              ? [
+                  {
+                    option_group_code: "mineral_water_type",
+                    option_value_id: item.mineralWaterTypeId,
                     quantity: 1,
                   },
                 ]
@@ -647,6 +685,7 @@ export default function NuevaVentaPage() {
 
             {configuringProduct && (
               <ProductConfigurator
+                key={`${configuringProduct.id}-${editingItem?.localId ?? "new"}`}
                 product={configuringProduct}
                 editingItem={editingItem}
                 flavors={
@@ -658,6 +697,7 @@ export default function NuevaVentaPage() {
                       : flavors
                 }
                 brownieVarieties={brownieVarieties}
+                mineralWaterTypes={mineralWaterTypes}
                 getPrice={getPrice}
                 onCancel={() => {
                   setConfiguringProduct(null);
