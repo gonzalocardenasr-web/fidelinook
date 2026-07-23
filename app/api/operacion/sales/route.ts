@@ -51,6 +51,53 @@ function getCreatedSaleId(result: unknown): number | null {
   return null;
 }
 
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function getItemProductId(item: unknown): number | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const productId = Number((item as Record<string, unknown>).product_id);
+
+  return Number.isInteger(productId) && productId > 0 ? productId : null;
+}
+
+function getItemFlavorIds(item: unknown): number[] {
+  if (!item || typeof item !== "object") {
+    return [];
+  }
+
+  const options = (item as Record<string, unknown>).options;
+
+  if (!Array.isArray(options)) {
+    return [];
+  }
+
+  return options
+    .filter((option) => {
+      if (!option || typeof option !== "object") {
+        return false;
+      }
+
+      return (
+        String((option as Record<string, unknown>).option_group_code || "")
+          .trim()
+          .toLowerCase() === "flavor"
+      );
+    })
+    .map((option) =>
+      Number((option as Record<string, unknown>).option_value_id),
+    )
+    .filter(
+      (optionValueId) => Number.isInteger(optionValueId) && optionValueId > 0,
+    );
+}
+
 export async function GET(req: Request) {
   const session = await getOperationSession();
 
@@ -518,6 +565,226 @@ export async function POST(req: Request) {
         },
         { status: 400 },
       );
+    }
+
+    /*
+     * GL-004:
+     * Los potes armados solo pueden venderse utilizando sabores
+     * que tengan una bacha abierta y stock disponible.
+     *
+     * Esta validación se ejecuta nuevamente en backend para evitar:
+     * - solicitudes manipuladas;
+     * - información desactualizada en el POS;
+     * - cambios de inventario entre configuración y confirmación.
+     */
+    const productIds = [
+      ...new Set(
+        items
+          .map(getItemProductId)
+          .filter((productId): productId is number => productId !== null),
+      ),
+    ];
+
+    if (productIds.length !== items.length) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Uno o más productos de la venta no son válidos.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: saleProducts, error: saleProductsError } = await supabaseAdmin
+      .from("products")
+      .select("id, sku, name")
+      .in("id", productIds);
+
+    if (saleProductsError) {
+      console.error(
+        "Error validando productos antes de crear venta:",
+        saleProductsError,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar los productos de la venta.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const productsById = new Map(
+      (saleProducts || []).map((product) => [Number(product.id), product]),
+    );
+
+    const armedPotFlavorIds = new Set<number>();
+
+    for (const item of items) {
+      const productId = getItemProductId(item);
+
+      if (!productId) {
+        continue;
+      }
+
+      const product = productsById.get(productId);
+
+      if (!product) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Uno o más productos ya no están disponibles.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (product.sku !== "POT-16-ARMADO") {
+        continue;
+      }
+
+      const flavorIds = getItemFlavorIds(item);
+
+      if (flavorIds.length === 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: `${product.name} requiere al menos un sabor.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      for (const flavorId of flavorIds) {
+        armedPotFlavorIds.add(flavorId);
+      }
+    }
+
+    if (armedPotFlavorIds.size > 0) {
+      const requestedFlavorIds = [...armedPotFlavorIds];
+
+      const { data: batchItemRows, error: batchItemsError } =
+        await supabaseAdmin
+          .from("inventory_items")
+          .select(
+            `
+          id,
+          option_value_id,
+          inventory_stock (
+            quantity
+          ),
+          catalog_option_values!inventory_items_option_value_id_fkey (
+            id,
+            name
+          )
+        `,
+          )
+          .eq("item_type", "BATCH")
+          .eq("is_active", true)
+          .in("option_value_id", requestedFlavorIds);
+
+      if (batchItemsError) {
+        console.error(
+          "Error validando inventario de sabores:",
+          batchItemsError,
+        );
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "No fue posible validar la disponibilidad de los sabores.",
+          },
+          { status: 500 },
+        );
+      }
+
+      const inventoryItemIds = (batchItemRows || [])
+        .map((row) => Number(row.id))
+        .filter(
+          (inventoryItemId) =>
+            Number.isInteger(inventoryItemId) && inventoryItemId > 0,
+        );
+
+      const { data: openBatchRows, error: openBatchesError } =
+        inventoryItemIds.length > 0
+          ? await supabaseAdmin
+              .from("inventory_batches")
+              .select("inventory_item_id")
+              .eq("status", "OPEN")
+              .in("inventory_item_id", inventoryItemIds)
+          : {
+              data: [],
+              error: null,
+            };
+
+      if (openBatchesError) {
+        console.error("Error validando bachas abiertas:", openBatchesError);
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "No fue posible validar las bachas abiertas.",
+          },
+          { status: 500 },
+        );
+      }
+
+      const openInventoryItemIds = new Set(
+        (openBatchRows || []).map((row) => Number(row.inventory_item_id)),
+      );
+
+      const availableFlavorIds = new Set<number>();
+      const flavorNamesById = new Map<number, string>();
+
+      for (const row of batchItemRows || []) {
+        const inventoryItemId = Number(row.id);
+        const optionValueId = Number(row.option_value_id);
+
+        const stock = firstRelation(row.inventory_stock);
+        const optionValue = firstRelation(row.catalog_option_values);
+
+        if (
+          Number.isInteger(optionValueId) &&
+          optionValueId > 0 &&
+          optionValue?.name
+        ) {
+          flavorNamesById.set(optionValueId, optionValue.name);
+        }
+
+        const hasOpenBatch = openInventoryItemIds.has(inventoryItemId);
+
+        const hasAvailableStock = Number(stock?.quantity ?? 0) > 0;
+
+        if (
+          Number.isInteger(optionValueId) &&
+          optionValueId > 0 &&
+          hasOpenBatch &&
+          hasAvailableStock
+        ) {
+          availableFlavorIds.add(optionValueId);
+        }
+      }
+
+      const unavailableFlavorId = requestedFlavorIds.find(
+        (flavorId) => !availableFlavorIds.has(flavorId),
+      );
+
+      if (unavailableFlavorId) {
+        const flavorName =
+          flavorNamesById.get(unavailableFlavorId) ||
+          `ID ${unavailableFlavorId}`;
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `El sabor ${flavorName} ya no tiene una bacha ` +
+              "abierta disponible. Actualiza el pedido.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const { data, error } = await supabaseAdmin.rpc(
