@@ -120,7 +120,9 @@ export default function NuevaVentaPage() {
   }, [optionGroups]);
 
   const openBatchFlavors = useMemo(() => {
-    return flavors.filter((flavor) => openBatchFlavorIds.includes(flavor.id));
+    const availableFlavorIds = new Set(openBatchFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
   }, [flavors, openBatchFlavorIds]);
 
   const readyPotFlavors = useMemo(() => {
@@ -128,12 +130,6 @@ export default function NuevaVentaPage() {
 
     return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
   }, [flavors, readyPotFlavorIds]);
-
-  const openBatchFlavors = useMemo(() => {
-    const availableFlavorIds = new Set(openBatchFlavorIds);
-
-    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
-  }, [flavors, openBatchFlavorIds]);
 
   const toppings = useMemo(() => {
     return (
