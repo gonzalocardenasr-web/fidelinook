@@ -577,15 +577,9 @@ export async function POST(req: Request) {
      * - información desactualizada en el POS;
      * - cambios de inventario entre configuración y confirmación.
      */
-    const productIds = [
-      ...new Set(
-        items
-          .map(getItemProductId)
-          .filter((productId): productId is number => productId !== null),
-      ),
-    ];
+    const parsedProductIds = items.map(getItemProductId);
 
-    if (productIds.length !== items.length) {
+    if (parsedProductIds.some((productId) => productId === null)) {
       return NextResponse.json(
         {
           ok: false,
@@ -594,6 +588,14 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
+    const productIds = [
+      ...new Set(
+        parsedProductIds.filter(
+          (productId): productId is number => productId !== null,
+        ),
+      ),
+    ];
 
     const { data: saleProducts, error: saleProductsError } = await supabaseAdmin
       .from("products")
@@ -671,7 +673,7 @@ export async function POST(req: Request) {
             `
           id,
           option_value_id,
-                    catalog_option_values!inventory_items_option_value_id_fkey (
+          catalog_option_values!inventory_items_option_value_id_fkey (
             id,
             name
           )
