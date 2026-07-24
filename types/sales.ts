@@ -46,4 +46,7 @@ export type CartItem = {
   includesCookie?: boolean;
   chocolateDip?: boolean;
   extraToppingSelections?: number[];
+
+  isGift: boolean;
+  giftReason: string | null;
 };

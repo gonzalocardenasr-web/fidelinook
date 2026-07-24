@@ -194,6 +194,9 @@ export default function ProductConfigurator({
       includesCookie: false,
       chocolateDip: isServedIceCream && chocolateDip,
       extraToppingSelections: [],
+
+      isGift: editingItem?.isGift ?? false,
+      giftReason: editingItem?.giftReason ?? null,
     };
 
     if (editingItem) {

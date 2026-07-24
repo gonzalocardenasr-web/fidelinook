@@ -243,6 +243,8 @@ export default function NuevaVentaPage() {
 
   const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
 
+  const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
+
   const pricing = cart.reduce(
     (acc, item) => {
       const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
@@ -251,7 +253,11 @@ export default function NuevaVentaPage() {
 
       acc.subtotal += lineTotal;
 
-      if (potSkus.has(item.product.sku)) {
+      if (item.isGift) {
+        acc.giftDiscountTotal += lineTotal;
+      }
+
+      if (!item.isGift && potSkus.has(item.product.sku)) {
         acc.potQuantity += item.quantity;
         acc.potSubtotal += lineTotal;
       }
@@ -262,15 +268,18 @@ export default function NuevaVentaPage() {
       subtotal: 0,
       potQuantity: 0,
       potSubtotal: 0,
+      giftDiscountTotal: 0,
     },
   );
 
   const discountRate =
     pricing.potQuantity >= 6 ? 0.15 : pricing.potQuantity >= 4 ? 0.1 : 0;
 
-  const discountTotal = Math.round(pricing.potSubtotal * discountRate);
+  const potDiscountTotal = Math.round(pricing.potSubtotal * discountRate);
 
-  const total = pricing.subtotal - discountTotal;
+  const discountTotal = potDiscountTotal + pricing.giftDiscountTotal;
+
+  const total = Math.max(0, pricing.subtotal - discountTotal);
 
   function validarVenta() {
     if (cart.length === 0) {
@@ -294,6 +303,9 @@ export default function NuevaVentaPage() {
     }
 
     for (const item of cart) {
+      if (item.isGift && !item.giftReason?.trim()) {
+        return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+      }
       const isServedIceCream =
         item.product.category?.trim().toLowerCase() === "helados" &&
         item.product.operational_type?.trim().toLowerCase() === "servido";
@@ -378,6 +390,9 @@ export default function NuevaVentaPage() {
       extraUnitPrice: item.extraUnitPrice || 0,
 
       mineralWaterTypeId: item.mineralWaterTypeId ?? null,
+
+      isGift: Boolean(item.isGift),
+      giftReason: item.giftReason?.trim() || null,
     });
   }
 
@@ -507,6 +522,8 @@ export default function NuevaVentaPage() {
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
+          is_gift: Boolean(item.isGift),
+          gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
           extra_unit_price: item.extraUnitPrice || 0,
           notes: [
             item.serviceFormat
@@ -745,6 +762,8 @@ export default function NuevaVentaPage() {
             subtotal={pricing.subtotal}
             potQuantity={pricing.potQuantity}
             discountRate={discountRate}
+            potDiscountTotal={potDiscountTotal}
+            giftDiscountTotal={pricing.giftDiscountTotal}
             discountTotal={discountTotal}
             total={total}
             saving={saving}

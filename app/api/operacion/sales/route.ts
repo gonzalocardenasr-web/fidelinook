@@ -360,8 +360,12 @@ export async function GET(req: Request) {
           product_sku,
           product_name,
           quantity,
+          list_unit_price,
           unit_price,
+          discount_total,
           total_price,
+          is_gift,
+          gift_reason,
           notes,
           sale_item_options (
             id,
@@ -524,6 +528,39 @@ export async function POST(req: Request) {
         { ok: false, message: "La venta debe tener al menos un producto." },
         { status: 400 },
       );
+    }
+
+    for (const [index, item] of items.entries()) {
+      if (!item || typeof item !== "object") {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: `La línea ${index + 1} de la venta no es válida.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const itemRecord = item as Record<string, unknown>;
+
+      const isGift = itemRecord.is_gift === true;
+
+      const giftReason =
+        typeof itemRecord.gift_reason === "string"
+          ? itemRecord.gift_reason.trim()
+          : "";
+
+      if (isGift && !giftReason) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `La línea ${index + 1} está marcada como regalo ` +
+              "pero no tiene motivo.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const promotionalStamps = Number(body.promotionalStamps ?? 0);

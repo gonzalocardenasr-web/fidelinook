@@ -12,6 +12,8 @@ type Props = {
   subtotal: number;
   potQuantity: number;
   discountRate: number;
+  potDiscountTotal: number;
+  giftDiscountTotal: number;
   discountTotal: number;
   total: number;
   saving: boolean;
@@ -39,6 +41,8 @@ export default function OrderBuilder({
   subtotal,
   potQuantity,
   discountRate,
+  potDiscountTotal,
+  giftDiscountTotal,
   discountTotal,
   total,
   saving,
@@ -86,7 +90,7 @@ export default function OrderBuilder({
               onRemove={onRemoveItem}
               onDuplicate={onDuplicateItem}
               onReconfigure={onReconfigureItem}
-              onUpdate={() => {}}
+              onUpdate={onUpdateItem}
               onToggleFlavor={() => {}}
               onToggleTopping={() => {}}
               onRemoveFlavorSelection={() => {}}
@@ -132,6 +136,8 @@ export default function OrderBuilder({
             subtotal={subtotal}
             potQuantity={potQuantity}
             discountRate={discountRate}
+            potDiscountTotal={potDiscountTotal}
+            giftDiscountTotal={giftDiscountTotal}
             discountTotal={discountTotal}
             total={total}
           />
