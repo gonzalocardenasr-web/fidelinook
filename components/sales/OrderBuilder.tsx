@@ -52,6 +52,7 @@ export default function OrderBuilder({
   onRemoveItem,
   onDuplicateItem,
   onReconfigureItem,
+  onUpdateItem
   onOrderNotesChange,
   onConfirm,
 }: Props) {
