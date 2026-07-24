@@ -117,6 +117,17 @@ function formatRepeatedNames(names: string[]) {
     .join(" + ");
 }
 
+function formatCompactNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${count}x ${name}` : name))
+    .join(", ");
+}
+
 function parseStructuredNotes(notes?: string | null): StructuredNotes {
   const result: StructuredNotes = {
     format: null,
@@ -168,6 +179,80 @@ export default function OrderQueueCard({
   const channel = getChannelStyle(order.sales?.channel);
   const items = order.sales?.sale_items || [];
 
+  const groupedItems = items.reduce<
+    Array<{
+      key: string;
+      quantity: number;
+      productName: string;
+      items: typeof items;
+    }>
+  >((groups, item) => {
+    const sku = String(item.product_sku || "")
+      .trim()
+      .toUpperCase();
+
+    const isPot = sku === "POT-16-LISTO" || sku === "POT-16-ARMADO";
+
+    /*
+     * Por ahora solo agrupamos potes.
+     * Los demás productos mantienen una línea independiente
+     * para no mezclar configuraciones incompatibles.
+     */
+    if (!isPot) {
+      groups.push({
+        key: `item-${item.id}`,
+        quantity: item.quantity,
+        productName: item.product_name,
+        items: [item],
+      });
+
+      return groups;
+    }
+
+    const options = Array.isArray(item.sale_item_options)
+      ? item.sale_item_options
+      : [];
+
+    /*
+     * Los sabores no forman parte de la firma porque queremos
+     * consolidarlos visualmente dentro del mismo grupo.
+     */
+    const nonFlavorOptions = options
+      .filter(
+        (option) =>
+          option.option_group_code !== "flavor" &&
+          option.option_group_code !== "sabor",
+      )
+      .map((option) => ({
+        group: option.option_group_code,
+        value: option.option_value_id,
+        quantity: option.quantity,
+      }))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+    const groupKey = JSON.stringify({
+      sku,
+      notes: item.notes || null,
+      nonFlavorOptions,
+    });
+
+    const existingGroup = groups.find((group) => group.key === groupKey);
+
+    if (existingGroup) {
+      existingGroup.quantity += item.quantity;
+      existingGroup.items.push(item);
+    } else {
+      groups.push({
+        key: groupKey,
+        quantity: item.quantity,
+        productName: item.product_name,
+        items: [item],
+      });
+    }
+
+    return groups;
+  }, []);
+
   return (
     <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition duration-150 hover:border-violet-200 hover:shadow-md">
       <div
@@ -212,42 +297,64 @@ export default function OrderQueueCard({
         )}
 
         <div className="mt-2 divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-neutral-50">
-          {items.map((item) => {
-            const options = Array.isArray(item.sale_item_options)
-              ? item.sale_item_options
-              : [];
+          {groupedItems.map((group) => {
+            const firstItem = group.items[0];
 
-            const flavorNames = options
-              .filter(
-                (option) =>
-                  option.option_group_code === "flavor" ||
-                  option.option_group_code === "sabor",
-              )
-              .map((option) => option.option_value_name)
-              .filter(Boolean);
+            const flavorNames = group.items.flatMap((item) => {
+              const options = Array.isArray(item.sale_item_options)
+                ? item.sale_item_options
+                : [];
 
-            const regularToppingNames = options
-              .filter(
-                (option) =>
-                  option.option_group_code === "topping" ||
-                  option.option_group_code === "toppings",
-              )
-              .map((option) => option.option_value_name)
-              .filter(Boolean);
+              return options
+                .filter(
+                  (option) =>
+                    option.option_group_code === "flavor" ||
+                    option.option_group_code === "sabor",
+                )
+                .flatMap((option) => {
+                  const optionQuantity = Math.max(
+                    1,
+                    Number(option.quantity || 1),
+                  );
 
-            const structuredNotes = parseStructuredNotes(item.notes);
+                  const totalOptionQuantity =
+                    optionQuantity * Math.max(1, item.quantity);
+
+                  return Array.from(
+                    { length: totalOptionQuantity },
+                    () => option.option_value_name,
+                  );
+                })
+                .filter(Boolean);
+            });
+
+            const regularToppingNames = group.items.flatMap((item) => {
+              const options = Array.isArray(item.sale_item_options)
+                ? item.sale_item_options
+                : [];
+
+              return options
+                .filter(
+                  (option) =>
+                    option.option_group_code === "topping" ||
+                    option.option_group_code === "toppings",
+                )
+                .map((option) => option.option_value_name)
+                .filter(Boolean);
+            });
+
+            const structuredNotes = parseStructuredNotes(firstItem.notes);
 
             return (
-              <div key={item.id} className="px-2.5 py-2">
+              <div key={group.key} className="px-2.5 py-2">
                 <p className="text-[12px] font-black leading-tight text-neutral-900">
-                  {item.quantity}x {item.product_name}
+                  {group.quantity}x {group.productName}
                 </p>
 
                 <div className="mt-1 space-y-0.5 text-[11px] leading-snug text-neutral-600">
                   {flavorNames.length > 0 && (
-                    <p>
-                      <span className="font-bold">Sabores:</span>{" "}
-                      {formatRepeatedNames(flavorNames)}
+                    <p className="font-semibold text-neutral-700">
+                      ({formatCompactNames(flavorNames)})
                     </p>
                   )}
 
