@@ -9,6 +9,10 @@ type Props = {
   toppings: OptionValue[];
   selectedCliente: ClienteSelectorValue | null;
   paymentMethod: string;
+  subtotal: number;
+  potQuantity: number;
+  discountRate: number;
+  discountTotal: number;
   total: number;
   saving: boolean;
   orderNotes: string;
@@ -32,6 +36,10 @@ export default function OrderBuilder({
   flavors,
   toppings,
   paymentMethod,
+  subtotal,
+  potQuantity,
+  discountRate,
+  discountTotal,
   total,
   saving,
   orderNotes,
@@ -120,7 +128,13 @@ export default function OrderBuilder({
         </div>
 
         <div className="mt-3">
-          <OrderTotals total={total} />
+          <OrderTotals
+            subtotal={subtotal}
+            potQuantity={potQuantity}
+            discountRate={discountRate}
+            discountTotal={discountTotal}
+            total={total}
+          />
         </div>
 
         <button

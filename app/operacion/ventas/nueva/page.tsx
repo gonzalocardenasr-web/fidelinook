@@ -241,12 +241,36 @@ export default function NuevaVentaPage() {
     });
   }
 
-  const total = cart.reduce(
-    (acc, item) =>
-      acc +
-      (getPrice(item.product) + (item.extraUnitPrice || 0)) * item.quantity,
-    0,
+  const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
+
+  const pricing = cart.reduce(
+    (acc, item) => {
+      const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
+
+      const lineTotal = unitPrice * item.quantity;
+
+      acc.subtotal += lineTotal;
+
+      if (potSkus.has(item.product.sku)) {
+        acc.potQuantity += item.quantity;
+        acc.potSubtotal += lineTotal;
+      }
+
+      return acc;
+    },
+    {
+      subtotal: 0,
+      potQuantity: 0,
+      potSubtotal: 0,
+    },
   );
+
+  const discountRate =
+    pricing.potQuantity >= 6 ? 0.15 : pricing.potQuantity >= 4 ? 0.1 : 0;
+
+  const discountTotal = Math.round(pricing.potSubtotal * discountRate);
+
+  const total = pricing.subtotal - discountTotal;
 
   function validarVenta() {
     if (cart.length === 0) {
@@ -718,6 +742,10 @@ export default function NuevaVentaPage() {
             paymentMethod={paymentMethod}
             orderNotes={orderNotes}
             clienteSelectorResetKey={clienteSelectorResetKey}
+            subtotal={pricing.subtotal}
+            potQuantity={pricing.potQuantity}
+            discountRate={discountRate}
+            discountTotal={discountTotal}
             total={total}
             saving={saving}
             getPrice={getPrice}
