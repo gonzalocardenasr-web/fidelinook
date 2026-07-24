@@ -243,8 +243,6 @@ export default function NuevaVentaPage() {
 
   const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
 
-  const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
-
   const pricing = cart.reduce(
     (acc, item) => {
       const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
