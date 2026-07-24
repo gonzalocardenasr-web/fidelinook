@@ -52,7 +52,10 @@ export default function OrderBuilder({
   onRemoveItem,
   onDuplicateItem,
   onReconfigureItem,
-  onUpdateItem
+  onUpdateItem,
+  onToggleFlavor,
+  onToggleTopping,
+  onRemoveFlavorSelection,
   onOrderNotesChange,
   onConfirm,
 }: Props) {
@@ -92,9 +95,9 @@ export default function OrderBuilder({
               onDuplicate={onDuplicateItem}
               onReconfigure={onReconfigureItem}
               onUpdate={onUpdateItem}
-              onToggleFlavor={() => {}}
-              onToggleTopping={() => {}}
-              onRemoveFlavorSelection={() => {}}
+              onToggleFlavor={onToggleFlavor}
+              onToggleTopping={onToggleTopping}
+              onRemoveFlavorSelection={onRemoveFlavorSelection}
             />
           ))
         )}
