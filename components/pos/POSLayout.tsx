@@ -40,7 +40,7 @@ export default function POSLayout({
 
           <Link
             href="/operacion/cola"
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-xl text-neutral-700 transition hover:bg-violet-50 hover:scale-105 active:scale-95"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-xl text-neutral-700 transition hover:scale-105 hover:bg-violet-50 active:scale-95"
             title="Pedidos"
           >
             ⏱
@@ -48,7 +48,7 @@ export default function POSLayout({
 
           <Link
             href="/operacion/catalogo"
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-xl text-neutral-700 transition hover:bg-violet-50 hover:scale-105 active:scale-95"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-xl text-neutral-700 transition hover:scale-105 hover:bg-violet-50 active:scale-95"
             title="Catálogo"
           >
             📦
@@ -57,43 +57,44 @@ export default function POSLayout({
 
         <section className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
-            <div>
-              <h1 className="text-lg font-black leading-tight text-neutral-900">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-black leading-tight text-neutral-900">
                 {title}
               </h1>
+
               {subtitle && (
-                <p className="text-xs text-neutral-500">{subtitle}</p>
+                <p className="truncate text-xs text-neutral-500">{subtitle}</p>
               )}
             </div>
 
-            <div className="text-right text-xs text-neutral-500">
+            <div className="shrink-0 text-right text-xs text-neutral-500">
               <p className="font-semibold text-neutral-800">Caja local</p>
               <p>{new Date().toLocaleDateString("es-CL")}</p>
             </div>
           </header>
 
           <div
-            className={`grid min-h-0 flex-1 gap-2 p-2 ${
+            className={`grid min-h-0 min-w-0 flex-1 gap-2 overflow-hidden p-2 ${
               left
-                ? "grid-cols-[220px_minmax(0,1fr)_380px_250px]"
-                : "grid-cols-[minmax(0,1fr)_380px_250px]"
+                ? "grid-cols-[200px_minmax(0,1fr)_340px_220px]"
+                : "grid-cols-[minmax(0,1fr)_340px_220px]"
             }`}
           >
             {left && (
-              <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
+              <section className="min-h-0 min-w-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
                 {left}
               </section>
             )}
 
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
+            <section className="min-h-0 min-w-0 overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
               {center}
             </section>
 
-            <section className="min-h-0 overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
+            <section className="min-h-0 min-w-0 overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
               {right}
             </section>
 
-            <section className="min-h-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
+            <section className="min-h-0 min-w-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {context}
             </section>
           </div>
