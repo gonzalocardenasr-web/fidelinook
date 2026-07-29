@@ -334,6 +334,11 @@ export async function GET(req: Request) {
         status,
         subtotal,
         discount_total,
+        manual_discount_type,
+        manual_discount_value,
+        manual_discount_amount,
+        manual_discount_reason,
+        manual_discount_notes,
         total,
         payment_status,
         payment_method,
@@ -522,6 +527,112 @@ export async function POST(req: Request) {
 
     const paymentMethod = String(body.paymentMethod || "manual").trim();
     const items = Array.isArray(body.items) ? body.items : [];
+
+    const rawManualDiscountType =
+      typeof body.manualDiscountType === "string"
+        ? body.manualDiscountType.trim().toLowerCase()
+        : "";
+
+    const manualDiscountType =
+      rawManualDiscountType === "" ? null : rawManualDiscountType;
+
+    const manualDiscountValue =
+      body.manualDiscountValue === null ||
+      body.manualDiscountValue === undefined ||
+      body.manualDiscountValue === ""
+        ? null
+        : Number(body.manualDiscountValue);
+
+    const rawManualDiscountReason =
+      typeof body.manualDiscountReason === "string"
+        ? body.manualDiscountReason.trim().toLowerCase()
+        : "";
+
+    const manualDiscountReason =
+      rawManualDiscountReason === "" ? null : rawManualDiscountReason;
+
+    const manualDiscountNotes =
+      typeof body.manualDiscountNotes === "string"
+        ? body.manualDiscountNotes.trim() || null
+        : null;
+
+    const allowedManualDiscountTypes = ["percent", "fixed"];
+
+    const allowedManualDiscountReasons = [
+      "courtesy",
+      "complaint",
+      "agreement",
+      "exceptional_promotion",
+      "service_error",
+      "other",
+    ];
+
+    if (manualDiscountType !== null) {
+      if (!allowedManualDiscountTypes.includes(manualDiscountType)) {
+        return NextResponse.json(
+          { ok: false, message: "Tipo de descuento manual inválido." },
+          { status: 400 },
+        );
+      }
+
+      if (
+        manualDiscountValue === null ||
+        !Number.isInteger(manualDiscountValue) ||
+        manualDiscountValue <= 0
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "El valor del descuento manual debe ser un número entero mayor que cero.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (manualDiscountType === "percent" && manualDiscountValue > 100) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "El descuento porcentual no puede superar 100%.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        manualDiscountReason === null ||
+        !allowedManualDiscountReasons.includes(manualDiscountReason)
+      ) {
+        return NextResponse.json(
+          { ok: false, message: "Motivo de descuento manual inválido." },
+          { status: 400 },
+        );
+      }
+
+      if (manualDiscountReason === "other" && !manualDiscountNotes) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Debes especificar el motivo del descuento manual.",
+          },
+          { status: 400 },
+        );
+      }
+    } else if (
+      manualDiscountValue !== null ||
+      manualDiscountReason !== null ||
+      manualDiscountNotes !== null
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "No se pueden enviar datos de descuento manual sin indicar su tipo.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (items.length === 0) {
       return NextResponse.json(
@@ -831,6 +942,10 @@ export async function POST(req: Request) {
         p_external_order_id: externalOrderId || null,
         p_promotional_stamps: promotionalStamps,
         p_promotion_reason: promotionalStamps > 0 ? promotionReason : null,
+        p_manual_discount_type: manualDiscountType,
+        p_manual_discount_value: manualDiscountValue,
+        p_manual_discount_reason: manualDiscountReason,
+        p_manual_discount_notes: manualDiscountNotes,
       },
     );
 
@@ -856,6 +971,10 @@ export async function POST(req: Request) {
           itemLines: items.length,
           promotionalStamps,
           promotionReason: promotionalStamps > 0 ? promotionReason : null,
+          manualDiscountType,
+          manualDiscountValue,
+          manualDiscountReason,
+          manualDiscountNotes,
         },
 
         correlationId,
@@ -905,6 +1024,10 @@ export async function POST(req: Request) {
         itemLines: items.length,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? promotionReason : null,
+        manualDiscountType,
+        manualDiscountValue,
+        manualDiscountReason,
+        manualDiscountNotes,
       },
 
       metadata: {
@@ -912,6 +1035,10 @@ export async function POST(req: Request) {
         hasCustomer: customerId !== null,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? promotionReason : null,
+        manualDiscountType,
+        manualDiscountValue,
+        manualDiscountReason,
+        manualDiscountNotes,
       },
 
       correlationId,
@@ -950,6 +1077,9 @@ export async function POST(req: Request) {
           paymentMethod,
           itemLines: items.length,
           hasCustomer: customerId !== null,
+          manualDiscountType,
+          manualDiscountValue,
+          manualDiscountReason,
         },
       });
     } catch (eventError) {
