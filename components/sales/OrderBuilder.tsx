@@ -477,6 +477,7 @@ export default function OrderBuilder({
             discountRate={discountRate}
             potDiscountTotal={potDiscountTotal}
             giftDiscountTotal={giftDiscountTotal}
+            manualDiscountAmount={manualDiscountAmount}
             discountTotal={discountTotal}
             total={total}
           />
