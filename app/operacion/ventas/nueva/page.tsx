@@ -14,6 +14,16 @@ import ProductConfigurator from "../../../../components/sales/ProductConfigurato
 import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
 import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
 
+type ManualDiscountType = "percent" | "fixed";
+
+type ManualDiscountReason =
+  | "courtesy"
+  | "complaint"
+  | "agreement"
+  | "exceptional_promotion"
+  | "service_error"
+  | "other";
+
 export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
@@ -40,6 +50,15 @@ export default function NuevaVentaPage() {
   const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
 
   const [promotionalStamps, setPromotionalStamps] = useState(0);
+
+  const [manualDiscountEnabled, setManualDiscountEnabled] = useState(false);
+  const [manualDiscountType, setManualDiscountType] =
+    useState<ManualDiscountType>("percent");
+  const [manualDiscountValue, setManualDiscountValue] = useState("");
+  const [manualDiscountReason, setManualDiscountReason] = useState<
+    ManualDiscountReason | ""
+  >("");
+  const [manualDiscountNotes, setManualDiscountNotes] = useState("");
 
   const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
 
@@ -278,7 +297,28 @@ export default function NuevaVentaPage() {
 
   const potDiscountTotal = Math.round(pricing.potSubtotal * discountRate);
 
-  const discountTotal = potDiscountTotal + pricing.giftDiscountTotal;
+  const totalBeforeManualDiscount = Math.max(
+    0,
+    pricing.subtotal - potDiscountTotal - pricing.giftDiscountTotal,
+  );
+
+  const parsedManualDiscountValue = Number(manualDiscountValue);
+
+  const manualDiscountAmount = manualDiscountEnabled
+    ? manualDiscountType === "percent"
+      ? Math.min(
+          totalBeforeManualDiscount,
+          Math.round(
+            (totalBeforeManualDiscount * parsedManualDiscountValue) / 100,
+          ),
+        )
+      : Math.min(totalBeforeManualDiscount, parsedManualDiscountValue)
+    : 0;
+
+  const discountTotal =
+    potDiscountTotal +
+    pricing.giftDiscountTotal +
+    (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
 
   const total = Math.max(0, pricing.subtotal - discountTotal);
 
@@ -294,6 +334,35 @@ export default function NuevaVentaPage() {
 
     if (channel !== "local" && !externalOrderId.trim()) {
       return "Ingresa el número externo del pedido digital.";
+    }
+
+    if (manualDiscountEnabled) {
+      if (
+        manualDiscountValue.trim() === "" ||
+        !Number.isInteger(parsedManualDiscountValue) ||
+        parsedManualDiscountValue <= 0
+      ) {
+        return "Ingresa un valor válido para el descuento manual.";
+      }
+
+      if (manualDiscountType === "percent" && parsedManualDiscountValue > 100) {
+        return "El descuento porcentual no puede superar 100%.";
+      }
+
+      if (
+        manualDiscountType === "fixed" &&
+        parsedManualDiscountValue > totalBeforeManualDiscount
+      ) {
+        return "El descuento manual no puede superar el total vigente.";
+      }
+
+      if (!manualDiscountReason) {
+        return "Selecciona el motivo del descuento manual.";
+      }
+
+      if (manualDiscountReason === "other" && !manualDiscountNotes.trim()) {
+        return "Especifica el motivo del descuento manual.";
+      }
     }
 
     if (paymentMethod === "efectivo") {
@@ -537,6 +606,16 @@ export default function NuevaVentaPage() {
         customerId: selectedCliente?.id ?? null,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? "Promoción RRSS" : null,
+        manualDiscountType: manualDiscountEnabled ? manualDiscountType : null,
+        manualDiscountValue: manualDiscountEnabled
+          ? parsedManualDiscountValue
+          : null,
+        manualDiscountReason: manualDiscountEnabled
+          ? manualDiscountReason
+          : null,
+        manualDiscountNotes: manualDiscountEnabled
+          ? manualDiscountNotes.trim() || null
+          : null,
         items: cart.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -634,6 +713,11 @@ export default function NuevaVentaPage() {
       setExternalOrderId("");
       setClienteSelectorResetKey((current) => current + 1);
       setPromotionalStamps(0);
+      setManualDiscountEnabled(false);
+      setManualDiscountType("percent");
+      setManualDiscountValue("");
+      setManualDiscountReason("");
+      setManualDiscountNotes("");
 
       const warnings = Array.isArray(data.warnings)
         ? data.warnings.filter(
