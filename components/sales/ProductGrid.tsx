@@ -52,6 +52,10 @@ export default function ProductGrid({
     setExpandedCategory((current) => (current === category ? null : category));
   }
 
+  const productGridClass = compact
+    ? "grid grid-cols-[repeat(auto-fill,minmax(138px,1fr))] gap-2"
+    : "grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2";
+
   return (
     <section className="flex h-full min-h-0 flex-col">
       <div className="shrink-0">
@@ -60,6 +64,7 @@ export default function ProductGrid({
             <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
               Productos
             </h2>
+
             <p className="text-xs text-neutral-400">
               {products.length} disponible{products.length === 1 ? "" : "s"}
             </p>
@@ -105,14 +110,14 @@ export default function ProductGrid({
                     <button
                       type="button"
                       onClick={() => toggleCategory(category)}
-                      className="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 text-left transition hover:bg-violet-50 active:bg-violet-100"
+                      className="flex min-h-8 w-full cursor-pointer items-center justify-between px-3 py-1 text-left transition hover:bg-violet-50 active:bg-violet-100"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-violet-700">
+                        <span className="text-[10px] font-black text-violet-700">
                           {expanded ? "▼" : "▶"}
                         </span>
 
-                        <span className="text-xs font-black uppercase tracking-wide text-neutral-700">
+                        <span className="text-[11px] font-black uppercase tracking-wide text-neutral-700">
                           {category}
                         </span>
                       </div>
@@ -123,15 +128,17 @@ export default function ProductGrid({
                     </button>
 
                     {expanded && (
-                      <div className="space-y-1.5 border-t border-neutral-200 p-1.5">
-                        {categoryProducts.map((product) => (
-                          <ProductCard
-                            key={product.id}
-                            product={product}
-                            price={getPrice(product)}
-                            onAdd={onAdd}
-                          />
-                        ))}
+                      <div className="border-t border-neutral-200 p-2">
+                        <div className={productGridClass}>
+                          {categoryProducts.map((product) => (
+                            <ProductCard
+                              key={product.id}
+                              product={product}
+                              price={getPrice(product)}
+                              onAdd={onAdd}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )}
                   </section>
