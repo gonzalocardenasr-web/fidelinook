@@ -76,8 +76,8 @@ export default function POSLayout({
           <div
             className={`grid min-h-0 min-w-0 flex-1 gap-2 overflow-hidden p-2 ${
               left
-                ? "grid-cols-[200px_minmax(0,1fr)_340px_220px]"
-                : "grid-cols-[minmax(0,1fr)_340px_220px]"
+                ? "grid-cols-[200px_minmax(0,1fr)_330px_260px]"
+                : "grid-cols-[minmax(0,1fr)_330px_260px]"
             }`}
           >
             {left && (
@@ -94,7 +94,7 @@ export default function POSLayout({
               {right}
             </section>
 
-            <section className="min-h-0 min-w-0 overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
+            <section className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto rounded-2xl bg-white p-2 shadow-sm">
               {context}
             </section>
           </div>
