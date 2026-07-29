@@ -124,8 +124,7 @@ export default function OrderBuilder({
     manualDiscountEnabled &&
     (!Number.isInteger(parsedManualDiscountValue) ||
       parsedManualDiscountValue <= 0 ||
-      (manualDiscountType === "percent" &&
-        parsedManualDiscountValue > 100) ||
+      (manualDiscountType === "percent" && parsedManualDiscountValue > 100) ||
       (manualDiscountType === "fixed" &&
         parsedManualDiscountValue > totalBeforeManualDiscount));
 
@@ -231,6 +230,72 @@ export default function OrderBuilder({
 
         {paymentMethod === "efectivo" && (
           <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+            <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+              Monto recibido
+            </label>
+
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
+                $
+              </span>
+              <input
+                value={cashReceived}
+                onChange={(event) => updateCashReceived(event.target.value)}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="0"
+                className={`w-full rounded-lg border bg-white py-2 pl-7 pr-3 text-sm font-black outline-none transition focus:ring-2 ${
+                  cashIsInsufficient && cashReceived.trim()
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                    : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                }`}
+              />
+            </div>
+
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
+              {[10000, 20000, 50000].map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setQuickCashAmount(amount)}
+                  className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-1.5 py-2 text-[11px] font-black text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
+                >
+                  ${(amount / 1000).toLocaleString("es-CL")} mil
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setQuickCashAmount(total)}
+                className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-1.5 py-2 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
+              >
+                Exacto
+              </button>
+            </div>
+
+            {cashIsInsufficient && (
+              <p className="mt-2 text-[11px] font-bold text-red-600">
+                Ingresa un monto recibido igual o superior a $
+                {total.toLocaleString("es-CL")}.
+              </p>
+            )}
+
+            <div className="mt-2 flex items-center justify-between border-t border-neutral-200 pt-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                Vuelto
+              </span>
+              <span
+                className={`text-base font-black ${
+                  cashChange > 0 ? "text-emerald-700" : "text-neutral-700"
+                }`}
+              >
+                ${cashChange.toLocaleString("es-CL")}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
           <label className="flex cursor-pointer items-center justify-between gap-3">
             <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
               Descuento manual
@@ -253,6 +318,7 @@ export default function OrderBuilder({
                   <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                     Tipo
                   </label>
+
                   <div className="mt-1 grid grid-cols-2 gap-1">
                     <button
                       type="button"
