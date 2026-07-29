@@ -200,17 +200,23 @@ export default function OrderBuilder({
 
       <div className="mt-1.5 flex max-h-[68%] shrink-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="min-h-0 overflow-y-auto p-2">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-              Nota pedido
-            </label>
-            <input
-              value={orderNotes}
-              onChange={(event) => onOrderNotesChange(event.target.value)}
-              placeholder="Ej: cliente espera afuera"
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
+          <details
+            open={Boolean(orderNotes.trim())}
+            className="rounded-lg border border-neutral-200 bg-neutral-50"
+          >
+            <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-bold text-neutral-600">
+              {orderNotes.trim() ? "Nota agregada" : "+ Agregar nota"}
+            </summary>
+
+            <div className="border-t border-neutral-200 px-2.5 pb-2.5 pt-2">
+              <input
+                value={orderNotes}
+                onChange={(event) => onOrderNotesChange(event.target.value)}
+                placeholder="Ej: cliente espera afuera"
+                className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              />
+            </div>
+          </details>
 
           <div className="mt-2">
             <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
