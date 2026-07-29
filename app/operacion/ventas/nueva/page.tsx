@@ -19,6 +19,7 @@ export default function NuevaVentaPage() {
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [cashReceived, setCashReceived] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -62,6 +63,8 @@ export default function NuevaVentaPage() {
   }, []);
 
   useEffect(() => {
+    setCashReceived("");
+
     if (channel === "local") {
       setPaymentMethod("efectivo");
     } else {
@@ -279,6 +282,11 @@ export default function NuevaVentaPage() {
 
   const total = Math.max(0, pricing.subtotal - discountTotal);
 
+  function handlePaymentMethodChange(value: string) {
+    setPaymentMethod(value);
+    setCashReceived("");
+  }
+
   function validarVenta() {
     if (cart.length === 0) {
       return "Agrega al menos un producto.";
@@ -286,6 +294,18 @@ export default function NuevaVentaPage() {
 
     if (channel !== "local" && !externalOrderId.trim()) {
       return "Ingresa el número externo del pedido digital.";
+    }
+
+    if (paymentMethod === "efectivo") {
+      const receivedAmount = Number(cashReceived);
+
+      if (
+        cashReceived.trim() === "" ||
+        !Number.isFinite(receivedAmount) ||
+        receivedAmount < total
+      ) {
+        return "El monto recibido es inferior al total.";
+      }
     }
 
     if (
@@ -609,6 +629,7 @@ export default function NuevaVentaPage() {
       setCart([]);
       setOrderNotes("");
       setSelectedCliente(null);
+      setCashReceived("");
       setChannel("local");
       setExternalOrderId("");
       setClienteSelectorResetKey((current) => current + 1);
@@ -755,6 +776,7 @@ export default function NuevaVentaPage() {
             toppings={toppings}
             selectedCliente={selectedCliente}
             paymentMethod={paymentMethod}
+            cashReceived={cashReceived}
             orderNotes={orderNotes}
             clienteSelectorResetKey={clienteSelectorResetKey}
             subtotal={pricing.subtotal}
@@ -767,7 +789,8 @@ export default function NuevaVentaPage() {
             saving={saving}
             getPrice={getPrice}
             onClienteChange={setSelectedCliente}
-            onPaymentMethodChange={setPaymentMethod}
+            onPaymentMethodChange={handlePaymentMethodChange}
+            onCashReceivedChange={setCashReceived}
             onOrderNotesChange={setOrderNotes}
             onRemoveItem={removeItem}
             onUpdateItem={updateItem}
