@@ -53,6 +53,11 @@ type Sale = {
   status: string;
   subtotal: number;
   discount_total: number;
+  manual_discount_type?: "percent" | "fixed" | null;
+  manual_discount_value?: number | null;
+  manual_discount_amount?: number | null;
+  manual_discount_reason?: string | null;
+  manual_discount_notes?: string | null;
   total: number;
   payment_status: string;
   payment_method: string;
@@ -148,6 +153,30 @@ function getPaymentMethodLabel(value?: string | null) {
   if (normalized === "credito") return "Crédito";
   if (normalized === "transferencia") return "Transferencia";
   if (normalized === "manual") return "Plataforma";
+
+  return value || "—";
+}
+
+function getManualDiscountTypeLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "percent") return "Porcentaje";
+  if (normalized === "fixed") return "Monto fijo";
+
+  return value || "—";
+}
+
+function getManualDiscountReasonLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "courtesy") return "Cortesía comercial";
+  if (normalized === "complaint") return "Reclamo cliente";
+  if (normalized === "agreement") return "Convenio";
+  if (normalized === "exceptional_promotion") {
+    return "Promoción excepcional";
+  }
+  if (normalized === "service_error") return "Error en atención";
+  if (normalized === "other") return "Otro";
 
   return value || "—";
 }
@@ -698,6 +727,15 @@ export default function HistorialVentasPage() {
 
   const selectedOrder = selectedSale?.orders?.[0] || null;
   const selectedItems = selectedSale?.sale_items || [];
+
+  const selectedManualDiscountAmount = Number(
+    selectedSale?.manual_discount_amount || 0,
+  );
+
+  const selectedAutomaticDiscountAmount = Math.max(
+    0,
+    Number(selectedSale?.discount_total || 0) - selectedManualDiscountAmount,
+  );
 
   function imprimirDocumentoEnSegundoPlano({
     saleId,
@@ -1601,6 +1639,74 @@ export default function HistorialVentasPage() {
                 </section>
               )}
 
+              {selectedManualDiscountAmount > 0 && (
+                <section className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">
+                      Descuento manual
+                    </p>
+
+                    <span className="text-[12px] font-black text-amber-800">
+                      -{formatMoney(selectedManualDiscountAmount)}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Tipo
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {getManualDiscountTypeLabel(
+                          selectedSale.manual_discount_type,
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Valor ingresado
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {selectedSale.manual_discount_type === "percent"
+                          ? `${Number(
+                              selectedSale.manual_discount_value || 0,
+                            ).toLocaleString("es-CL")}%`
+                          : formatMoney(
+                              selectedSale.manual_discount_value || 0,
+                            )}
+                      </p>
+                    </div>
+
+                    <div className="col-span-2">
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Motivo
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {getManualDiscountReasonLabel(
+                          selectedSale.manual_discount_reason,
+                        )}
+                      </p>
+                    </div>
+
+                    {selectedSale.manual_discount_notes && (
+                      <div className="col-span-2">
+                        <p className="font-bold uppercase tracking-wide text-amber-600">
+                          Detalle
+                        </p>
+
+                        <p className="mt-0.5 whitespace-pre-wrap font-semibold leading-snug text-amber-900">
+                          {selectedSale.manual_discount_notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               <section className="mt-3 rounded-lg border border-neutral-200 bg-white p-3">
                 <div className="space-y-1 text-[11px]">
                   <div className="flex items-center justify-between gap-3 text-neutral-600">
@@ -1610,12 +1716,32 @@ export default function HistorialVentasPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 text-neutral-600">
-                    <span>Descuentos</span>
-                    <span className="font-bold">
-                      {formatMoney(selectedSale.discount_total)}
-                    </span>
-                  </div>
+                  {selectedAutomaticDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-neutral-600">
+                      <span>Descuentos automáticos</span>
+
+                      <span className="font-bold">
+                        -{formatMoney(selectedAutomaticDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedManualDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-amber-700">
+                      <span className="font-bold">Descuento manual</span>
+
+                      <span className="font-bold">
+                        -{formatMoney(selectedManualDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {Number(selectedSale.discount_total || 0) === 0 && (
+                    <div className="flex items-center justify-between gap-3 text-neutral-400">
+                      <span>Descuentos</span>
+                      <span className="font-bold">{formatMoney(0)}</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
                     <span className="text-[12px] font-black text-neutral-900">
