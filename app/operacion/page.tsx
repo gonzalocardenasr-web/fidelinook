@@ -605,7 +605,7 @@ export default function OperacionPage() {
 
         <OperationSummary />
 
-        <section className="grid gap-4 md:grid-cols-5">
+        <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Link
             href="/operacion/ventas/nueva"
             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
@@ -660,6 +660,17 @@ export default function OperacionPage() {
 
             <p className="mt-2 text-sm text-neutral-500">
               Recepciones, stock y movimientos de productos.
+            </p>
+          </Link>
+
+          <Link
+            href="/operacion/caja"
+            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+          >
+            <p className="text-lg font-bold text-neutral-900">Caja</p>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Abrir caja y consultar su estado actual.
             </p>
           </Link>
         </section>
