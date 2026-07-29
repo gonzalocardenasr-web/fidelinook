@@ -124,7 +124,8 @@ export default function OrderBuilder({
     manualDiscountEnabled &&
     (!Number.isInteger(parsedManualDiscountValue) ||
       parsedManualDiscountValue <= 0 ||
-      (manualDiscountType === "percent" && parsedManualDiscountValue > 100) ||
+      (manualDiscountType === "percent" &&
+        parsedManualDiscountValue > 100) ||
       (manualDiscountType === "fixed" &&
         parsedManualDiscountValue > totalBeforeManualDiscount));
 
@@ -157,7 +158,7 @@ export default function OrderBuilder({
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col">
+    <aside className="flex h-full min-h-0 flex-col overflow-y-auto pr-1">
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
@@ -173,7 +174,7 @@ export default function OrderBuilder({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+      <div className="space-y-2">
         {cart.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-400">
             Aún no hay productos agregados.
@@ -198,7 +199,7 @@ export default function OrderBuilder({
         )}
       </div>
 
-      <div className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm">
+      <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm">
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
             Nota pedido
@@ -230,80 +231,10 @@ export default function OrderBuilder({
 
         {paymentMethod === "efectivo" && (
           <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-              Monto recibido
-            </label>
-
-            <div className="relative mt-1">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
-                $
-              </span>
-              <input
-                value={cashReceived}
-                onChange={(event) => updateCashReceived(event.target.value)}
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="0"
-                className={`w-full rounded-lg border bg-white py-2 pl-7 pr-3 text-sm font-black outline-none transition focus:ring-2 ${
-                  cashIsInsufficient && cashReceived.trim()
-                    ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                    : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                }`}
-              />
-            </div>
-
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {[10000, 20000, 50000].map((amount) => (
-                <button
-                  key={amount}
-                  type="button"
-                  onClick={() => setQuickCashAmount(amount)}
-                  className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-1.5 py-2 text-[11px] font-black text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
-                >
-                  ${(amount / 1000).toLocaleString("es-CL")} mil
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setQuickCashAmount(total)}
-                className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-1.5 py-2 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
-              >
-                Exacto
-              </button>
-            </div>
-
-            {cashIsInsufficient && cashReceived.trim() && (
-              <p className="mt-2 text-[11px] font-bold text-red-600">
-                El monto recibido es inferior al total.
-              </p>
-            )}
-
-            <div className="mt-2 flex items-center justify-between border-t border-neutral-200 pt-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                Vuelto
-              </span>
-              <span
-                className={`text-base font-black ${
-                  cashChange > 0 ? "text-emerald-700" : "text-neutral-700"
-                }`}
-              >
-                ${cashChange.toLocaleString("es-CL")}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
           <label className="flex cursor-pointer items-center justify-between gap-3">
-            <div>
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                Descuento manual
-              </span>
-              <span className="text-xs text-neutral-400">
-                Aplicar una excepción autorizada
-              </span>
-            </div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+              Descuento manual
+            </span>
 
             <input
               type="checkbox"
@@ -316,10 +247,10 @@ export default function OrderBuilder({
           </label>
 
           {manualDiscountEnabled && (
-            <div className="mt-3 space-y-2.5 border-t border-neutral-200 pt-3">
-              <div className="grid grid-cols-[110px_1fr] gap-2">
+            <div className="mt-2 space-y-2 border-t border-neutral-200 pt-2">
+              <div className="grid grid-cols-[92px_1fr] gap-2">
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                     Tipo
                   </label>
                   <div className="mt-1 grid grid-cols-2 gap-1">
@@ -334,6 +265,7 @@ export default function OrderBuilder({
                     >
                       %
                     </button>
+
                     <button
                       type="button"
                       onClick={() => onManualDiscountTypeChange("fixed")}
@@ -349,13 +281,15 @@ export default function OrderBuilder({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                     Valor
                   </label>
+
                   <div className="relative mt-1">
                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
                       {manualDiscountType === "percent" ? "%" : "$"}
                     </span>
+
                     <input
                       value={manualDiscountValue}
                       onChange={(event) =>
@@ -375,9 +309,10 @@ export default function OrderBuilder({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Motivo
                 </label>
+
                 <select
                   value={manualDiscountReason}
                   onChange={(event) =>
@@ -403,29 +338,26 @@ export default function OrderBuilder({
                 </select>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                  {manualDiscountReason === "other"
-                    ? "Especificar motivo"
-                    : "Nota opcional"}
-                </label>
-                <input
-                  value={manualDiscountNotes}
-                  onChange={(event) =>
-                    onManualDiscountNotesChange(event.target.value)
-                  }
-                  placeholder={
-                    manualDiscountReason === "other"
-                      ? "Describe el motivo"
-                      : "Antecedente adicional"
-                  }
-                  className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
-                    manualDiscountNotesInvalid
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                      : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                  }`}
-                />
-              </div>
+              {manualDiscountReason === "other" && (
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                    Especificar motivo
+                  </label>
+
+                  <input
+                    value={manualDiscountNotes}
+                    onChange={(event) =>
+                      onManualDiscountNotesChange(event.target.value)
+                    }
+                    placeholder="Describe el motivo"
+                    className={`mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
+                      manualDiscountNotesInvalid
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                    }`}
+                  />
+                </div>
+              )}
 
               {manualDiscountValueInvalid && (
                 <p className="text-[11px] font-bold text-red-600">
@@ -452,8 +384,9 @@ export default function OrderBuilder({
               {!manualDiscountInvalid && manualDiscountAmount > 0 && (
                 <div className="flex items-center justify-between rounded-lg bg-violet-100 px-3 py-2">
                   <span className="text-xs font-bold text-violet-700">
-                    Descuento calculado
+                    Descuento
                   </span>
+
                   <span className="text-sm font-black text-violet-700">
                     -${manualDiscountAmount.toLocaleString("es-CL")}
                   </span>
