@@ -485,6 +485,59 @@ export async function POST(req: Request) {
 
     const correlationId = createCorrelationId("sale-create");
 
+    const { data: activeCashSession, error: activeCashSessionError } =
+      await supabaseAdmin
+        .from("cash_register_sessions")
+        .select("id, status")
+        .eq("status", "OPEN")
+        .limit(1)
+        .maybeSingle();
+
+    if (activeCashSessionError) {
+      console.error(
+        "Error consultando caja abierta antes de crear venta:",
+        activeCashSessionError,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar el estado de la caja.",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!activeCashSession) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Debes abrir la caja antes de registrar una venta.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const cashRegisterSessionId = Number(activeCashSession.id);
+
+    if (
+      !Number.isInteger(cashRegisterSessionId) ||
+      cashRegisterSessionId <= 0
+    ) {
+      console.error(
+        "Caja abierta con identificador inválido:",
+        activeCashSession,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La sesión de caja activa no es válida.",
+        },
+        { status: 500 },
+      );
+    }
+
     const orderNotes = String(body.orderNotes || "").trim();
 
     const channel = String(body.channel || "local")
@@ -936,6 +989,7 @@ export async function POST(req: Request) {
         p_customer_id: customerId,
         p_payment_method: paymentMethod,
         p_items: items,
+        p_cash_register_session_id: cashRegisterSessionId,
         p_actor_role: session.role,
         p_order_notes: orderNotes || null,
         p_channel: channel,
@@ -965,6 +1019,7 @@ export async function POST(req: Request) {
 
         newState: {
           customerId,
+          cashRegisterSessionId,
           channel,
           externalOrderId: externalOrderId || null,
           paymentMethod,
@@ -1018,6 +1073,7 @@ export async function POST(req: Request) {
       newState: {
         saleId: createdSaleId,
         customerId,
+        cashRegisterSessionId,
         channel,
         externalOrderId: externalOrderId || null,
         paymentMethod,
@@ -1033,6 +1089,7 @@ export async function POST(req: Request) {
       metadata: {
         orderNotes: orderNotes || null,
         hasCustomer: customerId !== null,
+        cashRegisterSessionId,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? promotionReason : null,
         manualDiscountType,
@@ -1074,6 +1131,7 @@ export async function POST(req: Request) {
         metadata: {
           channel,
           externalOrderId: externalOrderId || null,
+          cashRegisterSessionId,
           paymentMethod,
           itemLines: items.length,
           hasCustomer: customerId !== null,
