@@ -218,6 +218,9 @@ export default function CashRegisterPage() {
   const [closingPreview, setClosingPreview] =
     useState<CashClosingPreview | null>(null);
 
+  const [completedClosing, setCompletedClosing] =
+    useState<CashClosingResult | null>(null);
+
   const [loadingClosingPreview, setLoadingClosingPreview] = useState(false);
   const [submittingClosing, setSubmittingClosing] = useState(false);
 
@@ -535,13 +538,18 @@ export default function CashRegisterPage() {
         return;
       }
 
+      const completedClosingResult = data.closing;
+
       resetClosingState();
 
       /*
-       * El backend ya cerró la sesión. Se recarga el estado para que
-       * la vista vuelva al formulario de apertura.
+       * El backend ya cerró la sesión. Se recarga el estado para confirmar
+       * que no exista una sesión abierta y luego se conserva el comprobante
+       * recibido desde el cierre transaccional.
        */
       await loadCashRegister();
+
+      setCompletedClosing(completedClosingResult);
 
       setMessageType("success");
       setMessage(data.message || "Caja cerrada correctamente.");
@@ -553,6 +561,13 @@ export default function CashRegisterPage() {
     } finally {
       setSubmittingClosing(false);
     }
+  }
+
+  function finishCompletedClosing() {
+    setCompletedClosing(null);
+    setMessage("");
+    setOpeningAmount("");
+    setOpeningNotes("");
   }
 
   async function openCashRegister(event: FormEvent<HTMLFormElement>) {
@@ -603,6 +618,7 @@ export default function CashRegisterPage() {
       setSession(data.session ?? null);
       setOpeningAmount("");
       setOpeningNotes("");
+      setCompletedClosing(null);
       setMovements([]);
       setMovementTotals({
         cashIn: 0,
@@ -1514,6 +1530,214 @@ export default function CashRegisterPage() {
               )}
             </section>
           </>
+        ) : completedClosing ? (
+          <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+                  Caja cerrada
+                </span>
+
+                <h2 className="mt-3 text-xl font-bold text-neutral-950">
+                  Comprobante de cierre
+                </h2>
+
+                <p className="mt-1 text-sm text-neutral-600">
+                  Revisa el resultado y prepara el respaldo físico del efectivo.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Sesión
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-neutral-950">
+                  #{completedClosing.id}
+                </p>
+              </div>
+            </div>
+
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl bg-neutral-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Fondo inicial
+                </dt>
+
+                <dd className="mt-2 text-lg font-bold text-neutral-950">
+                  {formatCurrency(completedClosing.opening_amount)}
+                </dd>
+              </div>
+
+              <div className="rounded-2xl bg-neutral-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Ventas en efectivo
+                </dt>
+
+                <dd className="mt-2 text-lg font-bold text-neutral-950">
+                  {formatCurrency(completedClosing.cash_sales_amount)}
+                </dd>
+
+                <p className="mt-1 text-xs text-neutral-500">
+                  {completedClosing.cash_sales_count} venta
+                  {completedClosing.cash_sales_count === 1 ? "" : "s"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  Otros ingresos
+                </dt>
+
+                <dd className="mt-2 text-lg font-bold text-emerald-900">
+                  +{formatCurrency(completedClosing.cash_in_amount)}
+                </dd>
+              </div>
+
+              <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                  Salidas
+                </dt>
+
+                <dd className="mt-2 text-lg font-bold text-red-900">
+                  −{formatCurrency(completedClosing.cash_out_amount)}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  Efectivo esperado
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-violet-950">
+                  {formatCurrency(completedClosing.expected_cash_amount)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  Efectivo contado
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-neutral-950">
+                  {formatCurrency(completedClosing.counted_cash_amount)}
+                </p>
+              </div>
+
+              <div
+                className={`rounded-2xl border p-5 ${
+                  completedClosing.cash_difference === 0
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-red-200 bg-red-50"
+                }`}
+              >
+                <p
+                  className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                    completedClosing.cash_difference === 0
+                      ? "text-emerald-700"
+                      : "text-red-700"
+                  }`}
+                >
+                  Diferencia
+                </p>
+
+                <p
+                  className={`mt-2 text-2xl font-bold ${
+                    completedClosing.cash_difference === 0
+                      ? "text-emerald-900"
+                      : "text-red-900"
+                  }`}
+                >
+                  {completedClosing.cash_difference > 0 ? "+" : ""}
+                  {formatCurrency(completedClosing.cash_difference)}
+                </p>
+
+                <p
+                  className={`mt-1 text-xs ${
+                    completedClosing.cash_difference === 0
+                      ? "text-emerald-700"
+                      : "text-red-700"
+                  }`}
+                >
+                  {completedClosing.cash_difference === 0
+                    ? "Cierre sin diferencias."
+                    : completedClosing.cash_difference > 0
+                      ? "Cierre con sobrante."
+                      : "Cierre con faltante."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                Efectivo para respaldar
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-violet-950">
+                {formatCurrency(completedClosing.counted_cash_amount)}
+              </p>
+
+              <p className="mt-2 text-sm text-violet-800">
+                Este monto corresponde al efectivo físico declarado al cerrar la
+                sesión y debe quedar asociado al comprobante o sobre de caja.
+              </p>
+            </div>
+
+            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Fecha de cierre
+                </dt>
+
+                <dd className="mt-2 text-sm font-semibold text-neutral-900">
+                  {formatDateTime(completedClosing.closed_at)}
+                </dd>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Responsable
+                </dt>
+
+                <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
+                  {completedClosing.closed_by_role}
+                </dd>
+              </div>
+            </dl>
+
+            {completedClosing.closing_notes && (
+              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  Observaciones del cierre
+                </p>
+
+                <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">
+                  {completedClosing.closing_notes}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">
+                Antes de finalizar
+              </p>
+
+              <p className="mt-1 text-xs text-amber-800">
+                Confirma que el efectivo haya sido retirado o resguardado según
+                el procedimiento operativo de Nook.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={finishCompletedClosing}
+              className="mt-5 w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+            >
+              Finalizar y volver a apertura
+            </button>
+          </section>
         ) : (
           <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div>
