@@ -149,10 +149,31 @@ type CashClosingDetailSummary = {
   cashDifference: number;
 };
 
+type CashClosingSaleOrder = {
+  id: number;
+  displayOrderCode: string;
+  businessDate: string;
+  dailyOrderNumber: number;
+  status: string;
+};
+
+type CashClosingCashSale = {
+  id: number;
+  saleNumber: string;
+  total: number;
+  paymentMethod: string;
+  status: string;
+  paymentStatus: string;
+  actorRole: string | null;
+  confirmedAt: string;
+  order: CashClosingSaleOrder | null;
+};
+
 type CashClosingDetail = {
   session: CashClosingHistoryItem;
   summary: CashClosingDetailSummary;
   movements: CashRegisterMovement[];
+  cashSales: CashClosingCashSale[];
 };
 
 type CashClosingDetailResponse = {
@@ -217,6 +238,14 @@ const REASON_LABELS: Record<CashMovementReason, string> = {
   AUTHORIZED_WITHDRAWAL: "Retiro autorizado",
   DOCUMENTED_CORRECTION: "Corrección documentada",
   OTHER: "Otro",
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  preparing: "En preparación",
+  ready: "Listo",
+  delivered: "Entregado",
+  cancelled: "Cancelado",
 };
 
 function formatCurrency(value: number) {
@@ -306,6 +335,22 @@ export default function CashRegisterPage() {
     () => (movementType === "CASH_IN" ? CASH_IN_REASONS : CASH_OUT_REASONS),
     [movementType],
   );
+
+  const closingDetailCashSalesTotal = useMemo(() => {
+    if (!closingDetail) {
+      return 0;
+    }
+
+    return closingDetail.cashSales.reduce(
+      (total, sale) => total + sale.total,
+      0,
+    );
+  }, [closingDetail]);
+
+  const closingDetailCashSalesMatch =
+    closingDetail !== null &&
+    closingDetail.cashSales.length === closingDetail.summary.cashSalesCount &&
+    closingDetailCashSalesTotal === closingDetail.summary.cashSalesAmount;
 
   const loadMovements = useCallback(async () => {
     try {
@@ -2369,6 +2414,164 @@ export default function CashRegisterPage() {
                         </div>
                       </div>
                     )}
+
+                    <div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                            Trazabilidad
+                          </p>
+
+                          <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                            Ventas en efectivo
+                          </h3>
+
+                          <p className="mt-1 text-sm text-neutral-600">
+                            Ventas pagadas en efectivo y asociadas directamente
+                            a esta sesión de caja.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-start gap-2 sm:items-end">
+                          <span className="text-xs font-medium text-neutral-500">
+                            {closingDetail.cashSales.length} venta
+                            {closingDetail.cashSales.length === 1 ? "" : "s"}
+                          </span>
+
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                              closingDetailCashSalesMatch
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {closingDetailCashSalesMatch
+                              ? "Total validado"
+                              : "Inconsistencia detectada"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            Total listado
+                          </p>
+
+                          <p className="mt-2 text-xl font-bold text-neutral-950">
+                            {formatCurrency(closingDetailCashSalesTotal)}
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">
+                            Total del cierre
+                          </p>
+
+                          <p className="mt-2 text-xl font-bold text-violet-950">
+                            {formatCurrency(
+                              closingDetail.summary.cashSalesAmount,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {closingDetail.cashSales.length === 0 ? (
+                        <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
+                          <p className="text-sm font-semibold text-neutral-700">
+                            No existen ventas en efectivo asociadas.
+                          </p>
+
+                          <p className="mt-1 text-xs text-neutral-500">
+                            Esta sesión no registró ventas confirmadas y pagadas
+                            mediante efectivo.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-4 overflow-x-auto rounded-2xl border border-neutral-200">
+                          <table className="min-w-full text-sm">
+                            <thead className="bg-neutral-50">
+                              <tr>
+                                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                                  Pedido
+                                </th>
+
+                                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                                  Fecha
+                                </th>
+
+                                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                                  Responsable
+                                </th>
+
+                                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                                  Estado
+                                </th>
+
+                                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                                  Monto
+                                </th>
+                              </tr>
+                            </thead>
+
+                            <tbody>
+                              {closingDetail.cashSales.map((sale) => (
+                                <tr
+                                  key={sale.id}
+                                  className="border-t border-neutral-200 bg-white"
+                                >
+                                  <td className="whitespace-nowrap px-4 py-3">
+                                    <p className="font-semibold text-neutral-950">
+                                      {sale.order?.displayOrderCode ||
+                                        `Venta #${sale.id}`}
+                                    </p>
+
+                                    <p className="mt-1 max-w-[220px] truncate text-xs text-neutral-500">
+                                      {sale.saleNumber}
+                                    </p>
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3 text-neutral-700">
+                                    {formatDateTime(sale.confirmedAt)}
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3 capitalize text-neutral-700">
+                                    {sale.actorRole || "Sin registro"}
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3">
+                                    <span
+                                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                        sale.order?.status === "delivered"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : sale.order?.status === "cancelled"
+                                            ? "bg-red-100 text-red-800"
+                                            : sale.order?.status === "ready"
+                                              ? "bg-blue-100 text-blue-800"
+                                              : sale.order?.status ===
+                                                  "preparing"
+                                                ? "bg-amber-100 text-amber-800"
+                                                : "bg-neutral-100 text-neutral-700"
+                                      }`}
+                                    >
+                                      {sale.order
+                                        ? ORDER_STATUS_LABELS[
+                                            sale.order.status
+                                          ] || sale.order.status
+                                        : "Sin pedido"}
+                                    </span>
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3 text-right text-base font-bold text-neutral-950">
+                                    {formatCurrency(sale.total)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
 
                     <div>
                       <div className="flex items-center justify-between gap-4">
