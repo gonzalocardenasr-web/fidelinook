@@ -110,6 +110,32 @@ type CashClosingResponse = {
   message?: string;
 };
 
+type CashClosingHistoryItem = {
+  id: number;
+  status: "CLOSED";
+  opened_at: string;
+  opened_by_role: string;
+  opening_amount: number;
+  opening_notes: string | null;
+  closed_at: string;
+  closed_by_role: string;
+  expected_cash_amount: number;
+  counted_cash_amount: number;
+  cash_difference: number;
+  closing_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type CashClosingHistoryResponse = {
+  ok: boolean;
+  closings?: CashClosingHistoryItem[];
+  total?: number;
+  returned?: number;
+  limit?: number;
+  message?: string;
+};
+
 const CASH_IN_REASONS: Array<{
   value: CashMovementReason;
   label: string;
@@ -221,6 +247,12 @@ export default function CashRegisterPage() {
   const [completedClosing, setCompletedClosing] =
     useState<CashClosingResult | null>(null);
 
+  const [closingHistory, setClosingHistory] = useState<
+    CashClosingHistoryItem[]
+  >([]);
+
+  const [loadingClosingHistory, setLoadingClosingHistory] = useState(false);
+
   const [loadingClosingPreview, setLoadingClosingPreview] = useState(false);
   const [submittingClosing, setSubmittingClosing] = useState(false);
 
@@ -290,6 +322,31 @@ export default function CashRegisterPage() {
     }
   }, []);
 
+  const loadClosingHistory = useCallback(async () => {
+    try {
+      setLoadingClosingHistory(true);
+
+      const response = await fetch("/api/operacion/caja/cierres?limit=10", {
+        cache: "no-store",
+      });
+
+      const data = (await response.json()) as CashClosingHistoryResponse;
+
+      if (!response.ok || !data.ok) {
+        setClosingHistory([]);
+        return;
+      }
+
+      setClosingHistory(data.closings ?? []);
+    } catch (error) {
+      console.error("Error consultando historial de cierres:", error);
+
+      setClosingHistory([]);
+    } finally {
+      setLoadingClosingHistory(false);
+    }
+  }, []);
+
   const loadCashRegister = useCallback(async () => {
     try {
       setLoading(true);
@@ -345,10 +402,11 @@ export default function CashRegisterPage() {
 
       setMessageType("error");
       setMessage("Ocurrió un error al consultar el estado de la caja.");
+      await loadClosingHistory();
     } finally {
       setLoading(false);
     }
-  }, [loadMovements]);
+  }, [loadMovements, loadClosingHistory]);
 
   useEffect(() => {
     void loadCashRegister();
@@ -548,6 +606,7 @@ export default function CashRegisterPage() {
        * recibido desde el cierre transaccional.
        */
       await loadCashRegister();
+      await loadClosingHistory();
 
       setCompletedClosing(completedClosingResult);
 
@@ -850,6 +909,84 @@ export default function CashRegisterPage() {
                   <p className="mt-2 text-sm text-neutral-700">
                     {session.opening_notes}
                   </p>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                    Auditoría
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                    Últimos cierres
+                  </h2>
+                </div>
+
+                <span className="text-xs text-neutral-500">
+                  {closingHistory.length} registros
+                </span>
+              </div>
+
+              {loadingClosingHistory ? (
+                <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+                  Consultando historial...
+                </div>
+              ) : closingHistory.length === 0 ? (
+                <div className="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5 text-sm text-neutral-600">
+                  Todavía no existen cierres registrados.
+                </div>
+              ) : (
+                <div className="mt-5 overflow-hidden rounded-xl border border-neutral-200">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-neutral-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Sesión</th>
+                        <th className="px-4 py-3 text-left">Cierre</th>
+                        <th className="px-4 py-3 text-right">Esperado</th>
+                        <th className="px-4 py-3 text-right">Contado</th>
+                        <th className="px-4 py-3 text-right">Diferencia</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {closingHistory.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-t border-neutral-200"
+                        >
+                          <td className="px-4 py-3 font-semibold">
+                            #{item.id}
+                          </td>
+
+                          <td className="px-4 py-3">
+                            {formatDateTime(item.closed_at)}
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            {formatCurrency(item.expected_cash_amount)}
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            {formatCurrency(item.counted_cash_amount)}
+                          </td>
+
+                          <td
+                            className={`px-4 py-3 text-right font-bold ${
+                              item.cash_difference === 0
+                                ? "text-emerald-700"
+                                : "text-red-700"
+                            }`}
+                          >
+                            {item.cash_difference > 0 ? "+" : ""}
+                            {formatCurrency(item.cash_difference)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </section>
