@@ -1160,53 +1160,87 @@ export default function CashRegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] px-4 py-6">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <header className="rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white shadow-sm">
-          <Link
-            href="/operacion"
-            className="inline-flex rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-          >
-            ← Volver a Operación
-          </Link>
+    <main className="min-h-screen bg-[#F6F3FF] p-3">
+      <div className="mx-auto flex min-h-[calc(100vh-24px)] w-full max-w-[1600px] flex-col">
+        <header className="flex shrink-0 flex-col gap-3 rounded-xl bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/operacion"
+              className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50"
+            >
+              ← Operación
+            </Link>
 
-          <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/75">
-              Gestión de caja
-            </p>
+            <div className="min-w-0">
+              <h1 className="text-lg font-black leading-tight text-neutral-900">
+                Caja
+              </h1>
 
-            <h1 className="mt-1 text-2xl font-bold">Caja</h1>
+              <p className="text-[11px] text-neutral-500">
+                Apertura, movimientos y cierre de efectivo.
+              </p>
+            </div>
+          </div>
 
-            <p className="mt-1 text-sm text-white/85">
-              Administra la apertura y los movimientos de efectivo de la
-              jornada.
-            </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void loadCashRegister()}
+              disabled={
+                loading ||
+                loadingMovements ||
+                loadingClosingHistory ||
+                loadingClosingPreview ||
+                submittingClosing
+              }
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading || loadingMovements ? "Actualizando..." : "Actualizar"}
+            </button>
+
+            {session && !showClosingForm && (
+              <button
+                type="button"
+                onClick={startClosing}
+                disabled={
+                  loadingMovements ||
+                  submittingMovement ||
+                  loadingClosingPreview ||
+                  submittingClosing
+                }
+                className="cursor-pointer rounded-lg bg-neutral-900 px-3 py-2 text-[12px] font-black text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cerrar caja
+              </button>
+            )}
           </div>
         </header>
 
         {message && (
           <div
-            className={`rounded-2xl border px-4 py-3 text-sm ${
+            className={`mt-2 shrink-0 rounded-lg border px-3 py-2 text-[12px] font-semibold ${
               messageType === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : messageType === "error"
                   ? "border-red-200 bg-red-50 text-red-800"
-                  : "border-violet-200 bg-violet-50 text-violet-800"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
             }`}
           >
             {message}
           </div>
         )}
 
+        <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2"></div>
+
         {loading ? (
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-neutral-600">
               Consultando estado de la caja...
             </p>
           </section>
         ) : session ? (
           <>
-            <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
@@ -1220,37 +1254,7 @@ export default function CashRegisterPage() {
                   <p className="mt-1 text-sm text-neutral-600">
                     La operación de caja se encuentra activa.
                   </p>
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => void loadCashRegister()}
-                    disabled={
-                      loadingMovements ||
-                      loadingClosingPreview ||
-                      submittingClosing
-                    }
-                    className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loadingMovements ? "Actualizando..." : "Actualizar estado"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={startClosing}
-                    disabled={
-                      showClosingForm ||
-                      loadingMovements ||
-                      loadingClosingPreview ||
-                      submittingMovement ||
-                      submittingClosing
-                    }
-                    className="cursor-pointer rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Cerrar caja
-                  </button>
-                </div>
+                </div>                
               </div>
 
               <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1298,7 +1302,7 @@ export default function CashRegisterPage() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
@@ -1607,7 +1611,7 @@ export default function CashRegisterPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
@@ -1622,23 +1626,7 @@ export default function CashRegisterPage() {
                     Cuenta todo el efectivo físico disponible antes de revisar
                     el cierre.
                   </p>
-                </div>
-
-                {!showClosingForm && (
-                  <button
-                    type="button"
-                    onClick={startClosing}
-                    disabled={
-                      loadingMovements ||
-                      submittingMovement ||
-                      loadingClosingPreview ||
-                      submittingClosing
-                    }
-                    className="cursor-pointer rounded-xl bg-neutral-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Iniciar cierre
-                  </button>
-                )}
+                </div>                
               </div>
 
               {!showClosingForm ? (
@@ -1975,7 +1963,7 @@ export default function CashRegisterPage() {
             </section>
           </>
         ) : completedClosing ? (
-          <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+          <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
@@ -2183,7 +2171,7 @@ export default function CashRegisterPage() {
             </button>
           </section>
         ) : (
-          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div>
               <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
                 Caja cerrada
@@ -2267,21 +2255,23 @@ export default function CashRegisterPage() {
           </section>
         )}
 
+        </div>
+
         {!loading && (
           <>
-            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
                     Auditoría
                   </p>
 
-                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                  <h2 className="mt-0.5 text-lg font-black text-neutral-900">
                     Últimos cierres
                   </h2>
 
-                  <p className="mt-1 text-sm text-neutral-600">
-                    Consulta los últimos cierres registrados en el sistema.
+                  <p className="text-[11px] text-neutral-500">
+                    Consulta los últimos cierres registrados.
                   </p>
                 </div>
 
@@ -2289,16 +2279,7 @@ export default function CashRegisterPage() {
                   <span className="text-xs font-medium text-neutral-500">
                     {closingHistory.length} registro
                     {closingHistory.length === 1 ? "" : "s"}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => void loadClosingHistory()}
-                    disabled={loadingClosingHistory}
-                    className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loadingClosingHistory ? "Actualizando..." : "Actualizar"}
-                  </button>
+                  </span>                  
                 </div>
               </div>
 
@@ -2422,7 +2403,7 @@ export default function CashRegisterPage() {
             </section>
 
             {selectedClosingId !== null && (
-              <section className="rounded-2xl border border-violet-200 bg-white p-6 shadow-sm">
+              <section className="rounded-xl border border-violet-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
