@@ -65,6 +65,51 @@ type CashMovementsResponse = {
   message?: string;
 };
 
+type CashClosingPreview = {
+  cashRegisterSessionId: number;
+  openingAmount: number;
+  cashSalesAmount: number;
+  cashSalesCount: number;
+  cashInAmount: number;
+  cashInCount: number;
+  cashOutAmount: number;
+  cashOutCount: number;
+  expectedCashAmount: number;
+  countedCashAmount: number;
+  cashDifference: number;
+  requiresNotes: boolean;
+};
+
+type CashClosingPreviewResponse = {
+  ok: boolean;
+  preview?: CashClosingPreview;
+  message?: string;
+};
+
+type CashClosingResult = {
+  id: number;
+  status: "CLOSED";
+  opening_amount: number;
+  cash_sales_amount: number;
+  cash_sales_count: number;
+  cash_in_amount: number;
+  cash_in_count: number;
+  cash_out_amount: number;
+  cash_out_count: number;
+  expected_cash_amount: number;
+  counted_cash_amount: number;
+  cash_difference: number;
+  closing_notes: string | null;
+  closed_by_role: string;
+  closed_at: string;
+};
+
+type CashClosingResponse = {
+  ok: boolean;
+  closing?: CashClosingResult;
+  message?: string;
+};
+
 const CASH_IN_REASONS: Array<{
   value: CashMovementReason;
   label: string;
@@ -166,6 +211,15 @@ export default function CashRegisterPage() {
     useState<CashMovementReason>("MINOR_PURCHASE");
   const [movementNotes, setMovementNotes] = useState("");
   const [showMovementForm, setShowMovementForm] = useState(false);
+
+  const [showClosingForm, setShowClosingForm] = useState(false);
+  const [countedCashAmount, setCountedCashAmount] = useState("");
+  const [closingNotes, setClosingNotes] = useState("");
+  const [closingPreview, setClosingPreview] =
+    useState<CashClosingPreview | null>(null);
+
+  const [loadingClosingPreview, setLoadingClosingPreview] = useState(false);
+  const [submittingClosing, setSubmittingClosing] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadingMovements, setLoadingMovements] = useState(false);
@@ -272,6 +326,8 @@ export default function CashRegisterPage() {
           cashOut: 0,
           net: 0,
         });
+
+        resetClosingState();
       }
     } catch (error) {
       console.error("Error consultando caja:", error);
@@ -309,6 +365,189 @@ export default function CashRegisterPage() {
     setMovementAmount("");
     setMovementNotes("");
     setMovementReason(getDefaultReason(movementType));
+  }
+
+  function resetClosingState() {
+    setShowClosingForm(false);
+    setCountedCashAmount("");
+    setClosingNotes("");
+    setClosingPreview(null);
+    setLoadingClosingPreview(false);
+    setSubmittingClosing(false);
+  }
+
+  function startClosing() {
+    closeMovementForm();
+    setCountedCashAmount("");
+    setClosingNotes("");
+    setClosingPreview(null);
+    setMessage("");
+    setShowClosingForm(true);
+  }
+
+  function cancelClosing() {
+    if (loadingClosingPreview || submittingClosing) {
+      return;
+    }
+
+    resetClosingState();
+    setMessage("");
+  }
+
+  function handleCountedCashAmountChange(value: string) {
+    setCountedCashAmount(value);
+
+    /*
+     * Si el conteo cambia después de calcular el resumen,
+     * la previsualización deja de ser válida.
+     */
+    if (closingPreview) {
+      setClosingPreview(null);
+    }
+  }
+
+  async function previewClosing(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!session) {
+      setMessageType("error");
+      setMessage("No existe una caja abierta para cerrar.");
+      return;
+    }
+
+    const normalizedAmount = countedCashAmount.trim();
+    const parsedAmount = Number(normalizedAmount);
+
+    if (
+      normalizedAmount === "" ||
+      !Number.isInteger(parsedAmount) ||
+      parsedAmount < 0
+    ) {
+      setMessageType("error");
+      setMessage(
+        "El efectivo contado debe ser un número entero mayor o igual a cero.",
+      );
+      return;
+    }
+
+    try {
+      setLoadingClosingPreview(true);
+      setClosingPreview(null);
+      setMessage("");
+
+      const response = await fetch("/api/operacion/caja/cierre/preview", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          countedCashAmount: parsedAmount,
+        }),
+      });
+
+      const data = (await response.json()) as CashClosingPreviewResponse;
+
+      if (!response.ok || !data.ok || !data.preview) {
+        setMessageType("error");
+        setMessage(
+          data.message ||
+            "No fue posible calcular la previsualización del cierre.",
+        );
+        return;
+      }
+
+      if (data.preview.cashRegisterSessionId !== session.id) {
+        setMessageType("error");
+        setMessage(
+          "La sesión de caja cambió durante el cálculo. Actualiza la página antes de continuar.",
+        );
+        return;
+      }
+
+      setClosingPreview(data.preview);
+
+      setMessageType(data.preview.cashDifference === 0 ? "success" : "info");
+
+      setMessage(
+        data.message ||
+          (data.preview.cashDifference === 0
+            ? "El conteo coincide con el efectivo esperado."
+            : "El conteo presenta una diferencia de caja."),
+      );
+    } catch (error) {
+      console.error("Error calculando previsualización del cierre:", error);
+
+      setMessageType("error");
+      setMessage("Ocurrió un error inesperado al calcular el cierre de caja.");
+    } finally {
+      setLoadingClosingPreview(false);
+    }
+  }
+
+  async function confirmClosing() {
+    if (!session) {
+      setMessageType("error");
+      setMessage("No existe una caja abierta para cerrar.");
+      return;
+    }
+
+    if (!closingPreview) {
+      setMessageType("error");
+      setMessage("Debes revisar el conteo antes de confirmar el cierre.");
+      return;
+    }
+
+    const normalizedNotes = closingNotes.trim();
+
+    if (closingPreview.requiresNotes && !normalizedNotes) {
+      setMessageType("error");
+      setMessage(
+        "Debes registrar una observación cuando exista una diferencia de caja.",
+      );
+      return;
+    }
+
+    try {
+      setSubmittingClosing(true);
+      setMessage("");
+
+      const response = await fetch("/api/operacion/caja/cierre", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          countedCashAmount: closingPreview.countedCashAmount,
+          closingNotes: normalizedNotes,
+        }),
+      });
+
+      const data = (await response.json()) as CashClosingResponse;
+
+      if (!response.ok || !data.ok || !data.closing) {
+        setMessageType("error");
+        setMessage(data.message || "No fue posible cerrar la caja.");
+        return;
+      }
+
+      resetClosingState();
+
+      /*
+       * El backend ya cerró la sesión. Se recarga el estado para que
+       * la vista vuelva al formulario de apertura.
+       */
+      await loadCashRegister();
+
+      setMessageType("success");
+      setMessage(data.message || "Caja cerrada correctamente.");
+    } catch (error) {
+      console.error("Error confirmando cierre de caja:", error);
+
+      setMessageType("error");
+      setMessage("Ocurrió un error inesperado al confirmar el cierre de caja.");
+    } finally {
+      setSubmittingClosing(false);
+    }
   }
 
   async function openCashRegister(event: FormEvent<HTMLFormElement>) {
