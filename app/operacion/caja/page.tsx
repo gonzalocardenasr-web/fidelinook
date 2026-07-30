@@ -169,6 +169,79 @@ type CashClosingCashSale = {
   order: CashClosingSaleOrder | null;
 };
 
+type SaleDetailOption = {
+  id: number;
+  option_group_code: string;
+  option_value_name: string;
+  quantity: number;
+};
+
+type SaleDetailItem = {
+  id: number;
+  product_sku: string | null;
+  product_name: string;
+  quantity: number;
+  list_unit_price: number | null;
+  unit_price: number;
+  discount_total: number;
+  total_price: number;
+  is_gift: boolean;
+  gift_reason: string | null;
+  notes: string | null;
+  sale_item_options: SaleDetailOption[];
+};
+
+type SaleDetailOrder = {
+  id: number;
+  business_date: string | null;
+  daily_order_number: number | null;
+  display_order_code: string;
+  status: string;
+  notes: string | null;
+  created_at: string | null;
+};
+
+type SaleDetailCustomer = {
+  id: number;
+  nombre: string | null;
+  correo: string | null;
+  telefono: string | null;
+};
+
+type SaleDetail = {
+  id: number;
+  sale_number: string | null;
+  cash_register_session_id: number | null;
+  channel: string;
+  external_order_id: string | null;
+  integration_source: string | null;
+  received_at: string | null;
+  customer_id: number | null;
+  status: string;
+  subtotal: number;
+  discount_total: number;
+  manual_discount_type: "percent" | "fixed" | null;
+  manual_discount_value: number | null;
+  manual_discount_amount: number | null;
+  manual_discount_reason: string | null;
+  manual_discount_notes: string | null;
+  total: number;
+  payment_status: string;
+  payment_method: string;
+  actor_role: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+  clientes: SaleDetailCustomer | null;
+  orders: SaleDetailOrder[];
+  sale_items: SaleDetailItem[];
+};
+
+type SaleDetailResponse = {
+  ok: boolean;
+  sale?: SaleDetail;
+  message?: string;
+};
+
 type CashClosingDetail = {
   session: CashClosingHistoryItem;
   summary: CashClosingDetailSummary;
@@ -267,6 +340,130 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function getChannelLabel(channel?: string | null) {
+  const normalized = String(channel || "local").toLowerCase();
+
+  if (normalized === "shopify") return "Shopify";
+
+  if (
+    normalized === "uber" ||
+    normalized === "uber_eats" ||
+    normalized === "ubereats"
+  ) {
+    return "Uber Eats";
+  }
+
+  if (
+    normalized === "rappi" ||
+    normalized === "Rapi" ||
+    normalized === "rapi"
+  ) {
+    return "Rappi";
+  }
+
+  if (
+    normalized === "pedidosya" ||
+    normalized === "pedidos_ya" ||
+    normalized === "pedidos ya"
+  ) {
+    return "PedidosYa";
+  }
+
+  return "Local";
+}
+
+function getPaymentMethodLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "efectivo") return "Efectivo";
+  if (normalized === "debito") return "Débito";
+  if (normalized === "credito") return "Crédito";
+  if (normalized === "transferencia") return "Transferencia";
+  if (normalized === "manual") return "Plataforma";
+
+  return value || "—";
+}
+
+function getOrderStatusLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "pending") return "Pendiente";
+  if (normalized === "preparing") return "Preparando";
+  if (normalized === "ready") return "Listo";
+  if (normalized === "delivered") return "Entregado";
+  if (normalized === "cancelled") return "Cancelado";
+
+  return value || "—";
+}
+
+function getManualDiscountTypeLabel(value?: string | null) {
+  if (value === "percent") return "Porcentaje";
+  if (value === "fixed") return "Monto fijo";
+
+  return value || "—";
+}
+
+function getManualDiscountReasonLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "courtesy") return "Cortesía comercial";
+  if (normalized === "complaint") return "Reclamo cliente";
+  if (normalized === "agreement") return "Convenio";
+  if (normalized === "exceptional_promotion") {
+    return "Promoción excepcional";
+  }
+  if (normalized === "service_error") return "Error en atención";
+  if (normalized === "other") return "Otro";
+
+  return value || "—";
+}
+
+function formatRepeatedNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+    .join(" + ");
+}
+
+function getSaleItemOptions(item: SaleDetailItem) {
+  const options = Array.isArray(item.sale_item_options)
+    ? item.sale_item_options
+    : [];
+
+  const flavors = options
+    .filter((option) => ["flavor", "sabor"].includes(option.option_group_code))
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  const toppings = options
+    .filter((option) =>
+      ["topping", "toppings"].includes(option.option_group_code),
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  const otherOptions = options
+    .filter(
+      (option) =>
+        !["flavor", "sabor", "topping", "toppings"].includes(
+          option.option_group_code,
+        ),
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  return {
+    flavors,
+    toppings,
+    otherOptions,
+  };
+}
+
 function getDefaultReason(movementType: CashMovementType): CashMovementReason {
   return movementType === "CASH_IN" ? "AUTHORIZED_INCOME" : "MINOR_PURCHASE";
 }
@@ -297,6 +494,12 @@ export default function CashRegisterPage() {
   const [closingNotes, setClosingNotes] = useState("");
   const [closingPreview, setClosingPreview] =
     useState<CashClosingPreview | null>(null);
+
+  const [selectedSaleDetail, setSelectedSaleDetail] =
+    useState<SaleDetail | null>(null);
+
+  const [loadingSaleDetail, setLoadingSaleDetail] = useState(false);
+  const [saleDetailError, setSaleDetailError] = useState("");
 
   const [completedClosing, setCompletedClosing] =
     useState<CashClosingResult | null>(null);
@@ -433,6 +636,8 @@ export default function CashRegisterPage() {
       setSelectedClosingId(closingId);
       setClosingDetail(null);
       setClosingDetailError("");
+      setSelectedSaleDetail(null);
+      setSaleDetailError("");
       setLoadingClosingDetail(true);
 
       const response = await fetch(`/api/operacion/caja/cierres/${closingId}`, {
@@ -467,6 +672,55 @@ export default function CashRegisterPage() {
       setLoadingClosingDetail(false);
     }
   }, []);
+
+  const loadSaleDetail = useCallback(
+    async (saleId: number, expectedCashSessionId: number) => {
+      try {
+        setSelectedSaleDetail(null);
+        setSaleDetailError("");
+        setLoadingSaleDetail(true);
+
+        const response = await fetch(`/api/operacion/sales/${saleId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as SaleDetailResponse;
+
+        if (!response.ok || !data.ok || !data.sale) {
+          setSaleDetailError(
+            data.message || "No fue posible consultar el detalle de la venta.",
+          );
+          return;
+        }
+
+        if (data.sale.id !== saleId) {
+          setSaleDetailError(
+            "El detalle recibido no corresponde a la venta seleccionada.",
+          );
+          return;
+        }
+
+        if (data.sale.cash_register_session_id !== expectedCashSessionId) {
+          setSaleDetailError(
+            "La venta no pertenece al cierre de caja seleccionado.",
+          );
+          return;
+        }
+
+        setSelectedSaleDetail(data.sale);
+      } catch (error) {
+        console.error("Error consultando detalle de venta:", error);
+
+        setSaleDetailError(
+          "Ocurrió un error al consultar el detalle de la venta.",
+        );
+      } finally {
+        setLoadingSaleDetail(false);
+      }
+    },
+    [],
+  );
 
   const loadCashRegister = useCallback(async () => {
     try {
@@ -754,6 +1008,10 @@ export default function CashRegisterPage() {
     setClosingDetail(null);
     setClosingDetailError("");
     setLoadingClosingDetail(false);
+
+    setSelectedSaleDetail(null);
+    setSaleDetailError("");
+    setLoadingSaleDetail(false);
   }
 
   async function openCashRegister(event: FormEvent<HTMLFormElement>) {
@@ -2511,6 +2769,10 @@ export default function CashRegisterPage() {
                                 <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
                                   Monto
                                 </th>
+
+                                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                                  Acción
+                                </th>
                               </tr>
                             </thead>
 
@@ -2564,6 +2826,28 @@ export default function CashRegisterPage() {
 
                                   <td className="whitespace-nowrap px-4 py-3 text-right text-base font-bold text-neutral-950">
                                     {formatCurrency(sale.total)}
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3 text-right">
+                                    {formatCurrency(sale.total)}
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-4 py-3 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void loadSaleDetail(
+                                          sale.id,
+                                          closingDetail.session.id,
+                                        )
+                                      }
+                                      disabled={loadingSaleDetail}
+                                      className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      {loadingSaleDetail
+                                        ? "Consultando..."
+                                        : "Ver venta"}
+                                    </button>
                                   </td>
                                 </tr>
                               ))}
@@ -2670,6 +2954,318 @@ export default function CashRegisterPage() {
           </>
         )}
       </div>
+      {(selectedSaleDetail || loadingSaleDetail || saleDetailError) && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/20">
+          <button
+            type="button"
+            aria-label="Cerrar detalle de venta"
+            onClick={() => {
+              setSelectedSaleDetail(null);
+              setSaleDetailError("");
+              setLoadingSaleDetail(false);
+            }}
+            className="absolute inset-0 cursor-default"
+          />
+
+          <aside className="relative z-10 flex h-full w-full max-w-[460px] flex-col border-l border-neutral-200 bg-white shadow-2xl">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-violet-600">
+                  Trazabilidad de caja
+                </p>
+
+                <h2 className="mt-0.5 text-lg font-black leading-tight text-neutral-900">
+                  {selectedSaleDetail?.orders?.[0]?.display_order_code ||
+                    selectedSaleDetail?.sale_number ||
+                    (selectedSaleDetail
+                      ? `Venta #${selectedSaleDetail.id}`
+                      : "Detalle de venta")}
+                </h2>
+
+                {selectedSaleDetail && (
+                  <p className="mt-1 text-[10px] font-semibold text-neutral-500">
+                    Venta #{selectedSaleDetail.id}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSaleDetail(null);
+                  setSaleDetailError("");
+                  setLoadingSaleDetail(false);
+                }}
+                className="shrink-0 cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50"
+              >
+                Cerrar
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              {loadingSaleDetail ? (
+                <div className="rounded-lg bg-neutral-50 p-4 text-sm text-neutral-600">
+                  Consultando venta...
+                </div>
+              ) : saleDetailError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm font-semibold text-red-800">
+                    No fue posible cargar la venta
+                  </p>
+
+                  <p className="mt-1 text-sm text-red-700">{saleDetailError}</p>
+                </div>
+              ) : selectedSaleDetail ? (
+                <>
+                  <section className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Fecha y hora
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                        {formatDateTime(
+                          selectedSaleDetail.confirmed_at ||
+                            selectedSaleDetail.created_at,
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Canal
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                        {getChannelLabel(selectedSaleDetail.channel)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Medio de pago
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                        {getPaymentMethodLabel(
+                          selectedSaleDetail.payment_method,
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Operador
+                      </p>
+
+                      <p className="mt-0.5 capitalize text-[11px] font-bold text-neutral-800">
+                        {selectedSaleDetail.actor_role || "—"}
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="mt-3 rounded-lg border border-neutral-200 px-3 py-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                      Cliente
+                    </p>
+
+                    <p className="mt-0.5 text-[12px] font-black text-neutral-900">
+                      {selectedSaleDetail.clientes?.nombre || "Mostrador"}
+                    </p>
+
+                    {selectedSaleDetail.clientes?.telefono && (
+                      <p className="mt-1 text-[10px] text-neutral-500">
+                        {selectedSaleDetail.clientes.telefono}
+                      </p>
+                    )}
+
+                    {selectedSaleDetail.clientes?.correo && (
+                      <p className="mt-0.5 break-all text-[10px] text-neutral-500">
+                        {selectedSaleDetail.clientes.correo}
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="mt-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                        Productos
+                      </p>
+
+                      <span className="text-[10px] text-neutral-400">
+                        {selectedSaleDetail.sale_items.reduce(
+                          (total, item) => total + item.quantity,
+                          0,
+                        )}{" "}
+                        ítems
+                      </span>
+                    </div>
+
+                    <div className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-neutral-50">
+                      {selectedSaleDetail.sale_items.map((item) => {
+                        const { flavors, toppings, otherOptions } =
+                          getSaleItemOptions(item);
+
+                        return (
+                          <div key={item.id} className="px-3 py-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-black text-neutral-900">
+                                  {item.quantity}x {item.product_name}
+                                </p>
+
+                                {item.product_sku && (
+                                  <p className="mt-0.5 text-[9px] text-neutral-400">
+                                    SKU: {item.product_sku}
+                                  </p>
+                                )}
+                              </div>
+
+                              <p className="shrink-0 text-[11px] font-black text-violet-700">
+                                {formatCurrency(item.total_price)}
+                              </p>
+                            </div>
+
+                            <div className="mt-1 space-y-0.5 text-[10px] leading-snug text-neutral-600">
+                              {flavors.length > 0 && (
+                                <p>
+                                  <span className="font-bold">Sabores:</span>{" "}
+                                  {formatRepeatedNames(flavors)}
+                                </p>
+                              )}
+
+                              {toppings.length > 0 && (
+                                <p>
+                                  <span className="font-bold">Toppings:</span>{" "}
+                                  {formatRepeatedNames(toppings)}
+                                </p>
+                              )}
+
+                              {otherOptions.length > 0 && (
+                                <p>
+                                  <span className="font-bold">Opciones:</span>{" "}
+                                  {formatRepeatedNames(otherOptions)}
+                                </p>
+                              )}
+
+                              {item.is_gift && (
+                                <p className="font-semibold text-amber-700">
+                                  Regalo
+                                  {item.gift_reason
+                                    ? `: ${item.gift_reason}`
+                                    : ""}
+                                </p>
+                              )}
+
+                              {item.notes && (
+                                <p>
+                                  <span className="font-bold">Detalle:</span>{" "}
+                                  {item.notes}
+                                </p>
+                              )}
+
+                              <p className="text-neutral-400">
+                                Unitario: {formatCurrency(item.unit_price)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {selectedSaleDetail.orders?.[0]?.notes && (
+                    <section className="mt-3 rounded-lg bg-amber-50 px-3 py-2.5 text-[10px] font-semibold leading-snug text-amber-800">
+                      <span className="font-black">Nota del pedido:</span>{" "}
+                      {selectedSaleDetail.orders[0].notes}
+                    </section>
+                  )}
+
+                  {Number(selectedSaleDetail.manual_discount_amount || 0) >
+                    0 && (
+                    <section className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">
+                          Descuento manual
+                        </p>
+
+                        <span className="text-[12px] font-black text-amber-800">
+                          -
+                          {formatCurrency(
+                            Number(selectedSaleDetail.manual_discount_amount),
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                        <div>
+                          <p className="font-bold uppercase tracking-wide text-amber-600">
+                            Tipo
+                          </p>
+
+                          <p className="mt-0.5 font-bold text-amber-900">
+                            {getManualDiscountTypeLabel(
+                              selectedSaleDetail.manual_discount_type,
+                            )}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="font-bold uppercase tracking-wide text-amber-600">
+                            Motivo
+                          </p>
+
+                          <p className="mt-0.5 font-bold text-amber-900">
+                            {getManualDiscountReasonLabel(
+                              selectedSaleDetail.manual_discount_reason,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedSaleDetail.manual_discount_notes && (
+                        <p className="mt-2 whitespace-pre-wrap text-[10px] font-semibold text-amber-900">
+                          {selectedSaleDetail.manual_discount_notes}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  <section className="mt-3 rounded-lg border border-neutral-200 bg-white p-3">
+                    <div className="space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between gap-3 text-neutral-600">
+                        <span>Subtotal</span>
+
+                        <span className="font-bold">
+                          {formatCurrency(selectedSaleDetail.subtotal)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 text-neutral-600">
+                        <span>Descuentos</span>
+
+                        <span className="font-bold">
+                          -{formatCurrency(selectedSaleDetail.discount_total)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
+                        <span className="text-[12px] font-black text-neutral-900">
+                          Total
+                        </span>
+
+                        <span className="text-base font-black text-violet-700">
+                          {formatCurrency(selectedSaleDetail.total)}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              ) : null}
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
