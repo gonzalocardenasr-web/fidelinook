@@ -389,6 +389,8 @@ export default function CashRegisterPage() {
 
         resetClosingState();
       }
+
+      await loadClosingHistory();
     } catch (error) {
       console.error("Error consultando caja:", error);
 
@@ -402,7 +404,6 @@ export default function CashRegisterPage() {
 
       setMessageType("error");
       setMessage("Ocurrió un error al consultar el estado de la caja.");
-      await loadClosingHistory();
     } finally {
       setLoading(false);
     }
@@ -417,7 +418,6 @@ export default function CashRegisterPage() {
       return;
     }
 
-    setMovementType(type);
     setMovementType(type);
     setMovementReason(getDefaultReason(type));
     setMovementAmount("");
@@ -606,7 +606,6 @@ export default function CashRegisterPage() {
        * recibido desde el cierre transaccional.
        */
       await loadCashRegister();
-      await loadClosingHistory();
 
       setCompletedClosing(completedClosingResult);
 
@@ -909,84 +908,6 @@ export default function CashRegisterPage() {
                   <p className="mt-2 text-sm text-neutral-700">
                     {session.opening_notes}
                   </p>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
-                    Auditoría
-                  </p>
-
-                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
-                    Últimos cierres
-                  </h2>
-                </div>
-
-                <span className="text-xs text-neutral-500">
-                  {closingHistory.length} registros
-                </span>
-              </div>
-
-              {loadingClosingHistory ? (
-                <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-5">
-                  Consultando historial...
-                </div>
-              ) : closingHistory.length === 0 ? (
-                <div className="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5 text-sm text-neutral-600">
-                  Todavía no existen cierres registrados.
-                </div>
-              ) : (
-                <div className="mt-5 overflow-hidden rounded-xl border border-neutral-200">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-neutral-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Sesión</th>
-                        <th className="px-4 py-3 text-left">Cierre</th>
-                        <th className="px-4 py-3 text-right">Esperado</th>
-                        <th className="px-4 py-3 text-right">Contado</th>
-                        <th className="px-4 py-3 text-right">Diferencia</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {closingHistory.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-t border-neutral-200"
-                        >
-                          <td className="px-4 py-3 font-semibold">
-                            #{item.id}
-                          </td>
-
-                          <td className="px-4 py-3">
-                            {formatDateTime(item.closed_at)}
-                          </td>
-
-                          <td className="px-4 py-3 text-right">
-                            {formatCurrency(item.expected_cash_amount)}
-                          </td>
-
-                          <td className="px-4 py-3 text-right">
-                            {formatCurrency(item.counted_cash_amount)}
-                          </td>
-
-                          <td
-                            className={`px-4 py-3 text-right font-bold ${
-                              item.cash_difference === 0
-                                ? "text-emerald-700"
-                                : "text-red-700"
-                            }`}
-                          >
-                            {item.cash_difference > 0 ? "+" : ""}
-                            {formatCurrency(item.cash_difference)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               )}
             </section>
@@ -1957,6 +1878,133 @@ export default function CashRegisterPage() {
                 {submitting ? "Abriendo caja..." : "Abrir caja"}
               </button>
             </form>
+          </section>
+        )}
+
+        {!loading && (
+          <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                  Auditoría
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                  Últimos cierres
+                </h2>
+
+                <p className="mt-1 text-sm text-neutral-600">
+                  Consulta los últimos cierres registrados en el sistema.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-neutral-500">
+                  {closingHistory.length} registro
+                  {closingHistory.length === 1 ? "" : "s"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => void loadClosingHistory()}
+                  disabled={loadingClosingHistory}
+                  className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loadingClosingHistory ? "Actualizando..." : "Actualizar"}
+                </button>
+              </div>
+            </div>
+
+            {loadingClosingHistory ? (
+              <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+                <p className="text-sm text-neutral-600">
+                  Consultando historial...
+                </p>
+              </div>
+            ) : closingHistory.length === 0 ? (
+              <div className="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
+                <p className="text-sm font-semibold text-neutral-700">
+                  Todavía no existen cierres registrados.
+                </p>
+
+                <p className="mt-1 text-xs text-neutral-500">
+                  Los cierres aparecerán aquí una vez finalizada una sesión de
+                  caja.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-neutral-50">
+                    <tr>
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                        Sesión
+                      </th>
+
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                        Cierre
+                      </th>
+
+                      <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                        Responsable
+                      </th>
+
+                      <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                        Esperado
+                      </th>
+
+                      <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                        Contado
+                      </th>
+
+                      <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                        Diferencia
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {closingHistory.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-t border-neutral-200 bg-white"
+                      >
+                        <td className="whitespace-nowrap px-4 py-3 font-semibold text-neutral-950">
+                          #{item.id}
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-3 text-neutral-700">
+                          {formatDateTime(item.closed_at)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-3 capitalize text-neutral-700">
+                          {item.closed_by_role}
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-neutral-700">
+                          {formatCurrency(item.expected_cash_amount)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-neutral-700">
+                          {formatCurrency(item.counted_cash_amount)}
+                        </td>
+
+                        <td
+                          className={`whitespace-nowrap px-4 py-3 text-right font-bold ${
+                            item.cash_difference === 0
+                              ? "text-emerald-700"
+                              : "text-red-700"
+                          }`}
+                        >
+                          {item.cash_difference > 0 ? "+" : ""}
+                          {formatCurrency(item.cash_difference)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
       </div>
