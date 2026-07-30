@@ -42,6 +42,44 @@ type CashRegisterMovementRow = {
   created_at: string;
 };
 
+type CashSaleOrderRow = {
+  id: number;
+  display_order_code: string;
+  business_date: string;
+  daily_order_number: number;
+  status: string;
+};
+
+type CashSaleRow = {
+  id: number;
+  sale_number: string;
+  total: number;
+  payment_method: string;
+  status: string;
+  payment_status: string;
+  actor_role: string | null;
+  confirmed_at: string;
+  orders: CashSaleOrderRow | CashSaleOrderRow[] | null;
+};
+
+type NormalizedCashSale = {
+  id: number;
+  saleNumber: string;
+  total: number;
+  paymentMethod: string;
+  status: string;
+  paymentStatus: string;
+  actorRole: string | null;
+  confirmedAt: string;
+  order: {
+    id: number;
+    displayOrderCode: string;
+    businessDate: string;
+    dailyOrderNumber: number;
+    status: string;
+  } | null;
+};
+
 type ExpectedCashResult = {
   cash_register_session_id: number;
   session_status: "OPEN" | "CLOSED";
@@ -83,6 +121,32 @@ function normalizeMovement(
     id: Number(movement.id),
     cash_register_session_id: Number(movement.cash_register_session_id),
     amount: Number(movement.amount || 0),
+  };
+}
+
+function normalizeCashSale(sale: CashSaleRow): NormalizedCashSale {
+  const relatedOrder = Array.isArray(sale.orders)
+    ? (sale.orders[0] ?? null)
+    : sale.orders;
+
+  return {
+    id: Number(sale.id),
+    saleNumber: sale.sale_number,
+    total: Number(sale.total ?? 0),
+    paymentMethod: sale.payment_method,
+    status: sale.status,
+    paymentStatus: sale.payment_status,
+    actorRole: sale.actor_role,
+    confirmedAt: sale.confirmed_at,
+    order: relatedOrder
+      ? {
+          id: Number(relatedOrder.id),
+          displayOrderCode: relatedOrder.display_order_code,
+          businessDate: relatedOrder.business_date,
+          dailyOrderNumber: Number(relatedOrder.daily_order_number),
+          status: relatedOrder.status,
+        }
+      : null,
   };
 }
 
@@ -208,15 +272,16 @@ export async function GET(
       );
     }
 
-    const [expectedCashResult, movementsResult] = await Promise.all([
-      supabaseAdmin.rpc("get_cash_register_expected_cash", {
-        p_cash_register_session_id: cashRegisterSessionId,
-      }),
+    const [expectedCashResult, movementsResult, cashSalesResult] =
+      await Promise.all([
+        supabaseAdmin.rpc("get_cash_register_expected_cash", {
+          p_cash_register_session_id: cashRegisterSessionId,
+        }),
 
-      supabaseAdmin
-        .from("cash_register_movements")
-        .select(
-          `
+        supabaseAdmin
+          .from("cash_register_movements")
+          .select(
+            `
             id,
             cash_register_session_id,
             movement_type,
@@ -226,12 +291,41 @@ export async function GET(
             created_by_role,
             created_at
           `,
-        )
-        .eq("cash_register_session_id", cashRegisterSessionId)
-        .order("created_at", {
-          ascending: true,
-        }),
-    ]);
+          )
+          .eq("cash_register_session_id", cashRegisterSessionId)
+          .order("created_at", {
+            ascending: true,
+          }),
+
+        supabaseAdmin
+          .from("sales")
+          .select(
+            `
+            id,
+            sale_number,
+            total,
+            payment_method,
+            status,
+            payment_status,
+            actor_role,
+            confirmed_at,
+            orders (
+              id,
+              display_order_code,
+              business_date,
+              daily_order_number,
+              status
+            )
+          `,
+          )
+          .eq("cash_register_session_id", cashRegisterSessionId)
+          .eq("status", "confirmed")
+          .eq("payment_status", "paid")
+          .ilike("payment_method", "efectivo")
+          .order("confirmed_at", {
+            ascending: true,
+          }),
+      ]);
 
     if (expectedCashResult.error) {
       console.error(
@@ -267,6 +361,24 @@ export async function GET(
       );
     }
 
+    if (cashSalesResult.error) {
+      console.error(
+        "Error consultando ventas en efectivo del cierre:",
+        cashSalesResult.error,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "No fue posible consultar las ventas en efectivo del cierre.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
     const expectedCash = normalizeExpectedCash(
       expectedCashResult.data as ExpectedCashResult,
     );
@@ -292,6 +404,10 @@ export async function GET(
       (movementsResult.data || []) as CashRegisterMovementRow[]
     ).map(normalizeMovement);
 
+    const cashSales = ((cashSalesResult.data || []) as CashSaleRow[]).map(
+      normalizeCashSale,
+    );
+
     const movementTotals = movements.reduce(
       (accumulator, movement) => {
         if (movement.movement_type === "CASH_IN") {
@@ -314,6 +430,45 @@ export async function GET(
       },
     );
 
+    const cashSalesTotals = cashSales.reduce(
+      (accumulator, sale) => {
+        accumulator.amount += sale.total;
+        accumulator.count += 1;
+
+        return accumulator;
+      },
+      {
+        amount: 0,
+        count: 0,
+      },
+    );
+
+    if (
+      cashSalesTotals.amount !== expectedCash.cash_sales_amount ||
+      cashSalesTotals.count !== expectedCash.cash_sales_count
+    ) {
+      console.error(
+        "El listado de ventas en efectivo no coincide con el resumen:",
+        {
+          cashRegisterSessionId,
+          expectedAmount: expectedCash.cash_sales_amount,
+          listedAmount: cashSalesTotals.amount,
+          expectedCount: expectedCash.cash_sales_count,
+          listedCount: cashSalesTotals.count,
+        },
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar las ventas asociadas al cierre.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
     const summary = {
       openingAmount: session.opening_amount,
       cashSalesAmount: expectedCash.cash_sales_amount,
@@ -335,6 +490,7 @@ export async function GET(
         session,
         summary,
         movements,
+        cashSales,
       },
     });
   } catch (error) {
