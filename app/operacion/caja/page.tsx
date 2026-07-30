@@ -353,11 +353,7 @@ function getChannelLabel(channel?: string | null) {
     return "Uber Eats";
   }
 
-  if (
-    normalized === "rappi" ||
-    normalized === "Rapi" ||
-    normalized === "rapi"
-  ) {
+  if (normalized === "rappi" || normalized === "rapi") {
     return "Rappi";
   }
 
@@ -1239,62 +1235,69 @@ export default function CashRegisterPage() {
             </section>
           ) : session ? (
             <>
-              <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
-                      Caja abierta
-                    </span>
+              <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
 
-                    <h2 className="mt-3 text-xl font-bold text-neutral-950">
-                      Sesión #{session.id}
-                    </h2>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h2 className="text-[14px] font-black text-neutral-900">
+                          Caja abierta
+                        </h2>
 
-                    <p className="mt-1 text-sm text-neutral-600">
-                      La operación de caja se encuentra activa.
-                    </p>
+                        <span className="text-[11px] font-semibold text-neutral-400">
+                          Sesión #{session.id}
+                        </span>
+                      </div>
+
+                      <p className="text-[10px] text-neutral-500">
+                        La sesión se encuentra disponible para registrar ventas
+                        y movimientos.
+                      </p>
+                    </div>
                   </div>
+
+                  <dl className="grid gap-2 sm:grid-cols-3 lg:min-w-[650px]">
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Fondo inicial
+                      </dt>
+
+                      <dd className="mt-0.5 text-[13px] font-black text-neutral-900">
+                        {formatCurrency(session.opening_amount)}
+                      </dd>
+                    </div>
+
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Apertura
+                      </dt>
+
+                      <dd className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                        {formatDateTime(session.opened_at)}
+                      </dd>
+                    </div>
+
+                    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                      <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Responsable
+                      </dt>
+
+                      <dd className="mt-0.5 text-[11px] font-bold capitalize text-neutral-800">
+                        {session.opened_by_role}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
 
-                <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="rounded-2xl bg-neutral-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                      Fondo inicial
-                    </dt>
-
-                    <dd className="mt-2 text-xl font-bold text-neutral-950">
-                      {formatCurrency(session.opening_amount)}
-                    </dd>
-                  </div>
-
-                  <div className="rounded-2xl bg-neutral-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                      Apertura
-                    </dt>
-
-                    <dd className="mt-2 text-sm font-semibold text-neutral-900">
-                      {formatDateTime(session.opened_at)}
-                    </dd>
-                  </div>
-
-                  <div className="rounded-2xl bg-neutral-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                      Responsable
-                    </dt>
-
-                    <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
-                      {session.opened_by_role}
-                    </dd>
-                  </div>
-                </dl>
-
                 {session.opening_notes && (
-                  <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  <div className="mt-3 border-t border-neutral-100 pt-3">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                       Observaciones de apertura
                     </p>
 
-                    <p className="mt-2 text-sm text-neutral-700">
+                    <p className="mt-1 whitespace-pre-wrap text-[11px] text-neutral-600">
                       {session.opening_notes}
                     </p>
                   </div>
@@ -1302,22 +1305,18 @@ export default function CashRegisterPage() {
               </section>
 
               <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
-                      Operación del día
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                    <h2 className="text-[14px] font-black text-neutral-900">
                       Movimientos de efectivo
                     </h2>
 
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Registra ingresos o salidas distintas de las ventas.
+                    <p className="text-[10px] text-neutral-500">
+                      Ingresos y salidas manuales distintas de las ventas.
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => selectMovementType("CASH_IN")}
@@ -1326,9 +1325,9 @@ export default function CashRegisterPage() {
                         loadingClosingPreview ||
                         submittingClosing
                       }
-                      className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                      className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-black text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      + Registrar ingreso
+                      + Ingreso
                     </button>
 
                     <button
@@ -1339,40 +1338,49 @@ export default function CashRegisterPage() {
                         loadingClosingPreview ||
                         submittingClosing
                       }
-                      className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-100"
+                      className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-black text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      − Registrar salida
+                      − Salida
                     </button>
                   </div>
                 </div>
 
-                <dl className="mt-6 grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                <dl className="mt-3 grid overflow-hidden rounded-lg border border-neutral-200 sm:grid-cols-3">
+                  <div className="border-b border-neutral-200 px-3 py-2 sm:border-b-0 sm:border-r">
+                    <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                       Otros ingresos
                     </dt>
 
-                    <dd className="mt-2 text-xl font-bold text-emerald-900">
-                      {formatCurrency(movementTotals.cashIn)}
+                    <dd className="mt-0.5 text-[13px] font-black text-emerald-700">
+                      +{formatCurrency(movementTotals.cashIn)}
                     </dd>
                   </div>
 
-                  <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-red-700">
+                  <div className="border-b border-neutral-200 px-3 py-2 sm:border-b-0 sm:border-r">
+                    <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                       Salidas
                     </dt>
 
-                    <dd className="mt-2 text-xl font-bold text-red-900">
-                      {formatCurrency(movementTotals.cashOut)}
+                    <dd className="mt-0.5 text-[13px] font-black text-red-700">
+                      −{formatCurrency(movementTotals.cashOut)}
                     </dd>
                   </div>
 
-                  <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  <div className="px-3 py-2">
+                    <dt className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                       Efecto neto
                     </dt>
 
-                    <dd className="mt-2 text-xl font-bold text-violet-900">
+                    <dd
+                      className={`mt-0.5 text-[13px] font-black ${
+                        movementTotals.net > 0
+                          ? "text-emerald-700"
+                          : movementTotals.net < 0
+                            ? "text-red-700"
+                            : "text-neutral-700"
+                      }`}
+                    >
+                      {movementTotals.net > 0 ? "+" : ""}
                       {formatCurrency(movementTotals.net)}
                     </dd>
                   </div>
@@ -1381,41 +1389,42 @@ export default function CashRegisterPage() {
                 {showMovementForm && (
                   <form
                     onSubmit={registerMovement}
-                    className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
+                    className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                           Nuevo movimiento
                         </p>
 
-                        <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                        <h3 className="mt-0.5 text-[13px] font-black text-neutral-900">
                           {movementType === "CASH_IN"
-                            ? "Registrar ingreso de efectivo"
-                            : "Registrar salida de efectivo"}
+                            ? "Registrar ingreso"
+                            : "Registrar salida"}
                         </h3>
                       </div>
 
                       <button
                         type="button"
                         onClick={closeMovementForm}
-                        className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800"
+                        disabled={submittingMovement}
+                        className="cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-neutral-600 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Cerrar
                       </button>
                     </div>
 
-                    <div className="mt-5 grid gap-5 md:grid-cols-2">
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
                       <div>
                         <label
                           htmlFor="movementAmount"
-                          className="mb-2 block text-sm font-semibold text-neutral-800"
+                          className="mb-1 block text-[10px] font-bold text-neutral-700"
                         >
                           Monto
                         </label>
 
                         <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[11px] font-semibold text-neutral-500">
                             $
                           </span>
 
@@ -1431,7 +1440,7 @@ export default function CashRegisterPage() {
                             }
                             placeholder="0"
                             required
-                            className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                            className="h-9 w-full rounded-lg border border-neutral-200 bg-white pl-7 pr-3 text-[12px] text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                           />
                         </div>
                       </div>
@@ -1439,7 +1448,7 @@ export default function CashRegisterPage() {
                       <div>
                         <label
                           htmlFor="movementReason"
-                          className="mb-2 block text-sm font-semibold text-neutral-800"
+                          className="mb-1 block text-[10px] font-bold text-neutral-700"
                         >
                           Motivo
                         </label>
@@ -1452,7 +1461,7 @@ export default function CashRegisterPage() {
                               event.target.value as CashMovementReason,
                             )
                           }
-                          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                          className="h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                         >
                           {movementReasons.map((reason) => (
                             <option key={reason.value} value={reason.value}>
@@ -1463,10 +1472,10 @@ export default function CashRegisterPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5">
+                    <div className="mt-3">
                       <label
                         htmlFor="movementNotes"
-                        className="mb-2 block text-sm font-semibold text-neutral-800"
+                        className="mb-1 block text-[10px] font-bold text-neutral-700"
                       >
                         Observaciones
                         {movementReason !== "OTHER" && (
@@ -1482,7 +1491,7 @@ export default function CashRegisterPage() {
                         onChange={(event) =>
                           setMovementNotes(event.target.value)
                         }
-                        rows={3}
+                        rows={2}
                         maxLength={500}
                         required={movementReason === "OTHER"}
                         placeholder={
@@ -1490,16 +1499,16 @@ export default function CashRegisterPage() {
                             ? "Describe obligatoriamente el motivo."
                             : "Agrega información de respaldo cuando corresponda."
                         }
-                        className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                        className="w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                       />
                     </div>
 
-                    <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                       <button
                         type="button"
                         onClick={closeMovementForm}
                         disabled={submittingMovement}
-                        className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Cancelar
                       </button>
@@ -1507,10 +1516,10 @@ export default function CashRegisterPage() {
                       <button
                         type="submit"
                         disabled={submittingMovement}
-                        className={`cursor-pointer rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                        className={`cursor-pointer rounded-lg px-3 py-2 text-[11px] font-black text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
                           movementType === "CASH_IN"
-                            ? "bg-emerald-600"
-                            : "bg-red-600"
+                            ? "bg-emerald-600 hover:bg-emerald-700"
+                            : "bg-red-600 hover:bg-red-700"
                         }`}
                       >
                         {submittingMovement
@@ -1523,13 +1532,13 @@ export default function CashRegisterPage() {
                   </form>
                 )}
 
-                <div className="mt-6">
+                <div className="mt-4 border-t border-neutral-100 pt-3">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-base font-bold text-neutral-950">
+                    <h3 className="text-[12px] font-black text-neutral-900">
                       Historial de la sesión
                     </h3>
 
-                    <span className="text-xs font-medium text-neutral-500">
+                    <span className="text-[10px] font-medium text-neutral-400">
                       {movements.length} movimiento
                       {movements.length === 1 ? "" : "s"}
                     </span>
@@ -1542,18 +1551,18 @@ export default function CashRegisterPage() {
                       </p>
                     </div>
                   ) : movements.length === 0 ? (
-                    <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
-                      <p className="text-sm font-semibold text-neutral-700">
+                    <div className="mt-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-3 py-4 text-center">
+                      <p className="text-[11px] font-bold text-neutral-700">
                         No hay movimientos manuales registrados.
                       </p>
 
-                      <p className="mt-1 text-xs text-neutral-500">
+                      <p className="mt-0.5 text-[10px] text-neutral-500">
                         Las ventas en efectivo no aparecen aquí porque se
                         contabilizan automáticamente en el cierre.
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200">
+                    <div className="mt-3 overflow-hidden rounded-lg border border-neutral-200">
                       <div className="divide-y divide-neutral-200">
                         {movements.map((movement) => {
                           const isCashIn = movement.movement_type === "CASH_IN";
@@ -1561,11 +1570,11 @@ export default function CashRegisterPage() {
                           return (
                             <article
                               key={movement.id}
-                              className="flex flex-col gap-4 bg-white p-4 sm:flex-row sm:items-start sm:justify-between"
+                              className="flex flex-col gap-2 bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div className="flex min-w-0 gap-3">
                                 <span
-                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+                                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-black ${
                                     isCashIn
                                       ? "bg-emerald-100 text-emerald-700"
                                       : "bg-red-100 text-red-700"
@@ -1575,11 +1584,11 @@ export default function CashRegisterPage() {
                                 </span>
 
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-neutral-950">
+                                  <p className="text-[11px] font-black text-neutral-900">
                                     {REASON_LABELS[movement.reason]}
                                   </p>
 
-                                  <p className="mt-1 text-xs text-neutral-500">
+                                  <p className="mt-0.5 text-[9px] text-neutral-400">
                                     {formatDateTime(movement.created_at)}
                                     {" · "}
                                     <span className="capitalize">
@@ -1588,7 +1597,7 @@ export default function CashRegisterPage() {
                                   </p>
 
                                   {movement.notes && (
-                                    <p className="mt-2 text-sm text-neutral-600">
+                                    <p className="mt-1 whitespace-pre-wrap text-[10px] text-neutral-500">
                                       {movement.notes}
                                     </p>
                                   )}
@@ -1596,7 +1605,7 @@ export default function CashRegisterPage() {
                               </div>
 
                               <p
-                                className={`shrink-0 text-lg font-bold ${
+                                className={`shrink-0 text-[12px] font-black ${
                                   isCashIn ? "text-emerald-700" : "text-red-700"
                                 }`}
                               >
@@ -1612,36 +1621,8 @@ export default function CashRegisterPage() {
                 </div>
               </section>
 
-              <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
-                      Fin de jornada
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-bold text-neutral-950">
-                      Cierre de caja
-                    </h2>
-
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Cuenta todo el efectivo físico disponible antes de revisar
-                      el cierre.
-                    </p>
-                  </div>
-                </div>
-
-                {!showClosingForm ? (
-                  <div className="mt-5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                    <p className="text-sm font-semibold text-neutral-700">
-                      La caja continúa abierta.
-                    </p>
-
-                    <p className="mt-1 text-xs text-neutral-500">
-                      El efectivo esperado no se mostrará hasta que registres el
-                      conteo físico.
-                    </p>
-                  </div>
-                ) : (
+              {showClosingForm && (
+                <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
                   <form
                     onSubmit={(event) => {
                       if (closingPreview) {
@@ -1651,23 +1632,23 @@ export default function CashRegisterPage() {
 
                       void previewClosing(event);
                     }}
-                    className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
+                    className="rounded-lg border border-neutral-200 bg-neutral-50 p-3"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
                           {closingPreview ? "Paso 2 de 2" : "Paso 1 de 2"}
                         </p>
 
-                        <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                        <h2 className="mt-0.5 text-[14px] font-black text-neutral-900">
                           {closingPreview
-                            ? "Revisar cierre"
+                            ? "Revisar cierre de caja"
                             : "Contar efectivo"}
-                        </h3>
+                        </h2>
 
-                        <p className="mt-1 text-sm text-neutral-600">
+                        <p className="mt-0.5 text-[10px] text-neutral-500">
                           {closingPreview
-                            ? "Verifica el desglose antes de confirmar el cierre definitivo."
+                            ? "Verifica los montos antes de confirmar el cierre definitivo."
                             : "Ingresa el total físico presente en la caja, incluyendo el fondo inicial."}
                         </p>
                       </div>
@@ -1676,9 +1657,9 @@ export default function CashRegisterPage() {
                         type="button"
                         onClick={cancelClosing}
                         disabled={loadingClosingPreview || submittingClosing}
-                        className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-neutral-600 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Cancelar cierre
+                        Cancelar
                       </button>
                     </div>
 
@@ -1758,7 +1739,7 @@ export default function CashRegisterPage() {
                               {formatCurrency(closingPreview.cashSalesAmount)}
                             </p>
 
-                            <p className="mt-1 text-xs text-neutral-500">
+                            <p className="mt-0.5 text-[10px] text-neutral-500">
                               {closingPreview.cashSalesCount} venta
                               {closingPreview.cashSalesCount === 1 ? "" : "s"}
                             </p>
@@ -1970,8 +1951,8 @@ export default function CashRegisterPage() {
                       )}
                     </div>
                   </form>
-                )}
-              </section>
+                </section>
+              )}
             </>
           ) : completedClosing ? (
             <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
@@ -2022,7 +2003,7 @@ export default function CashRegisterPage() {
                     {formatCurrency(completedClosing.cash_sales_amount)}
                   </dd>
 
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-0.5 text-[10px] text-neutral-500">
                     {completedClosing.cash_sales_count} venta
                     {completedClosing.cash_sales_count === 1 ? "" : "s"}
                   </p>
@@ -2303,11 +2284,11 @@ export default function CashRegisterPage() {
                 </div>
               ) : closingHistory.length === 0 ? (
                 <div className="mt-5 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                  <p className="text-sm font-semibold text-neutral-700">
+                  <p className="text-[11px] font-bold text-neutral-700">
                     Todavía no existen cierres registrados.
                   </p>
 
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-0.5 text-[10px] text-neutral-500">
                     Los cierres aparecerán aquí una vez finalizada una sesión de
                     caja.
                   </p>
@@ -2489,7 +2470,7 @@ export default function CashRegisterPage() {
                           )}
                         </p>
 
-                        <p className="mt-1 text-xs text-neutral-500">
+                        <p className="mt-0.5 text-[10px] text-neutral-500">
                           {closingDetail.summary.cashSalesCount} venta
                           {closingDetail.summary.cashSalesCount === 1
                             ? ""
@@ -2729,11 +2710,11 @@ export default function CashRegisterPage() {
 
                       {closingDetail.cashSales.length === 0 ? (
                         <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                          <p className="text-sm font-semibold text-neutral-700">
+                          <p className="text-[11px] font-bold text-neutral-700">
                             No existen ventas en efectivo asociadas.
                           </p>
 
-                          <p className="mt-1 text-xs text-neutral-500">
+                          <p className="mt-0.5 text-[10px] text-neutral-500">
                             Esta sesión no registró ventas confirmadas y pagadas
                             mediante efectivo.
                           </p>
@@ -2776,7 +2757,7 @@ export default function CashRegisterPage() {
                                   className="border-t border-neutral-200 bg-white"
                                 >
                                   <td className="whitespace-nowrap px-4 py-3">
-                                    <p className="font-semibold text-neutral-950">
+                                    <p className="text-[11px] font-black text-neutral-900">
                                       {sale.order?.displayOrderCode ||
                                         `Venta #${sale.id}`}
                                     </p>
@@ -2866,17 +2847,17 @@ export default function CashRegisterPage() {
 
                       {closingDetail.movements.length === 0 ? (
                         <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                          <p className="text-sm font-semibold text-neutral-700">
+                          <p className="text-[11px] font-bold text-neutral-700">
                             No existen movimientos manuales asociados.
                           </p>
 
-                          <p className="mt-1 text-xs text-neutral-500">
+                          <p className="mt-0.5 text-[10px] text-neutral-500">
                             El cierre solo considera el fondo inicial y las
                             ventas registradas en efectivo.
                           </p>
                         </div>
                       ) : (
-                        <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200">
+                        <div className="mt-3 overflow-hidden rounded-lg border border-neutral-200">
                           <div className="divide-y divide-neutral-200">
                             {closingDetail.movements.map((movement) => {
                               const isCashIn =
@@ -2885,11 +2866,11 @@ export default function CashRegisterPage() {
                               return (
                                 <article
                                   key={movement.id}
-                                  className="flex flex-col gap-4 bg-white p-4 sm:flex-row sm:items-start sm:justify-between"
+                                  className="flex flex-col gap-2 bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                                 >
                                   <div className="flex min-w-0 gap-3">
                                     <span
-                                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+                                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-black ${
                                         isCashIn
                                           ? "bg-emerald-100 text-emerald-700"
                                           : "bg-red-100 text-red-700"
@@ -2899,11 +2880,11 @@ export default function CashRegisterPage() {
                                     </span>
 
                                     <div className="min-w-0">
-                                      <p className="font-semibold text-neutral-950">
+                                      <p className="text-[11px] font-black text-neutral-900">
                                         {REASON_LABELS[movement.reason]}
                                       </p>
 
-                                      <p className="mt-1 text-xs text-neutral-500">
+                                      <p className="mt-0.5 text-[10px] text-neutral-500">
                                         {formatDateTime(movement.created_at)}
                                         {" · "}
                                         <span className="capitalize">
@@ -2920,7 +2901,7 @@ export default function CashRegisterPage() {
                                   </div>
 
                                   <p
-                                    className={`shrink-0 text-lg font-bold ${
+                                    className={`shrink-0 text-[12px] font-black ${
                                       isCashIn
                                         ? "text-emerald-700"
                                         : "text-red-700"
