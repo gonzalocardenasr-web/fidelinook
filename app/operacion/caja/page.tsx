@@ -1230,1031 +1230,1043 @@ export default function CashRegisterPage() {
           </div>
         )}
 
-        <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2"></div>
-
-        {loading ? (
-          <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-neutral-600">
-              Consultando estado de la caja...
-            </p>
-          </section>
-        ) : session ? (
-          <>
-            <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
-                    Caja abierta
-                  </span>
-
-                  <h2 className="mt-3 text-xl font-bold text-neutral-950">
-                    Sesión #{session.id}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-neutral-600">
-                    La operación de caja se encuentra activa.
-                  </p>
-                </div>                
-              </div>
-
-              <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-2xl bg-neutral-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                    Fondo inicial
-                  </dt>
-
-                  <dd className="mt-2 text-xl font-bold text-neutral-950">
-                    {formatCurrency(session.opening_amount)}
-                  </dd>
-                </div>
-
-                <div className="rounded-2xl bg-neutral-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                    Apertura
-                  </dt>
-
-                  <dd className="mt-2 text-sm font-semibold text-neutral-900">
-                    {formatDateTime(session.opened_at)}
-                  </dd>
-                </div>
-
-                <div className="rounded-2xl bg-neutral-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                    Responsable
-                  </dt>
-
-                  <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
-                    {session.opened_by_role}
-                  </dd>
-                </div>
-              </dl>
-
-              {session.opening_notes && (
-                <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                    Observaciones de apertura
-                  </p>
-
-                  <p className="mt-2 text-sm text-neutral-700">
-                    {session.opening_notes}
-                  </p>
-                </div>
-              )}
-            </section>
-
+        <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
+          {loading ? (
             <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
-                    Operación del día
-                  </p>
+              <p className="text-sm text-neutral-600">
+                Consultando estado de la caja...
+              </p>
+            </section>
+          ) : session ? (
+            <>
+              <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+                      Caja abierta
+                    </span>
 
-                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
-                    Movimientos de efectivo
-                  </h2>
+                    <h2 className="mt-3 text-xl font-bold text-neutral-950">
+                      Sesión #{session.id}
+                    </h2>
 
-                  <p className="mt-1 text-sm text-neutral-600">
-                    Registra ingresos o salidas distintas de las ventas.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => selectMovementType("CASH_IN")}
-                    disabled={
-                      showClosingForm ||
-                      loadingClosingPreview ||
-                      submittingClosing
-                    }
-                    className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
-                  >
-                    + Registrar ingreso
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => selectMovementType("CASH_OUT")}
-                    disabled={
-                      showClosingForm ||
-                      loadingClosingPreview ||
-                      submittingClosing
-                    }
-                    className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-100"
-                  >
-                    − Registrar salida
-                  </button>
-                </div>
-              </div>
-
-              <dl className="mt-6 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                    Otros ingresos
-                  </dt>
-
-                  <dd className="mt-2 text-xl font-bold text-emerald-900">
-                    {formatCurrency(movementTotals.cashIn)}
-                  </dd>
-                </div>
-
-                <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-red-700">
-                    Salidas
-                  </dt>
-
-                  <dd className="mt-2 text-xl font-bold text-red-900">
-                    {formatCurrency(movementTotals.cashOut)}
-                  </dd>
-                </div>
-
-                <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                    Efecto neto
-                  </dt>
-
-                  <dd className="mt-2 text-xl font-bold text-violet-900">
-                    {formatCurrency(movementTotals.net)}
-                  </dd>
-                </div>
-              </dl>
-
-              {showMovementForm && (
-                <form
-                  onSubmit={registerMovement}
-                  className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
-                        Nuevo movimiento
-                      </p>
-
-                      <h3 className="mt-1 text-lg font-bold text-neutral-950">
-                        {movementType === "CASH_IN"
-                          ? "Registrar ingreso de efectivo"
-                          : "Registrar salida de efectivo"}
-                      </h3>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={closeMovementForm}
-                      className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-
-                  <div className="mt-5 grid gap-5 md:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="movementAmount"
-                        className="mb-2 block text-sm font-semibold text-neutral-800"
-                      >
-                        Monto
-                      </label>
-
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
-                          $
-                        </span>
-
-                        <input
-                          id="movementAmount"
-                          type="number"
-                          min="1"
-                          step="1"
-                          inputMode="numeric"
-                          value={movementAmount}
-                          onChange={(event) =>
-                            setMovementAmount(event.target.value)
-                          }
-                          placeholder="0"
-                          required
-                          className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="movementReason"
-                        className="mb-2 block text-sm font-semibold text-neutral-800"
-                      >
-                        Motivo
-                      </label>
-
-                      <select
-                        id="movementReason"
-                        value={movementReason}
-                        onChange={(event) =>
-                          setMovementReason(
-                            event.target.value as CashMovementReason,
-                          )
-                        }
-                        className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                      >
-                        {movementReasons.map((reason) => (
-                          <option key={reason.value} value={reason.value}>
-                            {reason.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mt-5">
-                    <label
-                      htmlFor="movementNotes"
-                      className="mb-2 block text-sm font-semibold text-neutral-800"
-                    >
-                      Observaciones
-                      {movementReason !== "OTHER" && (
-                        <span className="ml-1 font-normal text-neutral-500">
-                          opcional
-                        </span>
-                      )}
-                    </label>
-
-                    <textarea
-                      id="movementNotes"
-                      value={movementNotes}
-                      onChange={(event) => setMovementNotes(event.target.value)}
-                      rows={3}
-                      maxLength={500}
-                      required={movementReason === "OTHER"}
-                      placeholder={
-                        movementReason === "OTHER"
-                          ? "Describe obligatoriamente el motivo."
-                          : "Agrega información de respaldo cuando corresponda."
-                      }
-                      className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                    />
-                  </div>
-
-                  <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={closeMovementForm}
-                      disabled={submittingMovement}
-                      className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Cancelar
-                    </button>
-
-                    <button
-                      type="submit"
-                      disabled={submittingMovement}
-                      className={`cursor-pointer rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 ${
-                        movementType === "CASH_IN"
-                          ? "bg-emerald-600"
-                          : "bg-red-600"
-                      }`}
-                    >
-                      {submittingMovement
-                        ? "Registrando..."
-                        : movementType === "CASH_IN"
-                          ? "Confirmar ingreso"
-                          : "Confirmar salida"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              <div className="mt-6">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-base font-bold text-neutral-950">
-                    Historial de la sesión
-                  </h3>
-
-                  <span className="text-xs font-medium text-neutral-500">
-                    {movements.length} movimiento
-                    {movements.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                {loadingMovements ? (
-                  <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-                    <p className="text-sm text-neutral-600">
-                      Consultando movimientos...
+                    <p className="mt-1 text-sm text-neutral-600">
+                      La operación de caja se encuentra activa.
                     </p>
                   </div>
-                ) : movements.length === 0 ? (
-                  <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
-                    <p className="text-sm font-semibold text-neutral-700">
-                      No hay movimientos manuales registrados.
-                    </p>
+                </div>
 
-                    <p className="mt-1 text-xs text-neutral-500">
-                      Las ventas en efectivo no aparecen aquí porque se
-                      contabilizan automáticamente en el cierre.
-                    </p>
+                <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-2xl bg-neutral-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      Fondo inicial
+                    </dt>
+
+                    <dd className="mt-2 text-xl font-bold text-neutral-950">
+                      {formatCurrency(session.opening_amount)}
+                    </dd>
                   </div>
-                ) : (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200">
-                    <div className="divide-y divide-neutral-200">
-                      {movements.map((movement) => {
-                        const isCashIn = movement.movement_type === "CASH_IN";
 
-                        return (
-                          <article
-                            key={movement.id}
-                            className="flex flex-col gap-4 bg-white p-4 sm:flex-row sm:items-start sm:justify-between"
-                          >
-                            <div className="flex min-w-0 gap-3">
-                              <span
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
-                                  isCashIn
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {isCashIn ? "+" : "−"}
-                              </span>
+                  <div className="rounded-2xl bg-neutral-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      Apertura
+                    </dt>
 
-                              <div className="min-w-0">
-                                <p className="font-semibold text-neutral-950">
-                                  {REASON_LABELS[movement.reason]}
-                                </p>
+                    <dd className="mt-2 text-sm font-semibold text-neutral-900">
+                      {formatDateTime(session.opened_at)}
+                    </dd>
+                  </div>
 
-                                <p className="mt-1 text-xs text-neutral-500">
-                                  {formatDateTime(movement.created_at)}
-                                  {" · "}
-                                  <span className="capitalize">
-                                    {movement.created_by_role}
-                                  </span>
-                                </p>
+                  <div className="rounded-2xl bg-neutral-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      Responsable
+                    </dt>
 
-                                {movement.notes && (
-                                  <p className="mt-2 text-sm text-neutral-600">
-                                    {movement.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                    <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
+                      {session.opened_by_role}
+                    </dd>
+                  </div>
+                </dl>
 
-                            <p
-                              className={`shrink-0 text-lg font-bold ${
-                                isCashIn ? "text-emerald-700" : "text-red-700"
-                              }`}
-                            >
-                              {isCashIn ? "+" : "−"}
-                              {formatCurrency(movement.amount)}
-                            </p>
-                          </article>
-                        );
-                      })}
-                    </div>
+                {session.opening_notes && (
+                  <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      Observaciones de apertura
+                    </p>
+
+                    <p className="mt-2 text-sm text-neutral-700">
+                      {session.opening_notes}
+                    </p>
                   </div>
                 )}
-              </div>
-            </section>
+              </section>
 
-            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
-                    Fin de jornada
-                  </p>
+              <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
+                      Operación del día
+                    </p>
 
-                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
-                    Cierre de caja
-                  </h2>
+                    <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                      Movimientos de efectivo
+                    </h2>
 
-                  <p className="mt-1 text-sm text-neutral-600">
-                    Cuenta todo el efectivo físico disponible antes de revisar
-                    el cierre.
-                  </p>
-                </div>                
-              </div>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Registra ingresos o salidas distintas de las ventas.
+                    </p>
+                  </div>
 
-              {!showClosingForm ? (
-                <div className="mt-5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-                  <p className="text-sm font-semibold text-neutral-700">
-                    La caja continúa abierta.
-                  </p>
-
-                  <p className="mt-1 text-xs text-neutral-500">
-                    El efectivo esperado no se mostrará hasta que registres el
-                    conteo físico.
-                  </p>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(event) => {
-                    if (closingPreview) {
-                      event.preventDefault();
-                      return;
-                    }
-
-                    void previewClosing(event);
-                  }}
-                  className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
-                        {closingPreview ? "Paso 2 de 2" : "Paso 1 de 2"}
-                      </p>
-
-                      <h3 className="mt-1 text-lg font-bold text-neutral-950">
-                        {closingPreview ? "Revisar cierre" : "Contar efectivo"}
-                      </h3>
-
-                      <p className="mt-1 text-sm text-neutral-600">
-                        {closingPreview
-                          ? "Verifica el desglose antes de confirmar el cierre definitivo."
-                          : "Ingresa el total físico presente en la caja, incluyendo el fondo inicial."}
-                      </p>
-                    </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => selectMovementType("CASH_IN")}
+                      disabled={
+                        showClosingForm ||
+                        loadingClosingPreview ||
+                        submittingClosing
+                      }
+                      className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      + Registrar ingreso
+                    </button>
 
                     <button
                       type="button"
-                      onClick={cancelClosing}
-                      disabled={loadingClosingPreview || submittingClosing}
-                      className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => selectMovementType("CASH_OUT")}
+                      disabled={
+                        showClosingForm ||
+                        loadingClosingPreview ||
+                        submittingClosing
+                      }
+                      className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-100"
                     >
-                      Cancelar cierre
+                      − Registrar salida
                     </button>
                   </div>
+                </div>
 
-                  {!closingPreview && (
-                    <div className="mt-5">
-                      <label
-                        htmlFor="countedCashAmount"
-                        className="mb-2 block text-sm font-semibold text-neutral-800"
+                <dl className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                      Otros ingresos
+                    </dt>
+
+                    <dd className="mt-2 text-xl font-bold text-emerald-900">
+                      {formatCurrency(movementTotals.cashIn)}
+                    </dd>
+                  </div>
+
+                  <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-red-700">
+                      Salidas
+                    </dt>
+
+                    <dd className="mt-2 text-xl font-bold text-red-900">
+                      {formatCurrency(movementTotals.cashOut)}
+                    </dd>
+                  </div>
+
+                  <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                      Efecto neto
+                    </dt>
+
+                    <dd className="mt-2 text-xl font-bold text-violet-900">
+                      {formatCurrency(movementTotals.net)}
+                    </dd>
+                  </div>
+                </dl>
+
+                {showMovementForm && (
+                  <form
+                    onSubmit={registerMovement}
+                    className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                          Nuevo movimiento
+                        </p>
+
+                        <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                          {movementType === "CASH_IN"
+                            ? "Registrar ingreso de efectivo"
+                            : "Registrar salida de efectivo"}
+                        </h3>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={closeMovementForm}
+                        className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800"
                       >
-                        Efectivo contado
-                      </label>
-
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
-                          $
-                        </span>
-
-                        <input
-                          id="countedCashAmount"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          value={countedCashAmount}
-                          onChange={(event) =>
-                            handleCountedCashAmountChange(event.target.value)
-                          }
-                          placeholder="0"
-                          required
-                          autoFocus
-                          disabled={loadingClosingPreview || submittingClosing}
-                          className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
-                        />
-                      </div>
-
-                      <p className="mt-2 text-xs text-neutral-500">
-                        Cuenta billetes y monedas antes de consultar el efectivo
-                        esperado por el sistema.
-                      </p>
+                        Cerrar
+                      </button>
                     </div>
-                  )}
 
-                  {!closingPreview && (
-                    <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                      <p className="text-sm font-semibold text-amber-900">
-                        El efectivo esperado permanece oculto
-                      </p>
-
-                      <p className="mt-1 text-xs text-amber-800">
-                        Esto evita que el conteo físico sea ajustado para
-                        coincidir artificialmente con el sistema.
-                      </p>
-                    </div>
-                  )}
-
-                  {closingPreview && (
-                    <div className="mt-5 space-y-5">
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                            Fondo inicial
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-neutral-950">
-                            {formatCurrency(closingPreview.openingAmount)}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                            Ventas en efectivo
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-neutral-950">
-                            {formatCurrency(closingPreview.cashSalesAmount)}
-                          </p>
-
-                          <p className="mt-1 text-xs text-neutral-500">
-                            {closingPreview.cashSalesCount} venta
-                            {closingPreview.cashSalesCount === 1 ? "" : "s"}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                            Otros ingresos
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-emerald-900">
-                            +{formatCurrency(closingPreview.cashInAmount)}
-                          </p>
-
-                          <p className="mt-1 text-xs text-emerald-700">
-                            {closingPreview.cashInCount} movimiento
-                            {closingPreview.cashInCount === 1 ? "" : "s"}
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
-                            Salidas
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-red-900">
-                            −{formatCurrency(closingPreview.cashOutAmount)}
-                          </p>
-
-                          <p className="mt-1 text-xs text-red-700">
-                            {closingPreview.cashOutCount} movimiento
-                            {closingPreview.cashOutCount === 1 ? "" : "s"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                            Efectivo esperado
-                          </p>
-
-                          <p className="mt-2 text-2xl font-bold text-violet-950">
-                            {formatCurrency(closingPreview.expectedCashAmount)}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                            Efectivo contado
-                          </p>
-
-                          <p className="mt-2 text-2xl font-bold text-neutral-950">
-                            {formatCurrency(closingPreview.countedCashAmount)}
-                          </p>
-                        </div>
-
-                        <div
-                          className={`rounded-2xl border p-5 ${
-                            closingPreview.cashDifference === 0
-                              ? "border-emerald-200 bg-emerald-50"
-                              : "border-red-200 bg-red-50"
-                          }`}
+                    <div className="mt-5 grid gap-5 md:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor="movementAmount"
+                          className="mb-2 block text-sm font-semibold text-neutral-800"
                         >
-                          <p
-                            className={`text-xs font-semibold uppercase tracking-[0.16em] ${
-                              closingPreview.cashDifference === 0
-                                ? "text-emerald-700"
-                                : "text-red-700"
-                            }`}
-                          >
-                            Diferencia
-                          </p>
+                          Monto
+                        </label>
 
-                          <p
-                            className={`mt-2 text-2xl font-bold ${
-                              closingPreview.cashDifference === 0
-                                ? "text-emerald-900"
-                                : "text-red-900"
-                            }`}
-                          >
-                            {closingPreview.cashDifference > 0 ? "+" : ""}
-                            {formatCurrency(closingPreview.cashDifference)}
-                          </p>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
+                            $
+                          </span>
 
-                          <p
-                            className={`mt-1 text-xs ${
-                              closingPreview.cashDifference === 0
-                                ? "text-emerald-700"
-                                : "text-red-700"
-                            }`}
-                          >
-                            {closingPreview.cashDifference === 0
-                              ? "El conteo coincide con el sistema."
-                              : closingPreview.cashDifference > 0
-                                ? "Existe un sobrante de efectivo."
-                                : "Existe un faltante de efectivo."}
-                          </p>
+                          <input
+                            id="movementAmount"
+                            type="number"
+                            min="1"
+                            step="1"
+                            inputMode="numeric"
+                            value={movementAmount}
+                            onChange={(event) =>
+                              setMovementAmount(event.target.value)
+                            }
+                            placeholder="0"
+                            required
+                            className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                          />
                         </div>
                       </div>
 
                       <div>
                         <label
-                          htmlFor="closingNotes"
+                          htmlFor="movementReason"
                           className="mb-2 block text-sm font-semibold text-neutral-800"
                         >
-                          Observaciones del cierre
-                          {!closingPreview.requiresNotes && (
-                            <span className="ml-1 font-normal text-neutral-500">
-                              opcional
-                            </span>
-                          )}
+                          Motivo
                         </label>
 
-                        <textarea
-                          id="closingNotes"
-                          value={closingNotes}
+                        <select
+                          id="movementReason"
+                          value={movementReason}
                           onChange={(event) =>
-                            setClosingNotes(event.target.value)
+                            setMovementReason(
+                              event.target.value as CashMovementReason,
+                            )
                           }
-                          rows={3}
-                          maxLength={500}
-                          required={closingPreview.requiresNotes}
-                          disabled={submittingClosing}
-                          placeholder={
-                            closingPreview.requiresNotes
-                              ? "Explica obligatoriamente la causa conocida o probable de la diferencia."
-                              : "Agrega información relevante del cierre cuando corresponda."
-                          }
-                          className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
-                        />
-
-                        {closingPreview.requiresNotes && (
-                          <p className="mt-2 text-xs font-medium text-red-700">
-                            La observación es obligatoria porque existe una
-                            diferencia de caja.
-                          </p>
-                        )}
+                          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                        >
+                          {movementReasons.map((reason) => (
+                            <option key={reason.value} value={reason.value}>
+                              {reason.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
+                    </div>
 
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-sm font-semibold text-amber-900">
-                          Confirmación definitiva
-                        </p>
+                    <div className="mt-5">
+                      <label
+                        htmlFor="movementNotes"
+                        className="mb-2 block text-sm font-semibold text-neutral-800"
+                      >
+                        Observaciones
+                        {movementReason !== "OTHER" && (
+                          <span className="ml-1 font-normal text-neutral-500">
+                            opcional
+                          </span>
+                        )}
+                      </label>
 
-                        <p className="mt-1 text-xs text-amber-800">
-                          Al confirmar, la sesión quedará cerrada y no será
-                          posible registrar nuevas ventas ni movimientos en esta
-                          caja.
-                        </p>
+                      <textarea
+                        id="movementNotes"
+                        value={movementNotes}
+                        onChange={(event) =>
+                          setMovementNotes(event.target.value)
+                        }
+                        rows={3}
+                        maxLength={500}
+                        required={movementReason === "OTHER"}
+                        placeholder={
+                          movementReason === "OTHER"
+                            ? "Describe obligatoriamente el motivo."
+                            : "Agrega información de respaldo cuando corresponda."
+                        }
+                        className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      />
+                    </div>
+
+                    <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={closeMovementForm}
+                        disabled={submittingMovement}
+                        className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={submittingMovement}
+                        className={`cursor-pointer rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          movementType === "CASH_IN"
+                            ? "bg-emerald-600"
+                            : "bg-red-600"
+                        }`}
+                      >
+                        {submittingMovement
+                          ? "Registrando..."
+                          : movementType === "CASH_IN"
+                            ? "Confirmar ingreso"
+                            : "Confirmar salida"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="mt-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-neutral-950">
+                      Historial de la sesión
+                    </h3>
+
+                    <span className="text-xs font-medium text-neutral-500">
+                      {movements.length} movimiento
+                      {movements.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {loadingMovements ? (
+                    <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                      <p className="text-sm text-neutral-600">
+                        Consultando movimientos...
+                      </p>
+                    </div>
+                  ) : movements.length === 0 ? (
+                    <div className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
+                      <p className="text-sm font-semibold text-neutral-700">
+                        No hay movimientos manuales registrados.
+                      </p>
+
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Las ventas en efectivo no aparecen aquí porque se
+                        contabilizan automáticamente en el cierre.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200">
+                      <div className="divide-y divide-neutral-200">
+                        {movements.map((movement) => {
+                          const isCashIn = movement.movement_type === "CASH_IN";
+
+                          return (
+                            <article
+                              key={movement.id}
+                              className="flex flex-col gap-4 bg-white p-4 sm:flex-row sm:items-start sm:justify-between"
+                            >
+                              <div className="flex min-w-0 gap-3">
+                                <span
+                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+                                    isCashIn
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}
+                                >
+                                  {isCashIn ? "+" : "−"}
+                                </span>
+
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-neutral-950">
+                                    {REASON_LABELS[movement.reason]}
+                                  </p>
+
+                                  <p className="mt-1 text-xs text-neutral-500">
+                                    {formatDateTime(movement.created_at)}
+                                    {" · "}
+                                    <span className="capitalize">
+                                      {movement.created_by_role}
+                                    </span>
+                                  </p>
+
+                                  {movement.notes && (
+                                    <p className="mt-2 text-sm text-neutral-600">
+                                      {movement.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p
+                                className={`shrink-0 text-lg font-bold ${
+                                  isCashIn ? "text-emerald-700" : "text-red-700"
+                                }`}
+                              >
+                                {isCashIn ? "+" : "−"}
+                                {formatCurrency(movement.amount)}
+                              </p>
+                            </article>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
+                </div>
+              </section>
 
-                  <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    {closingPreview ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setClosingPreview(null);
-                            setClosingNotes("");
-                            setMessage("");
-                          }}
-                          disabled={submittingClosing}
-                          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Volver a contar
-                        </button>
+              <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
+                      Fin de jornada
+                    </p>
 
-                        <button
-                          type="button"
-                          onClick={() => void confirmClosing()}
-                          disabled={submittingClosing}
-                          className="cursor-pointer rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {submittingClosing
-                            ? "Cerrando caja..."
-                            : "Confirmar cierre de caja"}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={cancelClosing}
-                          disabled={loadingClosingPreview || submittingClosing}
-                          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Cancelar
-                        </button>
+                    <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                      Cierre de caja
+                    </h2>
 
-                        <button
-                          type="submit"
-                          disabled={loadingClosingPreview || submittingClosing}
-                          className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {loadingClosingPreview
-                            ? "Calculando cierre..."
-                            : "Revisar conteo"}
-                        </button>
-                      </>
-                    )}
+                    <p className="mt-1 text-sm text-neutral-600">
+                      Cuenta todo el efectivo físico disponible antes de revisar
+                      el cierre.
+                    </p>
                   </div>
-                </form>
+                </div>
+
+                {!showClosingForm ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
+                    <p className="text-sm font-semibold text-neutral-700">
+                      La caja continúa abierta.
+                    </p>
+
+                    <p className="mt-1 text-xs text-neutral-500">
+                      El efectivo esperado no se mostrará hasta que registres el
+                      conteo físico.
+                    </p>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(event) => {
+                      if (closingPreview) {
+                        event.preventDefault();
+                        return;
+                      }
+
+                      void previewClosing(event);
+                    }}
+                    className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                          {closingPreview ? "Paso 2 de 2" : "Paso 1 de 2"}
+                        </p>
+
+                        <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                          {closingPreview
+                            ? "Revisar cierre"
+                            : "Contar efectivo"}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-neutral-600">
+                          {closingPreview
+                            ? "Verifica el desglose antes de confirmar el cierre definitivo."
+                            : "Ingresa el total físico presente en la caja, incluyendo el fondo inicial."}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={cancelClosing}
+                        disabled={loadingClosingPreview || submittingClosing}
+                        className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancelar cierre
+                      </button>
+                    </div>
+
+                    {!closingPreview && (
+                      <div className="mt-5">
+                        <label
+                          htmlFor="countedCashAmount"
+                          className="mb-2 block text-sm font-semibold text-neutral-800"
+                        >
+                          Efectivo contado
+                        </label>
+
+                        <div className="relative">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
+                            $
+                          </span>
+
+                          <input
+                            id="countedCashAmount"
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            value={countedCashAmount}
+                            onChange={(event) =>
+                              handleCountedCashAmountChange(event.target.value)
+                            }
+                            placeholder="0"
+                            required
+                            autoFocus
+                            disabled={
+                              loadingClosingPreview || submittingClosing
+                            }
+                            className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                          />
+                        </div>
+
+                        <p className="mt-2 text-xs text-neutral-500">
+                          Cuenta billetes y monedas antes de consultar el
+                          efectivo esperado por el sistema.
+                        </p>
+                      </div>
+                    )}
+
+                    {!closingPreview && (
+                      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm font-semibold text-amber-900">
+                          El efectivo esperado permanece oculto
+                        </p>
+
+                        <p className="mt-1 text-xs text-amber-800">
+                          Esto evita que el conteo físico sea ajustado para
+                          coincidir artificialmente con el sistema.
+                        </p>
+                      </div>
+                    )}
+
+                    {closingPreview && (
+                      <div className="mt-5 space-y-5">
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                              Fondo inicial
+                            </p>
+
+                            <p className="mt-2 text-lg font-bold text-neutral-950">
+                              {formatCurrency(closingPreview.openingAmount)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                              Ventas en efectivo
+                            </p>
+
+                            <p className="mt-2 text-lg font-bold text-neutral-950">
+                              {formatCurrency(closingPreview.cashSalesAmount)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-neutral-500">
+                              {closingPreview.cashSalesCount} venta
+                              {closingPreview.cashSalesCount === 1 ? "" : "s"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                              Otros ingresos
+                            </p>
+
+                            <p className="mt-2 text-lg font-bold text-emerald-900">
+                              +{formatCurrency(closingPreview.cashInAmount)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-emerald-700">
+                              {closingPreview.cashInCount} movimiento
+                              {closingPreview.cashInCount === 1 ? "" : "s"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                              Salidas
+                            </p>
+
+                            <p className="mt-2 text-lg font-bold text-red-900">
+                              −{formatCurrency(closingPreview.cashOutAmount)}
+                            </p>
+
+                            <p className="mt-1 text-xs text-red-700">
+                              {closingPreview.cashOutCount} movimiento
+                              {closingPreview.cashOutCount === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                              Efectivo esperado
+                            </p>
+
+                            <p className="mt-2 text-2xl font-bold text-violet-950">
+                              {formatCurrency(
+                                closingPreview.expectedCashAmount,
+                              )}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                              Efectivo contado
+                            </p>
+
+                            <p className="mt-2 text-2xl font-bold text-neutral-950">
+                              {formatCurrency(closingPreview.countedCashAmount)}
+                            </p>
+                          </div>
+
+                          <div
+                            className={`rounded-2xl border p-5 ${
+                              closingPreview.cashDifference === 0
+                                ? "border-emerald-200 bg-emerald-50"
+                                : "border-red-200 bg-red-50"
+                            }`}
+                          >
+                            <p
+                              className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                                closingPreview.cashDifference === 0
+                                  ? "text-emerald-700"
+                                  : "text-red-700"
+                              }`}
+                            >
+                              Diferencia
+                            </p>
+
+                            <p
+                              className={`mt-2 text-2xl font-bold ${
+                                closingPreview.cashDifference === 0
+                                  ? "text-emerald-900"
+                                  : "text-red-900"
+                              }`}
+                            >
+                              {closingPreview.cashDifference > 0 ? "+" : ""}
+                              {formatCurrency(closingPreview.cashDifference)}
+                            </p>
+
+                            <p
+                              className={`mt-1 text-xs ${
+                                closingPreview.cashDifference === 0
+                                  ? "text-emerald-700"
+                                  : "text-red-700"
+                              }`}
+                            >
+                              {closingPreview.cashDifference === 0
+                                ? "El conteo coincide con el sistema."
+                                : closingPreview.cashDifference > 0
+                                  ? "Existe un sobrante de efectivo."
+                                  : "Existe un faltante de efectivo."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="closingNotes"
+                            className="mb-2 block text-sm font-semibold text-neutral-800"
+                          >
+                            Observaciones del cierre
+                            {!closingPreview.requiresNotes && (
+                              <span className="ml-1 font-normal text-neutral-500">
+                                opcional
+                              </span>
+                            )}
+                          </label>
+
+                          <textarea
+                            id="closingNotes"
+                            value={closingNotes}
+                            onChange={(event) =>
+                              setClosingNotes(event.target.value)
+                            }
+                            rows={3}
+                            maxLength={500}
+                            required={closingPreview.requiresNotes}
+                            disabled={submittingClosing}
+                            placeholder={
+                              closingPreview.requiresNotes
+                                ? "Explica obligatoriamente la causa conocida o probable de la diferencia."
+                                : "Agrega información relevante del cierre cuando corresponda."
+                            }
+                            className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                          />
+
+                          {closingPreview.requiresNotes && (
+                            <p className="mt-2 text-xs font-medium text-red-700">
+                              La observación es obligatoria porque existe una
+                              diferencia de caja.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <p className="text-sm font-semibold text-amber-900">
+                            Confirmación definitiva
+                          </p>
+
+                          <p className="mt-1 text-xs text-amber-800">
+                            Al confirmar, la sesión quedará cerrada y no será
+                            posible registrar nuevas ventas ni movimientos en
+                            esta caja.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                      {closingPreview ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setClosingPreview(null);
+                              setClosingNotes("");
+                              setMessage("");
+                            }}
+                            disabled={submittingClosing}
+                            className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Volver a contar
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void confirmClosing()}
+                            disabled={submittingClosing}
+                            className="cursor-pointer rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {submittingClosing
+                              ? "Cerrando caja..."
+                              : "Confirmar cierre de caja"}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={cancelClosing}
+                            disabled={
+                              loadingClosingPreview || submittingClosing
+                            }
+                            className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Cancelar
+                          </button>
+
+                          <button
+                            type="submit"
+                            disabled={
+                              loadingClosingPreview || submittingClosing
+                            }
+                            className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {loadingClosingPreview
+                              ? "Calculando cierre..."
+                              : "Revisar conteo"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </section>
+            </>
+          ) : completedClosing ? (
+            <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+                    Caja cerrada
+                  </span>
+
+                  <h2 className="mt-3 text-xl font-bold text-neutral-950">
+                    Comprobante de cierre
+                  </h2>
+
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Revisa el resultado y prepara el respaldo físico del
+                    efectivo.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Sesión
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-neutral-950">
+                    #{completedClosing.id}
+                  </p>
+                </div>
+              </div>
+
+              <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl bg-neutral-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Fondo inicial
+                  </dt>
+
+                  <dd className="mt-2 text-lg font-bold text-neutral-950">
+                    {formatCurrency(completedClosing.opening_amount)}
+                  </dd>
+                </div>
+
+                <div className="rounded-2xl bg-neutral-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Ventas en efectivo
+                  </dt>
+
+                  <dd className="mt-2 text-lg font-bold text-neutral-950">
+                    {formatCurrency(completedClosing.cash_sales_amount)}
+                  </dd>
+
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {completedClosing.cash_sales_count} venta
+                    {completedClosing.cash_sales_count === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                    Otros ingresos
+                  </dt>
+
+                  <dd className="mt-2 text-lg font-bold text-emerald-900">
+                    +{formatCurrency(completedClosing.cash_in_amount)}
+                  </dd>
+                </div>
+
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                    Salidas
+                  </dt>
+
+                  <dd className="mt-2 text-lg font-bold text-red-900">
+                    −{formatCurrency(completedClosing.cash_out_amount)}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                    Efectivo esperado
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-violet-950">
+                    {formatCurrency(completedClosing.expected_cash_amount)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    Efectivo contado
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold text-neutral-950">
+                    {formatCurrency(completedClosing.counted_cash_amount)}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-2xl border p-5 ${
+                    completedClosing.cash_difference === 0
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-red-200 bg-red-50"
+                  }`}
+                >
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                      completedClosing.cash_difference === 0
+                        ? "text-emerald-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    Diferencia
+                  </p>
+
+                  <p
+                    className={`mt-2 text-2xl font-bold ${
+                      completedClosing.cash_difference === 0
+                        ? "text-emerald-900"
+                        : "text-red-900"
+                    }`}
+                  >
+                    {completedClosing.cash_difference > 0 ? "+" : ""}
+                    {formatCurrency(completedClosing.cash_difference)}
+                  </p>
+
+                  <p
+                    className={`mt-1 text-xs ${
+                      completedClosing.cash_difference === 0
+                        ? "text-emerald-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    {completedClosing.cash_difference === 0
+                      ? "Cierre sin diferencias."
+                      : completedClosing.cash_difference > 0
+                        ? "Cierre con sobrante."
+                        : "Cierre con faltante."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  Efectivo para respaldar
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-violet-950">
+                  {formatCurrency(completedClosing.counted_cash_amount)}
+                </p>
+
+                <p className="mt-2 text-sm text-violet-800">
+                  Este monto corresponde al efectivo físico declarado al cerrar
+                  la sesión y debe quedar asociado al comprobante o sobre de
+                  caja.
+                </p>
+              </div>
+
+              <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Fecha de cierre
+                  </dt>
+
+                  <dd className="mt-2 text-sm font-semibold text-neutral-900">
+                    {formatDateTime(completedClosing.closed_at)}
+                  </dd>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Responsable
+                  </dt>
+
+                  <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
+                    {completedClosing.closed_by_role}
+                  </dd>
+                </div>
+              </dl>
+
+              {completedClosing.closing_notes && (
+                <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    Observaciones del cierre
+                  </p>
+
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">
+                    {completedClosing.closing_notes}
+                  </p>
+                </div>
               )}
+
+              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-900">
+                  Antes de finalizar
+                </p>
+
+                <p className="mt-1 text-xs text-amber-800">
+                  Confirma que el efectivo haya sido retirado o resguardado
+                  según el procedimiento operativo de Nook.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={finishCompletedClosing}
+                className="mt-5 w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                Finalizar y volver a apertura
+              </button>
             </section>
-          </>
-        ) : completedClosing ? (
-          <section className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          ) : (
+            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div>
-                <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+                <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
                   Caja cerrada
                 </span>
 
                 <h2 className="mt-3 text-xl font-bold text-neutral-950">
-                  Comprobante de cierre
+                  Abrir caja
                 </h2>
 
                 <p className="mt-1 text-sm text-neutral-600">
-                  Revisa el resultado y prepara el respaldo físico del efectivo.
+                  Registra el fondo inicial antes de comenzar la operación.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                  Sesión
-                </p>
-
-                <p className="mt-1 text-sm font-bold text-neutral-950">
-                  #{completedClosing.id}
-                </p>
-              </div>
-            </div>
-
-            <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl bg-neutral-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                  Fondo inicial
-                </dt>
-
-                <dd className="mt-2 text-lg font-bold text-neutral-950">
-                  {formatCurrency(completedClosing.opening_amount)}
-                </dd>
-              </div>
-
-              <div className="rounded-2xl bg-neutral-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                  Ventas en efectivo
-                </dt>
-
-                <dd className="mt-2 text-lg font-bold text-neutral-950">
-                  {formatCurrency(completedClosing.cash_sales_amount)}
-                </dd>
-
-                <p className="mt-1 text-xs text-neutral-500">
-                  {completedClosing.cash_sales_count} venta
-                  {completedClosing.cash_sales_count === 1 ? "" : "s"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                  Otros ingresos
-                </dt>
-
-                <dd className="mt-2 text-lg font-bold text-emerald-900">
-                  +{formatCurrency(completedClosing.cash_in_amount)}
-                </dd>
-              </div>
-
-              <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
-                  Salidas
-                </dt>
-
-                <dd className="mt-2 text-lg font-bold text-red-900">
-                  −{formatCurrency(completedClosing.cash_out_amount)}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                  Efectivo esperado
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-violet-950">
-                  {formatCurrency(completedClosing.expected_cash_amount)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                  Efectivo contado
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-neutral-950">
-                  {formatCurrency(completedClosing.counted_cash_amount)}
-                </p>
-              </div>
-
-              <div
-                className={`rounded-2xl border p-5 ${
-                  completedClosing.cash_difference === 0
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-red-200 bg-red-50"
-                }`}
+              <form
+                onSubmit={openCashRegister}
+                className="mt-6 flex flex-col gap-5"
               >
-                <p
-                  className={`text-xs font-semibold uppercase tracking-[0.16em] ${
-                    completedClosing.cash_difference === 0
-                      ? "text-emerald-700"
-                      : "text-red-700"
-                  }`}
-                >
-                  Diferencia
-                </p>
+                <div>
+                  <label
+                    htmlFor="openingAmount"
+                    className="mb-2 block text-sm font-semibold text-neutral-800"
+                  >
+                    Fondo inicial
+                  </label>
 
-                <p
-                  className={`mt-2 text-2xl font-bold ${
-                    completedClosing.cash_difference === 0
-                      ? "text-emerald-900"
-                      : "text-red-900"
-                  }`}
-                >
-                  {completedClosing.cash_difference > 0 ? "+" : ""}
-                  {formatCurrency(completedClosing.cash_difference)}
-                </p>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
+                      $
+                    </span>
 
-                <p
-                  className={`mt-1 text-xs ${
-                    completedClosing.cash_difference === 0
-                      ? "text-emerald-700"
-                      : "text-red-700"
-                  }`}
-                >
-                  {completedClosing.cash_difference === 0
-                    ? "Cierre sin diferencias."
-                    : completedClosing.cash_difference > 0
-                      ? "Cierre con sobrante."
-                      : "Cierre con faltante."}
-                </p>
-              </div>
-            </div>
+                    <input
+                      id="openingAmount"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      value={openingAmount}
+                      onChange={(event) => setOpeningAmount(event.target.value)}
+                      placeholder="0"
+                      required
+                      className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                  </div>
 
-            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                Efectivo para respaldar
-              </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Ingresa el efectivo físico disponible al iniciar la jornada.
+                  </p>
+                </div>
 
-              <p className="mt-2 text-3xl font-bold text-violet-950">
-                {formatCurrency(completedClosing.counted_cash_amount)}
-              </p>
+                <div>
+                  <label
+                    htmlFor="openingNotes"
+                    className="mb-2 block text-sm font-semibold text-neutral-800"
+                  >
+                    Observaciones
+                    <span className="ml-1 font-normal text-neutral-500">
+                      opcional
+                    </span>
+                  </label>
 
-              <p className="mt-2 text-sm text-violet-800">
-                Este monto corresponde al efectivo físico declarado al cerrar la
-                sesión y debe quedar asociado al comprobante o sobre de caja.
-              </p>
-            </div>
-
-            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                  Fecha de cierre
-                </dt>
-
-                <dd className="mt-2 text-sm font-semibold text-neutral-900">
-                  {formatDateTime(completedClosing.closed_at)}
-                </dd>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                  Responsable
-                </dt>
-
-                <dd className="mt-2 text-sm font-semibold capitalize text-neutral-900">
-                  {completedClosing.closed_by_role}
-                </dd>
-              </div>
-            </dl>
-
-            {completedClosing.closing_notes && (
-              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                  Observaciones del cierre
-                </p>
-
-                <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">
-                  {completedClosing.closing_notes}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-900">
-                Antes de finalizar
-              </p>
-
-              <p className="mt-1 text-xs text-amber-800">
-                Confirma que el efectivo haya sido retirado o resguardado según
-                el procedimiento operativo de Nook.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={finishCompletedClosing}
-              className="mt-5 w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-            >
-              Finalizar y volver a apertura
-            </button>
-          </section>
-        ) : (
-          <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <div>
-              <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
-                Caja cerrada
-              </span>
-
-              <h2 className="mt-3 text-xl font-bold text-neutral-950">
-                Abrir caja
-              </h2>
-
-              <p className="mt-1 text-sm text-neutral-600">
-                Registra el fondo inicial antes de comenzar la operación.
-              </p>
-            </div>
-
-            <form
-              onSubmit={openCashRegister}
-              className="mt-6 flex flex-col gap-5"
-            >
-              <div>
-                <label
-                  htmlFor="openingAmount"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
-                >
-                  Fondo inicial
-                </label>
-
-                <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
-                    $
-                  </span>
-
-                  <input
-                    id="openingAmount"
-                    type="number"
-                    min="0"
-                    step="1"
-                    inputMode="numeric"
-                    value={openingAmount}
-                    onChange={(event) => setOpeningAmount(event.target.value)}
-                    placeholder="0"
-                    required
-                    className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  <textarea
+                    id="openingNotes"
+                    value={openingNotes}
+                    onChange={(event) => setOpeningNotes(event.target.value)}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Ejemplo: fondo inicial entregado por administración."
+                    className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
-                <p className="mt-2 text-xs text-neutral-500">
-                  Ingresa el efectivo físico disponible al iniciar la jornada.
-                </p>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="openingNotes"
-                  className="mb-2 block text-sm font-semibold text-neutral-800"
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Observaciones
-                  <span className="ml-1 font-normal text-neutral-500">
-                    opcional
-                  </span>
-                </label>
-
-                <textarea
-                  id="openingNotes"
-                  value={openingNotes}
-                  onChange={(event) => setOpeningNotes(event.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Ejemplo: fondo inicial entregado por administración."
-                  className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? "Abriendo caja..." : "Abrir caja"}
-              </button>
-            </form>
-          </section>
-        )}
-
+                  {submitting ? "Abriendo caja..." : "Abrir caja"}
+                </button>
+              </form>
+            </section>
+          )}
         </div>
 
         {!loading && (
@@ -2279,7 +2291,7 @@ export default function CashRegisterPage() {
                   <span className="text-xs font-medium text-neutral-500">
                     {closingHistory.length} registro
                     {closingHistory.length === 1 ? "" : "s"}
-                  </span>                  
+                  </span>
                 </div>
               </div>
 
@@ -2806,10 +2818,6 @@ export default function CashRegisterPage() {
                                   </td>
 
                                   <td className="whitespace-nowrap px-4 py-3 text-right text-base font-bold text-neutral-950">
-                                    {formatCurrency(sale.total)}
-                                  </td>
-
-                                  <td className="whitespace-nowrap px-4 py-3 text-right">
                                     {formatCurrency(sale.total)}
                                   </td>
 
