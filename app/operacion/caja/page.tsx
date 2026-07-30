@@ -352,6 +352,11 @@ export default function CashRegisterPage() {
   }, [loadCashRegister]);
 
   function selectMovementType(type: CashMovementType) {
+    if (showClosingForm || loadingClosingPreview || submittingClosing) {
+      return;
+    }
+
+    setMovementType(type);
     setMovementType(type);
     setMovementReason(getDefaultReason(type));
     setMovementAmount("");
@@ -757,14 +762,35 @@ export default function CashRegisterPage() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => void loadCashRegister()}
-                  disabled={loadingMovements}
-                  className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loadingMovements ? "Actualizando..." : "Actualizar estado"}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void loadCashRegister()}
+                    disabled={
+                      loadingMovements ||
+                      loadingClosingPreview ||
+                      submittingClosing
+                    }
+                    className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loadingMovements ? "Actualizando..." : "Actualizar estado"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={startClosing}
+                    disabled={
+                      showClosingForm ||
+                      loadingMovements ||
+                      loadingClosingPreview ||
+                      submittingMovement ||
+                      submittingClosing
+                    }
+                    className="cursor-pointer rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cerrar caja
+                  </button>
+                </div>
               </div>
 
               <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -832,6 +858,11 @@ export default function CashRegisterPage() {
                   <button
                     type="button"
                     onClick={() => selectMovementType("CASH_IN")}
+                    disabled={
+                      showClosingForm ||
+                      loadingClosingPreview ||
+                      submittingClosing
+                    }
                     className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
                   >
                     + Registrar ingreso
@@ -840,6 +871,11 @@ export default function CashRegisterPage() {
                   <button
                     type="button"
                     onClick={() => selectMovementType("CASH_OUT")}
+                    disabled={
+                      showClosingForm ||
+                      loadingClosingPreview ||
+                      submittingClosing
+                    }
                     className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-100"
                   >
                     − Registrar salida
@@ -1111,15 +1147,152 @@ export default function CashRegisterPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-              <p className="text-sm font-semibold text-violet-900">
-                Próxima capacidad
-              </p>
+            <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
+                    Fin de jornada
+                  </p>
 
-              <p className="mt-1 text-sm text-violet-700">
-                El cierre de caja incorporará ventas en efectivo, movimientos,
-                conteo físico, diferencia y generación del sobre.
-              </p>
+                  <h2 className="mt-1 text-xl font-bold text-neutral-950">
+                    Cierre de caja
+                  </h2>
+
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Cuenta todo el efectivo físico disponible antes de revisar
+                    el cierre.
+                  </p>
+                </div>
+
+                {!showClosingForm && (
+                  <button
+                    type="button"
+                    onClick={startClosing}
+                    disabled={
+                      loadingMovements ||
+                      submittingMovement ||
+                      loadingClosingPreview ||
+                      submittingClosing
+                    }
+                    className="cursor-pointer rounded-xl bg-neutral-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Iniciar cierre
+                  </button>
+                )}
+              </div>
+
+              {!showClosingForm ? (
+                <div className="mt-5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
+                  <p className="text-sm font-semibold text-neutral-700">
+                    La caja continúa abierta.
+                  </p>
+
+                  <p className="mt-1 text-xs text-neutral-500">
+                    El efectivo esperado no se mostrará hasta que registres el
+                    conteo físico.
+                  </p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={previewClosing}
+                  className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/60 p-5"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
+                        Paso 1 de 2
+                      </p>
+
+                      <h3 className="mt-1 text-lg font-bold text-neutral-950">
+                        Contar efectivo
+                      </h3>
+
+                      <p className="mt-1 text-sm text-neutral-600">
+                        Ingresa el total físico presente en la caja, incluyendo
+                        el fondo inicial.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={cancelClosing}
+                      disabled={loadingClosingPreview || submittingClosing}
+                      className="cursor-pointer text-sm font-semibold text-neutral-500 transition hover:text-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Cancelar cierre
+                    </button>
+                  </div>
+
+                  <div className="mt-5">
+                    <label
+                      htmlFor="countedCashAmount"
+                      className="mb-2 block text-sm font-semibold text-neutral-800"
+                    >
+                      Efectivo contado
+                    </label>
+
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
+                        $
+                      </span>
+
+                      <input
+                        id="countedCashAmount"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputMode="numeric"
+                        value={countedCashAmount}
+                        onChange={(event) =>
+                          handleCountedCashAmountChange(event.target.value)
+                        }
+                        placeholder="0"
+                        required
+                        autoFocus
+                        disabled={loadingClosingPreview || submittingClosing}
+                        className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                      />
+                    </div>
+
+                    <p className="mt-2 text-xs text-neutral-500">
+                      Cuenta billetes y monedas antes de consultar el efectivo
+                      esperado por el sistema.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-semibold text-amber-900">
+                      El efectivo esperado permanece oculto
+                    </p>
+
+                    <p className="mt-1 text-xs text-amber-800">
+                      Esto evita que el conteo físico sea ajustado para
+                      coincidir artificialmente con el sistema.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={cancelClosing}
+                      disabled={loadingClosingPreview || submittingClosing}
+                      className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={loadingClosingPreview || submittingClosing}
+                      className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loadingClosingPreview
+                        ? "Calculando cierre..."
+                        : "Revisar conteo"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </section>
           </>
         ) : (
