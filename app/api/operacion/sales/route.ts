@@ -57,6 +57,26 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+type SaleItemType = "PRODUCT" | "CUSTOM";
+
+function getItemType(item: unknown): SaleItemType | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const itemRecord = item as Record<string, unknown>;
+
+  const rawItemType = String(itemRecord.item_type || "PRODUCT")
+    .trim()
+    .toUpperCase();
+
+  if (rawItemType === "PRODUCT" || rawItemType === "CUSTOM") {
+    return rawItemType;
+  }
+
+  return null;
+}
+
 function getItemProductId(item: unknown): number | null {
   if (!item || typeof item !== "object") {
     return null;
@@ -340,6 +360,7 @@ export async function GET(req: Request) {
         manual_discount_reason,
         manual_discount_notes,
         total,
+        loyalty_eligible_total,
         payment_status,
         payment_method,
         actor_role,
@@ -362,6 +383,8 @@ export async function GET(req: Request) {
         ),
         sale_items (
           id,
+          item_type,
+          product_id,
           product_sku,
           product_name,
           quantity,
@@ -689,10 +712,12 @@ export async function POST(req: Request) {
 
     if (items.length === 0) {
       return NextResponse.json(
-        { ok: false, message: "La venta debe tener al menos un producto." },
+        { ok: false, message: "La venta debe tener al menos una línea." },
         { status: 400 },
       );
     }
+
+    const normalizedItems: Record<string, unknown>[] = [];
 
     for (const [index, item] of items.entries()) {
       if (!item || typeof item !== "object") {
@@ -706,6 +731,129 @@ export async function POST(req: Request) {
       }
 
       const itemRecord = item as Record<string, unknown>;
+
+      const itemType = getItemType(itemRecord);
+
+      if (!itemType) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: `La línea ${index + 1} tiene un tipo inválido.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const quantity = Number(itemRecord.quantity ?? 1);
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `La cantidad de la línea ${index + 1} ` +
+              "debe ser un número entero mayor que cero.",
+          },
+          { status: 400 },
+        );
+      }
+
+      /*
+       * Ítem personalizado:
+       * - no requiere product_id;
+       * - no admite opciones;
+       * - no admite regalo;
+       * - requiere nombre y precio unitario.
+       */
+      if (itemType === "CUSTOM") {
+        const customName =
+          typeof itemRecord.custom_name === "string"
+            ? itemRecord.custom_name.trim()
+            : "";
+
+        const unitPrice = Number(itemRecord.unit_price);
+
+        const options = Array.isArray(itemRecord.options)
+          ? itemRecord.options
+          : [];
+
+        const notes =
+          typeof itemRecord.notes === "string" ? itemRecord.notes.trim() : "";
+
+        if (!customName) {
+          return NextResponse.json(
+            {
+              ok: false,
+              message:
+                `El ítem personalizado de la línea ${index + 1} ` +
+                "requiere un nombre.",
+            },
+            { status: 400 },
+          );
+        }
+
+        if (!Number.isInteger(unitPrice) || unitPrice <= 0) {
+          return NextResponse.json(
+            {
+              ok: false,
+              message:
+                `El precio del ítem personalizado de la línea ${index + 1} ` +
+                "debe ser un número entero mayor que cero.",
+            },
+            { status: 400 },
+          );
+        }
+
+        if (itemRecord.is_gift === true) {
+          return NextResponse.json(
+            {
+              ok: false,
+              message:
+                "Los ítems personalizados no pueden registrarse como regalo.",
+            },
+            { status: 400 },
+          );
+        }
+
+        if (options.length > 0) {
+          return NextResponse.json(
+            {
+              ok: false,
+              message:
+                "Los ítems personalizados no pueden incluir opciones de catálogo.",
+            },
+            { status: 400 },
+          );
+        }
+
+        normalizedItems.push({
+          item_type: "CUSTOM",
+          custom_name: customName,
+          unit_price: unitPrice,
+          quantity,
+          notes: notes || null,
+          options: [],
+          is_gift: false,
+          gift_reason: null,
+        });
+
+        continue;
+      }
+
+      /*
+       * Producto de catálogo.
+       */
+      const productId = getItemProductId(itemRecord);
+
+      if (!productId) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: `El producto de la línea ${index + 1} no es válido.`,
+          },
+          { status: 400 },
+        );
+      }
 
       const isGift = itemRecord.is_gift === true;
 
@@ -725,6 +873,15 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
+
+      normalizedItems.push({
+        ...itemRecord,
+        item_type: "PRODUCT",
+        product_id: productId,
+        quantity,
+        is_gift: isGift,
+        gift_reason: isGift ? giftReason : null,
+      });
     }
 
     const promotionalStamps = Number(body.promotionalStamps ?? 0);
@@ -778,7 +935,11 @@ export async function POST(req: Request) {
      * - información desactualizada en el POS;
      * - cambios de inventario entre configuración y confirmación.
      */
-    const parsedProductIds = items.map(getItemProductId);
+    const productItems = normalizedItems.filter(
+      (item) => item.item_type === "PRODUCT",
+    );
+
+    const parsedProductIds = productItems.map(getItemProductId);
 
     if (parsedProductIds.some((productId) => productId === null)) {
       return NextResponse.json(
@@ -798,10 +959,16 @@ export async function POST(req: Request) {
       ),
     ];
 
-    const { data: saleProducts, error: saleProductsError } = await supabaseAdmin
-      .from("products")
-      .select("id, sku, name")
-      .in("id", productIds);
+    const { data: saleProducts, error: saleProductsError } =
+      productIds.length > 0
+        ? await supabaseAdmin
+            .from("products")
+            .select("id, sku, name")
+            .in("id", productIds)
+        : {
+            data: [],
+            error: null,
+          };
 
     if (saleProductsError) {
       console.error(
@@ -824,7 +991,7 @@ export async function POST(req: Request) {
 
     const armedPotFlavorIds = new Set<number>();
 
-    for (const item of items) {
+    for (const item of productItems) {
       const productId = getItemProductId(item);
 
       if (!productId) {
@@ -988,7 +1155,7 @@ export async function POST(req: Request) {
       {
         p_customer_id: customerId,
         p_payment_method: paymentMethod,
-        p_items: items,
+        p_items: normalizedItems,
         p_cash_register_session_id: cashRegisterSessionId,
         p_actor_role: session.role,
         p_order_notes: orderNotes || null,
@@ -1023,7 +1190,7 @@ export async function POST(req: Request) {
           channel,
           externalOrderId: externalOrderId || null,
           paymentMethod,
-          itemLines: items.length,
+          itemLines: normalizedItems.length,
           promotionalStamps,
           promotionReason: promotionalStamps > 0 ? promotionReason : null,
           manualDiscountType,
@@ -1077,7 +1244,7 @@ export async function POST(req: Request) {
         channel,
         externalOrderId: externalOrderId || null,
         paymentMethod,
-        itemLines: items.length,
+        itemLines: normalizedItems.length,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? promotionReason : null,
         manualDiscountType,
@@ -1133,7 +1300,7 @@ export async function POST(req: Request) {
           externalOrderId: externalOrderId || null,
           cashRegisterSessionId,
           paymentMethod,
-          itemLines: items.length,
+          itemLines: normalizedItems.length,
           hasCustomer: customerId !== null,
           manualDiscountType,
           manualDiscountValue,

@@ -31,17 +31,24 @@ export type OptionGroup = {
   catalog_option_values: OptionValue[];
 };
 
-export type CartItem = {
+export type ProductCartItem = {
+  itemType: "product";
+
   localId: string;
   product: Product;
   quantity: number;
+
   flavorSelections: number[];
   toppingIds: number[];
+
   brownieVarietyId?: number | null;
   mineralWaterTypeId?: number | null;
+
   notes: string;
+
   extraUnitPrice: number;
   extraLabels: string[];
+
   serviceFormat?: "vaso" | "barquillo" | "ambos";
   includesCookie?: boolean;
   chocolateDip?: boolean;
@@ -50,3 +57,17 @@ export type CartItem = {
   isGift: boolean;
   giftReason: string | null;
 };
+
+export type CustomCartItem = {
+  itemType: "custom";
+
+  localId: string;
+
+  customName: string;
+  customUnitPrice: number;
+  quantity: number;
+
+  notes: string;
+};
+
+export type CartItem = ProductCartItem | CustomCartItem;
