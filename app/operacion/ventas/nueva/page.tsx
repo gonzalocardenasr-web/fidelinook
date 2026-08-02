@@ -1,13 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import ClienteSelector, {
-  ClienteSelectorValue,
-} from "../../../../components/client/ClienteSelector";
+import { ClienteSelectorValue } from "../../../../components/client/ClienteSelector";
 import ProductGrid from "../../../../components/sales/ProductGrid";
 import OrderBuilder from "../../../../components/sales/OrderBuilder";
-import { CartItem, OptionGroup, Product } from "../../../../types/sales";
+import {
+  CartItem,
+  CustomCartItem,
+  OptionGroup,
+  Product,
+  ProductCartItem,
+} from "../../../../types/sales";
 import POSLayout from "../../../../components/pos/POSLayout";
 import POSContextPanel from "../../../../components/pos/POSContextPanel";
 import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
@@ -36,7 +39,8 @@ export default function NuevaVentaPage() {
   const [productSearch, setProductSearch] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
-  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [editingItem, setEditingItem] = useState<ProductCartItem | null>(null);
+
   const [channel, setChannel] = useState<SalesChannel>("local");
   const [externalOrderId, setExternalOrderId] = useState("");
 
@@ -208,6 +212,23 @@ export default function NuevaVentaPage() {
     setConfiguringProduct(product);
   }
 
+  function addCustomItem(input: {
+    customName: string;
+    customUnitPrice: number;
+    quantity: number;
+  }) {
+    const customItem: CustomCartItem = {
+      itemType: "custom",
+      localId: `custom-${Date.now()}-${Math.random()}`,
+      customName: input.customName.trim(),
+      customUnitPrice: input.customUnitPrice,
+      quantity: input.quantity,
+      notes: "",
+    };
+
+    setCart((current) => [...current, customItem]);
+  }
+
   function removeItem(localId: string) {
     setCart((current) => current.filter((item) => item.localId !== localId));
   }
@@ -220,7 +241,7 @@ export default function NuevaVentaPage() {
     );
   }
 
-  function toggleFlavor(item: CartItem, flavorId: number) {
+  function toggleFlavor(item: ProductCartItem, flavorId: number) {
     const maxFlavors = item.product.max_flavors || 0;
     const currentSelections = item.flavorSelections || [];
 
@@ -238,7 +259,10 @@ export default function NuevaVentaPage() {
     });
   }
 
-  function removeFlavorSelection(item: CartItem, selectionIndex: number) {
+  function removeFlavorSelection(
+    item: ProductCartItem,
+    selectionIndex: number,
+  ) {
     updateItem(item.localId, {
       flavorSelections: item.flavorSelections.filter(
         (_flavorId, index) => index !== selectionIndex,
@@ -246,7 +270,7 @@ export default function NuevaVentaPage() {
     });
   }
 
-  function toggleTopping(item: CartItem, toppingId: number) {
+  function toggleTopping(item: ProductCartItem, toppingId: number) {
     const exists = item.toppingIds.includes(toppingId);
 
     if (exists) {
@@ -267,8 +291,12 @@ export default function NuevaVentaPage() {
 
   const pricing = cart.reduce(
     (acc, item) => {
-      const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
+      if (item.itemType === "custom") {
+        acc.subtotal += item.customUnitPrice * item.quantity;
+        return acc;
+      }
 
+      const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
       const lineTotal = unitPrice * item.quantity;
 
       acc.subtotal += lineTotal;
@@ -329,7 +357,7 @@ export default function NuevaVentaPage() {
 
   function validarVenta() {
     if (cart.length === 0) {
-      return "Agrega al menos un producto.";
+      return "Agrega al menos una línea a la venta.";
     }
 
     if (channel !== "local" && !externalOrderId.trim()) {
@@ -390,6 +418,24 @@ export default function NuevaVentaPage() {
     }
 
     for (const item of cart) {
+      if (item.itemType === "custom") {
+        if (!item.customName.trim()) {
+          return "El ítem personalizado debe tener un nombre.";
+        }
+
+        if (
+          !Number.isInteger(item.customUnitPrice) ||
+          item.customUnitPrice <= 0
+        ) {
+          return `El precio de ${item.customName} no es válido.`;
+        }
+
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          return `La cantidad de ${item.customName} no es válida.`;
+        }
+
+        continue;
+      }
       if (item.isGift && !item.giftReason?.trim()) {
         return `Debes indicar el motivo del regalo para ${item.product.name}.`;
       }
@@ -450,7 +496,7 @@ export default function NuevaVentaPage() {
     return null;
   }
 
-  function getCartItemSignature(item: Omit<CartItem, "localId">) {
+  function getCartItemSignature(item: Omit<ProductCartItem, "localId">) {
     return JSON.stringify({
       productId: item.product.id,
 
@@ -483,32 +529,37 @@ export default function NuevaVentaPage() {
     });
   }
 
-  function addConfiguredProduct(item: Omit<CartItem, "localId">) {
+  function addConfiguredProduct(item: Omit<ProductCartItem, "localId">) {
     const newSignature = getCartItemSignature(item);
 
     setCart((current) => {
-      const existingIndex = current.findIndex(
-        (cartItem) => getCartItemSignature(cartItem) === newSignature,
-      );
+      const existingIndex = current.findIndex((cartItem) => {
+        if (cartItem.itemType !== "product") {
+          return false;
+        }
+
+        return getCartItemSignature(cartItem) === newSignature;
+      });
 
       if (existingIndex === -1) {
-        return [
-          ...current,
-          {
-            ...item,
-            localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
-          },
-        ];
+        const newProductItem: ProductCartItem = {
+          ...item,
+          localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
+        };
+
+        return [...current, newProductItem];
       }
 
-      return current.map((cartItem, index) =>
-        index === existingIndex
-          ? {
-              ...cartItem,
-              quantity: cartItem.quantity + item.quantity,
-            }
-          : cartItem,
-      );
+      return current.map((cartItem, index) => {
+        if (index !== existingIndex || cartItem.itemType !== "product") {
+          return cartItem;
+        }
+
+        return {
+          ...cartItem,
+          quantity: cartItem.quantity + item.quantity,
+        };
+      });
     });
 
     setEditingItem(null);
@@ -616,60 +667,76 @@ export default function NuevaVentaPage() {
         manualDiscountNotes: manualDiscountEnabled
           ? manualDiscountNotes.trim() || null
           : null,
-        items: cart.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-          is_gift: Boolean(item.isGift),
-          gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
-          extra_unit_price: item.extraUnitPrice || 0,
-          notes: [
-            item.serviceFormat
-              ? `Formato: ${
-                  item.serviceFormat === "ambos"
-                    ? "vaso + barquillo"
-                    : item.serviceFormat
-                }`
-              : null,
-            item.includesCookie ? "Con galleta" : null,
-            ...(item.extraLabels || []),
-            item.notes?.trim() || null,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-          options: [
-            ...item.flavorSelections.map((id) => ({
-              option_group_code: "flavor",
-              option_value_id: id,
-              quantity: 1,
-            })),
+        items: cart.map((item) => {
+          if (item.itemType === "custom") {
+            return {
+              item_type: "CUSTOM",
+              custom_name: item.customName.trim(),
+              unit_price: item.customUnitPrice,
+              quantity: item.quantity,
+              notes: item.notes.trim() || null,
+              options: [],
+              is_gift: false,
+              gift_reason: null,
+            };
+          }
 
-            ...(item.brownieVarietyId
-              ? [
-                  {
-                    option_group_code: "brownie_variety",
-                    option_value_id: item.brownieVarietyId,
-                    quantity: 1,
-                  },
-                ]
-              : []),
+          return {
+            item_type: "PRODUCT",
+            product_id: item.product.id,
+            quantity: item.quantity,
+            is_gift: Boolean(item.isGift),
+            gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
+            extra_unit_price: item.extraUnitPrice || 0,
+            notes: [
+              item.serviceFormat
+                ? `Formato: ${
+                    item.serviceFormat === "ambos"
+                      ? "vaso + barquillo"
+                      : item.serviceFormat
+                  }`
+                : null,
+              item.includesCookie ? "Con galleta" : null,
+              ...(item.extraLabels || []),
+              item.notes?.trim() || null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            options: [
+              ...item.flavorSelections.map((id) => ({
+                option_group_code: "flavor",
+                option_value_id: id,
+                quantity: 1,
+              })),
 
-            ...(item.mineralWaterTypeId
-              ? [
-                  {
-                    option_group_code: "mineral_water_type",
-                    option_value_id: item.mineralWaterTypeId,
-                    quantity: 1,
-                  },
-                ]
-              : []),
+              ...(item.brownieVarietyId
+                ? [
+                    {
+                      option_group_code: "brownie_variety",
+                      option_value_id: item.brownieVarietyId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
 
-            ...item.toppingIds.map((id) => ({
-              option_group_code: "topping",
-              option_value_id: id,
-              quantity: 1,
-            })),
-          ],
-        })),
+              ...(item.mineralWaterTypeId
+                ? [
+                    {
+                      option_group_code: "mineral_water_type",
+                      option_value_id: item.mineralWaterTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...item.toppingIds.map((id) => ({
+                option_group_code: "topping",
+                option_value_id: id,
+                quantity: 1,
+              })),
+            ],
+          };
+        }),
       };
 
       const res = await fetch("/api/operacion/sales", {
@@ -741,7 +808,7 @@ export default function NuevaVentaPage() {
     }
   }
 
-  function duplicateItem(item: CartItem) {
+  function duplicateItem(item: ProductCartItem) {
     setCart((current) =>
       current.map((cartItem) =>
         cartItem.localId === item.localId
@@ -751,49 +818,61 @@ export default function NuevaVentaPage() {
     );
   }
 
-  function reconfigureItem(item: CartItem) {
+  function reconfigureItem(item: ProductCartItem) {
     setEditingItem(item);
     setConfiguringProduct(item.product);
   }
 
   function updateConfiguredProduct(
     localId: string,
-    updatedItem: Omit<CartItem, "localId">,
+    updatedItem: Omit<ProductCartItem, "localId">,
   ) {
     const updatedSignature = getCartItemSignature(updatedItem);
 
     setCart((current) => {
       const itemBeingEdited = current.find((item) => item.localId === localId);
 
-      if (!itemBeingEdited) return current;
+      if (!itemBeingEdited || itemBeingEdited.itemType !== "product") {
+        return current;
+      }
 
       const matchingItem = current.find(
-        (item) =>
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
           item.localId !== localId &&
           getCartItemSignature(item) === updatedSignature,
       );
 
       if (!matchingItem) {
-        return current.map((item) =>
-          item.localId === localId
-            ? {
-                ...updatedItem,
-                localId,
-              }
-            : item,
-        );
+        return current.map((item) => {
+          if (item.localId !== localId) {
+            return item;
+          }
+
+          const updatedProductItem: ProductCartItem = {
+            ...updatedItem,
+            localId,
+          };
+
+          return updatedProductItem;
+        });
       }
 
       return current
         .filter((item) => item.localId !== localId)
-        .map((item) =>
-          item.localId === matchingItem.localId
-            ? {
-                ...item,
-                quantity: item.quantity + updatedItem.quantity,
-              }
-            : item,
-        );
+        .map((item) => {
+          if (
+            item.itemType !== "product" ||
+            item.localId !== matchingItem.localId
+          ) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: item.quantity + updatedItem.quantity,
+          };
+        });
     });
 
     setEditingItem(null);
@@ -888,6 +967,7 @@ export default function NuevaVentaPage() {
             onManualDiscountReasonChange={setManualDiscountReason}
             onManualDiscountNotesChange={setManualDiscountNotes}
             onOrderNotesChange={setOrderNotes}
+            onAddCustomItem={addCustomItem}
             onRemoveItem={removeItem}
             onUpdateItem={updateItem}
             onToggleFlavor={toggleFlavor}
