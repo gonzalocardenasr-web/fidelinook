@@ -7,7 +7,7 @@ import {
 } from "../../types/sales";
 import OrderItemCard from "./OrderItemCard";
 import OrderTotals from "./OrderTotals";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type ManualDiscountType = "percent" | "fixed";
 
@@ -117,6 +117,8 @@ export default function OrderBuilder({
   const [customQuantity, setCustomQuantity] = useState("1");
   const [customItemError, setCustomItemError] = useState("");
 
+  const customItemDetailsRef = useRef<HTMLDetailsElement>(null);
+
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   function submitCustomItem() {
@@ -149,6 +151,10 @@ export default function OrderBuilder({
     setCustomUnitPrice("");
     setCustomQuantity("1");
     setCustomItemError("");
+
+    if (customItemDetailsRef.current) {
+      customItemDetailsRef.current.open = false;
+    }
   }
 
   const parsedCashReceived =
@@ -334,7 +340,10 @@ export default function OrderBuilder({
 
       <div className="mt-1.5 flex max-h-[68%] shrink-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="min-h-0 overflow-y-auto p-2">
-          <details className="mb-2 rounded-lg border border-amber-200 bg-amber-50">
+          <details
+            ref={customItemDetailsRef}
+            className="mb-2 rounded-lg border border-amber-200 bg-amber-50"
+          >
             <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-black text-amber-800">
               + Agregar ítem personalizado
             </summary>
