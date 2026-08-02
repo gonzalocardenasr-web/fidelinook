@@ -486,19 +486,21 @@ export async function POST(req: Request) {
                 }
               }
 
+              let loyaltyApplication:
+                | Awaited<ReturnType<typeof applyDailyLoyaltyCredit>>
+                | undefined;
+
               /*
                * 4.2.1 Acreditar diferencia positiva.
                */
               if (projection.pendingStampDelta > 0) {
-                const application = await applyDailyLoyaltyCredit({
+                loyaltyApplication = await applyDailyLoyaltyCredit({
                   dailyLoyaltyId: projection.dailyLoyaltyId,
-
                   actorRole: session.role,
-
                   reason: "Acreditación automática por venta entregada.",
                 });
 
-                if (!application.applied) {
+                if (!loyaltyApplication.applied) {
                   warnings.push(
                     "La venta fue entregada, pero los sellos no pudieron acreditarse automáticamente.",
                   );
@@ -673,6 +675,187 @@ export async function POST(req: Request) {
 
                   warnings.push(
                     "El premio fue generado, pero ocurrió un problema al enviar su correo.",
+                  );
+                }
+              }
+
+              /*
+               * 4.2.4 Notificar avance de sellos cuando no se emitió premio.
+               *
+               * Reglas:
+               * - Debe existir una acreditación nueva.
+               * - La diferencia aplicada debe ser positiva.
+               * - No debe haberse generado un premio en esta operación.
+               * - Un error de correo nunca revierte la venta ni los sellos.
+               */
+              const rewardWasIssued =
+                Boolean(conversion?.converted) &&
+                Number(conversion?.rewardsIssued ?? 0) > 0;
+
+              const shouldSendStampEmail =
+                Boolean(loyaltyApplication?.applied) &&
+                Boolean(loyaltyApplication?.movementCreated) &&
+                Number(loyaltyApplication?.appliedDelta ?? 0) > 0 &&
+                !rewardWasIssued;
+
+              if (shouldSendStampEmail) {
+                try {
+                  const [
+                    { data: customer, error: customerError },
+                    { data: loyaltyAccount, error: loyaltyAccountError },
+                    { data: rewardRule, error: rewardRuleError },
+                  ] = await Promise.all([
+                    supabaseAdmin
+                      .from("clientes")
+                      .select(
+                        `
+          id,
+          nombre,
+          correo,
+          public_token
+        `,
+                      )
+                      .eq("id", customerId)
+                      .single(),
+
+                    supabaseAdmin
+                      .from("loyalty_accounts")
+                      .select("current_stamp_balance")
+                      .eq("customer_id", customerId)
+                      .single(),
+
+                    supabaseAdmin
+                      .from("loyalty_rules")
+                      .select("conditions")
+                      .eq("code", "LOYALTY_REWARD_THRESHOLD")
+                      .eq("version", 1)
+                      .eq("configuration_version", "LOYALTY_POLICY_V1")
+                      .limit(1)
+                      .maybeSingle(),
+                  ]);
+
+                  if (customerError || !customer) {
+                    console.error(
+                      "Sellos acreditados, pero no se pudo cargar el cliente para notificar:",
+                      customerError,
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero no se pudo preparar su correo.",
+                    );
+                  } else if (loyaltyAccountError || !loyaltyAccount) {
+                    console.error(
+                      "Sellos acreditados, pero no se pudo obtener el saldo actualizado:",
+                      loyaltyAccountError,
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero no se pudo obtener el saldo para su correo.",
+                    );
+                  } else if (
+                    !customer.correo ||
+                    !customer.nombre ||
+                    !customer.public_token
+                  ) {
+                    console.error(
+                      "Sellos acreditados, pero el cliente no tiene datos completos para notificar:",
+                      {
+                        customerId,
+                        hasEmail: Boolean(customer.correo),
+                        hasName: Boolean(customer.nombre),
+                        hasPublicToken: Boolean(customer.public_token),
+                      },
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero el cliente no tiene datos completos para recibir el correo.",
+                    );
+                  } else {
+                    if (rewardRuleError) {
+                      console.error(
+                        "No se pudo cargar la meta de fidelización; se utilizará 7:",
+                        rewardRuleError,
+                      );
+                    }
+
+                    const ruleConditions =
+                      rewardRule?.conditions &&
+                      typeof rewardRule.conditions === "object"
+                        ? (rewardRule.conditions as Record<string, unknown>)
+                        : {};
+
+                    const configuredGoal = Number(
+                      ruleConditions.stampsRequired,
+                    );
+
+                    const metaSellos =
+                      Number.isInteger(configuredGoal) && configuredGoal > 0
+                        ? configuredGoal
+                        : 7;
+
+                    const sellosActuales = Number(
+                      loyaltyAccount.current_stamp_balance ?? 0,
+                    );
+
+                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
+                      /\/$/,
+                      "",
+                    );
+
+                    if (!baseUrl) {
+                      console.error(
+                        "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de sellos.",
+                      );
+
+                      warnings.push(
+                        "Los sellos fueron acreditados, pero el correo no pudo enviarse por configuración.",
+                      );
+                    } else {
+                      const emailResponse = await fetch(
+                        `${baseUrl}/api/send-stamp`,
+                        {
+                          method: "POST",
+
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+
+                          body: JSON.stringify({
+                            email: customer.correo,
+                            nombre: customer.nombre,
+                            sellosActuales,
+                            metaSellos,
+                            publicToken: customer.public_token,
+                          }),
+                        },
+                      );
+
+                      if (!emailResponse.ok) {
+                        const emailErrorBody = await emailResponse
+                          .text()
+                          .catch(() => "");
+
+                        throw new Error(
+                          `El correo de sellos respondió ${emailResponse.status}. ${emailErrorBody}`,
+                        );
+                      }
+                    }
+                  }
+                } catch (stampEmailError) {
+                  console.error(
+                    "Sellos acreditados, pero falló el correo de avance:",
+                    {
+                      orderId,
+                      saleId,
+                      customerId,
+                      movementId: loyaltyApplication?.movementId ?? null,
+                      appliedDelta: loyaltyApplication?.appliedDelta ?? null,
+                      error: stampEmailError,
+                    },
+                  );
+
+                  warnings.push(
+                    "Los sellos fueron acreditados correctamente, pero su correo no pudo enviarse.",
                   );
                 }
               }
