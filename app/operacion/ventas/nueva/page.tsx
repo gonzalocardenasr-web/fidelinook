@@ -195,39 +195,6 @@ export default function NuevaVentaPage() {
   }, [optionGroups, availableBrownieVarietyIds]);
 
   const mineralWaterTypes = useMemo(() => {
-    const coffeeTypes = useMemo<CoffeeOption[]>(() => {
-      const availableIds = new Set(availableCoffeeTypeIds);
-
-      const priceByOptionValueId = new Map(
-        coffeeOptionPrices.map((option) => [
-          Number(option.optionValueId),
-          option,
-        ]),
-      );
-
-      return (
-        optionGroups.find((group) => group.code === "coffee_type")
-          ?.catalog_option_values || []
-      )
-        .filter(
-          (option) =>
-            option.is_active &&
-            availableIds.has(option.id) &&
-            priceByOptionValueId.has(option.id),
-        )
-        .map((option) => {
-          const priceData = priceByOptionValueId.get(option.id);
-
-          return {
-            ...option,
-            price: Number(priceData?.price ?? 0),
-            inventoryQuantity: Number(priceData?.inventoryQuantity ?? 1),
-            stockQuantity: Number(priceData?.stockQuantity ?? 0),
-            isAvailable: Boolean(priceData?.isAvailable),
-          };
-        })
-        .sort((a, b) => a.sort_order - b.sort_order);
-    }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices]);
     const availableIds = new Set(availableMineralWaterTypeIds);
 
     return (
@@ -237,6 +204,40 @@ export default function NuevaVentaPage() {
       .filter((option) => option.is_active && availableIds.has(option.id))
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [optionGroups, availableMineralWaterTypeIds]);
+
+  const coffeeTypes = useMemo<CoffeeOption[]>(() => {
+    const availableIds = new Set(availableCoffeeTypeIds);
+
+    const priceByOptionValueId = new Map(
+      coffeeOptionPrices.map((option) => [
+        Number(option.optionValueId),
+        option,
+      ]),
+    );
+
+    return (
+      optionGroups.find((group) => group.code === "coffee_type")
+        ?.catalog_option_values || []
+    )
+      .filter(
+        (option) =>
+          option.is_active &&
+          availableIds.has(option.id) &&
+          priceByOptionValueId.has(option.id),
+      )
+      .map((option) => {
+        const priceData = priceByOptionValueId.get(option.id);
+
+        return {
+          ...option,
+          price: Number(priceData?.price ?? 0),
+          inventoryQuantity: Number(priceData?.inventoryQuantity ?? 1),
+          stockQuantity: Number(priceData?.stockQuantity ?? 0),
+          isAvailable: Boolean(priceData?.isAvailable),
+        };
+      })
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices]);
 
   const toppings = useMemo(() => {
     return (
@@ -285,9 +286,16 @@ export default function NuevaVentaPage() {
 
   function updateItem(localId: string, patch: Partial<CartItem>) {
     setCart((current) =>
-      current.map((item) =>
-        item.localId === localId ? { ...item, ...patch } : item,
-      ),
+      current.map((item) => {
+        if (item.localId !== localId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          ...patch,
+        } as CartItem;
+      }),
     );
   }
 

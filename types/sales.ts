@@ -3,6 +3,7 @@ export type Product = {
   sku: string;
   name: string;
   category: string;
+  subcategory?: string | null;
   operational_type: string;
   has_flavors: boolean;
   max_flavors: number;
