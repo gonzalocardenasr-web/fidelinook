@@ -21,6 +21,13 @@ type OpenBatchRow = {
     | null;
 };
 
+type CoffeeOptionPriceRow = {
+  product_id: number;
+  option_value_id: number;
+  price: number;
+  inventory_quantity: number | string;
+};
+
 function firstRelation<T>(value: T | T[] | null): T | null {
   if (!value) return null;
 
@@ -42,6 +49,7 @@ export async function GET() {
     { data: optionGroups, error: optionsError },
     { data: openBatchRows, error: openBatchError },
     { data: inventoryRows, error: inventoryError },
+    { data: coffeePriceRows, error: coffeePricesError },
   ] = await Promise.all([
     supabaseAdmin
       .from("products")
@@ -96,15 +104,29 @@ export async function GET() {
       .from("inventory_items")
       .select(
         `
-          product_id,
-          option_value_id,
-          inventory_stock (
-            quantity
-          )
-        `,
+      product_id,
+      option_value_id,
+      inventory_stock (
+        quantity
+      )
+    `,
       )
       .eq("is_active", true)
       .not("product_id", "is", null),
+
+    supabaseAdmin
+      .from("product_option_prices")
+      .select(
+        `
+      product_id,
+      option_value_id,
+      price,
+      inventory_quantity
+    `,
+      )
+      .eq("channel", "local")
+      .eq("price_list", "general")
+      .eq("is_active", true),
   ]);
 
   if (productsError) {
@@ -131,6 +153,13 @@ export async function GET() {
   if (inventoryError) {
     return NextResponse.json(
       { ok: false, message: inventoryError.message },
+      { status: 500 },
+    );
+  }
+
+  if (coffeePricesError) {
+    return NextResponse.json(
+      { ok: false, message: coffeePricesError.message },
       { status: 500 },
     );
   }
@@ -168,6 +197,8 @@ export async function GET() {
   const availableBrownieVarietyIds = new Set<number>();
   const availableMineralWaterTypeIds = new Set<number>();
 
+  const coffeeStockByOptionValueId = new Map<number, number>();
+
   const brownieProduct = (products ?? []).find(
     (product) => String(product.sku || "").trim() === "BROWNIE",
   );
@@ -179,6 +210,12 @@ export async function GET() {
   );
 
   const mineralWaterProductId = Number(mineralWaterProduct?.id);
+
+  const coffeeProduct = (products ?? []).find(
+    (product) => String(product.sku || "").trim() === "CAFE",
+  );
+
+  const coffeeProductId = Number(coffeeProduct?.id);
 
   /*
    * Variedades de brownie con stock unitario disponible.
@@ -238,7 +275,39 @@ export async function GET() {
     ) {
       availableMineralWaterTypeIds.add(optionValueId);
     }
+
+    if (
+      Number.isInteger(coffeeProductId) &&
+      productId === coffeeProductId &&
+      Number.isInteger(optionValueId) &&
+      optionValueId > 0
+    ) {
+      coffeeStockByOptionValueId.set(optionValueId, quantity);
+    }
   }
+
+  const coffeeOptionPrices = ((coffeePriceRows ?? []) as CoffeeOptionPriceRow[])
+    .filter((row) => Number(row.product_id) === coffeeProductId)
+    .map((row) => {
+      const optionValueId = Number(row.option_value_id);
+      const price = Number(row.price);
+      const inventoryQuantity = Number(row.inventory_quantity);
+      const stockQuantity = coffeeStockByOptionValueId.get(optionValueId) ?? 0;
+
+      return {
+        optionValueId,
+        price,
+        inventoryQuantity,
+        stockQuantity,
+        isAvailable: stockQuantity >= inventoryQuantity,
+      };
+    });
+
+  const availableCoffeeTypeIds = new Set(
+    coffeeOptionPrices
+      .filter((option) => option.isAvailable)
+      .map((option) => option.optionValueId),
+  );
 
   const alwaysVisibleSkus = new Set([
     "HEL-SIMPLE",
@@ -289,6 +358,10 @@ export async function GET() {
       return availableMineralWaterTypeIds.size > 0;
     }
 
+    if (sku === "CAFE") {
+      return availableCoffeeTypeIds.size > 0;
+    }
+
     const baseProductSku = compositeBaseSkuBySku.get(sku);
 
     if (baseProductSku) {
@@ -315,5 +388,7 @@ export async function GET() {
     readyPotFlavorIds: [...readyPotFlavorIds],
     availableBrownieVarietyIds: [...availableBrownieVarietyIds],
     availableMineralWaterTypeIds: [...availableMineralWaterTypeIds],
+    availableCoffeeTypeIds: [...availableCoffeeTypeIds],
+    coffeeOptionPrices,
   });
 }

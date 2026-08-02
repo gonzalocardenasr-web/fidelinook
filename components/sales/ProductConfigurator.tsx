@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react";
-import { Product, OptionValue, CartItem } from "../../types/sales";
+import {
+  CoffeeOption,
+  OptionValue,
+  Product,
+  ProductCartItem,
+} from "../../types/sales";
 
 type Props = {
   product: Product | null;
-  editingItem: CartItem | null;
+  editingItem: ProductCartItem | null;
   flavors: OptionValue[];
   brownieVarieties: OptionValue[];
   mineralWaterTypes: OptionValue[];
+  coffeeTypes: CoffeeOption[];
   getPrice: (product: Product) => number;
   onCancel: () => void;
-  onAddConfigured: (item: Omit<CartItem, "localId">) => void;
+  onAddConfigured: (item: Omit<ProductCartItem, "localId">) => void;
   onUpdateConfigured: (
     localId: string,
-    item: Omit<CartItem, "localId">,
+    item: Omit<ProductCartItem, "localId">,
   ) => void;
 };
 
@@ -22,6 +28,7 @@ export default function ProductConfigurator({
   flavors,
   brownieVarieties,
   mineralWaterTypes,
+  coffeeTypes,
   getPrice,
   onCancel,
   onAddConfigured,
@@ -51,6 +58,10 @@ export default function ProductConfigurator({
 
   const [mineralWaterTypeId, setMineralWaterTypeId] = useState<number | null>(
     editingItem?.mineralWaterTypeId ?? null,
+  );
+
+  const [coffeeTypeId, setCoffeeTypeId] = useState<number | null>(
+    editingItem?.coffeeTypeId ?? null,
   );
 
   const [notes, setNotes] = useState(editingItem?.notes || "");
@@ -97,6 +108,24 @@ export default function ProductConfigurator({
     return sku === "AGUA-MINERAL-500CC";
   }, [product]);
 
+  const requiresCoffeeType = useMemo(() => {
+    const sku = String(product?.sku ?? "")
+      .trim()
+      .toUpperCase();
+
+    return sku === "CAFE";
+  }, [product]);
+
+  const selectedCoffeeType = useMemo(() => {
+    if (!coffeeTypeId) {
+      return null;
+    }
+
+    return (
+      coffeeTypes.find((coffeeType) => coffeeType.id === coffeeTypeId) ?? null
+    );
+  }, [coffeeTypeId, coffeeTypes]);
+
   if (!product) {
     return (
       <section className="flex h-full items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-400">
@@ -122,30 +151,41 @@ export default function ProductConfigurator({
   const hasRequiredMineralWaterType =
     !requiresMineralWaterType || Boolean(mineralWaterTypeId);
 
+  const hasRequiredCoffeeType =
+    !requiresCoffeeType || Boolean(selectedCoffeeType);
+
   const canAdd =
     hasRequiredFlavors &&
     hasRequiredBrownieVariety &&
-    hasRequiredMineralWaterType;
+    hasRequiredMineralWaterType &&
+    hasRequiredCoffeeType;
 
-  const unitPrice = getPrice(product);
+  const baseUnitPrice = getPrice(product);
+
+  const coffeeOptionPrice =
+    requiresCoffeeType && selectedCoffeeType ? selectedCoffeeType.price : 0;
+
+  const unitPrice = requiresCoffeeType ? coffeeOptionPrice : baseUnitPrice;
 
   const chocolateDipPrice = isServedIceCream && chocolateDip ? 500 : 0;
 
   const toppingPrice = isServedIceCream && toppingEnabled ? 500 : 0;
 
-  const extraUnitPrice = chocolateDipPrice + toppingPrice;
+  const extraUnitPrice = chocolateDipPrice + toppingPrice + coffeeOptionPrice;
 
   const extraLabels = [
+    ...(selectedCoffeeType ? [`Tipo: ${selectedCoffeeType.name}`] : []),
     ...(chocolateDip ? ["Baño chocolate"] : []),
     ...(toppingEnabled ? ["Topping"] : []),
   ];
 
-  const lineTotal = unitPrice + extraUnitPrice;
+  const lineTotal = baseUnitPrice + extraUnitPrice;
 
   function resetConfig() {
     setFlavorSelections([]);
     setBrownieVarietyId(null);
     setMineralWaterTypeId(null);
+    setCoffeeTypeId(null);
     setNotes("");
     setChocolateDip(false);
     setToppingEnabled(false);
@@ -170,7 +210,8 @@ export default function ProductConfigurator({
       return;
     }
 
-    const configuredItem: Omit<CartItem, "localId"> = {
+    const configuredItem: Omit<ProductCartItem, "localId"> = {
+      itemType: "product",
       product,
       quantity: 1,
 
@@ -185,6 +226,8 @@ export default function ProductConfigurator({
       brownieVarietyId: requiresBrownieVariety ? brownieVarietyId : null,
 
       mineralWaterTypeId: requiresMineralWaterType ? mineralWaterTypeId : null,
+
+      coffeeTypeId: requiresCoffeeType ? coffeeTypeId : null,
 
       notes: notes.trim(),
       extraUnitPrice,
@@ -306,6 +349,51 @@ export default function ProductConfigurator({
             </div>
           )}
 
+          {requiresCoffeeType && (
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                Tipo de café
+              </label>
+
+              <div className="mt-1 grid grid-cols-2 gap-1.5">
+                {coffeeTypes.map((coffeeType) => {
+                  const selected = coffeeTypeId === coffeeType.id;
+
+                  return (
+                    <button
+                      key={coffeeType.id}
+                      type="button"
+                      onClick={() => setCoffeeTypeId(coffeeType.id)}
+                      className={`cursor-pointer rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.99] ${
+                        selected
+                          ? "border-violet-400 bg-violet-600 text-white"
+                          : "border-neutral-200 bg-white text-neutral-800 hover:border-violet-300 hover:bg-violet-50"
+                      }`}
+                    >
+                      <p className="text-[12px] font-black leading-tight">
+                        {coffeeType.name}
+                      </p>
+
+                      <p
+                        className={`mt-0.5 text-[11px] font-bold ${
+                          selected ? "text-violet-100" : "text-violet-700"
+                        }`}
+                      >
+                        ${coffeeType.price.toLocaleString("es-CL")}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {coffeeTypes.length === 0 && (
+                <p className="mt-1 text-[11px] font-bold text-red-600">
+                  No existen tipos de café con cápsulas disponibles.
+                </p>
+              )}
+            </div>
+          )}
+
           {requiresFlavorSelection && (
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -384,6 +472,7 @@ export default function ProductConfigurator({
           {!requiresFlavorSelection &&
             !requiresBrownieVariety &&
             !requiresMineralWaterType &&
+            !requiresCoffeeType &&
             !isServedIceCream && (
               <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-500">
                 Este producto no requiere configuración adicional.

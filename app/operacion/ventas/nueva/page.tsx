@@ -6,6 +6,7 @@ import ProductGrid from "../../../../components/sales/ProductGrid";
 import OrderBuilder from "../../../../components/sales/OrderBuilder";
 import {
   CartItem,
+  CoffeeOption,
   CustomCartItem,
   OptionGroup,
   Product,
@@ -75,6 +76,20 @@ export default function NuevaVentaPage() {
   const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =
     useState<number[]>([]);
 
+  const [availableCoffeeTypeIds, setAvailableCoffeeTypeIds] = useState<
+    number[]
+  >([]);
+
+  const [coffeeOptionPrices, setCoffeeOptionPrices] = useState<
+    {
+      optionValueId: number;
+      price: number;
+      inventoryQuantity: number;
+      stockQuantity: number;
+      isAvailable: boolean;
+    }[]
+  >([]);
+
   useEffect(() => {
     if (!selectedCliente) {
       setPromotionalStamps(0);
@@ -113,6 +128,8 @@ export default function NuevaVentaPage() {
       setReadyPotFlavorIds(data.readyPotFlavorIds || []);
       setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);
       setAvailableMineralWaterTypeIds(data.availableMineralWaterTypeIds || []);
+      setAvailableCoffeeTypeIds(data.availableCoffeeTypeIds || []);
+      setCoffeeOptionPrices(data.coffeeOptionPrices || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -178,6 +195,39 @@ export default function NuevaVentaPage() {
   }, [optionGroups, availableBrownieVarietyIds]);
 
   const mineralWaterTypes = useMemo(() => {
+    const coffeeTypes = useMemo<CoffeeOption[]>(() => {
+      const availableIds = new Set(availableCoffeeTypeIds);
+
+      const priceByOptionValueId = new Map(
+        coffeeOptionPrices.map((option) => [
+          Number(option.optionValueId),
+          option,
+        ]),
+      );
+
+      return (
+        optionGroups.find((group) => group.code === "coffee_type")
+          ?.catalog_option_values || []
+      )
+        .filter(
+          (option) =>
+            option.is_active &&
+            availableIds.has(option.id) &&
+            priceByOptionValueId.has(option.id),
+        )
+        .map((option) => {
+          const priceData = priceByOptionValueId.get(option.id);
+
+          return {
+            ...option,
+            price: Number(priceData?.price ?? 0),
+            inventoryQuantity: Number(priceData?.inventoryQuantity ?? 1),
+            stockQuantity: Number(priceData?.stockQuantity ?? 0),
+            isAvailable: Boolean(priceData?.isAvailable),
+          };
+        })
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices]);
     const availableIds = new Set(availableMineralWaterTypeIds);
 
     return (
@@ -491,6 +541,15 @@ export default function NuevaVentaPage() {
       ) {
         return `Debes seleccionar el tipo para ${item.product.name}.`;
       }
+
+      const requiresCoffeeType = item.product.sku === "CAFE";
+
+      if (
+        requiresCoffeeType &&
+        (!Number.isInteger(item.coffeeTypeId) || Number(item.coffeeTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo de café para ${item.product.name}.`;
+      }
     }
 
     return null;
@@ -523,6 +582,8 @@ export default function NuevaVentaPage() {
       extraUnitPrice: item.extraUnitPrice || 0,
 
       mineralWaterTypeId: item.mineralWaterTypeId ?? null,
+
+      coffeeTypeId: item.coffeeTypeId ?? null,
 
       isGift: Boolean(item.isGift),
       giftReason: item.giftReason?.trim() || null,
@@ -729,6 +790,16 @@ export default function NuevaVentaPage() {
                   ]
                 : []),
 
+              ...(item.coffeeTypeId
+                ? [
+                    {
+                      option_group_code: "coffee_type",
+                      option_value_id: item.coffeeTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
               ...item.toppingIds.map((id) => ({
                 option_group_code: "topping",
                 option_value_id: id,
@@ -921,6 +992,7 @@ export default function NuevaVentaPage() {
                 }
                 brownieVarieties={brownieVarieties}
                 mineralWaterTypes={mineralWaterTypes}
+                coffeeTypes={coffeeTypes}
                 getPrice={getPrice}
                 onCancel={() => {
                   setConfiguringProduct(null);

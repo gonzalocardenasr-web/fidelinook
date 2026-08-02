@@ -31,6 +31,13 @@ export type OptionGroup = {
   catalog_option_values: OptionValue[];
 };
 
+export type CoffeeOption = OptionValue & {
+  price: number;
+  inventoryQuantity: number;
+  stockQuantity: number;
+  isAvailable: boolean;
+};
+
 export type ProductCartItem = {
   itemType: "product";
 
@@ -43,6 +50,7 @@ export type ProductCartItem = {
 
   brownieVarietyId?: number | null;
   mineralWaterTypeId?: number | null;
+  coffeeTypeId?: number | null;
 
   notes: string;
 
