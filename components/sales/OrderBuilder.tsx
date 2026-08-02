@@ -263,43 +263,43 @@ export default function OrderBuilder({
                   </div>
 
                   <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                      Cantidad
-                    </span>
-
-                    <div className="flex items-center overflow-hidden rounded-md border border-neutral-200 bg-white">
-                      <button
-                        type="button"
-                        disabled={item.quantity <= 1}
-                        onClick={() =>
-                          onUpdateItem(item.localId, {
-                            quantity: Math.max(1, item.quantity - 1),
-                          })
-                        }
-                        className="flex h-7 w-7 cursor-pointer items-center justify-center border-r border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        −
-                      </button>
-
-                      <span className="flex h-7 min-w-8 items-center justify-center px-1 text-[11px] font-black text-neutral-800">
-                        {item.quantity}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-neutral-500">
+                        Cantidad
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onUpdateItem(item.localId, {
-                            quantity: item.quantity + 1,
-                          })
-                        }
-                        className="flex h-7 w-7 cursor-pointer items-center justify-center border-l border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+                      <div className="flex items-center overflow-hidden rounded-md border border-neutral-200 bg-white">
+                        <button
+                          type="button"
+                          disabled={item.quantity <= 1}
+                          onClick={() =>
+                            onUpdateItem(item.localId, {
+                              quantity: Math.max(1, item.quantity - 1),
+                            })
+                          }
+                          className="flex h-7 w-7 cursor-pointer items-center justify-center border-r border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −
+                        </button>
 
-                  <div className="mt-1.5 flex items-center gap-1 border-t border-amber-200 pt-1.5">
+                        <span className="flex h-7 min-w-8 items-center justify-center px-1 text-[11px] font-black text-neutral-800">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateItem(item.localId, {
+                              quantity: item.quantity + 1,
+                            })
+                          }
+                          className="flex h-7 w-7 cursor-pointer items-center justify-center border-l border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => onRemoveItem(item.localId)}
