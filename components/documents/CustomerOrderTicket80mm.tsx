@@ -134,16 +134,16 @@ export default function CustomerOrderTicket80mm({ document }: Props) {
   const orderTime = getOrderTime(document.confirmedAt);
 
   return (
-    <article className="customer-order-ticket mx-auto w-[72mm] bg-white px-[2mm] py-[1.5mm] font-sans text-black">
+    <article className="customer-order-ticket mx-auto w-[72mm] bg-white px-[2mm] pb-[1.5mm] pt-0 font-sans text-black">
       <header>
-        <div className="flex h-[10mm] items-center justify-center overflow-hidden">
+        <div className="flex h-[8mm] items-start justify-center overflow-hidden">
           <Image
             src="/nook-logo-negro.png"
             alt="Nook"
             width={150}
             height={60}
             priority
-            className="block h-auto w-[29mm] object-contain"
+            className="block h-auto w-[27mm] object-contain"
           />
         </div>
 

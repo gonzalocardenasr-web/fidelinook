@@ -1,4 +1,3 @@
-import { SaleDocument } from "../../lib/documents/sales/types";
 import Image from "next/image";
 import { SaleDocument } from "../../lib/documents/sales/types";
 
@@ -41,16 +40,16 @@ function formatOptionNames(
 
 export default function SaleReceipt80mm({ document }: Props) {
   return (
-    <article className="sale-receipt mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">
+    <article className="sale-receipt mx-auto w-[72mm] bg-white px-[2mm] pb-[3mm] pt-0 font-sans text-black">
       <header className="text-center">
-        <div className="flex h-[17mm] items-center justify-center overflow-hidden">
+        <div className="flex h-[13mm] items-start justify-center overflow-hidden">
           <Image
             src="/nook-logo-negro.png"
             alt="Nook"
             width={190}
             height={80}
             priority
-            className="block h-auto w-[42mm] object-contain"
+            className="block h-auto w-[38mm] object-contain"
           />
         </div>
 
