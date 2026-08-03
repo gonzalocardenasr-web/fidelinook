@@ -6,9 +6,9 @@ type Props = {
 
 export default function CustomMessageTicket80mm({ message }: Props) {
   return (
-    <article className="custom-message-ticket mx-auto w-[72mm] bg-white px-[3mm] pb-[2mm] pt-0 font-sans text-black">
+    <article className="custom-message-ticket mx-auto w-[72mm] bg-white px-[3mm] py-[2mm] font-sans text-black">
       <header className="text-center">
-        <div className="flex h-[11mm] items-start justify-center overflow-hidden">
+        <div className="flex h-[14mm] items-center justify-center overflow-hidden">
           <Image
             src="/nook-logo-negro.png"
             alt="Nook"
