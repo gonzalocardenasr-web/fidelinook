@@ -1,17 +1,20 @@
-import { CartItem, OptionValue } from "../../types/sales";
+import { ProductCartItem, OptionValue } from "../../types/sales";
 
 type Props = {
-  item: CartItem;
+  item: ProductCartItem;
   flavors: OptionValue[];
   toppings: OptionValue[];
   price: number;
   onRemove: (localId: string) => void;
-  onDuplicate: (item: CartItem) => void;
-  onUpdate: (localId: string, patch: Partial<CartItem>) => void;
-  onToggleFlavor: (item: CartItem, flavorId: number) => void;
-  onToggleTopping: (item: CartItem, toppingId: number) => void;
-  onRemoveFlavorSelection: (item: CartItem, selectionIndex: number) => void;
-  onReconfigure: (item: CartItem) => void;
+  onDuplicate: (item: ProductCartItem) => void;
+  onUpdate: (localId: string, patch: Partial<ProductCartItem>) => void;
+  onToggleFlavor: (item: ProductCartItem, flavorId: number) => void;
+  onToggleTopping: (item: ProductCartItem, toppingId: number) => void;
+  onRemoveFlavorSelection: (
+    item: ProductCartItem,
+    selectionIndex: number,
+  ) => void;
+  onReconfigure: (item: ProductCartItem) => void;
 };
 
 const giftReasons = [
