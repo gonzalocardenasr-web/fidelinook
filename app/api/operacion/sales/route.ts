@@ -382,19 +382,20 @@ export async function GET(req: Request) {
           created_at
         ),
         sale_items (
-          id,
-          item_type,
-          product_id,
-          product_sku,
-          product_name,
-          quantity,
-          list_unit_price,
-          unit_price,
-          discount_total,
-          total_price,
-          is_gift,
-          gift_reason,
-          notes,
+        id,
+        item_type,
+        product_id,
+        product_sku,
+        product_name,
+        quantity,
+        list_unit_price,
+        unit_price,
+        discount_total,
+        total_price,
+        is_gift,
+        gift_reason,
+        loyalty_eligible,
+        notes,
           sale_item_options (
             id,
             option_group_code,
@@ -780,6 +781,22 @@ export async function POST(req: Request) {
         const notes =
           typeof itemRecord.notes === "string" ? itemRecord.notes.trim() : "";
 
+        const loyaltyEligibleRaw = itemRecord.loyalty_eligible;
+
+        if (typeof loyaltyEligibleRaw !== "boolean") {
+          return NextResponse.json(
+            {
+              ok: false,
+              message:
+                `El ítem personalizado de la línea ${index + 1} ` +
+                "debe indicar si aporta a fidelización.",
+            },
+            { status: 400 },
+          );
+        }
+
+        const loyaltyEligible = loyaltyEligibleRaw;
+
         if (!customName) {
           return NextResponse.json(
             {
@@ -831,6 +848,7 @@ export async function POST(req: Request) {
           custom_name: customName,
           unit_price: unitPrice,
           quantity,
+          loyalty_eligible: loyaltyEligible,
           notes: notes || null,
           options: [],
           is_gift: false,

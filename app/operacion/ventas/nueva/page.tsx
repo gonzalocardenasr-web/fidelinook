@@ -267,6 +267,7 @@ export default function NuevaVentaPage() {
     customName: string;
     customUnitPrice: number;
     quantity: number;
+    loyaltyEligible: boolean;
   }) {
     const customItem: CustomCartItem = {
       itemType: "custom",
@@ -274,6 +275,7 @@ export default function NuevaVentaPage() {
       customName: input.customName.trim(),
       customUnitPrice: input.customUnitPrice,
       quantity: input.quantity,
+      loyaltyEligible: input.loyaltyEligible,
       notes: "",
     };
 
@@ -743,6 +745,7 @@ export default function NuevaVentaPage() {
               custom_name: item.customName.trim(),
               unit_price: item.customUnitPrice,
               quantity: item.quantity,
+              loyalty_eligible: item.loyaltyEligible,
               notes: item.notes.trim() || null,
               options: [],
               is_gift: false,

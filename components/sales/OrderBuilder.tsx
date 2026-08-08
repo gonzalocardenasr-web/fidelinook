@@ -68,6 +68,7 @@ type Props = {
     customName: string;
     customUnitPrice: number;
     quantity: number;
+    loyaltyEligible: boolean;
   }) => void;
 };
 
@@ -115,6 +116,7 @@ export default function OrderBuilder({
   const [customName, setCustomName] = useState("");
   const [customUnitPrice, setCustomUnitPrice] = useState("");
   const [customQuantity, setCustomQuantity] = useState("1");
+  const [customLoyaltyEligible, setCustomLoyaltyEligible] = useState(false);
   const [customItemError, setCustomItemError] = useState("");
 
   const customItemDetailsRef = useRef<HTMLDetailsElement>(null);
@@ -145,11 +147,13 @@ export default function OrderBuilder({
       customName: normalizedName,
       customUnitPrice: parsedUnitPrice,
       quantity: parsedQuantity,
+      loyaltyEligible: customLoyaltyEligible,
     });
 
     setCustomName("");
     setCustomUnitPrice("");
     setCustomQuantity("1");
+    setCustomLoyaltyEligible(false);
     setCustomItemError("");
 
     if (customItemDetailsRef.current) {
@@ -252,9 +256,23 @@ export default function OrderBuilder({
                         {item.customName}
                       </p>
 
-                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
-                        Ítem personalizado
-                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                          Ítem personalizado
+                        </p>
+
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${
+                            item.loyaltyEligible
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-neutral-200 text-neutral-600"
+                          }`}
+                        >
+                          {item.loyaltyEligible
+                            ? "Aporta a fidelización"
+                            : "No aporta a fidelización"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="shrink-0 text-right leading-tight">
@@ -411,6 +429,49 @@ export default function OrderBuilder({
                     className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-center text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Aporta a fidelización
+                </label>
+
+                <div className="mt-1 grid grid-cols-2 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomLoyaltyEligible(false);
+                      setCustomItemError("");
+                    }}
+                    className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                      !customLoyaltyEligible
+                        ? "border-amber-500 bg-amber-100 text-amber-800"
+                        : "border-neutral-200 bg-white text-neutral-600"
+                    }`}
+                  >
+                    No
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomLoyaltyEligible(true);
+                      setCustomItemError("");
+                    }}
+                    className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                      customLoyaltyEligible
+                        ? "border-emerald-500 bg-emerald-100 text-emerald-800"
+                        : "border-neutral-200 bg-white text-neutral-600"
+                    }`}
+                  >
+                    Sí
+                  </button>
+                </div>
+
+                <p className="mt-1 text-[9px] leading-tight text-neutral-500">
+                  Marca Sí solo si este cobro debe participar en el cálculo de
+                  sellos.
+                </p>
               </div>
 
               {customItemError && (

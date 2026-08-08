@@ -76,6 +76,8 @@ export type CustomCartItem = {
   customUnitPrice: number;
   quantity: number;
 
+  loyaltyEligible: boolean;
+
   notes: string;
 };
 
