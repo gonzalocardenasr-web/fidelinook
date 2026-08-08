@@ -1,22 +1,46 @@
 import { NextResponse } from "next/server";
+
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
-import {
-  buildCustomerEventIdempotencyKey,
-  recordCustomerEvent,
-} from "../../../../../lib/customer-events";
-import {
-  getBusinessDateInTimezone,
-  rebuildDailyLoyaltyProjection,
-} from "../../../../../lib/daily-loyalty";
 
-type AssignCustomerResult = {
+type LoyaltyApplicationResult = {
+  applied?: boolean;
+  movement_id?: number | null;
+  movement_created?: boolean;
+  applied_delta?: number;
+};
+
+type LoyaltyConversionResult = {
+  converted?: boolean;
+  rewards_issued?: number;
+  reward_ids?: number[];
+  balance_after?: number;
+  reason?: string | null;
+};
+
+type AssignCustomerWithLoyaltyResult = {
   sale_id: number;
   change_id?: number | null;
+
   previous_customer_id?: number | null;
+
   customer_id: number;
   customer_name?: string | null;
+
   changed: boolean;
+  delivered?: boolean;
+
+  business_date?: string | null;
+
+  promotion_moved?: boolean;
+
+  previous_projection?: Record<string, unknown> | null;
+  previous_application?: LoyaltyApplicationResult | null;
+
+  new_projection?: Record<string, unknown> | null;
+  new_application?: LoyaltyApplicationResult | null;
+
+  new_conversion?: LoyaltyConversionResult | null;
 };
 
 export async function POST(req: Request) {
@@ -24,7 +48,10 @@ export async function POST(req: Request) {
 
   if (!session.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
+      {
+        ok: false,
+        message: "No autenticado.",
+      },
       { status: 401 },
     );
   }
@@ -40,14 +67,20 @@ export async function POST(req: Request) {
 
     if (!Number.isInteger(saleId) || saleId <= 0) {
       return NextResponse.json(
-        { ok: false, message: "La venta indicada no es válida." },
+        {
+          ok: false,
+          message: "La venta indicada no es válida.",
+        },
         { status: 400 },
       );
     }
 
     if (!Number.isInteger(customerId) || customerId <= 0) {
       return NextResponse.json(
-        { ok: false, message: "El cliente indicado no es válido." },
+        {
+          ok: false,
+          message: "El cliente indicado no es válido.",
+        },
         { status: 400 },
       );
     }
@@ -62,14 +95,48 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin.rpc("assign_customer_to_sale", {
-      p_sale_id: saleId,
-      p_customer_id: customerId,
-      p_actor_role: session.role,
-      p_reason: reason || null,
-    });
+    /*
+     * =========================================================
+     * 1. REASIGNACIÓN ATÓMICA
+     *
+     * El RPC se hace responsable de:
+     *
+     * - cambiar sales.customer_id;
+     * - registrar sale_customer_changes;
+     * - registrar sale.customer_assigned / changed;
+     * - mover la promoción POS asociada a la venta;
+     * - recalcular cliente anterior;
+     * - materializar reversa si corresponde;
+     * - recalcular cliente nuevo;
+     * - materializar crédito si corresponde;
+     * - convertir sellos en premios;
+     * - verificar pending_stamp_delta = 0.
+     *
+     * Si algo falla, PostgreSQL revierte TODO.
+     * =========================================================
+     */
+
+    const { data, error } = await supabaseAdmin.rpc(
+      "assign_customer_to_sale_with_loyalty",
+      {
+        p_sale_id: saleId,
+        p_customer_id: customerId,
+        p_actor_role: session.role,
+        p_actor_identifier: null,
+        p_reason: reason || null,
+      },
+    );
 
     if (error) {
+      console.error(
+        "No se pudo reasignar la venta con reconciliación de fidelización:",
+        {
+          saleId,
+          customerId,
+          error,
+        },
+      );
+
       return NextResponse.json(
         {
           ok: false,
@@ -80,234 +147,451 @@ export async function POST(req: Request) {
     }
 
     const result =
-      data && typeof data === "object" ? (data as AssignCustomerResult) : null;
+      data && typeof data === "object"
+        ? (data as AssignCustomerWithLoyaltyResult)
+        : null;
 
     if (!result) {
       return NextResponse.json(
         {
           ok: false,
-          message: "No se recibió confirmación de la actualización.",
+          message:
+            "No se recibió confirmación de la actualización del cliente.",
         },
         { status: 500 },
       );
     }
+
+    /*
+     * =========================================================
+     * 2. RECARGAR VENTA
+     *
+     * Desde este punto la operación patrimonial YA terminó
+     * correctamente.
+     *
+     * Cualquier problema posterior NO debe revertir la operación.
+     * =========================================================
+     */
 
     const { data: updatedSale, error: updatedSaleError } = await supabaseAdmin
       .from("sales")
       .select(
         `
-          id,
-          customer_id,
-          clientes (
             id,
-            nombre,
-            correo,
-            telefono
-          )
-        `,
+            customer_id,
+            clientes (
+              id,
+              nombre,
+              correo,
+              telefono
+            )
+          `,
       )
       .eq("id", saleId)
       .single();
 
     if (updatedSaleError) {
-      return NextResponse.json(
+      console.error(
+        "Venta reasignada correctamente, pero no se pudo recargar:",
         {
-          ok: false,
-          message:
-            "El cliente fue asignado, pero no se pudo recargar la venta.",
+          saleId,
+          customerId,
+          error: updatedSaleError,
         },
-        { status: 500 },
+      );
+
+      warnings.push(
+        "El cliente fue asignado correctamente, pero no se pudo recargar la venta.",
       );
     }
 
-    if (result.changed) {
-      const changeId = Number(result.change_id);
-      const previousCustomerId =
-        result.previous_customer_id === null ||
-        result.previous_customer_id === undefined
-          ? null
-          : Number(result.previous_customer_id);
-
-      if (!Number.isInteger(changeId) || changeId <= 0) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El cliente fue asignado, pero no se pudo identificar el cambio auditado.",
-          },
-          { status: 500 },
-        );
-      }
-
-      const eventType =
-        previousCustomerId === null
-          ? "sale.customer_assigned"
-          : "sale.customer_changed";
-
-      try {
-        await recordCustomerEvent({
-          customerId,
-          eventType,
-          sourceModule: "sales",
-          sourceEntityType: "sale_customer_change",
-          sourceEntityId: changeId,
-          saleId,
-          actorRole: session.role,
-          idempotencyKey: buildCustomerEventIdempotencyKey([
-            "sale-customer-change",
-            changeId,
-          ]),
-          metadata: {
-            previousCustomerId,
-            newCustomerId: customerId,
-            reason: reason || null,
-          },
-        });
-      } catch (eventError) {
-        console.error(
-          "El cliente fue asignado, pero falló el registro del evento:",
-          eventError,
-        );
-
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              "El cliente fue asignado correctamente, pero no se pudo registrar su evento.",
-          },
-          { status: 500 },
-        );
-      }
-    }
-
     /*
-     * Reconstrucción de fidelización por reasignación.
+     * =========================================================
+     * 3. NOTIFICACIONES POSTERIORES
      *
-     * Solo corresponde cuando la venta ya fue entregada.
-     * Si aún está pendiente, preparando o lista, la proyección se
-     * construirá normalmente cuando el pedido pase a delivered.
+     * Los correos son side effects.
+     *
+     * Nunca deben invalidar:
+     * - reasignación;
+     * - sellos;
+     * - reversas;
+     * - premios.
+     * =========================================================
      */
-    if (result.changed) {
-      const previousCustomerId =
-        result.previous_customer_id === null ||
-        result.previous_customer_id === undefined
-          ? null
-          : Number(result.previous_customer_id);
 
-      const { data: deliveredOrder, error: deliveredOrderError } =
-        await supabaseAdmin
-          .from("orders")
-          .select("id, delivered_at")
-          .eq("sale_id", saleId)
-          .eq("status", "delivered")
-          .not("delivered_at", "is", null)
-          .order("delivered_at", { ascending: false })
-          .order("id", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    if (result.changed && result.delivered) {
+      const newApplication =
+        result.new_application && typeof result.new_application === "object"
+          ? result.new_application
+          : null;
 
-      if (deliveredOrderError) {
-        console.error(
-          "Cliente reasignado, pero no se pudo revisar la entrega para recalcular fidelización:",
-          {
-            saleId,
-            previousCustomerId,
-            newCustomerId: customerId,
-            error: deliveredOrderError,
-          },
-        );
+      const conversion =
+        result.new_conversion && typeof result.new_conversion === "object"
+          ? result.new_conversion
+          : null;
 
-        warnings.push(
-          "El cliente fue actualizado, pero no se pudo verificar si correspondía recalcular la fidelización.",
-        );
-      } else if (deliveredOrder?.delivered_at) {
-        const businessDate = getBusinessDateInTimezone({
-          value: deliveredOrder.delivered_at,
-          timezone: "America/Santiago",
-        });
+      const appliedDelta = Number(newApplication?.applied_delta ?? 0);
 
-        /*
-         * Primero reconstruimos al cliente anterior.
-         *
-         * Como sales.customer_id ya fue actualizado por el RPC,
-         * la venta reasignada dejará automáticamente de formar parte
-         * de su acumulado diario.
-         */
-        if (
-          previousCustomerId !== null &&
-          Number.isInteger(previousCustomerId) &&
-          previousCustomerId > 0 &&
-          previousCustomerId !== customerId
-        ) {
-          try {
-            await rebuildDailyLoyaltyProjection({
-              customerId: previousCustomerId,
-              businessDate,
-              policyCode: "LOYALTY_POLICY_V1",
-              policyVersion: 1,
-              recalculationReason: "sale.customer_changed:previous_customer",
-            });
-          } catch (previousProjectionError) {
+      const movementCreated = Boolean(newApplication?.movement_created);
+
+      const rewardsIssued = Number(conversion?.rewards_issued ?? 0);
+
+      const rewardIds = Array.isArray(conversion?.reward_ids)
+        ? conversion.reward_ids
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value > 0)
+        : [];
+
+      const rewardWasIssued =
+        Boolean(conversion?.converted) &&
+        Number.isInteger(rewardsIssued) &&
+        rewardsIssued > 0 &&
+        rewardIds.length > 0;
+
+      /*
+       * =======================================================
+       * 3.1 NOTIFICAR PREMIO NUEVO
+       * =======================================================
+       */
+
+      if (rewardWasIssued) {
+        try {
+          const { data: customer, error: customerError } = await supabaseAdmin
+            .from("clientes")
+            .select(
+              `
+                  id,
+                  nombre,
+                  correo,
+                  public_token
+                `,
+            )
+            .eq("id", customerId)
+            .single();
+
+          if (customerError || !customer) {
             console.error(
-              "No se pudo reconstruir la fidelización del cliente anterior:",
+              "Premio generado tras reasignación, pero no se pudo cargar el cliente:",
+              customerError,
+            );
+
+            warnings.push(
+              "El premio fue generado correctamente, pero no se pudo preparar su correo.",
+            );
+          } else {
+            const { data: issuedRewards, error: rewardsError } =
+              await supabaseAdmin
+                .from("customer_rewards")
+                .select(
+                  `
+                  id,
+                  name,
+                  expires_at
+                `,
+                )
+                .in("id", rewardIds)
+                .order("id", {
+                  ascending: true,
+                });
+
+            if (rewardsError) {
+              console.error(
+                "Premio generado tras reasignación, pero no se pudo cargar:",
+                rewardsError,
+              );
+
+              warnings.push(
+                "El premio fue generado correctamente, pero no se pudo preparar su notificación.",
+              );
+            } else {
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
+                /\/$/,
+                "",
+              );
+
+              if (!baseUrl) {
+                console.error(
+                  "NEXT_PUBLIC_BASE_URL no está configurada para notificar premios.",
+                );
+
+                warnings.push(
+                  "El premio fue generado correctamente, pero el correo no pudo enviarse por configuración.",
+                );
+              } else {
+                const emailResults = await Promise.allSettled(
+                  (issuedRewards || []).map(async (reward) => {
+                    const emailResponse = await fetch(
+                      `${baseUrl}/api/send-prize`,
+                      {
+                        method: "POST",
+
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+
+                        body: JSON.stringify({
+                          email: customer.correo,
+                          nombre: customer.nombre,
+
+                          premioNombre: reward.name || "Helado simple gratis",
+
+                          vencimiento: reward.expires_at,
+
+                          publicToken: customer.public_token,
+                        }),
+                      },
+                    );
+
+                    if (!emailResponse.ok) {
+                      throw new Error(
+                        `El correo del premio ${reward.id} respondió ${emailResponse.status}.`,
+                      );
+                    }
+
+                    return reward.id;
+                  }),
+                );
+
+                const failedEmails = emailResults.filter(
+                  (emailResult) => emailResult.status === "rejected",
+                );
+
+                if (failedEmails.length > 0) {
+                  console.error(
+                    "Uno o más correos de premio no pudieron enviarse:",
+                    failedEmails,
+                  );
+
+                  warnings.push(
+                    rewardsIssued === 1
+                      ? "El premio fue generado, pero su correo no pudo enviarse."
+                      : "Los premios fueron generados, pero uno o más correos no pudieron enviarse.",
+                  );
+                }
+              }
+            }
+          }
+        } catch (notificationError) {
+          console.error(
+            "Error inesperado notificando premio posterior a reasignación:",
+            notificationError,
+          );
+
+          warnings.push(
+            "El premio fue generado correctamente, pero ocurrió un problema al enviar su correo.",
+          );
+        }
+      }
+
+      /*
+       * =======================================================
+       * 3.2 NOTIFICAR AVANCE DE SELLOS
+       *
+       * Solo:
+       * - hubo movimiento nuevo;
+       * - delta > 0;
+       * - no se emitió premio.
+       *
+       * Nunca enviamos correo por una reversa.
+       * =======================================================
+       */
+
+      const shouldSendStampEmail =
+        movementCreated &&
+        Number.isInteger(appliedDelta) &&
+        appliedDelta > 0 &&
+        !rewardWasIssued;
+
+      if (shouldSendStampEmail) {
+        try {
+          const [
+            { data: customer, error: customerError },
+
+            { data: loyaltyAccount, error: loyaltyAccountError },
+
+            { data: rewardRule, error: rewardRuleError },
+          ] = await Promise.all([
+            supabaseAdmin
+              .from("clientes")
+              .select(
+                `
+                  id,
+                  nombre,
+                  correo,
+                  public_token
+                `,
+              )
+              .eq("id", customerId)
+              .single(),
+
+            supabaseAdmin
+              .from("loyalty_accounts")
+              .select("current_stamp_balance")
+              .eq("customer_id", customerId)
+              .single(),
+
+            supabaseAdmin
+              .from("loyalty_rules")
+              .select("conditions")
+              .eq("code", "LOYALTY_REWARD_THRESHOLD")
+              .eq("version", 1)
+              .eq("configuration_version", "LOYALTY_POLICY_V1")
+              .limit(1)
+              .maybeSingle(),
+          ]);
+
+          if (customerError || !customer) {
+            console.error(
+              "Sellos reconciliados tras reasignación, pero no se pudo cargar el cliente:",
+              customerError,
+            );
+
+            warnings.push(
+              "Los sellos fueron procesados correctamente, pero no se pudo preparar su correo.",
+            );
+          } else if (loyaltyAccountError || !loyaltyAccount) {
+            console.error(
+              "Sellos reconciliados tras reasignación, pero no se pudo obtener el saldo:",
+              loyaltyAccountError,
+            );
+
+            warnings.push(
+              "Los sellos fueron procesados correctamente, pero no se pudo obtener el saldo para su correo.",
+            );
+          } else if (
+            !customer.correo ||
+            !customer.nombre ||
+            !customer.public_token
+          ) {
+            console.error(
+              "Sellos reconciliados, pero faltan datos del cliente para notificar:",
               {
-                saleId,
-                previousCustomerId,
-                businessDate,
-                error: previousProjectionError,
+                customerId,
+                hasEmail: Boolean(customer.correo),
+                hasName: Boolean(customer.nombre),
+                hasPublicToken: Boolean(customer.public_token),
               },
             );
 
             warnings.push(
-              "La fidelización del cliente anterior quedó pendiente de reconstrucción.",
+              "Los sellos fueron procesados correctamente, pero el cliente no tiene datos completos para recibir el correo.",
             );
-          }
-        }
+          } else {
+            if (rewardRuleError) {
+              console.error(
+                "No se pudo cargar la meta de fidelización; se utilizará 7:",
+                rewardRuleError,
+              );
+            }
 
-        /*
-         * Luego reconstruimos al cliente nuevo.
-         *
-         * La venta ya pertenece a este cliente y se combinará con
-         * sus demás ventas entregadas del mismo día comercial.
-         */
-        try {
-          await rebuildDailyLoyaltyProjection({
-            customerId,
-            businessDate,
-            policyCode: "LOYALTY_POLICY_V1",
-            policyVersion: 1,
-            recalculationReason:
-              previousCustomerId === null
-                ? "sale.customer_assigned:new_customer"
-                : "sale.customer_changed:new_customer",
-          });
-        } catch (newProjectionError) {
+            const ruleConditions =
+              rewardRule?.conditions &&
+              typeof rewardRule.conditions === "object"
+                ? (rewardRule.conditions as Record<string, unknown>)
+                : {};
+
+            const configuredGoal = Number(ruleConditions.stampsRequired);
+
+            const metaSellos =
+              Number.isInteger(configuredGoal) && configuredGoal > 0
+                ? configuredGoal
+                : 7;
+
+            const sellosActuales = Number(
+              loyaltyAccount.current_stamp_balance ?? 0,
+            );
+
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
+              /\/$/,
+              "",
+            );
+
+            if (!baseUrl) {
+              console.error(
+                "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de sellos.",
+              );
+
+              warnings.push(
+                "Los sellos fueron procesados correctamente, pero el correo no pudo enviarse por configuración.",
+              );
+            } else {
+              const emailResponse = await fetch(`${baseUrl}/api/send-stamp`, {
+                method: "POST",
+
+                headers: {
+                  "Content-Type": "application/json",
+                },
+
+                body: JSON.stringify({
+                  email: customer.correo,
+                  nombre: customer.nombre,
+                  sellosActuales,
+                  metaSellos,
+                  publicToken: customer.public_token,
+                }),
+              });
+
+              if (!emailResponse.ok) {
+                const emailErrorBody = await emailResponse
+                  .text()
+                  .catch(() => "");
+
+                throw new Error(
+                  `El correo de sellos respondió ${emailResponse.status}. ${emailErrorBody}`,
+                );
+              }
+            }
+          }
+        } catch (stampEmailError) {
           console.error(
-            "No se pudo reconstruir la fidelización del cliente nuevo:",
+            "Sellos reconciliados tras reasignación, pero falló el correo:",
             {
               saleId,
-              previousCustomerId,
-              newCustomerId: customerId,
-              businessDate,
-              error: newProjectionError,
+              customerId,
+              appliedDelta,
+              error: stampEmailError,
             },
           );
 
           warnings.push(
-            "La fidelización del cliente asignado quedó pendiente de reconstrucción.",
+            "Los sellos fueron procesados correctamente, pero su correo no pudo enviarse.",
           );
         }
       }
     }
 
+    /*
+     * =========================================================
+     * 4. RESPUESTA
+     * =========================================================
+     */
+
     return NextResponse.json({
       ok: true,
+
       changed: Boolean(result.changed),
-      sale: updatedSale,
+
+      sale: updatedSale || null,
+
+      loyalty: {
+        delivered: Boolean(result.delivered),
+
+        businessDate: result.business_date || null,
+
+        promotionMoved: Boolean(result.promotion_moved),
+
+        previousApplication: result.previous_application || null,
+
+        newApplication: result.new_application || null,
+
+        conversion: result.new_conversion || null,
+      },
+
       warnings,
+
       message: result.changed
         ? warnings.length > 0
-          ? "Cliente asignado correctamente, con advertencias de fidelización."
+          ? "Cliente asignado correctamente, con advertencias posteriores."
           : "Cliente asignado correctamente."
         : "La venta ya estaba asignada a este cliente.",
     });
