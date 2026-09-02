@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
-import { sendRegisterVerificationEmail } from "../../../lib/email/sendRegisterVerificationEmail";
+import { enqueueEmail } from "../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
 import {
   createCustomerRecord,
   deleteCustomerRecord,
@@ -245,33 +246,83 @@ export async function POST(req: Request) {
     }
 
     /*
-     * 5. El correo es un efecto posterior.
+     * 5. Persistir la obligación de correo.
      *
-     * Si falla, mantenemos cliente, usuario Auth y evento para
-     * permitir que el correo sea reenviado posteriormente.
+     * El registro ya está completo en este punto.
+     * El correo de activación pasa a ser un efecto posterior
+     * persistente: si Resend falla, la obligación permanece
+     * en email_queue para retry.
      */
+    let queuedEmail;
+
     try {
-      await sendRegisterVerificationEmail(correo, nombre, verificationToken);
-    } catch (emailError) {
+      queuedEmail = await enqueueEmail({
+        recipientEmail: correo,
+        emailType: "REGISTER_VERIFICATION",
+        priority: 0,
+        idempotencyKey: `register-verification:${linkedCustomer.id}:${verificationToken}`,
+        payload: {
+          nombre,
+          token: verificationToken,
+        },
+        customerId: linkedCustomer.id,
+        sourceType: "account_registration",
+        sourceReference: String(linkedCustomer.id),
+        maxAttempts: 5,
+      });
+    } catch (queueError) {
       console.error(
-        "Error enviando correo de verificación de registro:",
-        emailError,
+        "Cuenta creada, pero no se pudo persistir el correo de verificación:",
+        queueError,
       );
 
       return NextResponse.json({
         ok: true,
         customerId: linkedCustomer.id,
         warning:
-          "La cuenta fue creada, pero no se pudo enviar el correo de verificación.",
-        code: "REGISTER_EMAIL_SEND_FAILED",
+          "La cuenta fue creada, pero el correo de verificación requiere revisión.",
+        code: "REGISTER_EMAIL_QUEUE_FAILED",
       });
     }
 
-    return NextResponse.json({
-      ok: true,
-      customerId: linkedCustomer.id,
-      code: "ACCOUNT_REGISTERED",
-    });
+    /*
+     * 6. Intento inmediato.
+     *
+     * Si Resend falla, dispatchQueuedEmailById devuelve el
+     * email a PENDING con retry. La cuenta NO se revierte.
+     */
+    try {
+      const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
+
+      if (dispatchResult.sent === 1) {
+        return NextResponse.json({
+          ok: true,
+          customerId: linkedCustomer.id,
+          code: "ACCOUNT_REGISTERED",
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        customerId: linkedCustomer.id,
+        warning:
+          "La cuenta fue creada. El correo de verificación quedó pendiente de envío y será reintentado automáticamente.",
+        code: "REGISTER_EMAIL_PENDING",
+      });
+    } catch (dispatchError) {
+      console.error(
+        "Cuenta creada y correo encolado, pero falló el intento inmediato:",
+        dispatchError,
+      );
+
+      return NextResponse.json({
+        ok: true,
+        customerId: linkedCustomer.id,
+        warning:
+          "La cuenta fue creada. El correo de verificación quedó pendiente de envío.",
+        code: "REGISTER_EMAIL_PENDING",
+      });
+    }
   } catch (error) {
     console.error("Error en /api/register:", error);
 

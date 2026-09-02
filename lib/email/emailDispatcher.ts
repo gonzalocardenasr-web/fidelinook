@@ -33,32 +33,9 @@ export async function dispatchQueuedEmails(
   limit = 10,
 ): Promise<DispatchResult> {
   const safeLimit = Math.min(Math.max(limit, 1), 50);
-
   const workerId = `email-dispatch:${randomUUID()}`;
 
-  // ----------------------------------------------------------
-  // 1. Recuperar jobs que hayan quedado PROCESSING por una
-  //    ejecución interrumpida.
-  // ----------------------------------------------------------
-
-  const { data: recoveredData, error: recoverError } = await supabaseAdmin.rpc(
-    "recover_stale_processing_emails",
-    {
-      p_stale_after_minutes: 15,
-    },
-  );
-
-  if (recoverError) {
-    throw new Error(
-      `Could not recover stale email locks: ${recoverError.message}`,
-    );
-  }
-
-  const recoveredStale = typeof recoveredData === "number" ? recoveredData : 0;
-
-  // ----------------------------------------------------------
-  // 2. Reclamar trabajo de forma atómica.
-  // ----------------------------------------------------------
+  const recoveredStale = await recoverStaleProcessingEmails();
 
   const { data: claimedData, error: claimError } = await supabaseAdmin.rpc(
     "claim_pending_emails",
@@ -83,78 +60,139 @@ export async function dispatchQueuedEmails(
     failed: 0,
   };
 
-  // ----------------------------------------------------------
-  // 3. Procesamiento secuencial.
-  //
-  // Por ahora es deliberadamente secuencial:
-  // - menor presión sobre Resend;
-  // - comportamiento determinista;
-  // - futura gobernanza de cuota más simple.
-  // ----------------------------------------------------------
-
   for (const email of claimedEmails) {
-    try {
-      const providerMessageId = await sendQueuedEmail(email);
-
-      const { error: sentError } = await supabaseAdmin.rpc("mark_email_sent", {
-        p_email_id: email.id,
-        p_worker_id: workerId,
-        p_provider_message_id: providerMessageId,
-      });
-
-      if (sentError) {
-        throw new Error(
-          `Email sent by provider but queue could not be marked SENT: ${sentError.message}`,
-        );
-      }
-
-      result.sent += 1;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-
-      console.error(`Email queue ${email.id} dispatch failed:`, error);
-
-      try {
-        const { data: retryData, error: retryError } = await supabaseAdmin.rpc(
-          "mark_email_retry",
-          {
-            p_email_id: email.id,
-            p_worker_id: workerId,
-            p_error: errorMessage,
-            p_retry_after_seconds: 300,
-          },
-        );
-
-        if (retryError) {
-          console.error(
-            `Could not update retry state for email queue ${email.id}:`,
-            retryError,
-          );
-
-          result.failed += 1;
-          continue;
-        }
-
-        const retryRow = retryData as EmailQueueRow | null;
-
-        if (retryRow?.status === "FAILED") {
-          result.failed += 1;
-        } else {
-          result.retried += 1;
-        }
-      } catch (retryStateError) {
-        console.error(
-          `Unexpected retry-state failure for email queue ${email.id}:`,
-          retryStateError,
-        );
-
-        result.failed += 1;
-      }
-    }
+    await processClaimedEmail(email, workerId, result);
   }
 
   return result;
+}
+
+// ============================================================
+// DESPACHO INMEDIATO DE UNA OBLIGACIÓN ESPECÍFICA
+//
+// Utilizado inicialmente por flujos P0 como registro.
+// ============================================================
+
+export async function dispatchQueuedEmailById(
+  emailId: number,
+): Promise<DispatchResult> {
+  const workerId = `email-immediate:${randomUUID()}`;
+
+  const recoveredStale = await recoverStaleProcessingEmails();
+
+  const { data, error } = await supabaseAdmin.rpc("claim_pending_email_by_id", {
+    p_email_id: emailId,
+    p_worker_id: workerId,
+  });
+
+  if (error) {
+    throw new Error(`Could not claim email ${emailId}: ${error.message}`);
+  }
+
+  const result: DispatchResult = {
+    workerId,
+    recoveredStale,
+    claimed: data?.id ? 1 : 0,
+    sent: 0,
+    retried: 0,
+    failed: 0,
+  };
+
+  if (!data?.id) {
+    return result;
+  }
+
+  await processClaimedEmail(data as EmailQueueRow, workerId, result);
+
+  return result;
+}
+
+// ============================================================
+// RECUPERACIÓN DE LOCKS
+// ============================================================
+
+async function recoverStaleProcessingEmails() {
+  const { data, error } = await supabaseAdmin.rpc(
+    "recover_stale_processing_emails",
+    {
+      p_stale_after_minutes: 15,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Could not recover stale email locks: ${error.message}`);
+  }
+
+  return typeof data === "number" ? data : 0;
+}
+
+// ============================================================
+// PROCESAMIENTO DE UN EMAIL YA RECLAMADO
+// ============================================================
+
+async function processClaimedEmail(
+  email: EmailQueueRow,
+  workerId: string,
+  result: DispatchResult,
+) {
+  try {
+    const providerMessageId = await sendQueuedEmail(email);
+
+    const { error: sentError } = await supabaseAdmin.rpc("mark_email_sent", {
+      p_email_id: email.id,
+      p_worker_id: workerId,
+      p_provider_message_id: providerMessageId,
+    });
+
+    if (sentError) {
+      throw new Error(
+        `Email sent by provider but queue could not be marked SENT: ${sentError.message}`,
+      );
+    }
+
+    result.sent += 1;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    console.error(`Email queue ${email.id} dispatch failed:`, error);
+
+    try {
+      const { data: retryData, error: retryError } = await supabaseAdmin.rpc(
+        "mark_email_retry",
+        {
+          p_email_id: email.id,
+          p_worker_id: workerId,
+          p_error: errorMessage,
+          p_retry_after_seconds: 300,
+        },
+      );
+
+      if (retryError) {
+        console.error(
+          `Could not update retry state for email queue ${email.id}:`,
+          retryError,
+        );
+
+        result.failed += 1;
+        return;
+      }
+
+      const retryRow = retryData as EmailQueueRow | null;
+
+      if (retryRow?.status === "FAILED") {
+        result.failed += 1;
+      } else {
+        result.retried += 1;
+      }
+    } catch (retryStateError) {
+      console.error(
+        `Unexpected retry-state failure for email queue ${email.id}:`,
+        retryStateError,
+      );
+
+      result.failed += 1;
+    }
+  }
 }
 
 // ============================================================
@@ -176,9 +214,6 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
 
 // ============================================================
 // DEV TEST
-//
-// Sólo se utilizará para validar el dispatcher antes de
-// conectarlo a flujos productivos.
 // ============================================================
 
 async function sendDevTestEmail(email: EmailQueueRow): Promise<string | null> {
@@ -214,9 +249,6 @@ Queue ID: ${email.id}
 
 // ============================================================
 // REGISTER VERIFICATION
-//
-// Queda preparado en este DEV, pero /api/register todavía NO
-// utilizará la cola.
 // ============================================================
 
 async function sendQueuedRegisterVerification(
@@ -241,10 +273,6 @@ async function sendQueuedRegisterVerification(
 
   return result.data?.id ?? null;
 }
-
-// ============================================================
-// HTML mínimo para DEV_TEST
-// ============================================================
 
 function escapeHtml(value: string) {
   return value
