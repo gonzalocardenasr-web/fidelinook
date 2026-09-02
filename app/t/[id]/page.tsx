@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import QRCode from "react-qr-code";
 import { supabase } from "../../../lib/supabase";
 
@@ -24,7 +23,6 @@ type Cliente = {
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
-  auth_user_id?: string | null;
 };
 
 type Props = {
@@ -99,7 +97,8 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </p>
 
           <p className="mt-2 text-neutral-500 text-sm">
-            Revisa tu bandeja de entrada y haz clic en el enlace de verificación.
+            Revisa tu bandeja de entrada y haz clic en el enlace de
+            verificación.
           </p>
         </div>
       </main>
@@ -112,41 +111,29 @@ export default async function TarjetaPublicaPage({ params }: Props) {
 
   const premiosActivos = premiosArray.filter(
     (premio: Premio) =>
-      premio.estado === "activo" && !estaVencido(premio.vencimiento)
+      premio.estado === "activo" && !estaVencido(premio.vencimiento),
   );
 
   const premiosUsados = premiosArray.filter(
-    (premio: Premio) => premio.estado === "usado"
+    (premio: Premio) => premio.estado === "usado",
   );
 
   const premiosCaducados = premiosArray.filter(
     (premio: Premio) =>
       premio.estado === "caducado" ||
-      (premio.estado === "activo" && estaVencido(premio.vencimiento))
+      (premio.estado === "activo" && estaVencido(premio.vencimiento)),
   );
 
   const premioDestacado =
-  premiosActivos.find(
-    (premio: Premio) =>
-      premio.tipo === "campana" || premio.tipo === "campana_prueba"
-  ) ||
-  premiosActivos[0] ||
-  null;
+    premiosActivos.find(
+      (premio: Premio) =>
+        premio.tipo === "campana" || premio.tipo === "campana_prueba",
+    ) ||
+    premiosActivos[0] ||
+    null;
 
   const sellos = clienteTyped.sellos ?? 0;
   const urlTarjeta = `https://fidelidad.nookheladeria.cl/t/${clienteTyped.public_token}`;
-
-  const perfilHref = clienteTyped.auth_user_id
-    ? `/login?next=${encodeURIComponent("/mi-cuenta")}`
-    : `/activar-cuenta?token=${encodeURIComponent(
-        clienteTyped.public_token
-      )}&next=${encodeURIComponent("/mi-cuenta")}`;
-
-  const suscripcionesHref = clienteTyped.auth_user_id
-    ? `/login?next=${encodeURIComponent("/mi-cuenta/suscripciones")}`
-    : `/activar-cuenta?token=${encodeURIComponent(
-        clienteTyped.public_token
-      )}&next=${encodeURIComponent("/mi-cuenta/suscripciones")}`;
 
   return (
     <main className="min-h-screen bg-[#FFDBEF] p-6">
@@ -175,7 +162,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           </div>
 
           <div className="space-y-6 px-6 py-6">
-                                   
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.14em] text-[#4C00F7]/70">
                 Cliente
@@ -191,37 +177,21 @@ export default async function TarjetaPublicaPage({ params }: Props) {
               </p>
             </div>
 
-            <div className="px-6 pt-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href={perfilHref}
-                  className="rounded-2xl border border-[#D99BE8] bg-[#F4DCE8] px-4 py-3 text-center text-sm font-semibold text-[#4C00F7] transition hover:opacity-95"
-                >
-                  Administrar mi perfil
-                </Link>
+            <details className="mt-2 rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
+              <summary className="cursor-pointer list-none text-center text-sm font-semibold uppercase tracking-[0.14em] text-[#4C00F7] transition hover:opacity-80">
+                Ver mi código QR
+              </summary>
 
-                <Link
-                  href={suscripcionesHref}
-                  className="rounded-2xl bg-[#4C00F7] px-4 py-3 text-center text-sm font-semibold text-white transition hover:opacity-95"
-                >
-                  Ver mis suscripciones
-                </Link>
+              <div className="mt-4">
+                <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-sm">
+                  <QRCode value={urlTarjeta} size={180} />
+                </div>
+
+                <p className="mt-4 text-center text-xs text-neutral-500">
+                  Muéstralo en caja para identificar tu tarjeta
+                </p>
               </div>
-            </div>
-
-            <div className="rounded-2xl border border-[#4C00F7]/15 bg-[#FFDBEF]/40 p-5">
-              <p className="mb-4 text-center text-sm font-semibold uppercase tracking-[0.14em] text-[#4C00F7]">
-                Tu código de cliente
-              </p>
-
-              <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-sm">
-                <QRCode value={urlTarjeta} size={180} />
-              </div>
-
-              <p className="mt-4 text-center text-xs text-neutral-500">
-                Muéstralo en caja para identificar tu tarjeta
-              </p>
-            </div>
+            </details>
 
             <div className="rounded-2xl border border-[#4C00F7]/15 p-5">
               <div className="flex items-center justify-between gap-4">
@@ -277,7 +247,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                 </p>
               </div>
             )}
-                      
           </div>
         </div>
 
@@ -285,7 +254,9 @@ export default async function TarjetaPublicaPage({ params }: Props) {
           <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
             <span>Premios activos ({premiosActivos.length})</span>
             <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
+            <span className="hidden text-2xl leading-none group-open:inline">
+              −
+            </span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -300,7 +271,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>                    
+                    </p>
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: activo
@@ -314,12 +285,14 @@ export default async function TarjetaPublicaPage({ params }: Props) {
             )}
           </div>
         </details>
-        
+
         <details className="group overflow-hidden rounded-[24px] bg-white shadow">
           <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
             <span>Historial de premios usados ({premiosUsados.length})</span>
             <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
+            <span className="hidden text-2xl leading-none group-open:inline">
+              −
+            </span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
@@ -336,7 +309,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>                    
+                    </p>
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: usado
@@ -353,16 +326,18 @@ export default async function TarjetaPublicaPage({ params }: Props) {
 
         <details className="group overflow-hidden rounded-[24px] bg-white shadow">
           <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-5 text-xl font-bold text-[#4C00F7]">
-            <span>Historial de premios caducados ({premiosCaducados.length})</span>
+            <span>
+              Historial de premios caducados ({premiosCaducados.length})
+            </span>
             <span className="text-2xl leading-none group-open:hidden">+</span>
-            <span className="hidden text-2xl leading-none group-open:inline">−</span>
+            <span className="hidden text-2xl leading-none group-open:inline">
+              −
+            </span>
           </summary>
 
           <div className="border-t border-neutral-200 px-6 py-5">
             {premiosCaducados.length === 0 ? (
-              <p className="text-neutral-600">
-                No tienes premios caducados.
-              </p>
+              <p className="text-neutral-600">No tienes premios caducados.</p>
             ) : (
               <div className="space-y-3">
                 {premiosCaducados.map((premio: Premio) => (
@@ -372,7 +347,7 @@ export default async function TarjetaPublicaPage({ params }: Props) {
                   >
                     <p className="font-semibold text-[#4C00F7]">
                       {premio.nombre}
-                    </p>                    
+                    </p>
 
                     <p className="mt-2 text-sm text-neutral-600">
                       Estado: caducado
@@ -386,7 +361,6 @@ export default async function TarjetaPublicaPage({ params }: Props) {
             )}
           </div>
         </details>
-        
       </div>
     </main>
   );
