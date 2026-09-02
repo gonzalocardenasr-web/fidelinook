@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+
 import {
   createCustomerRecord,
   deleteCustomerRecord,
   getCustomerRegistrationErrorResponse,
   recordCustomerRegisteredEvent,
 } from "../../../../lib/customer-registration";
+
+import { dispatchQueuedEmailById } from "../../../../lib/email/emailDispatcher";
+import { enqueueEmail } from "../../../../lib/email/emailQueue";
 import { generateVerificationToken } from "../../../../lib/utils/generateVerificationToken";
 
 export async function POST(req: Request) {
@@ -27,17 +31,13 @@ export async function POST(req: Request) {
       nombre,
       correo,
       telefono,
-
       verificationToken,
       verificationTokenCreatedAt: verificationCreatedAt,
-
       emailVerified: false,
       cardActive: false,
-
       acceptsTerms: aceptaTerminos,
       acceptsMarketing: aceptaMarketing,
       marketingPreferenceDefined: true,
-
       termsVersion: "v1.0",
       acceptedAt: verificationCreatedAt,
     });
@@ -88,52 +88,83 @@ export async function POST(req: Request) {
     }
 
     /*
-     * El correo es un efecto posterior. Si falla, conservamos
-     * cliente y evento para permitir su reenvío posteriormente.
+     * El correo es un efecto posterior al registro.
+     * La obligación debe quedar persistida antes de intentar enviarla.
      */
-    let emailSent = false;
+    let queuedEmail;
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
+      queuedEmail = await enqueueEmail({
+        recipientEmail: customer.correo,
+        emailType: "REGISTER_VERIFICATION",
+        priority: 0,
+        idempotencyKey: `card-registration-verification:${customer.id}:${verificationToken}`,
+        payload: {
+          nombre: customer.nombre,
+          token: verificationToken,
+        },
+        customerId: customer.id,
+        sourceType: "card_registration",
+        sourceReference: String(customer.id),
+        maxAttempts: 5,
+      });
+    } catch (queueError) {
+      console.error(
+        "Cliente creado, pero no se pudo encolar correo de verificación:",
+        queueError,
+      );
 
-      if (!baseUrl) {
-        console.error("NEXT_PUBLIC_BASE_URL no está configurada.");
-      } else {
-        const emailResponse = await fetch(`${baseUrl}/api/send-verification`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: customer.correo,
-            nombre: customer.nombre,
-            token: verificationToken,
-          }),
-        });
-
-        emailSent = emailResponse.ok;
-
-        if (!emailResponse.ok) {
-          console.error(
-            "El endpoint de verificación respondió con error:",
-            emailResponse.status,
-          );
-        }
-      }
-    } catch (emailError) {
-      console.error("Error enviando verificación de tarjeta:", emailError);
+      return NextResponse.json({
+        ok: true,
+        customerId: customer.id,
+        publicToken: customer.public_token,
+        emailSent: false,
+        emailQueued: false,
+        code: "CARD_REGISTERED_EMAIL_QUEUE_FAILED",
+        message:
+          "La tarjeta fue registrada, pero el correo de verificación requiere revisión.",
+      });
     }
 
-    return NextResponse.json({
-      ok: true,
-      customerId: customer.id,
-      publicToken: customer.public_token,
-      emailSent,
-      code: emailSent ? "CARD_REGISTERED" : "CARD_REGISTERED_EMAIL_FAILED",
-      message: emailSent
-        ? "Tarjeta registrada correctamente. Revisa tu correo para activarla."
-        : "La tarjeta fue registrada, pero no se pudo enviar el correo de verificación.",
-    });
+    /*
+     * Intentamos envío inmediato de la obligación recién creada.
+     * Si falla, la fila permanece disponible para retry.
+     */
+    try {
+      const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
+
+      const emailSent = dispatchResult.sent === 1;
+
+      return NextResponse.json({
+        ok: true,
+        customerId: customer.id,
+        publicToken: customer.public_token,
+        emailSent,
+        emailQueued: true,
+        emailQueueId: queuedEmail.id,
+        code: emailSent ? "CARD_REGISTERED" : "CARD_REGISTERED_EMAIL_PENDING",
+        message: emailSent
+          ? "Tarjeta registrada correctamente. Revisa tu correo para activarla."
+          : "La tarjeta fue registrada. El correo de verificación quedó pendiente de envío y será reintentado automáticamente.",
+      });
+    } catch (dispatchError) {
+      console.error(
+        "Correo de verificación encolado, pero falló el despacho inmediato:",
+        dispatchError,
+      );
+
+      return NextResponse.json({
+        ok: true,
+        customerId: customer.id,
+        publicToken: customer.public_token,
+        emailSent: false,
+        emailQueued: true,
+        emailQueueId: queuedEmail.id,
+        code: "CARD_REGISTERED_EMAIL_PENDING",
+        message:
+          "La tarjeta fue registrada. El correo de verificación quedó pendiente de envío y será reintentado automáticamente.",
+      });
+    }
   } catch (error) {
     console.error("Error registrando tarjeta de cliente:", error);
 
