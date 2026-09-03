@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { sendPrizeExpiringReminderEmail } from "../../../lib/email/sendPrizeExpiringReminderEmail";
-import { sendReactivationEmail } from "../../../lib/email/sendReactivationEmail";
+import { enqueueEmail } from "../../../lib/email/emailQueue";
 
 type CustomerRow = {
   id: number;
@@ -219,7 +219,7 @@ export async function GET(req: Request) {
       dryRun: boolean;
     }> = [];
 
-    const reactivacionesEnviadas: Array<{
+    const reactivacionesEncoladas: Array<{
       clienteId: number;
       correo: string;
       sellosActuales: number;
@@ -324,13 +324,28 @@ export async function GET(req: Request) {
       }
 
       if (!dryRun) {
-        await sendReactivationEmail(
-          email,
-          customerName,
-          currentStampBalance,
-          META_SELLOS,
-          publicToken,
-        );
+        const reminderState =
+          customer.fecha_ultimo_recordatorio_inactividad ||
+          latestPositiveMovement.occurred_at;
+
+        const queuedEmail = await enqueueEmail({
+          recipientEmail: email,
+          emailType: "CRM_REACTIVATION",
+          priority: 3,
+          idempotencyKey: ["crm-reactivation", customerId, reminderState].join(
+            ":",
+          ),
+          payload: {
+            nombre: customerName,
+            sellosActuales: currentStampBalance,
+            metaSellos: META_SELLOS,
+            publicToken,
+          },
+          customerId,
+          sourceType: "daily_crm_reactivation",
+          sourceReference: String(customerId),
+          maxAttempts: 5,
+        });
 
         const { error: updateError } = await supabaseAdmin
           .from("clientes")
@@ -342,12 +357,13 @@ export async function GET(req: Request) {
         if (updateError) {
           console.error("Error actualizando fecha de recordatorio CRM:", {
             customerId,
+            emailQueueId: queuedEmail.id,
             error: updateError,
           });
         }
       }
 
-      reactivacionesEnviadas.push({
+      reactivacionesEncoladas.push({
         clienteId: customerId,
         correo: email,
         sellosActuales: currentStampBalance,
@@ -368,11 +384,11 @@ export async function GET(req: Request) {
       resumen: {
         clientesEvaluados: customers.length,
         premiosPorVencer: premiosEnviados.length,
-        reactivaciones: reactivacionesEnviadas.length,
+        reactivacionesEncoladas: reactivacionesEncoladas.length,
         omitidos: omitidos.length,
       },
       premiosEnviados,
-      reactivacionesEnviadas,
+      reactivacionesEncoladas,
       omitidos,
     });
   } catch (error) {

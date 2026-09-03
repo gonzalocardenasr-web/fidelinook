@@ -4,6 +4,7 @@ import { supabaseAdmin } from "../supabase-admin";
 import { resend } from "./resend";
 import { sendRegisterVerificationEmail } from "./sendRegisterVerificationEmail";
 import { sendVerificationEmail } from "./sendVerificationEmail";
+import { sendReactivationEmail } from "./sendReactivationEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -210,10 +211,47 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
 
     case "REGISTER_VERIFICATION":
       return sendQueuedRegisterVerification(email);
+    case "CRM_REACTIVATION":
+      return sendQueuedReactivation(email);
 
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
+}
+
+async function sendQueuedReactivation(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const sellosActuales = email.payload?.sellosActuales;
+  const metaSellos = email.payload?.metaSellos;
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("CRM_REACTIVATION payload requires nombre");
+  }
+
+  if (typeof sellosActuales !== "number" || !Number.isFinite(sellosActuales)) {
+    throw new Error("CRM_REACTIVATION payload requires sellosActuales");
+  }
+
+  if (typeof metaSellos !== "number" || !Number.isFinite(metaSellos)) {
+    throw new Error("CRM_REACTIVATION payload requires metaSellos");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("CRM_REACTIVATION payload requires publicToken");
+  }
+
+  const result = await sendReactivationEmail(
+    email.recipient_email,
+    nombre,
+    sellosActuales,
+    metaSellos,
+    publicToken,
+  );
+
+  return result.data?.id ?? null;
 }
 
 // ============================================================
