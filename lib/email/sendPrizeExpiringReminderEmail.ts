@@ -9,7 +9,8 @@ export async function sendPrizeExpiringReminderEmail(
   nombre: string,
   premioNombre: string,
   vencimiento: string,
-  publicToken: string
+  publicToken: string,
+  idempotencyKey: string,
 ) {
   const cardUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
 
@@ -24,12 +25,13 @@ export async function sendPrizeExpiringReminderEmail(
     botonUrl: cardUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Tu premio Fideli-NooK está por vencer",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Tu premio Fideli-NooK está por vencer",
+      html,
+      text: `
 Hola ${nombre},
 
 Tu premio ${premioNombre} está próximo a vencer.
@@ -41,7 +43,11 @@ ${cardUrl}
 
 Nook Heladería de Autora
     `,
-  });
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);

@@ -256,6 +256,7 @@ async function sendQueuedReactivation(
     sellosActuales,
     metaSellos,
     publicToken,
+    email.idempotency_key,
   );
 
   return result.data?.id ?? null;
@@ -291,6 +292,7 @@ async function sendQueuedRewardExpiring(
     premioNombre,
     vencimiento,
     publicToken,
+    email.idempotency_key,
   );
 
   return result.data?.id ?? null;
@@ -306,23 +308,28 @@ async function sendDevTestEmail(email: EmailQueueRow): Promise<string | null> {
       ? email.payload.message
       : "Nook email queue dispatcher test.";
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email.recipient_email,
-    subject: "[DEV] Nook Email Queue",
-    html: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email.recipient_email,
+      subject: "[DEV] Nook Email Queue",
+      html: `
       <p>Prueba controlada del nuevo motor de correos Nook.</p>
       <p>${escapeHtml(message)}</p>
       <p>Queue ID: ${email.id}</p>
     `,
-    text: `
+      text: `
 Prueba controlada del nuevo motor de correos Nook.
 
 ${message}
 
 Queue ID: ${email.id}
     `.trim(),
-  });
+    },
+    {
+      idempotencyKey: email.idempotency_key,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
@@ -353,6 +360,7 @@ async function sendQueuedCardVerification(
     email.recipient_email,
     nombre,
     token,
+    email.idempotency_key,
   );
 
   return result.data?.id ?? null;
@@ -380,6 +388,7 @@ async function sendQueuedRegisterVerification(
     email.recipient_email,
     nombre,
     token,
+    email.idempotency_key,
   );
 
   return result.data?.id ?? null;

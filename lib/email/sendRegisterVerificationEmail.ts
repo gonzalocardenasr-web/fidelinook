@@ -7,7 +7,8 @@ const FROM_EMAIL =
 export async function sendRegisterVerificationEmail(
   email: string,
   nombre: string,
-  token: string
+  token: string,
+  idempotencyKey: string,
 ) {
   const verifyUrl = `https://fidelidad.nookheladeria.cl/verificar-registro?token=${token}`;
 
@@ -21,12 +22,13 @@ export async function sendRegisterVerificationEmail(
     botonUrl: verifyUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Confirma tu cuenta en Nook",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Confirma tu cuenta en Nook",
+      html,
+      text: `
 Hola ${nombre},
 
 Confirma tu cuenta aquí:
@@ -34,7 +36,11 @@ ${verifyUrl}
 
 Nook Heladería de Autora
     `,
-  });
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);

@@ -9,7 +9,8 @@ export async function sendReactivationEmail(
   nombre: string,
   sellosActuales: number,
   metaSellos: number,
-  publicToken: string
+  publicToken: string,
+  idempotencyKey: string,
 ) {
   const cardUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
   const sellosFaltantes = Math.max(metaSellos - sellosActuales, 0);
@@ -27,12 +28,13 @@ export async function sendReactivationEmail(
     botonUrl: cardUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Tu próximo helado gratis está más cerca de lo que crees 🍦",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Tu próximo helado gratis está más cerca de lo que crees 🍦",
+      html,
+      text: `
 Hola ${nombre},
 
 No te hemos visto hace un tiempito en Nook.
@@ -49,7 +51,11 @@ ${cardUrl}
 
 Nook Heladería de Autora
     `,
-  });
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);

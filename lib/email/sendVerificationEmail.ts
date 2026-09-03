@@ -7,7 +7,8 @@ const FROM_EMAIL =
 export async function sendVerificationEmail(
   email: string,
   nombre: string,
-  token: string
+  token: string,
+  idempotencyKey: string,
 ) {
   const verifyUrl = `https://fidelidad.nookheladeria.cl/verificar?token=${token}`;
 
@@ -22,12 +23,13 @@ export async function sendVerificationEmail(
     botonUrl: verifyUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Confirma tu correo para activar tu tarjeta Fideli-NooK",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Confirma tu correo para activar tu tarjeta Fideli-NooK",
+      html,
+      text: `
 Hola ${nombre},
 
 Gracias por registrarte en Fideli-NooK.
@@ -41,7 +43,11 @@ Te esperamos en Tomás Moro 695, Local 4, Las Condes.
 
 Nook Heladería de Autora
     `,
-  });
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
