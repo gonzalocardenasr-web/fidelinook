@@ -23,7 +23,9 @@ export default function LoginForm() {
     const emailParam = searchParams.get("email");
 
     if (verified === "1") {
-      setMensajeInfo("Cuenta verificada correctamente. Ahora ingresa con tu correo y contraseña.");
+      setMensajeInfo(
+        "Cuenta verificada correctamente. Ahora ingresa con tu correo y contraseña.",
+      );
     }
 
     if (emailParam) {
@@ -141,19 +143,12 @@ export default function LoginForm() {
               </button>
 
               <div className="mt-4 text-sm text-center space-y-2">
-                <Link href="/recuperar-contrasena" className="text-[#4c00f7] underline">
+                <Link
+                  href="/recuperar-contrasena"
+                  className="text-[#4c00f7] underline"
+                >
                   ¿Olvidaste tu contraseña?
                 </Link>
-
-                <p>
-                  ¿No tienes cuenta?{" "}
-                  <span
-                    onClick={() => router.push("/register")}
-                    className="text-[#4c00f7] font-semibold cursor-pointer"
-                  >
-                    Crear cuenta
-                  </span>
-                </p>
               </div>
             </form>
           </div>

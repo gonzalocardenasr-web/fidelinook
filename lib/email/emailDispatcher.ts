@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { supabaseAdmin } from "../supabase-admin";
 import { resend } from "./resend";
 import { sendRegisterVerificationEmail } from "./sendRegisterVerificationEmail";
+import { sendVerificationEmail } from "./sendVerificationEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -204,6 +205,9 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
     case "DEV_TEST":
       return sendDevTestEmail(email);
 
+    case "CARD_VERIFICATION":
+      return sendQueuedCardVerification(email);
+
     case "REGISTER_VERIFICATION":
       return sendQueuedRegisterVerification(email);
 
@@ -243,6 +247,33 @@ Queue ID: ${email.id}
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
   }
+
+  return result.data?.id ?? null;
+}
+
+// ============================================================
+// CARD VERIFICATION
+// ============================================================
+
+async function sendQueuedCardVerification(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const token = email.payload?.token;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("CARD_VERIFICATION payload requires nombre");
+  }
+
+  if (typeof token !== "string" || !token.trim()) {
+    throw new Error("CARD_VERIFICATION payload requires token");
+  }
+
+  const result = await sendVerificationEmail(
+    email.recipient_email,
+    nombre,
+    token,
+  );
 
   return result.data?.id ?? null;
 }

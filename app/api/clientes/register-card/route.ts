@@ -96,9 +96,9 @@ export async function POST(req: Request) {
     try {
       queuedEmail = await enqueueEmail({
         recipientEmail: customer.correo,
-        emailType: "REGISTER_VERIFICATION",
+        emailType: "CARD_VERIFICATION",
         priority: 0,
-        idempotencyKey: `card-registration-verification:${customer.id}:${verificationToken}`,
+        idempotencyKey: `card-verification:${customer.id}:${verificationToken}`,
         payload: {
           nombre: customer.nombre,
           token: verificationToken,
