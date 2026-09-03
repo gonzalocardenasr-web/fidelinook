@@ -41,7 +41,7 @@ export async function dispatchQueuedEmails(
   const recoveredStale = await recoverStaleProcessingEmails();
 
   const { data: claimedData, error: claimError } = await supabaseAdmin.rpc(
-    "claim_pending_emails",
+    "claim_pending_emails_with_budget",
     {
       p_worker_id: workerId,
       p_limit: safeLimit,
@@ -83,10 +83,13 @@ export async function dispatchQueuedEmailById(
 
   const recoveredStale = await recoverStaleProcessingEmails();
 
-  const { data, error } = await supabaseAdmin.rpc("claim_pending_email_by_id", {
-    p_email_id: emailId,
-    p_worker_id: workerId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "claim_pending_email_by_id_with_budget",
+    {
+      p_email_id: emailId,
+      p_worker_id: workerId,
+    },
+  );
 
   if (error) {
     throw new Error(`Could not claim email ${emailId}: ${error.message}`);
