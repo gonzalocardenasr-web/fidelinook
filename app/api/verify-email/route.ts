@@ -3,7 +3,8 @@ import {
   activateCustomerByToken,
   getCustomerActivationErrorResponse,
 } from "../../../lib/customer-activation";
-import { sendCardActivatedEmail } from "../../../lib/email/sendCardActivatedEmail";
+import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
+import { enqueueEmail } from "../../../lib/email/emailQueue";
 
 export async function GET(req: Request) {
   try {
@@ -21,13 +22,27 @@ export async function GET(req: Request) {
      */
     if (customer.activated) {
       try {
-        await sendCardActivatedEmail(
-          customer.correo,
-          customer.nombre,
-          customer.publicToken,
-        );
+        const queuedEmail = await enqueueEmail({
+          recipientEmail: customer.correo,
+          emailType: "CARD_ACTIVATED",
+          priority: 1,
+          idempotencyKey: `card-activated:${customer.eventId}`,
+          payload: {
+            nombre: customer.nombre,
+            publicToken: customer.publicToken,
+          },
+          customerId: customer.customerId,
+          sourceType: "card_activation",
+          sourceReference: String(customer.eventId),
+          maxAttempts: 5,
+        });
+
+        await dispatchQueuedEmailById(queuedEmail.id);
       } catch (emailError) {
-        console.error("Error enviando correo de tarjeta activa:", emailError);
+        console.error(
+          "Error encolando/despachando correo de tarjeta activa:",
+          emailError,
+        );
       }
     }
 

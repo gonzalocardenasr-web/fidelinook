@@ -6,6 +6,7 @@ import { sendRegisterVerificationEmail } from "./sendRegisterVerificationEmail";
 import { sendVerificationEmail } from "./sendVerificationEmail";
 import { sendReactivationEmail } from "./sendReactivationEmail";
 import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail";
+import { sendCardActivatedEmail } from "./sendCardActivatedEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -221,6 +222,10 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
     case "REWARD_EXPIRING":
       return sendQueuedRewardExpiring(email);
 
+    case "CARD_ACTIVATED":
+    case "CARD_RECOVERY":
+      return sendQueuedCardAccess(email);
+
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
@@ -291,6 +296,30 @@ async function sendQueuedRewardExpiring(
     nombre,
     premioNombre,
     vencimiento,
+    publicToken,
+    email.idempotency_key,
+  );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedCardAccess(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error(`${email.email_type} payload requires nombre`);
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error(`${email.email_type} payload requires publicToken`);
+  }
+
+  const result = await sendCardActivatedEmail(
+    email.recipient_email,
+    nombre,
     publicToken,
     email.idempotency_key,
   );
