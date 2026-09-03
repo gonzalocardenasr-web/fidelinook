@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../lib/supabase-admin";
-import { sendPrizeExpiringReminderEmail } from "../../../lib/email/sendPrizeExpiringReminderEmail";
 import { enqueueEmail } from "../../../lib/email/emailQueue";
 
 type CustomerRow = {
@@ -210,7 +209,7 @@ export async function GET(req: Request) {
       }
     }
 
-    const premiosEnviados: Array<{
+    const premiosEncolados: Array<{
       clienteId: number;
       correo: string;
       rewardId: number;
@@ -257,16 +256,25 @@ export async function GET(req: Request) {
         if (!reward.expires_at) continue;
 
         if (!dryRun) {
-          await sendPrizeExpiringReminderEmail(
-            email,
-            customerName,
-            reward.name,
-            reward.expires_at,
-            publicToken,
-          );
+          await enqueueEmail({
+            recipientEmail: email,
+            emailType: "REWARD_EXPIRING",
+            priority: 2,
+            idempotencyKey: `reward-expiring:${reward.id}`,
+            payload: {
+              nombre: customerName,
+              premioNombre: reward.name,
+              vencimiento: reward.expires_at,
+              publicToken,
+            },
+            customerId,
+            sourceType: "daily_crm_reward_expiring",
+            sourceReference: String(reward.id),
+            maxAttempts: 5,
+          });
         }
 
-        premiosEnviados.push({
+        premiosEncolados.push({
           clienteId: customerId,
           correo: email,
           rewardId: reward.id,
@@ -383,11 +391,11 @@ export async function GET(req: Request) {
       },
       resumen: {
         clientesEvaluados: customers.length,
-        premiosPorVencer: premiosEnviados.length,
+        premiosPorVencerEncolados: premiosEncolados.length,
         reactivacionesEncoladas: reactivacionesEncoladas.length,
         omitidos: omitidos.length,
       },
-      premiosEnviados,
+      premiosEncolados,
       reactivacionesEncoladas,
       omitidos,
     });

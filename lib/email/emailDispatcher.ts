@@ -5,6 +5,7 @@ import { resend } from "./resend";
 import { sendRegisterVerificationEmail } from "./sendRegisterVerificationEmail";
 import { sendVerificationEmail } from "./sendVerificationEmail";
 import { sendReactivationEmail } from "./sendReactivationEmail";
+import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -214,6 +215,9 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
     case "CRM_REACTIVATION":
       return sendQueuedReactivation(email);
 
+    case "REWARD_EXPIRING":
+      return sendQueuedRewardExpiring(email);
+
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
@@ -248,6 +252,41 @@ async function sendQueuedReactivation(
     nombre,
     sellosActuales,
     metaSellos,
+    publicToken,
+  );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedRewardExpiring(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const premioNombre = email.payload?.premioNombre;
+  const vencimiento = email.payload?.vencimiento;
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("REWARD_EXPIRING payload requires nombre");
+  }
+
+  if (typeof premioNombre !== "string" || !premioNombre.trim()) {
+    throw new Error("REWARD_EXPIRING payload requires premioNombre");
+  }
+
+  if (typeof vencimiento !== "string" || !vencimiento.trim()) {
+    throw new Error("REWARD_EXPIRING payload requires vencimiento");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("REWARD_EXPIRING payload requires publicToken");
+  }
+
+  const result = await sendPrizeExpiringReminderEmail(
+    email.recipient_email,
+    nombre,
+    premioNombre,
+    vencimiento,
     publicToken,
   );
 
