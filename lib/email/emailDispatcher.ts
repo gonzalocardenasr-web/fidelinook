@@ -7,6 +7,7 @@ import { sendVerificationEmail } from "./sendVerificationEmail";
 import { sendReactivationEmail } from "./sendReactivationEmail";
 import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail";
 import { sendCardActivatedEmail } from "./sendCardActivatedEmail";
+import { sendResetPasswordEmail } from "./sendResetPasswordEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -226,6 +227,8 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
     case "CARD_RECOVERY":
       return sendQueuedCardAccess(email);
 
+    case "PASSWORD_RESET":
+      return sendQueuedPasswordReset(email);
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
@@ -321,6 +324,24 @@ async function sendQueuedCardAccess(
     email.recipient_email,
     nombre,
     publicToken,
+    email.idempotency_key,
+  );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedPasswordReset(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const resetUrl = email.payload?.resetUrl;
+
+  if (typeof resetUrl !== "string" || !resetUrl.trim()) {
+    throw new Error("PASSWORD_RESET payload requires resetUrl");
+  }
+
+  const result = await sendResetPasswordEmail(
+    email.recipient_email,
+    resetUrl,
     email.idempotency_key,
   );
 

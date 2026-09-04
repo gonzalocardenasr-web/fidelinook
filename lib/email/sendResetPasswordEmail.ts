@@ -6,7 +6,8 @@ const FROM_EMAIL =
 
 export async function sendResetPasswordEmail(
   email: string,
-  resetUrl: string
+  resetUrl: string,
+  idempotencyKey: string,
 ) {
   const html = baseTemplate({
     titulo: "Restablece tu contraseña",
@@ -19,12 +20,13 @@ export async function sendResetPasswordEmail(
     botonUrl: resetUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Restablece tu contraseña en Nook",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Restablece tu contraseña en Nook",
+      html,
+      text: `
 Recibimos una solicitud para cambiar la contraseña de tu cuenta en Nook.
 
 Restablece tu contraseña aquí:
@@ -34,7 +36,11 @@ Si no solicitaste este cambio, puedes ignorar este correo.
 
 Nook Heladería de Autora
     `,
-  });
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
