@@ -9,6 +9,9 @@ import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail
 import { sendCardActivatedEmail } from "./sendCardActivatedEmail";
 import { sendResetPasswordEmail } from "./sendResetPasswordEmail";
 import { sendCampaignRewardAssignedEmail } from "./sendCampaignRewardAssignedEmail";
+import { sendPrizeEmail } from "./sendPrizeEmail";
+import { sendRewardRedeemedEmail } from "./sendRewardRedeemedEmail";
+import { sendStampEmail } from "./sendStampEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -234,6 +237,15 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
     case "CAMPAIGN_REWARD_ASSIGNED":
       return sendQueuedCampaignRewardAssigned(email);
 
+    case "PRIZE_GENERATED":
+      return sendQueuedPrizeGenerated(email);
+
+    case "REWARD_REDEEMED":
+      return sendQueuedRewardRedeemed(email);
+
+    case "STAMP_EARNED":
+      return sendQueuedStampEarned(email);
+
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
@@ -411,6 +423,112 @@ async function sendQueuedCampaignRewardAssigned(
       trackingError,
     );
   }
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedPrizeGenerated(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const premioNombre = email.payload?.premioNombre;
+  const vencimiento = email.payload?.vencimiento;
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("PRIZE_GENERATED payload requires nombre");
+  }
+
+  if (typeof premioNombre !== "string" || !premioNombre.trim()) {
+    throw new Error("PRIZE_GENERATED payload requires premioNombre");
+  }
+
+  if (
+    vencimiento !== undefined &&
+    vencimiento !== null &&
+    typeof vencimiento !== "string"
+  ) {
+    throw new Error("PRIZE_GENERATED payload has invalid vencimiento");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("PRIZE_GENERATED payload requires publicToken");
+  }
+
+  const result = await sendPrizeEmail(
+    email.recipient_email,
+    nombre,
+    premioNombre,
+    typeof vencimiento === "string" ? vencimiento : undefined,
+    publicToken,
+    email.idempotency_key,
+  );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedRewardRedeemed(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const premioNombre = email.payload?.premioNombre;
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("REWARD_REDEEMED payload requires nombre");
+  }
+
+  if (typeof premioNombre !== "string" || !premioNombre.trim()) {
+    throw new Error("REWARD_REDEEMED payload requires premioNombre");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("REWARD_REDEEMED payload requires publicToken");
+  }
+
+  const result = await sendRewardRedeemedEmail(
+    email.recipient_email,
+    nombre,
+    premioNombre,
+    publicToken,
+    email.idempotency_key,
+  );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedStampEarned(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombre = email.payload?.nombre;
+  const sellosActuales = Number(email.payload?.sellosActuales);
+  const metaSellos = Number(email.payload?.metaSellos);
+  const publicToken = email.payload?.publicToken;
+
+  if (typeof nombre !== "string" || !nombre.trim()) {
+    throw new Error("STAMP_EARNED payload requires nombre");
+  }
+
+  if (!Number.isFinite(sellosActuales) || sellosActuales < 0) {
+    throw new Error("STAMP_EARNED payload requires sellosActuales");
+  }
+
+  if (!Number.isFinite(metaSellos) || metaSellos <= 0) {
+    throw new Error("STAMP_EARNED payload requires metaSellos");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("STAMP_EARNED payload requires publicToken");
+  }
+
+  const result = await sendStampEmail(
+    email.recipient_email,
+    nombre,
+    sellosActuales,
+    metaSellos,
+    publicToken,
+    email.idempotency_key,
+  );
 
   return result.data?.id ?? null;
 }

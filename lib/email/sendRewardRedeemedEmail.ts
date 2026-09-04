@@ -8,7 +8,8 @@ export async function sendRewardRedeemedEmail(
   email: string,
   nombre: string,
   premioNombre: string,
-  publicToken: string
+  publicToken: string,
+  idempotencyKey: string,
 ) {
   const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
 
@@ -24,12 +25,13 @@ export async function sendRewardRedeemedEmail(
     botonUrl: tarjetaUrl,
   });
 
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Tu premio Fideli-NooK fue canjeado correctamente",
-    html,
-    text: `
+  const result = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Tu premio Fideli-NooK fue canjeado correctamente",
+      html,
+      text: `
 Hola ${nombre},
 
 Confirmamos que tu premio de Fideli-NooK fue canjeado correctamente.
@@ -44,8 +46,12 @@ Gracias por visitarnos. Te esperamos pronto para que sigas acumulando sellos.
 Tomás Moro 695, Local 4, Las Condes.
 
 Nook Heladería de Autora
-    `,
-  });
+      `,
+    },
+    {
+      idempotencyKey,
+    },
+  );
 
   if (result.error) {
     throw new Error(`Resend error: ${JSON.stringify(result.error)}`);

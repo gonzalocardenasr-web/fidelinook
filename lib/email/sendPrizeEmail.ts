@@ -9,28 +9,29 @@ export async function sendPrizeEmail(
   nombre: string,
   premioNombre: string,
   vencimiento: string | undefined,
-  publicToken: string
+  publicToken: string,
+  idempotencyKey: string,
 ) {
-  try {
-    const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+  const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
 
-    const html = baseTemplate({
-      titulo: `¡Felicitaciones ${nombre}! 🎉`,
-      mensaje: `
-        Completaste tu tarjeta en <strong>Fideli-NooK</strong> y ya tienes un premio disponible.<br/><br/>
-        
-        <strong>Premio:</strong> ${premioNombre}<br/>
-        <strong>Vencimiento:</strong> ${vencimiento || "Sin definir"}<br/><br/>
-        
-        Muéstralo en nuestro local para canjearlo.<br/><br/>
-        
-        Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
-      `,
-      botonTexto: "Ver mi tarjeta",
-      botonUrl: tarjetaUrl,
-    });
+  const html = baseTemplate({
+    titulo: `¡Felicitaciones ${nombre}! 🎉`,
+    mensaje: `
+      Completaste tu tarjeta en <strong>Fideli-NooK</strong> y ya tienes un premio disponible.<br/><br/>
 
-    await resend.emails.send({
+      <strong>Premio:</strong> ${premioNombre}<br/>
+      <strong>Vencimiento:</strong> ${vencimiento || "Sin definir"}<br/><br/>
+
+      Muéstralo en nuestro local para canjearlo.<br/><br/>
+
+      Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
+    `,
+    botonTexto: "Ver mi tarjeta",
+    botonUrl: tarjetaUrl,
+  });
+
+  const result = await resend.emails.send(
+    {
       from: FROM_EMAIL,
       to: email,
       subject: "¡Ganaste un helado gratis en Nook! 🎉",
@@ -50,8 +51,15 @@ Puedes canjearlo en Tomás Moro 695, Local 4, Las Condes
 
 Nook Heladería de Autora
       `,
-    });
-  } catch (error) {
-    console.error("Error enviando correo de premio:", error);
+    },
+    {
+      idempotencyKey,
+    },
+  );
+
+  if (result.error) {
+    throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
   }
+
+  return result;
 }

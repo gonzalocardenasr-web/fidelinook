@@ -98,12 +98,12 @@ export default function ClientesPage() {
       }
 
       const seleccionadoGuardado = localStorage.getItem(
-        "clientesClienteSeleccionadoId"
+        "clientesClienteSeleccionadoId",
       );
 
       if (mantenerSeleccion && seleccionadoGuardado) {
         const existeSeleccionado = listaClientes.some(
-          (c) => String(c.id) === String(seleccionadoGuardado)
+          (c) => String(c.id) === String(seleccionadoGuardado),
         );
 
         if (existeSeleccionado) {
@@ -167,7 +167,7 @@ export default function ClientesPage() {
             (cliente.nombre || "")
               .trim()
               .toLowerCase()
-              .startsWith(letra.toLowerCase())
+              .startsWith(letra.toLowerCase()),
           );
 
     if (listaFiltrada.length > 0) {
@@ -178,11 +178,12 @@ export default function ClientesPage() {
   };
 
   const cliente =
-    clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) || null;
+    clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
+    null;
 
   const premiosArray = Array.isArray(cliente?.premios) ? cliente.premios : [];
   const premiosActivos = premiosArray.filter(
-    (premio: Premio) => premio.estado === "activo"
+    (premio: Premio) => premio.estado === "activo",
   );
 
   const validarCompra = async () => {
@@ -193,7 +194,7 @@ export default function ClientesPage() {
 
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
       setMensaje(
-        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero."
+        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.",
       );
       return;
     }
@@ -212,7 +213,7 @@ export default function ClientesPage() {
       const nuevosSellos = sellosActuales + sellosAAgregar;
 
       let sellosFinales = nuevosSellos;
-      let premiosFinales = [...premiosActuales];
+      const premiosFinales = [...premiosActuales];
       let mensajeFinal = esPrimeraCompraHistorica
         ? "Primera compra registrada. Se sumaron 2 sellos."
         : "Compra validada correctamente. Se sumó 1 sello.";
@@ -225,21 +226,24 @@ export default function ClientesPage() {
           nombre: "Helado simple gratis",
           estado: "activo",
           vencimiento: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
           ).toISOString(),
         };
 
         premiosFinales.push(premioGenerado);
         sellosFinales = 0;
-        mensajeFinal = "¡Cliente completó 7 sellos! Premio generado automáticamente.";
+        mensajeFinal =
+          "¡Cliente completó 7 sellos! Premio generado automáticamente.";
       }
+
+      const selloRegistradoAt = new Date().toISOString();
 
       const { error } = await supabase
         .from("clientes")
         .update({
           sellos: sellosFinales,
           premios: premiosFinales,
-          fecha_ultimo_sello: new Date().toISOString(),
+          fecha_ultimo_sello: selloRegistradoAt,
         })
         .eq("id", cliente.id);
 
@@ -262,6 +266,9 @@ export default function ClientesPage() {
               premioNombre: premioGenerado.nombre,
               vencimiento: premioGenerado.vencimiento,
               publicToken: cliente.public_token,
+              customerId: cliente.id,
+              idempotencyKey: `legacy-prize-generated:${cliente.id}:${premioGenerado.id}`,
+              sourceReference: String(premioGenerado.id),
             }),
           });
         } else {
@@ -276,6 +283,9 @@ export default function ClientesPage() {
               sellosActuales: nuevosSellos,
               metaSellos: 7,
               publicToken: cliente.public_token,
+              customerId: cliente.id,
+              idempotencyKey: `legacy-stamp-earned:${cliente.id}:${selloRegistradoAt}`,
+              sourceReference: selloRegistradoAt,
             }),
           });
         }
@@ -301,7 +311,7 @@ export default function ClientesPage() {
 
     if (!cliente.tarjeta_activa || !cliente.email_verificado) {
       setMensaje(
-        "El cliente aún no ha activado su tarjeta. No es posible canjear premios."
+        "El cliente aún no ha activado su tarjeta. No es posible canjear premios.",
       );
       return;
     }
@@ -315,7 +325,7 @@ export default function ClientesPage() {
         : [];
 
       const indexPremioActivo = premiosActuales.findIndex(
-        (premio: Premio) => premio.estado === "activo"
+        (premio: Premio) => premio.estado === "activo",
       );
 
       if (indexPremioActivo === -1) {
@@ -355,6 +365,9 @@ export default function ClientesPage() {
             nombre: cliente.nombre,
             premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
             publicToken: cliente.public_token,
+            customerId: cliente.id,
+            idempotencyKey: `legacy-reward-redeemed:${cliente.id}:${premioActivo.id}`,
+            sourceReference: String(premioActivo.id),
           }),
         });
       } catch (emailError) {
@@ -378,7 +391,7 @@ export default function ClientesPage() {
     }
 
     const confirmado = window.confirm(
-      `¿Seguro que quieres eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`
+      `¿Seguro que quieres eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`,
     );
 
     if (!confirmado) return;
@@ -411,7 +424,7 @@ export default function ClientesPage() {
 
   const reiniciarDatos = async () => {
     const confirmado = window.confirm(
-      "¿Seguro que quieres eliminar TODOS los clientes? Esta acción no se puede deshacer."
+      "¿Seguro que quieres eliminar TODOS los clientes? Esta acción no se puede deshacer.",
     );
 
     if (!confirmado) return;
@@ -461,7 +474,7 @@ export default function ClientesPage() {
       };
 
       const escaparCSV = (
-        valor: string | number | boolean | null | undefined
+        valor: string | number | boolean | null | undefined,
       ) => {
         const texto = String(valor ?? "").replace(/"/g, '""');
         return `"${texto}"`;
@@ -485,10 +498,10 @@ export default function ClientesPage() {
       const rows = clientes.map((cliente) => {
         const premios = Array.isArray(cliente.premios) ? cliente.premios : [];
         const premiosActivosCount = premios.filter(
-          (premio) => premio.estado === "activo"
+          (premio) => premio.estado === "activo",
         ).length;
         const premiosUsadosCount = premios.filter(
-          (premio) => premio.estado === "usado"
+          (premio) => premio.estado === "usado",
         ).length;
 
         return [
@@ -509,7 +522,9 @@ export default function ClientesPage() {
           .join(",");
       });
 
-      const csvContent = [headers.map(escaparCSV).join(","), ...rows].join("\n");
+      const csvContent = [headers.map(escaparCSV).join(","), ...rows].join(
+        "\n",
+      );
 
       const blob = new Blob([csvContent], {
         type: "text/csv;charset=utf-8;",
@@ -552,11 +567,11 @@ export default function ClientesPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <Link
-                    href="/"
-                    className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                >
-                    ← Volver al inicio
-                </Link>
+                href="/"
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
+                ← Volver al inicio
+              </Link>
 
               <h1 className="mt-3 text-2xl font-bold">Clientes</h1>
 
@@ -565,7 +580,9 @@ export default function ClientesPage() {
               </p>
 
               <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
+                {cargandoRol
+                  ? "Cargando rol..."
+                  : `Rol: ${rol ?? "sin sesión"}`}
               </p>
             </div>
 
@@ -697,20 +714,20 @@ export default function ClientesPage() {
                 </p>
 
                 <AdminClienteDetalle
-                    cliente={cliente}
-                    premiosActivos={premiosActivos}
-                    mensaje={mensaje}
-                    setMensaje={setMensaje}
-                    procesandoCompra={procesandoCompra}
-                    procesandoCanje={procesandoCanje}
-                    reiniciando={reiniciando}
-                    rol={rol}
-                    validarCompra={validarCompra}
-                    canjearPrimerPremio={canjearPrimerPremio}
-                    eliminarClienteSeleccionado={eliminarClienteSeleccionado}
-                    reiniciarDatos={reiniciarDatos}
-                    exportarCSV={exportarClientesCSV}
-                    mostrarAccionesAdministrativas={true}
+                  cliente={cliente}
+                  premiosActivos={premiosActivos}
+                  mensaje={mensaje}
+                  setMensaje={setMensaje}
+                  procesandoCompra={procesandoCompra}
+                  procesandoCanje={procesandoCanje}
+                  reiniciando={reiniciando}
+                  rol={rol}
+                  validarCompra={validarCompra}
+                  canjearPrimerPremio={canjearPrimerPremio}
+                  eliminarClienteSeleccionado={eliminarClienteSeleccionado}
+                  reiniciarDatos={reiniciarDatos}
+                  exportarCSV={exportarClientesCSV}
+                  mostrarAccionesAdministrativas={true}
                 />
               </>
             )}

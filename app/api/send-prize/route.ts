@@ -1,32 +1,68 @@
 import { NextResponse } from "next/server";
-import { sendPrizeEmail } from "../../../lib/email/sendPrizeEmail";
+
+import { enqueueEmail } from "../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, nombre, premioNombre, vencimiento, publicToken } = body;
 
-    if (!email || !nombre || !premioNombre || !publicToken) {
-      return NextResponse.json(
-        { error: "Faltan datos para enviar correo de premio" },
-        { status: 400 }
-      );
-    }
-
-    await sendPrizeEmail(
+    const {
       email,
       nombre,
       premioNombre,
       vencimiento,
-      publicToken
-    );
+      publicToken,
+      customerId,
+      idempotencyKey,
+      sourceReference,
+    } = body;
 
-    return NextResponse.json({ ok: true });
+    if (!email || !nombre || !premioNombre || !publicToken || !idempotencyKey) {
+      return NextResponse.json(
+        {
+          error: "Faltan datos para registrar el correo de premio en la cola.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const queuedEmail = await enqueueEmail({
+      recipientEmail: email,
+      emailType: "PRIZE_GENERATED",
+      priority: 1,
+      idempotencyKey,
+      payload: {
+        nombre,
+        premioNombre,
+        vencimiento: vencimiento ?? null,
+        publicToken,
+      },
+      customerId:
+        Number.isInteger(Number(customerId)) && Number(customerId) > 0
+          ? Number(customerId)
+          : null,
+      sourceType: "prize_generated",
+      sourceReference: sourceReference != null ? String(sourceReference) : null,
+      maxAttempts: 5,
+    });
+
+    const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
+
+    return NextResponse.json({
+      ok: true,
+      emailQueued: true,
+      emailSent: dispatchResult.sent > 0,
+      queueId: queuedEmail.id,
+    });
   } catch (error) {
     console.error("Error en /api/send-prize:", error);
+
     return NextResponse.json(
-      { error: "No se pudo enviar el correo de premio" },
-      { status: 500 }
+      {
+        error: "No se pudo registrar el correo de premio.",
+      },
+      { status: 500 },
     );
   }
 }

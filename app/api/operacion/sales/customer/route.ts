@@ -234,6 +234,8 @@ export async function POST(req: Request) {
 
       const movementCreated = Boolean(newApplication?.movement_created);
 
+      const loyaltyMovementId = Number(newApplication?.movement_id ?? 0);
+
       const rewardsIssued = Number(conversion?.rewards_issued ?? 0);
 
       const rewardIds = Array.isArray(conversion?.reward_ids)
@@ -338,6 +340,12 @@ export async function POST(req: Request) {
                           vencimiento: reward.expires_at,
 
                           publicToken: customer.public_token,
+
+                          customerId,
+
+                          idempotencyKey: `prize-generated:${reward.id}`,
+
+                          sourceReference: String(reward.id),
                         }),
                       },
                     );
@@ -398,6 +406,8 @@ export async function POST(req: Request) {
 
       const shouldSendStampEmail =
         movementCreated &&
+        Number.isInteger(loyaltyMovementId) &&
+        loyaltyMovementId > 0 &&
         Number.isInteger(appliedDelta) &&
         appliedDelta > 0 &&
         !rewardWasIssued;
@@ -528,6 +538,9 @@ export async function POST(req: Request) {
                   sellosActuales,
                   metaSellos,
                   publicToken: customer.public_token,
+                  customerId,
+                  idempotencyKey: `stamp-earned:${loyaltyMovementId}`,
+                  sourceReference: String(loyaltyMovementId),
                 }),
               });
 

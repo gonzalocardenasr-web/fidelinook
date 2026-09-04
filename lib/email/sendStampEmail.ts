@@ -9,30 +9,31 @@ export async function sendStampEmail(
   nombre: string,
   sellosActuales: number,
   metaSellos: number,
-  publicToken: string
+  publicToken: string,
+  idempotencyKey: string,
 ) {
-  try {
-    const sellosRestantes = Math.max(metaSellos - sellosActuales, 0);
-    const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+  const sellosRestantes = Math.max(metaSellos - sellosActuales, 0);
+  const tarjetaUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
 
-    const html = baseTemplate({
-      titulo: `¡Hola ${nombre}! 🍦`,
-      mensaje: `
-        Acabas de sumar un nuevo sello en <strong>Fideli-NooK</strong>.<br/><br/>
-        
-        Actualmente tienes <strong>${sellosActuales} de ${metaSellos} sellos</strong>.<br/><br/>
-        
-        Te faltan <strong>${sellosRestantes}</strong> para ganar tu premio.<br/><br/>
-        
-        Gracias por elegir <strong>Nook Heladería de Autora</strong>.<br/><br/>
-        
-        Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
-      `,
-      botonTexto: "Ver mi tarjeta",
-      botonUrl: tarjetaUrl,
-    });
+  const html = baseTemplate({
+    titulo: `¡Hola ${nombre}! 🍦`,
+    mensaje: `
+      Acabas de sumar un nuevo sello en <strong>Fideli-NooK</strong>.<br/><br/>
 
-    await resend.emails.send({
+      Actualmente tienes <strong>${sellosActuales} de ${metaSellos} sellos</strong>.<br/><br/>
+
+      Te faltan <strong>${sellosRestantes}</strong> para ganar tu premio.<br/><br/>
+
+      Gracias por elegir <strong>Nook Heladería de Autora</strong>.<br/><br/>
+
+      Te esperamos en <strong>Tomás Moro 695, Local 4, Las Condes</strong> 🍨
+    `,
+    botonTexto: "Ver mi tarjeta",
+    botonUrl: tarjetaUrl,
+  });
+
+  const result = await resend.emails.send(
+    {
       from: FROM_EMAIL,
       to: email,
       subject: "¡Sumaste un nuevo sello en Nook! 🍦",
@@ -53,8 +54,15 @@ Te esperamos en Tomás Moro 695, Local 4, Las Condes
 
 Nook Heladería de Autora
       `,
-    });
-  } catch (error) {
-    console.error("Error enviando correo de sello:", error);
+    },
+    {
+      idempotencyKey,
+    },
+  );
+
+  if (result.error) {
+    throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
   }
+
+  return result;
 }

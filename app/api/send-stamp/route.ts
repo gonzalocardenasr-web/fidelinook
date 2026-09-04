@@ -1,38 +1,75 @@
 import { NextResponse } from "next/server";
-import { sendStampEmail } from "../../../lib/email/sendStampEmail";
+
+import { enqueueEmail } from "../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, nombre, sellosActuales, metaSellos, publicToken } = body;
+
+    const {
+      email,
+      nombre,
+      sellosActuales,
+      metaSellos,
+      publicToken,
+      customerId,
+      idempotencyKey,
+      sourceReference,
+    } = body;
 
     if (
       !email ||
       !nombre ||
       sellosActuales == null ||
       !metaSellos ||
-      !publicToken
+      !publicToken ||
+      !idempotencyKey
     ) {
       return NextResponse.json(
-        { error: "Faltan datos para enviar correo de sello" },
-        { status: 400 }
+        {
+          error: "Faltan datos para registrar el correo de sello en la cola.",
+        },
+        { status: 400 },
       );
     }
 
-    await sendStampEmail(
-      email,
-      nombre,
-      sellosActuales,
-      metaSellos,
-      publicToken
-    );
+    const queuedEmail = await enqueueEmail({
+      recipientEmail: email,
+      emailType: "STAMP_EARNED",
+      priority: 1,
+      idempotencyKey,
+      payload: {
+        nombre,
+        sellosActuales: Number(sellosActuales),
+        metaSellos: Number(metaSellos),
+        publicToken,
+      },
+      customerId:
+        Number.isInteger(Number(customerId)) && Number(customerId) > 0
+          ? Number(customerId)
+          : null,
+      sourceType: "stamp_earned",
+      sourceReference: sourceReference != null ? String(sourceReference) : null,
+      maxAttempts: 5,
+    });
 
-    return NextResponse.json({ ok: true });
+    const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
+
+    return NextResponse.json({
+      ok: true,
+      emailQueued: true,
+      emailSent: dispatchResult.sent > 0,
+      queueId: queuedEmail.id,
+    });
   } catch (error) {
     console.error("Error en /api/send-stamp:", error);
+
     return NextResponse.json(
-      { error: "No se pudo enviar el correo de sello" },
-      { status: 500 }
+      {
+        error: "No se pudo registrar el correo de sello.",
+      },
+      { status: 500 },
     );
   }
 }

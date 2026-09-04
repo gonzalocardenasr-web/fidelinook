@@ -167,6 +167,9 @@ export async function POST(req: Request) {
                   nombre: customer.nombre,
                   premioNombre: rewardName,
                   publicToken: customer.public_token,
+                  customerId,
+                  idempotencyKey: `reward-redeemed:${rewardId}`,
+                  sourceReference: String(rewardId),
                 }),
               },
             );
