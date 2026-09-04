@@ -8,6 +8,7 @@ import { sendReactivationEmail } from "./sendReactivationEmail";
 import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail";
 import { sendCardActivatedEmail } from "./sendCardActivatedEmail";
 import { sendResetPasswordEmail } from "./sendResetPasswordEmail";
+import { sendCampaignRewardAssignedEmail } from "./sendCampaignRewardAssignedEmail";
 
 const FROM_EMAIL =
   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
@@ -229,6 +230,10 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
 
     case "PASSWORD_RESET":
       return sendQueuedPasswordReset(email);
+
+    case "CAMPAIGN_REWARD_ASSIGNED":
+      return sendQueuedCampaignRewardAssigned(email);
+
     default:
       throw new Error(`Unsupported queued email type: ${email.email_type}`);
   }
@@ -344,6 +349,68 @@ async function sendQueuedPasswordReset(
     resetUrl,
     email.idempotency_key,
   );
+
+  return result.data?.id ?? null;
+}
+
+async function sendQueuedCampaignRewardAssigned(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const nombrePremio = email.payload?.nombrePremio;
+  const descripcion = email.payload?.descripcion;
+  const vencimiento = email.payload?.vencimiento;
+  const publicToken = email.payload?.publicToken;
+  const campaignTrackingId = Number(email.payload?.campaignTrackingId);
+
+  if (typeof nombrePremio !== "string" || !nombrePremio.trim()) {
+    throw new Error("CAMPAIGN_REWARD_ASSIGNED payload requires nombrePremio");
+  }
+
+  if (descripcion !== null && typeof descripcion !== "string") {
+    throw new Error("CAMPAIGN_REWARD_ASSIGNED payload has invalid descripcion");
+  }
+
+  if (typeof vencimiento !== "string" || !vencimiento.trim()) {
+    throw new Error("CAMPAIGN_REWARD_ASSIGNED payload requires vencimiento");
+  }
+
+  if (typeof publicToken !== "string" || !publicToken.trim()) {
+    throw new Error("CAMPAIGN_REWARD_ASSIGNED payload requires publicToken");
+  }
+
+  if (!Number.isInteger(campaignTrackingId) || campaignTrackingId <= 0) {
+    throw new Error(
+      "CAMPAIGN_REWARD_ASSIGNED payload requires campaignTrackingId",
+    );
+  }
+
+  const result = await sendCampaignRewardAssignedEmail(
+    email.recipient_email,
+    nombrePremio,
+    descripcion ?? null,
+    vencimiento,
+    publicToken,
+    email.idempotency_key,
+  );
+
+  /*
+   * El proveedor ya aceptó el correo.
+   * Sincronizamos el tracking operacional de la campaña.
+   */
+  const { error: trackingError } = await supabaseAdmin
+    .from("campana_clientes")
+    .update({
+      email_enviado: true,
+    })
+    .eq("id", campaignTrackingId);
+
+  if (trackingError) {
+    console.error(
+      "Correo de campaña enviado, pero falló actualización de campana_clientes:",
+      campaignTrackingId,
+      trackingError,
+    );
+  }
 
   return result.data?.id ?? null;
 }

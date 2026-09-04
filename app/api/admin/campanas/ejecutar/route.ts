@@ -5,6 +5,8 @@ import {
   buildCustomerEventIdempotencyKey,
   recordCustomerEvent,
 } from "../../../../../lib/customer-events";
+import { dispatchQueuedEmailById } from "../../../../../lib/email/emailDispatcher";
+import { enqueueEmail } from "../../../../../lib/email/emailQueue";
 
 type LegacyReward = {
   id: string;
@@ -167,6 +169,7 @@ async function aplicarCampana({
       `
         id,
         correo,
+        public_token,
         premios,
         acepta_marketing,
         marketing_preferencia_definida
@@ -335,53 +338,42 @@ async function aplicarCampana({
       /*
        * 4. El correo es un efecto posterior. Su falla no elimina
        *    el premio ni el evento, porque el hecho ya ocurrió.
+       *
+       *    La obligación queda persistida en email_queue y su despacho
+       *    está sujeto al presupuesto P2 del Email Dispatch Manager.
        */
-      let emailEnviado = false;
-
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
-
-        if (!baseUrl) {
-          console.error("NEXT_PUBLIC_BASE_URL no está configurada.");
-        } else {
-          const emailResponse = await fetch(
-            `${baseUrl}/api/send-campana-email`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                to: cliente.correo,
-                nombrePremio: campana.premio_nombre,
-                descripcion: campana.premio_descripcion,
-                vencimiento: fechaExpiracion.toISOString(),
-              }),
-            },
+        if (!cliente.public_token) {
+          console.error(
+            "Cliente sin public_token para correo de campaña:",
+            cliente.id,
           );
+        } else {
+          const queuedEmail = await enqueueEmail({
+            recipientEmail: cliente.correo,
+            emailType: "CAMPAIGN_REWARD_ASSIGNED",
+            priority: 2,
+            idempotencyKey: `campaign-reward-assigned-email:${campaignTracking.id}`,
+            payload: {
+              nombrePremio: campana.premio_nombre,
+              descripcion: campana.premio_descripcion || null,
+              vencimiento: fechaExpiracion.toISOString(),
+              publicToken: cliente.public_token,
+              campaignTrackingId: campaignTracking.id,
+            },
+            customerId: cliente.id,
+            sourceType: "campaign_reward_assigned",
+            sourceReference: String(campaignTracking.id),
+            maxAttempts: 5,
+          });
 
-          emailEnviado = emailResponse.ok;
+          await dispatchQueuedEmailById(queuedEmail.id);
         }
       } catch (emailError) {
         console.error(
-          "Error enviando correo de campaña:",
+          "Error encolando/despachando correo de campaña:",
           cliente.id,
           emailError,
-        );
-      }
-
-      const { error: emailTrackingError } = await supabaseAdmin
-        .from("campana_clientes")
-        .update({
-          email_enviado: emailEnviado,
-        })
-        .eq("id", campaignTracking.id);
-
-      if (emailTrackingError) {
-        console.error(
-          "Error actualizando estado del correo:",
-          cliente.id,
-          emailTrackingError,
         );
       }
 
