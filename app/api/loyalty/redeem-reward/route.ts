@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { enqueueEmail } from "../../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../../lib/email/emailDispatcher";
 
 type RedeemRewardRpcResult = {
   customer_id?: unknown;
@@ -150,39 +152,25 @@ export async function POST(req: Request) {
             customerError,
           );
         } else {
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
+          const queuedEmail = await enqueueEmail({
+            recipientEmail: customer.correo,
+            emailType: "REWARD_REDEEMED",
+            priority: 1,
+            idempotencyKey: `reward-redeemed:${rewardId}`,
+            payload: {
+              nombre: customer.nombre,
+              premioNombre: rewardName,
+              publicToken: customer.public_token,
+            },
+            customerId,
+            sourceType: "reward_redeemed",
+            sourceReference: String(rewardId),
+            maxAttempts: 5,
+          });
 
-          if (!baseUrl) {
-            console.error("NEXT_PUBLIC_BASE_URL no está configurada.");
-          } else {
-            const emailResponse = await fetch(
-              `${baseUrl}/api/send-reward-redeemed`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  email: customer.correo,
-                  nombre: customer.nombre,
-                  premioNombre: rewardName,
-                  publicToken: customer.public_token,
-                  customerId,
-                  idempotencyKey: `reward-redeemed:${rewardId}`,
-                  sourceReference: String(rewardId),
-                }),
-              },
-            );
+          const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
 
-            emailSent = emailResponse.ok;
-
-            if (!emailResponse.ok) {
-              console.error(
-                "El correo de canje respondió con error:",
-                emailResponse.status,
-              );
-            }
-          }
+          emailSent = dispatchResult.sent > 0;
         }
       } catch (emailError) {
         console.error("Error enviando correo de canje:", emailError);

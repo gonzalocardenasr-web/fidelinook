@@ -16,6 +16,9 @@ import {
 import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
 import { convertLoyaltyStampsToRewards } from "../../../../../lib/loyalty-rewards";
 
+import { enqueueEmail } from "../../../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../../../lib/email/emailDispatcher";
+
 import {
   createCorrelationId,
   recordAuditLogSafely,
@@ -598,78 +601,47 @@ export async function POST(req: Request) {
                         "Los premios fueron generados, pero no se pudo preparar su notificación.",
                       );
                     } else {
-                      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
-                        /\/$/,
-                        "",
+                      const emailResults = await Promise.allSettled(
+                        (issuedRewards || []).map(async (reward) => {
+                          const queuedEmail = await enqueueEmail({
+                            recipientEmail: customer.correo,
+                            emailType: "PRIZE_GENERATED",
+                            priority: 1,
+                            idempotencyKey: `prize-generated:${reward.id}`,
+                            payload: {
+                              nombre: customer.nombre,
+                              premioNombre:
+                                reward.name || "Helado simple gratis",
+                              vencimiento: reward.expires_at ?? null,
+                              publicToken: customer.public_token,
+                            },
+                            customerId,
+                            sourceType: "prize_generated",
+                            sourceReference: String(reward.id),
+                            maxAttempts: 5,
+                          });
+
+                          await dispatchQueuedEmailById(queuedEmail.id);
+
+                          return reward.id;
+                        }),
                       );
 
-                      if (!baseUrl) {
+                      const failedEmails = emailResults.filter(
+                        (result) => result.status === "rejected",
+                      );
+
+                      if (failedEmails.length > 0) {
                         console.error(
-                          "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de premios.",
+                          "Uno o mÃ¡s correos de premio no pudieron registrarse o despacharse:",
+                          failedEmails,
                         );
 
                         warnings.push(
-                          "Los premios fueron generados, pero el correo no pudo enviarse por configuración.",
+                          conversion.rewardsIssued === 1
+                            ? "El premio fue generado, pero su correo no pudo procesarse."
+                            : "Los premios fueron generados, pero uno o mÃ¡s correos no pudieron procesarse.",
                         );
-                      } else {
-                        const emailResults = await Promise.allSettled(
-                          (issuedRewards || []).map(async (reward) => {
-                            const emailResponse = await fetch(
-                              `${baseUrl}/api/send-prize`,
-                              {
-                                method: "POST",
-
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-
-                                body: JSON.stringify({
-                                  email: customer.correo,
-
-                                  nombre: customer.nombre,
-
-                                  premioNombre:
-                                    reward.name || "Helado simple gratis",
-
-                                  vencimiento: reward.expires_at,
-
-                                  publicToken: customer.public_token,
-
-                                  customerId,
-
-                                  idempotencyKey: `prize-generated:${reward.id}`,
-
-                                  sourceReference: String(reward.id),
-                                }),
-                              },
-                            );
-
-                            if (!emailResponse.ok) {
-                              throw new Error(
-                                `El correo del premio ${reward.id} respondió ${emailResponse.status}.`,
-                              );
-                            }
-
-                            return reward.id;
-                          }),
-                        );
-
-                        const failedEmails = emailResults.filter(
-                          (result) => result.status === "rejected",
-                        );
-
-                        if (failedEmails.length > 0) {
-                          console.error(
-                            "Uno o más correos de premio no pudieron enviarse:",
-                            failedEmails,
-                          );
-
-                          warnings.push(
-                            conversion.rewardsIssued === 1
-                              ? "El premio fue generado, pero su correo no pudo enviarse."
-                              : "Los premios fueron generados, pero uno o más correos no pudieron enviarse.",
-                          );
-                        }
                       }
                     }
                   }
@@ -809,52 +781,24 @@ export async function POST(req: Request) {
                       loyaltyAccount.current_stamp_balance ?? 0,
                     );
 
-                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(
-                      /\/$/,
-                      "",
-                    );
+                    const queuedEmail = await enqueueEmail({
+                      recipientEmail: customer.correo,
+                      emailType: "STAMP_EARNED",
+                      priority: 1,
+                      idempotencyKey: `stamp-earned:${loyaltyMovementId}`,
+                      payload: {
+                        nombre: customer.nombre,
+                        sellosActuales,
+                        metaSellos,
+                        publicToken: customer.public_token,
+                      },
+                      customerId,
+                      sourceType: "stamp_earned",
+                      sourceReference: String(loyaltyMovementId),
+                      maxAttempts: 5,
+                    });
 
-                    if (!baseUrl) {
-                      console.error(
-                        "NEXT_PUBLIC_BASE_URL no está configurada para enviar correos de sellos.",
-                      );
-
-                      warnings.push(
-                        "Los sellos fueron acreditados, pero el correo no pudo enviarse por configuración.",
-                      );
-                    } else {
-                      const emailResponse = await fetch(
-                        `${baseUrl}/api/send-stamp`,
-                        {
-                          method: "POST",
-
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-
-                          body: JSON.stringify({
-                            email: customer.correo,
-                            nombre: customer.nombre,
-                            sellosActuales,
-                            metaSellos,
-                            publicToken: customer.public_token,
-                            customerId,
-                            idempotencyKey: `stamp-earned:${loyaltyMovementId}`,
-                            sourceReference: String(loyaltyMovementId),
-                          }),
-                        },
-                      );
-
-                      if (!emailResponse.ok) {
-                        const emailErrorBody = await emailResponse
-                          .text()
-                          .catch(() => "");
-
-                        throw new Error(
-                          `El correo de sellos respondió ${emailResponse.status}. ${emailErrorBody}`,
-                        );
-                      }
-                    }
+                    await dispatchQueuedEmailById(queuedEmail.id);
                   }
                 } catch (stampEmailError) {
                   console.error(

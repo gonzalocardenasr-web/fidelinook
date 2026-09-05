@@ -2,8 +2,15 @@ import { NextResponse } from "next/server";
 
 import { enqueueEmail } from "../../../lib/email/emailQueue";
 import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
+import { getOperationSession } from "../../../lib/operation-auth";
 
 export async function POST(req: Request) {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
 
