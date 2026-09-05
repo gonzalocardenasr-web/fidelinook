@@ -521,6 +521,7 @@ export default function NuevaVentaPage() {
       if (
         !isServedIceCream &&
         item.product.has_flavors &&
+        item.product.sku !== "POT-16-ARMADO" &&
         item.flavorSelections.length === 0
       ) {
         return `Debes seleccionar sabor para ${item.product.name}.`;

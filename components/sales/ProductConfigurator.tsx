@@ -143,7 +143,9 @@ export default function ProductConfigurator({
     !isServedIceCream && product.has_flavors && product.max_flavors > 0;
 
   const hasRequiredFlavors =
-    !requiresFlavorSelection || flavorSelections.length > 0;
+    !requiresFlavorSelection ||
+    product.sku === "POT-16-ARMADO" ||
+    flavorSelections.length > 0;
 
   const hasRequiredBrownieVariety =
     !requiresBrownieVariety || Boolean(brownieVarietyId);

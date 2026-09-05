@@ -945,8 +945,9 @@ export async function POST(req: Request) {
 
     /*
      * GL-004:
-     * Los potes armados solo pueden venderse utilizando sabores
-     * que tengan una bacha abierta y stock disponible.
+     * Los sabores del pote armado son opcionales al momento de la venta.
+     * Si se seleccionan sabores, deben corresponder a bachas abiertas
+     * y con stock disponible.
      *
      * Esta validación se ejecuta nuevamente en backend para evitar:
      * - solicitudes manipuladas;
@@ -1033,16 +1034,6 @@ export async function POST(req: Request) {
       }
 
       const flavorIds = getItemFlavorIds(item);
-
-      if (flavorIds.length === 0) {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: `${product.name} requiere al menos un sabor.`,
-          },
-          { status: 400 },
-        );
-      }
 
       for (const flavorId of flavorIds) {
         armedPotFlavorIds.add(flavorId);
