@@ -647,7 +647,7 @@ export default function NuevaVentaPage() {
     iframe.title = "Impresión Nook";
     iframe.setAttribute("aria-hidden", "true");
 
-    iframe.src = `/operacion/ventas/imprimir-pack/${saleId}` + "?autoPrint=1";
+    iframe.src = `/operacion/ventas/ticket/${saleId}` + "?autoPrint=1";
 
     /*
      * No usamos display:none porque algunos navegadores no
