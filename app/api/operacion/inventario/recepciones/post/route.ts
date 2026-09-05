@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const { data: operationalUser, error: operationalUserError } =
       await supabaseAdmin
         .from("operational_users")
-        .select("id, role, is_active")
+        .select("id, role, is_active, auth_user_id")
         .eq("id", session.userId)
         .maybeSingle();
 
@@ -94,11 +94,22 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!operationalUser.auth_user_id) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "El usuario operacional no tiene una identidad de inventario asociada.",
+        },
+        { status: 403 },
+      );
+    }
+
     const { error: postError } = await supabaseAdmin.rpc(
       "post_inventory_transaction",
       {
         p_transaction_id: transactionId,
-        p_posted_by: operationalUser.id,
+        p_posted_by: operationalUser.auth_user_id,
       },
     );
 
