@@ -570,13 +570,7 @@ export async function POST(req: Request) {
 
     const externalOrderId = String(body.externalOrderId || "").trim();
 
-    const allowedChannels = [
-      "local",
-      "shopify",
-      "uber_eats",
-      "rappi",
-      "pedidosya",
-    ];
+    const allowedChannels = ["local", "shopify", "uber_eats", "rappi"];
 
     if (!allowedChannels.includes(channel)) {
       return NextResponse.json(
@@ -602,7 +596,43 @@ export async function POST(req: Request) {
         ? null
         : Number(body.customerId);
 
-    const paymentMethod = String(body.paymentMethod || "manual").trim();
+    const rawPaymentMethod = String(body.paymentMethod || "")
+      .trim()
+      .toLowerCase();
+
+    let paymentMethod: string;
+
+    if (channel === "local") {
+      const allowedLocalPaymentMethods = [
+        "efectivo",
+        "tarjeta",
+        "transferencia",
+      ];
+
+      if (!allowedLocalPaymentMethods.includes(rawPaymentMethod)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Medio de pago inválido para venta local.",
+          },
+          { status: 400 },
+        );
+      }
+
+      paymentMethod = rawPaymentMethod;
+    } else {
+      if (rawPaymentMethod !== "pago_electronico") {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Las ventas digitales deben usar pago electrónico.",
+          },
+          { status: 400 },
+        );
+      }
+
+      paymentMethod = "pago_electronico";
+    }
     const items = Array.isArray(body.items) ? body.items : [];
 
     const rawManualDiscountType =

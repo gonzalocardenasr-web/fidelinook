@@ -1,9 +1,4 @@
-export type SalesChannel =
-  | "local"
-  | "shopify"
-  | "uber_eats"
-  | "rappi"
-  | "pedidosya";
+export type SalesChannel = "local" | "shopify" | "uber_eats" | "rappi";
 
 type Props = {
   channel: SalesChannel;
@@ -19,7 +14,6 @@ const digitalChannels: {
   { value: "shopify", label: "Shopify" },
   { value: "uber_eats", label: "Uber Eats" },
   { value: "rappi", label: "Rappi" },
-  { value: "pedidosya", label: "PedidosYa" },
 ];
 
 export default function SalesChannelSelector({

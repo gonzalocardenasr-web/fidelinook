@@ -149,9 +149,13 @@ function getPaymentMethodLabel(value?: string | null) {
   const normalized = String(value || "").toLowerCase();
 
   if (normalized === "efectivo") return "Efectivo";
+  if (normalized === "tarjeta") return "Tarjeta";
+  if (normalized === "transferencia") return "Transferencia";
+  if (normalized === "pago_electronico") return "Pago electrónico";
+
+  // Valores históricos: se mantienen para ventas anteriores.
   if (normalized === "debito") return "Débito";
   if (normalized === "credito") return "Crédito";
-  if (normalized === "transferencia") return "Transferencia";
   if (normalized === "manual") return "Plataforma";
 
   return value || "—";
@@ -1028,10 +1032,12 @@ export default function HistorialVentasPage() {
                 >
                   <option value="all">Todos</option>
                   <option value="efectivo">Efectivo</option>
-                  <option value="debito">Débito</option>
-                  <option value="credito">Crédito</option>
+                  <option value="tarjeta">Tarjeta</option>
                   <option value="transferencia">Transferencia</option>
-                  <option value="manual">Plataforma</option>
+                  <option value="pago_electronico">Pago electrónico</option>
+                  <option value="debito">Débito (histórico)</option>
+                  <option value="credito">Crédito (histórico)</option>
+                  <option value="manual">Plataforma (histórico)</option>
                 </select>
               </div>
 

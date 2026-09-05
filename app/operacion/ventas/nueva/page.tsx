@@ -106,7 +106,7 @@ export default function NuevaVentaPage() {
     if (channel === "local") {
       setPaymentMethod("efectivo");
     } else {
-      setPaymentMethod("manual");
+      setPaymentMethod("pago_electronico");
     }
   }, [channel]);
 
@@ -1023,6 +1023,7 @@ export default function NuevaVentaPage() {
             toppings={toppings}
             selectedCliente={selectedCliente}
             paymentMethod={paymentMethod}
+            channel={channel}
             cashReceived={cashReceived}
             orderNotes={orderNotes}
             clienteSelectorResetKey={clienteSelectorResetKey}

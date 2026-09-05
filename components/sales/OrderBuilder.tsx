@@ -25,6 +25,7 @@ type Props = {
   toppings: OptionValue[];
   selectedCliente: ClienteSelectorValue | null;
   paymentMethod: string;
+  channel: "local" | "shopify" | "uber_eats" | "rappi";
   cashReceived: string;
   subtotal: number;
   potQuantity: number;
@@ -77,6 +78,7 @@ export default function OrderBuilder({
   flavors,
   toppings,
   paymentMethod,
+  channel,
   cashReceived,
   subtotal,
   potQuantity,
@@ -512,17 +514,22 @@ export default function OrderBuilder({
             <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
               Medio de pago
             </label>
-            <select
-              value={paymentMethod}
-              onChange={(event) => onPaymentMethodChange(event.target.value)}
-              className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            >
-              <option value="efectivo">Efectivo</option>
-              <option value="debito">Débito</option>
-              <option value="credito">Crédito</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="manual">Manual</option>
-            </select>
+
+            {channel === "local" ? (
+              <select
+                value={paymentMethod}
+                onChange={(event) => onPaymentMethodChange(event.target.value)}
+                className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+            ) : (
+              <div className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] font-bold text-neutral-700">
+                Pago electrónico
+              </div>
+            )}
           </div>
 
           {paymentMethod === "efectivo" && (

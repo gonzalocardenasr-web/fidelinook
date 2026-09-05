@@ -61,9 +61,13 @@ function getPaymentMethodLabel(value: string) {
   const normalized = value.trim().toLowerCase();
 
   if (normalized === "efectivo") return "Efectivo";
+  if (normalized === "tarjeta") return "Tarjeta";
+  if (normalized === "transferencia") return "Transferencia";
+  if (normalized === "pago_electronico") return "Pago electrónico";
+
+  // Valores históricos: se mantienen para ventas anteriores.
   if (normalized === "debito") return "Débito";
   if (normalized === "credito") return "Crédito";
-  if (normalized === "transferencia") return "Transferencia";
   if (normalized === "manual") return "Plataforma";
 
   return value || "No informado";
