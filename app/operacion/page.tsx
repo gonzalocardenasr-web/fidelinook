@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import AdminClienteDetalle from "./components/AdminClienteDetalle";
 import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
 import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
@@ -185,19 +184,21 @@ export default function OperacionPage() {
     try {
       setCargando(true);
 
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("*")
-        .order("nombre", { ascending: true });
+      const res = await fetch("/api/operacion/clientes", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (error) {
-        console.error("Error cargando clientes:", error);
-        setMensaje("Error cargando clientes desde Supabase.");
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        console.error("Error cargando clientes:", data);
+        setMensaje(data.message || "Error cargando clientes.");
         setClientes([]);
         return;
       }
 
-      const listaClientes = (data || []) as Cliente[];
+      const listaClientes = (data.clientes || []) as Cliente[];
       setClientes(listaClientes);
 
       if (listaClientes.length === 0) {
@@ -237,20 +238,19 @@ export default function OperacionPage() {
     try {
       setCargandoCampanas(true);
 
-      const { data, error } = await supabase
-        .from("campanas")
-        .select(
-          "id, nombre_interno, premio_nombre, duracion_horas, fecha_lanzamiento, recurrencia, estado, total_objetivo, total_enviados, created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const res = await fetch("/api/operacion/campanas", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (error) {
-        console.error("Error cargando campañas:", error);
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        console.error("Error cargando campañas:", data);
         return;
       }
 
-      setCampanas((data || []) as Campana[]);
+      setCampanas((data.campanas || []) as Campana[]);
     } catch (error) {
       console.error("Error inesperado cargando campañas:", error);
     } finally {
