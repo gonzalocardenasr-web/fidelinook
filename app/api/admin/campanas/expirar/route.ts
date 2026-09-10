@@ -1,8 +1,96 @@
 import { NextResponse } from "next/server";
+
+import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+
+async function validateOperationalUser() {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Tu sesión no se encuentra activa." },
+        { status: 401 },
+      ),
+    };
+  }
+
+  if (!session.userId) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Tu sesión debe renovarse para identificar al usuario. Cierra sesión e inicia sesión nuevamente.",
+        },
+        { status: 401 },
+      ),
+    };
+  }
+
+  const { data: operationalUser, error: operationalUserError } =
+    await supabaseAdmin
+      .from("operational_users")
+      .select("id, role, is_active")
+      .eq("id", session.userId)
+      .maybeSingle();
+
+  if (operationalUserError) {
+    console.error(
+      "Error validando usuario operacional para expirar premios:",
+      operationalUserError,
+    );
+
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar al usuario operacional.",
+        },
+        { status: 500 },
+      ),
+    };
+  }
+
+  if (!operationalUser || !operationalUser.is_active) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "El usuario operacional no se encuentra activo.",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
+  if (operationalUser.role !== session.role) {
+    console.error(
+      "Rol inconsistente expirando premios:",
+      session.userId,
+      session.role,
+      operationalUser.role,
+    );
+
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "La sesión operacional no es válida." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return { error: null };
+}
 
 export async function POST() {
   try {
+    const validation = await validateOperationalUser();
+
+    if (validation.error) {
+      return validation.error;
+    }
+
     const { data: clientes, error } = await supabaseAdmin
       .from("clientes")
       .select("id, premios");
@@ -10,7 +98,7 @@ export async function POST() {
     if (error) {
       return NextResponse.json(
         { message: "Error cargando clientes" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -30,6 +118,7 @@ export async function POST() {
           cambio = true;
           return { ...p, estado: "caducado" };
         }
+
         return p;
       });
 
@@ -47,12 +136,12 @@ export async function POST() {
       ok: true,
       totalActualizados,
     });
-
   } catch (error) {
     console.error("Error expirando premios:", error);
+
     return NextResponse.json(
       { message: "Error expirando premios" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
