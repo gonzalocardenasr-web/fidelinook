@@ -17,7 +17,7 @@ type ReceiptActionBody = {
   unitCost?: unknown;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getOperationSession();
 
@@ -91,6 +91,90 @@ export async function GET() {
       );
     }
 
+    const url = new URL(req.url);
+    const transactionIdParam = url.searchParams.get("transactionId");
+
+    if (transactionIdParam) {
+      const transactionId = Number(transactionIdParam);
+
+      if (!Number.isInteger(transactionId) || transactionId <= 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "El identificador de la recepción no es válido.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("inventory_transactions")
+        .select(
+          `
+          id,
+          transaction_date,
+          status,
+          supplier_id,
+          reference_type,
+          reference_number,
+          notes,
+          posted_at,
+          created_at,
+          updated_at,
+          suppliers (
+            name
+          ),
+          inventory_transaction_items (
+            id,
+            inventory_item_id,
+            quantity_change,
+            unit_cost,
+            notes,
+            inventory_items (
+              id,
+              code,
+              name,
+              item_type,
+              unit
+            )
+          ),
+          inventory_transaction_types!inner (
+            code
+          )
+        `,
+        )
+        .eq("id", transactionId)
+        .eq("inventory_transaction_types.code", "PURCHASE")
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error cargando recepción:", error);
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "No fue posible obtener la recepción.",
+          },
+          { status: 500 },
+        );
+      }
+
+      if (!data) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "La recepción indicada no existe.",
+          },
+          { status: 404 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        receipt: data,
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from("inventory_items")
       .select("id, code, name, item_type, unit")
@@ -115,7 +199,7 @@ export async function GET() {
       items: data ?? [],
     });
   } catch (error) {
-    console.error("Error inesperado cargando productos de inventario:", error);
+    console.error("Error inesperado cargando inventario:", error);
 
     return NextResponse.json(
       {

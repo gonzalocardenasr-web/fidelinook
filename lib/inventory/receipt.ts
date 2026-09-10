@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase";
-
 export type InventoryReceiptStatus = "DRAFT" | "POSTED" | "CANCELLED";
 
 export type InventoryReceiptItem = {
@@ -82,6 +80,12 @@ type ReceiptDetailRow = {
   inventory_transaction_items: ReceiptItemRow[] | null;
 };
 
+type InventoryReceiptResponse = {
+  ok?: boolean;
+  message?: string;
+  receipt?: ReceiptDetailRow;
+};
+
 function getSupplierName(supplier: SupplierRelation): string | null {
   if (!supplier) {
     return null;
@@ -127,55 +131,21 @@ export async function getInventoryReceiptById(
     throw new Error("El identificador de la recepción no es válido.");
   }
 
-  const { data, error } = await supabase
-    .from("inventory_transactions")
-    .select(
-      `
-      id,
-      transaction_date,
-      status,
-      supplier_id,
-      reference_type,
-      reference_number,
-      notes,
-      posted_at,
-      created_at,
-      updated_at,
-      suppliers (
-        name
-      ),
-      inventory_transaction_items (
-        id,
-        inventory_item_id,
-        quantity_change,
-        unit_cost,
-        notes,
-        inventory_items (
-          id,
-          code,
-          name,
-          item_type,
-          unit
-        )
-      ),
-      inventory_transaction_types!inner (
-        code
-      )
-    `,
-    )
-    .eq("id", transactionId)
-    .eq("inventory_transaction_types.code", "PURCHASE")
-    .single();
+  const response = await fetch(
+    `/api/operacion/inventario/recepciones?transactionId=${transactionId}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
 
-  if (error) {
-    if (error.code === "PGRST116") {
-      throw new Error("La recepción indicada no existe.");
-    }
+  const payload = (await response.json()) as InventoryReceiptResponse;
 
-    throw new Error(`No fue posible obtener la recepción: ${error.message}`);
+  if (!response.ok || !payload.ok || !payload.receipt) {
+    throw new Error(payload.message ?? "No fue posible obtener la recepción.");
   }
 
-  const receipt = data as ReceiptDetailRow;
+  const receipt = payload.receipt;
 
   const items: InventoryReceiptItem[] = (
     receipt.inventory_transaction_items ?? []
