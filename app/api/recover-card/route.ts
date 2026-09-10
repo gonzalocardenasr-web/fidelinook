@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { randomUUID } from "crypto";
 
 import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: cliente, error } = await supabase
+    const { data: cliente, error } = await supabaseAdmin
       .from("clientes")
       .select(
         "id, nombre, correo, public_token, tarjeta_activa, email_verificado",
