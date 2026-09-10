@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
 
 type Campana = {
   id: number;
@@ -13,7 +12,13 @@ type Campana = {
   duracion_horas: number;
   fecha_lanzamiento: string;
   recurrencia: "una_vez" | "semanal";
-  estado: "borrador" | "programada" | "lanzando" | "lanzada" | "fallida" | "cancelada";
+  estado:
+    | "borrador"
+    | "programada"
+    | "lanzando"
+    | "lanzada"
+    | "fallida"
+    | "cancelada";
   total_objetivo?: number | null;
   total_enviados?: number | null;
   error_message?: string | null;
@@ -37,7 +42,9 @@ export default function CampanaDetallePage() {
   const [premioDescripcion, setPremioDescripcion] = useState("");
   const [duracionHoras, setDuracionHoras] = useState("48");
   const [fechaLanzamiento, setFechaLanzamiento] = useState("");
-  const [recurrencia, setRecurrencia] = useState<"una_vez" | "semanal">("una_vez");
+  const [recurrencia, setRecurrencia] = useState<"una_vez" | "semanal">(
+    "una_vez",
+  );
 
   const editable =
     campana?.estado === "borrador" ||
@@ -49,18 +56,19 @@ export default function CampanaDetallePage() {
       setLoading(true);
       setError("");
 
-      const { data, error } = await supabase
-        .from("campanas")
-        .select("*")
-        .eq("id", campanaId)
-        .single();
+      const response = await fetch(`/api/operacion/campanas/${campanaId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (error || !data) {
-        setError("No se encontró la campaña.");
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.campana) {
+        setError(data.message || "No se encontró la campaña.");
         return;
       }
 
-      const c = data as Campana;
+      const c = data.campana as Campana;
       setCampana(c);
       setNombreInterno(c.nombre_interno || "");
       setPremioNombre(c.premio_nombre || "");
@@ -68,17 +76,17 @@ export default function CampanaDetallePage() {
       setDuracionHoras(String(c.duracion_horas || 48));
       setFechaLanzamiento(
         c.fecha_lanzamiento
-            ? new Date(c.fecha_lanzamiento)
-                .toLocaleString("sv-SE", {
+          ? new Date(c.fecha_lanzamiento)
+              .toLocaleString("sv-SE", {
                 timeZone: "America/Santiago",
                 year: "numeric",
                 month: "2-digit",
                 day: "2-digit",
                 hour: "2-digit",
                 minute: "2-digit",
-                })
-                .replace(" ", "T")
-            : ""
+              })
+              .replace(" ", "T")
+          : "",
       );
       setRecurrencia(c.recurrencia || "una_vez");
     } catch (error) {
@@ -127,20 +135,25 @@ export default function CampanaDetallePage() {
     try {
       setGuardando(true);
 
-      const { error } = await supabase
-        .from("campanas")
-        .update({
+      const response = await fetch(`/api/operacion/campanas/${campana.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           nombre_interno: nombreInterno.trim(),
           premio_nombre: premioNombre.trim(),
           premio_descripcion: premioDescripcion.trim(),
           duracion_horas: duracion,
           fecha_lanzamiento: new Date(fechaLanzamiento).toISOString(),
           recurrencia,
-        })
-        .eq("id", campana.id);
+        }),
+      });
 
-      if (error) {
-        setError("No se pudo actualizar la campaña.");
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        setError(data.message || "No se pudo actualizar la campaña.");
         return;
       }
 
@@ -197,10 +210,14 @@ export default function CampanaDetallePage() {
               <>
                 <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4 text-sm text-[#555]">
                   <p>
-                    Estado: <span className="font-semibold text-[#4c00f7]">{campana.estado}</span>
+                    Estado:{" "}
+                    <span className="font-semibold text-[#4c00f7]">
+                      {campana.estado}
+                    </span>
                   </p>
                   <p className="mt-1">
-                    Alcance: {campana.total_enviados || 0}/{campana.total_objetivo || 0}
+                    Alcance: {campana.total_enviados || 0}/
+                    {campana.total_objetivo || 0}
                   </p>
                   {campana.error_message && (
                     <p className="mt-1 text-[#8A3550]">
