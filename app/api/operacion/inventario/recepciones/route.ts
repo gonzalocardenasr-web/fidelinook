@@ -93,6 +93,7 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const transactionIdParam = url.searchParams.get("transactionId");
+    const resource = url.searchParams.get("resource");
 
     if (transactionIdParam) {
       const transactionId = Number(transactionIdParam);
@@ -172,6 +173,32 @@ export async function GET(req: Request) {
       return NextResponse.json({
         ok: true,
         receipt: data,
+      });
+    }
+
+    if (resource === "suppliers") {
+      const { data, error } = await supabaseAdmin
+        .from("suppliers")
+        .select("id, code, name, supplier_type")
+        .eq("is_active", true)
+        .eq("supplier_type", "EXTERNAL")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando proveedores de inventario:", error);
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "No fue posible cargar los proveedores.",
+          },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        suppliers: data ?? [],
       });
     }
 

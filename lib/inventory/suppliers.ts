@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase";
-
 export type InventorySupplier = {
   id: number;
   code: string;
@@ -7,19 +5,30 @@ export type InventorySupplier = {
   supplier_type: string;
 };
 
+type InventorySuppliersResponse = {
+  ok?: boolean;
+  message?: string;
+  suppliers?: InventorySupplier[];
+};
+
 export async function getActiveInventorySuppliers(): Promise<
   InventorySupplier[]
 > {
-  const { data, error } = await supabase
-    .from("suppliers")
-    .select("id, code, name, supplier_type")
-    .eq("is_active", true)
-    .eq("supplier_type", "EXTERNAL")
-    .order("name", { ascending: true });
+  const response = await fetch(
+    "/api/operacion/inventario/recepciones?resource=suppliers",
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
 
-  if (error) {
-    throw new Error(`No fue posible cargar los proveedores: ${error.message}`);
+  const payload = (await response.json()) as InventorySuppliersResponse;
+
+  if (!response.ok || !payload.ok) {
+    throw new Error(
+      payload.message ?? "No fue posible cargar los proveedores.",
+    );
   }
 
-  return (data ?? []) as InventorySupplier[];
+  return payload.suppliers ?? [];
 }
