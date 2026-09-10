@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase";
-
 export type ActiveInventoryItem = {
   id: number;
   code: string;
@@ -16,31 +14,29 @@ type InventoryItemRow = {
   unit: string;
 };
 
+type InventoryItemsResponse = {
+  ok?: boolean;
+  message?: string;
+  items?: InventoryItemRow[];
+};
+
 export async function getActiveInventoryItems(): Promise<
   ActiveInventoryItem[]
 > {
-  const { data, error } = await supabase
-    .from("inventory_items")
-    .select(
-      `
-      id,
-      code,
-      name,
-      item_type,
-      unit
-    `,
-    )
-    .eq("is_active", true)
-    .order("item_type", { ascending: true })
-    .order("name", { ascending: true });
+  const response = await fetch("/api/operacion/inventario/recepciones", {
+    method: "GET",
+    cache: "no-store",
+  });
 
-  if (error) {
+  const payload = (await response.json()) as InventoryItemsResponse;
+
+  if (!response.ok || !payload.ok) {
     throw new Error(
-      `No fue posible obtener los productos de inventario: ${error.message}`,
+      payload.message ?? "No fue posible obtener los productos de inventario.",
     );
   }
 
-  return ((data ?? []) as InventoryItemRow[]).map((item) => ({
+  return (payload.items ?? []).map((item) => ({
     id: item.id,
     code: item.code,
     name: item.name,
