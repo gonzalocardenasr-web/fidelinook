@@ -33,9 +33,11 @@ export default function SuscripcionesPage() {
   const [mostrarActivas, setMostrarActivas] = useState(true);
   const [mostrarAsignaciones, setMostrarAsignaciones] = useState(true);
   const [mostrarCodigo, setMostrarCodigo] = useState(true);
-  const [mostrarAsignacionCliente, setMostrarAsignacionCliente] = useState(true);
+  const [mostrarAsignacionCliente, setMostrarAsignacionCliente] =
+    useState(true);
 
-  const [billingPeriodAsignacion, setBillingPeriodAsignacion] = useState("mensual");
+  const [billingPeriodAsignacion, setBillingPeriodAsignacion] =
+    useState("mensual");
   const [potsAsignacion, setPotsAsignacion] = useState("0");
   const [toppingsAsignacion, setToppingsAsignacion] = useState("0");
   const [waferAsignacion, setWaferAsignacion] = useState("0");
@@ -48,15 +50,23 @@ export default function SuscripcionesPage() {
   const [cookieCodigo, setCookieCodigo] = useState("0");
 
   const [mensaje, setMensaje] = useState("");
-  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">("info");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+    "info",
+  );
   const [codigoGenerado, setCodigoGenerado] = useState("");
 
   const [procesandoAsignacion, setProcesandoAsignacion] = useState(false);
   const [procesandoCodigo, setProcesandoCodigo] = useState(false);
-  const [eliminandoAsignacionId, setEliminandoAsignacionId] = useState<number | null>(null);
+  const [eliminandoAsignacionId, setEliminandoAsignacionId] = useState<
+    number | null
+  >(null);
 
-  const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">("all");
-  const [subscriptionFilter, setSubscriptionFilter] = useState<"all" | "active" | "expired">("all");
+  const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">(
+    "all",
+  );
+  const [subscriptionFilter, setSubscriptionFilter] = useState<
+    "all" | "active" | "expired"
+  >("all");
 
   const [cargandoRol, setCargandoRol] = useState(true);
   const [rol, setRol] = useState<string | null>(null);
@@ -65,50 +75,33 @@ export default function SuscripcionesPage() {
 
   useEffect(() => {
     cargarSesion();
-    cargarDatos();    
+    cargarDatos();
   }, []);
 
   const cargarDatos = async () => {
-    const { data: clientesData } = await supabase
-      .from("clientes")
-      .select("id, nombre, correo, telefono")
-      .order("nombre");
+    try {
+      const res = await fetch("/api/subscriptions", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-    const { data: claimsData } = await supabase
-      .from("subscription_claims")
-      .select(`
-        id,
-        source,
-        status,
-        claim_code,
-        created_at,
-        assigned_cliente_id,
-        template_id,
-        clientes:assigned_cliente_id ( nombre ),
-        subscription_templates:template_id ( name )
-      `)
-      .order("created_at", { ascending: false });
+      const data = await res.json();
 
-    const { data: subscriptionsData } = await supabase
-      .from("subscriptions")
-      .select(`
-        id,
-        status,
-        start_date,
-        end_date,
-        next_cycle_date,
-        activated_at,
-        created_at,
-        cliente_id,
-        template_id,
-        clientes:cliente_id ( nombre ),
-        subscription_templates:template_id ( name )
-      `)
-      .order("created_at", { ascending: false });
+      if (!res.ok || !data.ok) {
+        setMensaje(data.message || "No fue posible cargar las suscripciones.");
+        setTipoMensaje("error");
+        return;
+      }
 
-    setClientes(clientesData || []);
-    setAsignaciones(claimsData || []);
-    setSubscriptions(subscriptionsData || []);
+      setClientes(data.clientes || []);
+      setAsignaciones(data.claims || []);
+      setSubscriptions(data.subscriptions || []);
+    } catch (error) {
+      console.error("[suscripciones] cargarDatos error:", error);
+
+      setMensaje("No fue posible cargar las suscripciones.");
+      setTipoMensaje("error");
+    }
   };
 
   const clientesFiltrados = useMemo(() => {
@@ -119,7 +112,7 @@ export default function SuscripcionesPage() {
         (cliente.nombre || "")
           .trim()
           .toLowerCase()
-          .startsWith(letraActiva.toLowerCase())
+          .startsWith(letraActiva.toLowerCase()),
       );
     }
 
@@ -186,7 +179,7 @@ export default function SuscripcionesPage() {
     }
 
     const confirmado = window.confirm(
-      `¿Confirmas asignar una suscripción ${billingPeriodAsignacion} a ${clienteSeleccionado.nombre}?`
+      `¿Confirmas asignar una suscripción ${billingPeriodAsignacion} a ${clienteSeleccionado.nombre}?`,
     );
 
     if (!confirmado) return;
@@ -234,12 +227,14 @@ export default function SuscripcionesPage() {
 
     if (!cantidades.some((valor) => valor > 0)) {
       setTipoMensaje("error");
-      setMensaje("Debes configurar al menos un producto para generar un código.");
+      setMensaje(
+        "Debes configurar al menos un producto para generar un código.",
+      );
       return;
     }
 
     const confirmado = window.confirm(
-      `¿Confirmas generar un código para una suscripción ${billingPeriodCodigo}?`
+      `¿Confirmas generar un código para una suscripción ${billingPeriodCodigo}?`,
     );
 
     if (!confirmado) return;
@@ -302,7 +297,7 @@ export default function SuscripcionesPage() {
 
   const eliminarAsignacion = async (claimId: number) => {
     const confirmado = window.confirm(
-      "¿Seguro que quieres eliminar este registro pendiente?"
+      "¿Seguro que quieres eliminar este registro pendiente?",
     );
 
     if (!confirmado) return;
@@ -335,51 +330,51 @@ export default function SuscripcionesPage() {
 
   const eliminarSuscripcion = async (subscriptionId: number) => {
     const confirmado = window.confirm(
-        "¿Seguro que quieres eliminar esta suscripción? Esta acción no se puede deshacer."
+      "¿Seguro que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
     );
 
     if (!confirmado) return;
 
     try {
-        const res = await fetch("/api/subscriptions/delete", {
+      const res = await fetch("/api/subscriptions/delete", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ subscriptionId }),
-        });
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
-          setTipoMensaje("error");
-          setMensaje(data?.message || "No se pudo eliminar la suscripción.");
-          return;
-        }
-
-        setTipoMensaje("success");
-        setMensaje("Suscripción eliminada correctamente.");
-        await cargarDatos();
-
-        // aquí llama tus recargas actuales
-        // por ejemplo:
-        // await cargarSuscripcionesActivas();
-        // await cargarAsignacionesRecientes();
-        // o la función general que ya uses
-    } catch (error) {
-        console.error("Error eliminando suscripción:", error);
+      if (!res.ok) {
         setTipoMensaje("error");
-        setMensaje("Ocurrió un error inesperado al eliminar la suscripción.");
+        setMensaje(data?.message || "No se pudo eliminar la suscripción.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje("Suscripción eliminada correctamente.");
+      await cargarDatos();
+
+      // aquí llama tus recargas actuales
+      // por ejemplo:
+      // await cargarSuscripcionesActivas();
+      // await cargarAsignacionesRecientes();
+      // o la función general que ya uses
+    } catch (error) {
+      console.error("Error eliminando suscripción:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error inesperado al eliminar la suscripción.");
     }
-    };
+  };
 
   const cerrarSesion = async () => {
-  try {
-    await supabase.auth.signOut();
-    router.push("/login");
-  } catch (error) {
-    console.error("Error cerrando sesión:", error);
-  }
+    try {
+      await supabase.auth.signOut();
+      router.push("/login");
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+    }
   };
 
   return (
@@ -391,8 +386,8 @@ export default function SuscripcionesPage() {
               tipoMensaje === "success"
                 ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
                 : tipoMensaje === "error"
-                ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
-                : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+                  ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+                  : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
             }`}
           >
             {mensaje}
@@ -402,33 +397,36 @@ export default function SuscripcionesPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <Link
-                    href="/"
-                    className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                >
-                    ← Volver al inicio
+                href="/"
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
+                ← Volver al inicio
               </Link>
-            
-            <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
 
-            <p className="text-sm opacity-90">
-              Gestiona asignaciones, códigos y suscripciones activas del programa
-            </p>
+              <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
 
-            <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
-            </p>            
-          </div>
+              <p className="text-sm opacity-90">
+                Gestiona asignaciones, códigos y suscripciones activas del
+                programa
+              </p>
 
-          <div>
-            <button
-              onClick={cerrarSesion}
-              className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-            >
-              Cerrar sesión
-            </button>
+              <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+                {cargandoRol
+                  ? "Cargando rol..."
+                  : `Rol: ${rol ?? "sin sesión"}`}
+              </p>
+            </div>
+
+            <div>
+              <button
+                onClick={cerrarSesion}
+                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
+                Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
         <section className="rounded-2xl bg-white shadow-sm">
           <button
@@ -442,7 +440,9 @@ export default function SuscripcionesPage() {
                 Revisa suscripciones activas y su historial reciente
               </p>
             </div>
-            <span className="text-2xl leading-none">{mostrarActivas ? "−" : "+"}</span>
+            <span className="text-2xl leading-none">
+              {mostrarActivas ? "−" : "+"}
+            </span>
           </button>
 
           {mostrarActivas && (
@@ -495,72 +495,80 @@ export default function SuscripcionesPage() {
                 <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
                   <table className="min-w-full">
                     <thead className="sticky top-0 bg-white">
-                        <tr className="text-left text-xs uppercase text-neutral-500">
-                            <th className="px-4 py-3">Cliente</th>
-                            <th className="px-4 py-3">Suscripción</th>
-                            <th className="px-4 py-3">Estado</th>
-                            <th className="px-4 py-3">Inicio</th>
-                            <th className="px-4 py-3">Vencimiento</th>
-                            <th className="px-4 py-3">Próximo ciclo</th>
-                            <th className="px-4 py-3">Activada</th>
-                            {rol === "superadmin" && (
-                            <th className="px-4 py-3">Acciones</th>
-                            )}
-                        </tr>
+                      <tr className="text-left text-xs uppercase text-neutral-500">
+                        <th className="px-4 py-3">Cliente</th>
+                        <th className="px-4 py-3">Suscripción</th>
+                        <th className="px-4 py-3">Estado</th>
+                        <th className="px-4 py-3">Inicio</th>
+                        <th className="px-4 py-3">Vencimiento</th>
+                        <th className="px-4 py-3">Próximo ciclo</th>
+                        <th className="px-4 py-3">Activada</th>
+                        {rol === "superadmin" && (
+                          <th className="px-4 py-3">Acciones</th>
+                        )}
+                      </tr>
                     </thead>
 
                     <tbody>
-                        {subscriptionsFiltradas.map((s) => (
-                            <tr key={s.id} className="border-t text-sm">
-                            <td className="px-4 py-3">{s.clientes?.nombre || "-"}</td>
-                            <td className="px-4 py-3">{s.subscription_templates?.name || "-"}</td>
-                            <td className="px-4 py-3">
-                                <span
-                                className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                    s.status === "active"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-neutral-100 text-neutral-700"
-                                }`}
-                                >
-                                {s.status === "active" ? "Activa" : s.status}
-                                </span>
-                            </td>
-                            <td className="px-4 py-3 text-neutral-600">
-                                {s.start_date
-                                ? new Date(s.start_date).toLocaleDateString("es-CL")
-                                : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-neutral-600">
-                                {s.end_date
-                                ? new Date(s.end_date).toLocaleDateString("es-CL")
-                                : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-neutral-600">
-                                {s.next_cycle_date
-                                ? new Date(s.next_cycle_date).toLocaleDateString("es-CL")
-                                : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-neutral-500">
-                                {s.activated_at
-                                ? new Date(s.activated_at).toLocaleString("es-CL")
-                                : s.created_at
+                      {subscriptionsFiltradas.map((s) => (
+                        <tr key={s.id} className="border-t text-sm">
+                          <td className="px-4 py-3">
+                            {s.clientes?.nombre || "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {s.subscription_templates?.name || "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                s.status === "active"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-neutral-100 text-neutral-700"
+                              }`}
+                            >
+                              {s.status === "active" ? "Activa" : s.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-neutral-600">
+                            {s.start_date
+                              ? new Date(s.start_date).toLocaleDateString(
+                                  "es-CL",
+                                )
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3 text-neutral-600">
+                            {s.end_date
+                              ? new Date(s.end_date).toLocaleDateString("es-CL")
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3 text-neutral-600">
+                            {s.next_cycle_date
+                              ? new Date(s.next_cycle_date).toLocaleDateString(
+                                  "es-CL",
+                                )
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3 text-neutral-500">
+                            {s.activated_at
+                              ? new Date(s.activated_at).toLocaleString("es-CL")
+                              : s.created_at
                                 ? new Date(s.created_at).toLocaleString("es-CL")
                                 : "-"}
-                            </td>
+                          </td>
 
-                            {rol === "superadmin" && (
-                                <td className="px-4 py-3">
-                                <button
-                                    type="button"
-                                    onClick={() => eliminarSuscripcion(s.id)}
-                                    className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                                >
-                                    Eliminar
-                                </button>
-                                </td>
-                            )}
-                            </tr>
-                        ))}
+                          {rol === "superadmin" && (
+                            <td className="px-4 py-3">
+                              <button
+                                type="button"
+                                onClick={() => eliminarSuscripcion(s.id)}
+                                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -576,12 +584,16 @@ export default function SuscripcionesPage() {
             className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Asignaciones y códigos recientes</h2>
+              <h2 className="text-xl font-semibold">
+                Asignaciones y códigos recientes
+              </h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Revisa registros recientes y su historial
               </p>
             </div>
-            <span className="text-2xl leading-none">{mostrarAsignaciones ? "−" : "+"}</span>
+            <span className="text-2xl leading-none">
+              {mostrarAsignaciones ? "−" : "+"}
+            </span>
           </button>
 
           {mostrarAsignaciones && (
@@ -686,8 +698,12 @@ export default function SuscripcionesPage() {
                                 {c.claim_code && (
                                   <button
                                     onClick={() => {
-                                      navigator.clipboard.writeText(c.claim_code);
-                                      setMensaje("Código copiado al portapapeles.");
+                                      navigator.clipboard.writeText(
+                                        c.claim_code,
+                                      );
+                                      setMensaje(
+                                        "Código copiado al portapapeles.",
+                                      );
                                     }}
                                     className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
                                   >
@@ -700,11 +716,15 @@ export default function SuscripcionesPage() {
                                   disabled={eliminandoAsignacionId === c.id}
                                   className="cursor-pointer rounded-xl bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                                 >
-                                  {eliminandoAsignacionId === c.id ? "Eliminando..." : "Eliminar"}
+                                  {eliminandoAsignacionId === c.id
+                                    ? "Eliminando..."
+                                    : "Eliminar"}
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-xs text-neutral-400">—</span>
+                              <span className="text-xs text-neutral-400">
+                                —
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -726,10 +746,13 @@ export default function SuscripcionesPage() {
             <div>
               <h2 className="text-xl font-semibold">Generar código genérico</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Configura una suscripción y genera un código para canje posterior
+                Configura una suscripción y genera un código para canje
+                posterior
               </p>
             </div>
-            <span className="text-2xl leading-none">{mostrarCodigo ? "−" : "+"}</span>
+            <span className="text-2xl leading-none">
+              {mostrarCodigo ? "−" : "+"}
+            </span>
           </button>
 
           {mostrarCodigo && (
@@ -843,16 +866,23 @@ export default function SuscripcionesPage() {
         <section className="rounded-2xl bg-white shadow-sm">
           <button
             type="button"
-            onClick={() => setMostrarAsignacionCliente(!mostrarAsignacionCliente)}
+            onClick={() =>
+              setMostrarAsignacionCliente(!mostrarAsignacionCliente)
+            }
             className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Asignar suscripción a cliente</h2>
+              <h2 className="text-xl font-semibold">
+                Asignar suscripción a cliente
+              </h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Selecciona un cliente, configura la suscripción y confirma la asignación
+                Selecciona un cliente, configura la suscripción y confirma la
+                asignación
               </p>
             </div>
-            <span className="text-2xl leading-none">{mostrarAsignacionCliente ? "−" : "+"}</span>
+            <span className="text-2xl leading-none">
+              {mostrarAsignacionCliente ? "−" : "+"}
+            </span>
           </button>
 
           {mostrarAsignacionCliente && (
@@ -869,21 +899,27 @@ export default function SuscripcionesPage() {
                 ) : (
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border border-violet-100 bg-white p-3">
-                      <p className="text-xs uppercase tracking-wide text-neutral-500">Nombre</p>
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Nombre
+                      </p>
                       <p className="mt-1 text-sm font-semibold text-[#111111]">
                         {clienteSeleccionado.nombre}
                       </p>
                     </div>
 
                     <div className="rounded-xl border border-violet-100 bg-white p-3">
-                      <p className="text-xs uppercase tracking-wide text-neutral-500">Correo</p>
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Correo
+                      </p>
                       <p className="mt-1 break-all text-sm font-semibold text-[#111111]">
                         {clienteSeleccionado.correo}
                       </p>
                     </div>
 
                     <div className="rounded-xl border border-violet-100 bg-white p-3">
-                      <p className="text-xs uppercase tracking-wide text-neutral-500">Teléfono</p>
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Teléfono
+                      </p>
                       <p className="mt-1 text-sm font-semibold text-[#111111]">
                         {clienteSeleccionado.telefono || "-"}
                       </p>
@@ -979,7 +1015,9 @@ export default function SuscripcionesPage() {
                     </label>
                     <select
                       value={billingPeriodAsignacion}
-                      onChange={(e) => setBillingPeriodAsignacion(e.target.value)}
+                      onChange={(e) =>
+                        setBillingPeriodAsignacion(e.target.value)
+                      }
                       className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     >
                       {PERIODOS.map((periodo) => (
@@ -1050,12 +1088,14 @@ export default function SuscripcionesPage() {
                   disabled={procesandoAsignacion}
                   className="cursor-pointer rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
                 >
-                  {procesandoAsignacion ? "Asignando..." : "Confirmar asignación"}
+                  {procesandoAsignacion
+                    ? "Asignando..."
+                    : "Confirmar asignación"}
                 </button>
               </div>
             </div>
           )}
-        </section>    
+        </section>
 
         {mensaje && (
           <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
