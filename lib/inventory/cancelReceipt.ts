@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase";
-
 export async function cancelInventoryReceipt(
   transactionId: number,
 ): Promise<void> {
@@ -7,11 +5,20 @@ export async function cancelInventoryReceipt(
     throw new Error("La recepción indicada no es válida.");
   }
 
-  const { error } = await supabase.rpc("cancel_inventory_transaction", {
-    p_transaction_id: transactionId,
+  const response = await fetch("/api/operacion/inventario/recepciones", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "cancel",
+      transactionId,
+    }),
   });
 
-  if (error) {
-    throw new Error(`No fue posible cancelar la recepción: ${error.message}`);
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    throw new Error(result.message || "No fue posible cancelar la recepción.");
   }
 }
