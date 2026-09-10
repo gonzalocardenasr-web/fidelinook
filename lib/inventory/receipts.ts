@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import "server-only";
+
+import { getOperationSession } from "@/lib/operation-auth";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export type InventoryReceiptListItem = {
   id: number;
@@ -51,7 +54,50 @@ function getSupplierName(supplier: ReceiptRow["suppliers"]): string | null {
 export async function getInventoryReceipts(): Promise<
   InventoryReceiptListItem[]
 > {
-  const { data, error } = await supabase
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    throw new Error("Tu sesión no se encuentra activa.");
+  }
+
+  if (!session.userId) {
+    throw new Error(
+      "Tu sesión debe renovarse para identificar al usuario. Cierra sesión e inicia sesión nuevamente.",
+    );
+  }
+
+  const { data: operationalUser, error: operationalUserError } =
+    await supabaseAdmin
+      .from("operational_users")
+      .select("id, role, is_active")
+      .eq("id", session.userId)
+      .maybeSingle();
+
+  if (operationalUserError) {
+    console.error(
+      "Error validando usuario operacional para listado de recepciones:",
+      operationalUserError,
+    );
+
+    throw new Error("No fue posible validar al usuario operacional.");
+  }
+
+  if (!operationalUser || !operationalUser.is_active) {
+    throw new Error("El usuario operacional no se encuentra activo.");
+  }
+
+  if (operationalUser.role !== session.role) {
+    console.error(
+      "Rol inconsistente listando recepciones:",
+      session.userId,
+      session.role,
+      operationalUser.role,
+    );
+
+    throw new Error("La sesión operacional no es válida.");
+  }
+
+  const { data, error } = await supabaseAdmin
     .from("inventory_transactions")
     .select(
       `
