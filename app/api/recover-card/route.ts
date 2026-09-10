@@ -36,32 +36,17 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!cliente) {
-      // Respuesta neutra para no revelar demasiado
+    if (
+      !cliente ||
+      !cliente.public_token ||
+      !cliente.tarjeta_activa ||
+      !cliente.email_verificado
+    ) {
       return NextResponse.json({
         ok: true,
         message:
-          "Si existe una tarjeta asociada a este correo, te enviaremos un acceso a tu tarjeta.",
+          "Si existe una tarjeta activa asociada a este correo, te enviaremos un acceso a tu tarjeta.",
       });
-    }
-
-    if (!cliente.public_token) {
-      return NextResponse.json(
-        {
-          error: "Este cliente no tiene una tarjeta disponible para recuperar.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      return NextResponse.json(
-        {
-          error:
-            "Tu tarjeta aún no está activa. Primero debes verificar el correo con el que la registraste.",
-        },
-        { status: 400 },
-      );
     }
 
     const recoveryRequestId = randomUUID();
@@ -95,7 +80,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: "Te enviamos un correo con el acceso a tu tarjeta Fideli-NooK.",
+      message:
+        "Si existe una tarjeta activa asociada a este correo, te enviaremos un acceso a tu tarjeta.",
     });
   } catch (error) {
     console.error("Error en /api/recover-card:", error);

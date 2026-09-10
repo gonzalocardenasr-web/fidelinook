@@ -20,20 +20,29 @@ export async function POST(req: Request) {
         "id, nombre, correo, email_verificado, tarjeta_activa, token_verificacion, token_verificacion_creado_en",
       )
       .eq("correo", email)
-      .single();
+      .maybeSingle();
 
-    if (errorBusqueda || !cliente) {
+    if (errorBusqueda) {
+      console.error(
+        "Error buscando cliente para reenvío de verificación:",
+        errorBusqueda,
+      );
+
       return NextResponse.json(
-        { error: "Cliente no encontrado" },
-        { status: 404 },
+        {
+          ok: false,
+          message: "No fue posible procesar la solicitud.",
+        },
+        { status: 500 },
       );
     }
 
-    if (cliente.email_verificado && cliente.tarjeta_activa) {
-      return NextResponse.json(
-        { error: "Este correo ya fue verificado" },
-        { status: 400 },
-      );
+    if (!cliente || (cliente.email_verificado && cliente.tarjeta_activa)) {
+      return NextResponse.json({
+        ok: true,
+        message:
+          "Si existe una tarjeta pendiente de verificación asociada a este correo, enviaremos un nuevo correo.",
+      });
     }
 
     const tokenAnterior = cliente.token_verificacion;
@@ -111,15 +120,8 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         ok: true,
-        emailSent,
-        emailQueued: true,
-        emailQueueId: queuedEmail.id,
-        code: emailSent
-          ? "CARD_VERIFICATION_RESENT"
-          : "CARD_VERIFICATION_PENDING",
-        message: emailSent
-          ? "Correo de verificación reenviado"
-          : "El correo de verificación quedó pendiente de envío.",
+        message:
+          "Si existe una tarjeta pendiente de verificación asociada a este correo, enviaremos un nuevo correo.",
       });
     } catch (dispatchError) {
       console.error(
@@ -129,11 +131,8 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         ok: true,
-        emailSent: false,
-        emailQueued: true,
-        emailQueueId: queuedEmail.id,
-        code: "CARD_VERIFICATION_PENDING",
-        message: "El correo de verificación quedó pendiente de envío.",
+        message:
+          "Si existe una tarjeta pendiente de verificación asociada a este correo, enviaremos un nuevo correo.",
       });
     }
   } catch (error) {
