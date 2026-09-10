@@ -80,6 +80,18 @@ async function validateOperationalUser() {
     };
   }
 
+  if (operationalUser.role !== "superadmin") {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No tienes permisos para expirar premios globalmente.",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
   return { error: null };
 }
 
@@ -91,56 +103,45 @@ export async function POST() {
       return validation.error;
     }
 
-    const { data: clientes, error } = await supabaseAdmin
-      .from("clientes")
-      .select("id, premios");
+    const session = await getOperationSession();
+
+    if (!session.ok || !session.userId) {
+      return NextResponse.json(
+        { ok: false, message: "Tu sesión no se encuentra activa." },
+        { status: 401 },
+      );
+    }
+
+    const { data, error } = await supabaseAdmin.rpc("expire_customer_rewards", {
+      p_customer_id: null,
+      p_actor_role: session.role,
+      p_actor_identifier: String(session.userId),
+    });
 
     if (error) {
+      console.error("Error expirando premios:", error);
+
       return NextResponse.json(
-        { message: "Error cargando clientes" },
+        {
+          ok: false,
+          message: "No fue posible expirar los premios vencidos.",
+        },
         { status: 500 },
       );
     }
 
-    let totalActualizados = 0;
-
-    for (const cliente of clientes || []) {
-      if (!Array.isArray(cliente.premios)) continue;
-
-      let cambio = false;
-
-      const premiosActualizados = cliente.premios.map((p: any) => {
-        if (
-          p.estado === "activo" &&
-          p.vencimiento &&
-          new Date(p.vencimiento) < new Date()
-        ) {
-          cambio = true;
-          return { ...p, estado: "caducado" };
-        }
-
-        return p;
-      });
-
-      if (cambio) {
-        await supabaseAdmin
-          .from("clientes")
-          .update({ premios: premiosActualizados })
-          .eq("id", cliente.id);
-
-        totalActualizados += 1;
-      }
-    }
-
     return NextResponse.json({
       ok: true,
-      totalActualizados,
+      totalExpirados: Number(data || 0),
     });
   } catch (error) {
     console.error("Error expirando premios:", error);
 
     return NextResponse.json(
-      { message: "Error expirando premios" },
+      {
+        ok: false,
+        message: "Error expirando premios.",
+      },
       { status: 500 },
     );
   }

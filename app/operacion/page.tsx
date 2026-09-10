@@ -703,7 +703,14 @@ export default function OperacionPage() {
 
                   const data = await res.json();
 
-                  alert(`Clientes actualizados: ${data.totalActualizados}`);
+                  if (!res.ok || !data.ok) {
+                    alert(
+                      data.message || "No fue posible expirar los premios.",
+                    );
+                    return;
+                  }
+
+                  alert(`Premios expirados: ${data.totalExpirados}`);
 
                   await cargarDatos(true);
                 }}

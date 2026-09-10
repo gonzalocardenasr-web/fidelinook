@@ -49,6 +49,21 @@ export async function findCustomerLoyaltyData({
 
   const normalizedMovementLimit = normalizeMovementLimit(movementLimit);
 
+  const { error: expirationError } = await supabaseAdmin.rpc(
+    "expire_customer_rewards",
+    {
+      p_customer_id: normalizedCustomerId,
+      p_actor_role: "system",
+      p_actor_identifier: "customer-loyalty-read",
+    },
+  );
+
+  if (expirationError) {
+    throw new Error(
+      `No fue posible actualizar los premios vencidos: ${expirationError.message}`,
+    );
+  }
+
   const accountPromise = supabaseAdmin
     .from("loyalty_accounts")
     .select(

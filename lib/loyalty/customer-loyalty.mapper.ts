@@ -343,14 +343,23 @@ export function buildCustomerLoyaltySummary({
   account: CustomerLoyaltyAccountSummary;
   rewards: CustomerRewardSummary[];
 }): CustomerLoyaltySummary {
-  const activeRewards = rewards.filter((reward) => reward.status === "active");
+  const now = Date.now();
+
+  const isExpiredByDate = (reward: CustomerRewardSummary) =>
+    reward.expiresAt !== null && new Date(reward.expiresAt).getTime() < now;
+
+  const activeRewards = rewards.filter(
+    (reward) => reward.status === "active" && !isExpiredByDate(reward),
+  );
 
   const redeemedRewards = rewards.filter(
     (reward) => reward.status === "redeemed",
   );
 
   const expiredRewards = rewards.filter(
-    (reward) => reward.status === "expired",
+    (reward) =>
+      reward.status === "expired" ||
+      (reward.status === "active" && isExpiredByDate(reward)),
   );
 
   const cancelledRewards = rewards.filter(
