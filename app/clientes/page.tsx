@@ -18,8 +18,8 @@ type Cliente = {
   nombre: string;
   correo: string;
   telefono: string;
-  sellos: number;
-  premios: Premio[] | number | null;
+  sellos?: number;
+  premios?: Premio[] | number | null;
   public_token: string;
   tarjeta_activa?: boolean;
   email_verificado?: boolean;
@@ -76,19 +76,23 @@ export default function ClientesPage() {
     try {
       setCargando(true);
 
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("*")
-        .order("nombre", { ascending: true });
+      const res = await fetch("/api/operacion/clientes", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (error) {
-        console.error("Error cargando clientes:", error);
-        setMensaje("Error cargando clientes desde Supabase.");
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        console.error("Error cargando clientes:", data);
+        setMensaje(
+          data.message || "Error cargando clientes desde el servidor.",
+        );
         setClientes([]);
         return;
       }
 
-      const listaClientes = (data || []) as Cliente[];
+      const listaClientes = (data.clientes || []) as Cliente[];
       setClientes(listaClientes);
 
       if (listaClientes.length === 0) {
