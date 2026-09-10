@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import AdminRegistroCard from "../operacion/components/AdminRegistroCard";
 import AdminClienteDetalle from "../operacion/components/AdminClienteDetalle";
 
@@ -37,9 +36,7 @@ export default function ClientesPage() {
   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(true);
-  const [procesandoCompra, setProcesandoCompra] = useState(false);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
-  const [reiniciando, setReiniciando] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
   const [mostrarRegistro, setMostrarRegistro] = useState(true);
@@ -189,276 +186,6 @@ export default function ClientesPage() {
   const premiosActivos = premiosArray.filter(
     (premio: Premio) => premio.estado === "activo",
   );
-
-  const validarCompra = async () => {
-    if (!cliente) {
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setMensaje(
-        "El cliente aún no ha activado su tarjeta. Debe verificar su correo primero.",
-      );
-      return;
-    }
-
-    try {
-      setProcesandoCompra(true);
-      setMensaje("");
-
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? cliente.premios
-        : [];
-      const sellosActuales = cliente.sellos ?? 0;
-      const esPrimeraCompraHistorica =
-        sellosActuales === 0 && premiosActuales.length === 0;
-      const sellosAAgregar = esPrimeraCompraHistorica ? 2 : 1;
-      const nuevosSellos = sellosActuales + sellosAAgregar;
-
-      let sellosFinales = nuevosSellos;
-      const premiosFinales = [...premiosActuales];
-      let mensajeFinal = esPrimeraCompraHistorica
-        ? "Primera compra registrada. Se sumaron 2 sellos."
-        : "Compra validada correctamente. Se sumó 1 sello.";
-
-      let premioGenerado: Premio | null = null;
-
-      if (nuevosSellos >= 7) {
-        premioGenerado = {
-          id: Date.now(),
-          nombre: "Helado simple gratis",
-          estado: "activo",
-          vencimiento: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-        };
-
-        premiosFinales.push(premioGenerado);
-        sellosFinales = 0;
-        mensajeFinal =
-          "¡Cliente completó 7 sellos! Premio generado automáticamente.";
-      }
-
-      const selloRegistradoAt = new Date().toISOString();
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          sellos: sellosFinales,
-          premios: premiosFinales,
-          fecha_ultimo_sello: selloRegistradoAt,
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al validar compra:", error);
-        setMensaje("Hubo un error al validar la compra.");
-        return;
-      }
-
-      try {
-        if (premioGenerado) {
-          await fetch("/api/send-prize", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: cliente.correo,
-              nombre: cliente.nombre,
-              premioNombre: premioGenerado.nombre,
-              vencimiento: premioGenerado.vencimiento,
-              publicToken: cliente.public_token,
-              customerId: cliente.id,
-              idempotencyKey: `legacy-prize-generated:${cliente.id}:${premioGenerado.id}`,
-              sourceReference: String(premioGenerado.id),
-            }),
-          });
-        } else {
-          await fetch("/api/send-stamp", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: cliente.correo,
-              nombre: cliente.nombre,
-              sellosActuales: nuevosSellos,
-              metaSellos: 7,
-              publicToken: cliente.public_token,
-              customerId: cliente.id,
-              idempotencyKey: `legacy-stamp-earned:${cliente.id}:${selloRegistradoAt}`,
-              sourceReference: selloRegistradoAt,
-            }),
-          });
-        }
-      } catch (emailError) {
-        console.error("Error enviando correo:", emailError);
-      }
-
-      await cargarDatos(true);
-      setMensaje(mensajeFinal);
-    } catch (err) {
-      console.error("Error inesperado al validar compra:", err);
-      setMensaje("Ocurrió un error inesperado al validar la compra.");
-    } finally {
-      setProcesandoCompra(false);
-    }
-  };
-
-  const canjearPrimerPremio = async () => {
-    if (!cliente) {
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setMensaje(
-        "El cliente aún no ha activado su tarjeta. No es posible canjear premios.",
-      );
-      return;
-    }
-
-    try {
-      setProcesandoCanje(true);
-      setMensaje("");
-
-      const premiosActuales = Array.isArray(cliente.premios)
-        ? [...cliente.premios]
-        : [];
-
-      const indexPremioActivo = premiosActuales.findIndex(
-        (premio: Premio) => premio.estado === "activo",
-      );
-
-      if (indexPremioActivo === -1) {
-        setMensaje("No hay premios activos para canjear.");
-        return;
-      }
-
-      const premioActivo = premiosActuales[indexPremioActivo];
-
-      premiosActuales[indexPremioActivo] = {
-        ...premiosActuales[indexPremioActivo],
-        estado: "usado",
-      };
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({
-          premios: premiosActuales,
-          fecha_ultimo_canje: new Date().toISOString(),
-        })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al canjear premio:", error);
-        setMensaje("Hubo un error al canjear el premio.");
-        return;
-      }
-
-      try {
-        await fetch("/api/send-reward-redeemed", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: cliente.correo,
-            nombre: cliente.nombre,
-            premioNombre: premioActivo?.nombre || "Premio Fideli-Nook",
-            publicToken: cliente.public_token,
-            customerId: cliente.id,
-            idempotencyKey: `legacy-reward-redeemed:${cliente.id}:${premioActivo.id}`,
-            sourceReference: String(premioActivo.id),
-          }),
-        });
-      } catch (emailError) {
-        console.error("Error enviando correo de canje:", emailError);
-      }
-
-      await cargarDatos(true);
-      setMensaje("Premio canjeado correctamente.");
-    } catch (err) {
-      console.error("Error inesperado al canjear premio:", err);
-      setMensaje("Ocurrió un error inesperado al canjear el premio.");
-    } finally {
-      setProcesandoCanje(false);
-    }
-  };
-
-  const eliminarClienteSeleccionado = async () => {
-    if (!cliente) {
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    const confirmado = window.confirm(
-      `¿Seguro que quieres eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`,
-    );
-
-    if (!confirmado) return;
-
-    try {
-      setReiniciando(true);
-      setMensaje("");
-
-      const { error } = await supabase
-        .from("clientes")
-        .delete()
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("Error al eliminar cliente:", error);
-        setMensaje("Hubo un error al eliminar el cliente.");
-        return;
-      }
-
-      localStorage.removeItem("clienteId");
-      await cargarDatos(false);
-      setMensaje("Cliente eliminado correctamente.");
-    } catch (err) {
-      console.error("Error inesperado al eliminar cliente:", err);
-      setMensaje("Ocurrió un error inesperado al eliminar el cliente.");
-    } finally {
-      setReiniciando(false);
-    }
-  };
-
-  const reiniciarDatos = async () => {
-    const confirmado = window.confirm(
-      "¿Seguro que quieres eliminar TODOS los clientes? Esta acción no se puede deshacer.",
-    );
-
-    if (!confirmado) return;
-
-    try {
-      setReiniciando(true);
-      setMensaje("");
-
-      const { error } = await supabase.from("clientes").delete().neq("id", 0);
-
-      if (error) {
-        console.error("Error al reiniciar datos:", error);
-        setMensaje("Hubo un error al reiniciar los datos.");
-        return;
-      }
-
-      localStorage.removeItem("clienteId");
-      localStorage.removeItem("clientesClienteSeleccionadoId");
-      setClientes([]);
-      setClienteSeleccionadoId("");
-      setBusqueda("");
-      setLetraActiva("TODOS");
-      setMensaje("Todos los clientes fueron eliminados correctamente.");
-    } catch (err) {
-      console.error("Error inesperado al reiniciar los datos:", err);
-      setMensaje("Ocurrió un error inesperado al reiniciar los datos.");
-    } finally {
-      setReiniciando(false);
-    }
-  };
 
   const exportarClientesCSV = () => {
     try {
@@ -722,14 +449,8 @@ export default function ClientesPage() {
                   premiosActivos={premiosActivos}
                   mensaje={mensaje}
                   setMensaje={setMensaje}
-                  procesandoCompra={procesandoCompra}
                   procesandoCanje={procesandoCanje}
-                  reiniciando={reiniciando}
                   rol={rol}
-                  validarCompra={validarCompra}
-                  canjearPrimerPremio={canjearPrimerPremio}
-                  eliminarClienteSeleccionado={eliminarClienteSeleccionado}
-                  reiniciarDatos={reiniciarDatos}
                   exportarCSV={exportarClientesCSV}
                   mostrarAccionesAdministrativas={true}
                 />

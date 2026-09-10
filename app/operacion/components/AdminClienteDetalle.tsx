@@ -24,11 +24,9 @@ type Props = {
   tipoMensaje: "success" | "error" | "info";
   setMensaje: (value: string) => void;
   procesandoCanje: boolean;
-  reiniciando: boolean;
+  reiniciando?: boolean;
   rol: "admin" | "superadmin" | null;
   canjearPremioPorId: (premioId: number) => Promise<void>;
-  eliminarClienteSeleccionado?: () => void;
-  reiniciarDatos?: () => void;
   exportarCSV?: () => void;
   mostrarAccionesAdministrativas: boolean;
 };
@@ -44,11 +42,8 @@ export default function AdminClienteDetalle({
   tipoMensaje,
   setMensaje,
   procesandoCanje,
-  reiniciando,
   rol,
   canjearPremioPorId,
-  eliminarClienteSeleccionado,
-  reiniciarDatos,
   exportarCSV,
   mostrarAccionesAdministrativas,
 }: Props) {
@@ -276,31 +271,13 @@ export default function AdminClienteDetalle({
 
       <div className="mt-6 flex flex-wrap gap-4">
         {mostrarAccionesAdministrativas && rol === "superadmin" && (
-          <>
-            <button
-              onClick={eliminarClienteSeleccionado}
-              disabled={reiniciando || procesandoCanje || !cliente}
-              className="cursor-pointer rounded-lg bg-red-500 px-4 py-3 text-white hover:opacity-90 disabled:opacity-60"
-            >
-              {reiniciando ? "Procesando..." : "Eliminar cliente"}
-            </button>
-
-            <button
-              onClick={reiniciarDatos}
-              disabled={reiniciando || procesandoCanje}
-              className="cursor-pointer rounded-lg border border-red-300 bg-white px-4 py-3 text-red-600 hover:bg-red-50 disabled:opacity-60"
-            >
-              {reiniciando ? "Procesando..." : "Eliminar todos"}
-            </button>
-
-            <button
-              onClick={exportarCSV}
-              disabled={reiniciando || procesandoCanje}
-              className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
-            >
-              Exportar clientes CSV
-            </button>
-          </>
+          <button
+            onClick={exportarCSV}
+            disabled={procesandoCanje}
+            className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+          >
+            Exportar clientes CSV
+          </button>
         )}
       </div>
 
