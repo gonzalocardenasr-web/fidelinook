@@ -24,14 +24,63 @@ function normalizePositiveInteger(value: unknown) {
   return parsed;
 }
 
-export async function POST(req: Request) {
+async function validateOperationalUser() {
   const session = await getOperationSession();
 
-  if (!session.ok) {
-    return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
-    );
+  if (!session.ok || !session.userId) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "No autenticado." },
+        { status: 401 },
+      ),
+      role: null,
+    };
+  }
+
+  const { data: operationalUser, error } = await supabaseAdmin
+    .from("operational_users")
+    .select("id, role, is_active")
+    .eq("id", session.userId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar al usuario operacional.",
+        },
+        { status: 500 },
+      ),
+      role: null,
+    };
+  }
+
+  if (
+    !operationalUser ||
+    !operationalUser.is_active ||
+    operationalUser.role !== session.role
+  ) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Usuario operacional no autorizado." },
+        { status: 403 },
+      ),
+      role: null,
+    };
+  }
+
+  return {
+    error: null,
+    role: operationalUser.role,
+  };
+}
+
+export async function POST(req: Request) {
+  const validation = await validateOperationalUser();
+
+  if (validation.error) {
+    return validation.error;
   }
 
   try {
@@ -291,7 +340,7 @@ export async function POST(req: Request) {
         sourceModule: "subscriptions",
         sourceEntityType: "subscription_consumption",
         sourceEntityId: consumption.id,
-        actorRole: session.role,
+        actorRole: validation.role,
         occurredAt: consumption.created_at || new Date(),
         idempotencyKey: buildCustomerEventIdempotencyKey([
           "subscription-consumed",
