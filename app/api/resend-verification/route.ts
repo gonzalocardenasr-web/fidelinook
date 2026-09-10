@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
 import { enqueueEmail } from "../../../lib/email/emailQueue";
-import { supabase } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
 
 export async function POST(req: Request) {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Falta el correo" }, { status: 400 });
     }
 
-    const { data: cliente, error: errorBusqueda } = await supabase
+    const { data: cliente, error: errorBusqueda } = await supabaseAdmin
       .from("clientes")
       .select(
         "id, nombre, correo, email_verificado, tarjeta_activa, token_verificacion, token_verificacion_creado_en",
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const nuevoToken = generateVerificationToken();
     const nuevoTokenCreadoEn = new Date().toISOString();
 
-    const { error: errorUpdate } = await supabase
+    const { error: errorUpdate } = await supabaseAdmin
       .from("clientes")
       .update({
         token_verificacion: nuevoToken,
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     } catch (queueError) {
       console.error("Error encolando reenvío de verificación:", queueError);
 
-      const { error: rollbackError } = await supabase
+      const { error: rollbackError } = await supabaseAdmin
         .from("clientes")
         .update({
           token_verificacion: tokenAnterior,
