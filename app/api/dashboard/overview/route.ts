@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getOperationSession } from "../../../../lib/operation-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 
@@ -75,7 +76,88 @@ function countPremios(premios: any, estado: "activo" | "usado") {
   return premios.filter((p) => p?.estado === estado).length;
 }
 
+async function validateOperationalUser() {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Tu sesion no se encuentra activa." },
+        { status: 401 }
+      ),
+    };
+  }
+
+  if (!session.userId) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Tu sesion debe renovarse para identificar al usuario. Cierra sesion e inicia sesion nuevamente.",
+        },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const { data: operationalUser, error: operationalUserError } =
+    await supabaseAdmin
+      .from("operational_users")
+      .select("id, role, is_active")
+      .eq("id", session.userId)
+      .maybeSingle();
+
+  if (operationalUserError) {
+    console.error(
+      "Error validando usuario operacional en dashboard overview:",
+      operationalUserError
+    );
+
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar al usuario operacional.",
+        },
+        { status: 500 }
+      ),
+    };
+  }
+
+  if (!operationalUser || !operationalUser.is_active) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "El usuario operacional no se encuentra activo.",
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  if (operationalUser.role !== session.role) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "La sesion operacional no es valida.",
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { error: null };
+}
+
 export async function GET() {
+  const validation = await validateOperationalUser();
+
+  if (validation.error) {
+    return validation.error;
+  }
   try {
     const today = new Date();
     const plus7 = new Date();

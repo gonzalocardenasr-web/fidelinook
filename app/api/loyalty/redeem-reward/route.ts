@@ -41,17 +41,95 @@ function getErrorStatus(message: string) {
   return 500;
 }
 
-export async function POST(req: Request) {
+async function validateOperationalUser() {
   const session = await getOperationSession();
 
   if (!session.ok) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "No autenticado.",
-      },
-      { status: 401 },
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Tu sesión no se encuentra activa." },
+        { status: 401 },
+      ),
+      role: null,
+    };
+  }
+
+  if (!session.userId) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Tu sesión debe renovarse para identificar al usuario. Cierra sesión e inicia sesión nuevamente.",
+        },
+        { status: 401 },
+      ),
+      role: null,
+    };
+  }
+
+  const { data: operationalUser, error: operationalUserError } =
+    await supabaseAdmin
+      .from("operational_users")
+      .select("id, role, is_active")
+      .eq("id", session.userId)
+      .maybeSingle();
+
+  if (operationalUserError) {
+    console.error(
+      "Error validando usuario operacional para canje de premio:",
+      operationalUserError,
     );
+
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar al usuario operacional.",
+        },
+        { status: 500 },
+      ),
+      role: null,
+    };
+  }
+
+  if (!operationalUser || !operationalUser.is_active) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "El usuario operacional no se encuentra activo.",
+        },
+        { status: 403 },
+      ),
+      role: null,
+    };
+  }
+
+  if (operationalUser.role !== session.role) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "La sesión operacional no es válida.",
+        },
+        { status: 403 },
+      ),
+      role: null,
+    };
+  }
+
+  return {
+    error: null,
+    role: operationalUser.role,
+  };
+}
+
+export async function POST(req: Request) {
+  const validation = await validateOperationalUser();
+
+  if (validation.error) {
+    return validation.error;
   }
 
   try {
@@ -83,7 +161,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabaseAdmin.rpc("redeem_customer_reward", {
       p_customer_id: customerId,
       p_reward_reference: rewardReference,
-      p_actor_role: session.role,
+      p_actor_role: validation.role,
       p_actor_identifier: null,
     });
 

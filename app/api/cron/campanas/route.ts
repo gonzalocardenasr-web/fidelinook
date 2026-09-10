@@ -103,8 +103,32 @@ async function aplicarCampana(campanaId: number, duracionHoras: number) {
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const authHeader = req.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      console.error("Missing CRON_SECRET environment variable");
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Configuracion de seguridad incompleta.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No autorizado.",
+        },
+        { status: 401 }
+      );
+    }
     const ahora = new Date().toISOString();
 
     const { data: campanas, error } = await supabaseAdmin
