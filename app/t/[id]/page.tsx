@@ -1,6 +1,6 @@
 import Image from "next/image";
 import QRCode from "react-qr-code";
-import { supabase } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 type Premio = {
   id: number | string;
@@ -64,9 +64,11 @@ function estaVencido(fecha?: string) {
 export default async function TarjetaPublicaPage({ params }: Props) {
   const { id } = await params;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("clientes")
-    .select("*")
+    .select(
+      "id, nombre, correo, telefono, sellos, premios, public_token, tarjeta_activa",
+    )
     .eq("public_token", id)
     .single();
 
