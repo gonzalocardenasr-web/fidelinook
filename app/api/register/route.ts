@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+
+function isFutureAccountFlowEnabled(): boolean {
+  return false;
+}
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { generateVerificationToken } from "../../../lib/utils/generateVerificationToken";
 import { enqueueEmail } from "../../../lib/email/emailQueue";
@@ -12,6 +16,22 @@ import {
 } from "../../../lib/customer-registration";
 
 export async function POST(req: Request) {
+  if (!isFutureAccountFlowEnabled()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "FUTURE_ACCOUNT_FLOW_DISABLED",
+        message: "Este flujo de cuenta se encuentra temporalmente deshabilitado.",
+      },
+      { status: 410 },
+    );
+  }
+
+  /*
+   * SEC-P0-01:
+   * Se preserva debajo la implementación futura, pero permanece
+   * inaccesible mientras el flujo completo de cuenta esté pausado.
+   */
   let customerIdCreated: number | null = null;
   let authUserIdCreated: string | null = null;
 
