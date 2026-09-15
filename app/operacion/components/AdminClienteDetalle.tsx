@@ -23,10 +23,8 @@ type Props = {
   mensaje: string;
   tipoMensaje: "success" | "error" | "info";
   setMensaje: (value: string) => void;
-  procesandoCanje: boolean;
   reiniciando?: boolean;
   rol: "admin" | "superadmin" | null;
-  canjearPremioPorId: (premioId: number) => Promise<void>;
   exportarCSV?: () => void;
   mostrarAccionesAdministrativas: boolean;
 };
@@ -41,9 +39,7 @@ export default function AdminClienteDetalle({
   mensaje,
   tipoMensaje,
   setMensaje,
-  procesandoCanje,
   rol,
-  canjearPremioPorId,
   exportarCSV,
   mostrarAccionesAdministrativas,
 }: Props) {
@@ -172,15 +168,6 @@ export default function AdminClienteDetalle({
                       </p>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => canjearPremioPorId(premio.id)}
-                    disabled={procesandoCanje}
-                    className="rounded-xl bg-[#4c00f7] px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {procesandoCanje ? "Canjeando..." : "Canjear"}
-                  </button>
                 </div>
               ))}
             </div>
@@ -273,7 +260,6 @@ export default function AdminClienteDetalle({
         {mostrarAccionesAdministrativas && rol === "superadmin" && (
           <button
             onClick={exportarCSV}
-            disabled={procesandoCanje}
             className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
           >
             Exportar clientes CSV

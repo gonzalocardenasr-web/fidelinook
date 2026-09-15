@@ -57,7 +57,6 @@ export default function OperacionPage() {
     "info",
   );
   const [cargando, setCargando] = useState(true);
-  const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [customerLoyalty, setCustomerLoyalty] =
     useState<CustomerLoyaltySummary | null>(null);
   const [cargandoFidelizacion, setCargandoFidelizacion] = useState(false);
@@ -480,80 +479,6 @@ export default function OperacionPage() {
     null;
 
   const premiosActivos = customerLoyalty?.activeRewards ?? [];
-
-  const canjearPremioPorId = async (premioId: number) => {
-    if (!cliente) {
-      setTipoMensaje("error");
-      setMensaje("Debes seleccionar un cliente.");
-      return;
-    }
-
-    if (!cliente.tarjeta_activa || !cliente.email_verificado) {
-      setTipoMensaje("error");
-      setMensaje(
-        "El cliente aún no ha activado su tarjeta. No es posible canjear premios.",
-      );
-      return;
-    }
-
-    const premioActivo = premiosActivos.find(
-      (premio: CustomerRewardSummary) =>
-        premio.id === premioId && premio.status === "active",
-    );
-
-    if (!premioActivo) {
-      setTipoMensaje("error");
-      setMensaje("No se encontró un premio activo para canjear.");
-      return;
-    }
-
-    const confirmar = window.confirm(
-      `¿Confirmas el canje del premio "${premioActivo.name}"?`,
-    );
-
-    if (!confirmar) {
-      return;
-    }
-
-    try {
-      setProcesandoCanje(true);
-      setMensaje("");
-      setTipoMensaje("info");
-
-      const res = await fetch("/api/loyalty/redeem-reward", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customerId: cliente.id,
-          rewardId: premioActivo.id,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setTipoMensaje("error");
-        setMensaje(data.message || "No se pudo completar el canje del premio.");
-        return;
-      }
-
-      await cargarFidelizacionCliente(cliente.id);
-
-      setTipoMensaje("success");
-      setMensaje(
-        data.message || `Premio canjeado correctamente: ${premioActivo.name}.`,
-      );
-    } catch (error) {
-      console.error("Error canjeando premio:", error);
-
-      setTipoMensaje("error");
-      setMensaje("Ocurrió un error inesperado al canjear el premio.");
-    } finally {
-      setProcesandoCanje(false);
-    }
-  };
 
   const cerrarSesion = async () => {
     try {
@@ -999,10 +924,8 @@ export default function OperacionPage() {
                   mensaje={mensaje}
                   tipoMensaje={tipoMensaje}
                   setMensaje={setMensaje}
-                  procesandoCanje={procesandoCanje}
                   reiniciando={false}
                   rol={rol}
-                  canjearPremioPorId={canjearPremioPorId}
                   eliminarClienteSeleccionado={undefined}
                   reiniciarDatos={undefined}
                   exportarCSV={undefined}
