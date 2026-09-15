@@ -16,6 +16,7 @@ export type CustomerRewardSummary = {
   redeemedAt: string | null;
   cancelledAt: string | null;
   campaignId: number | null;
+  rewardProductId: number | null;
   source: string;
   sourceReference: string | null;
   legacyRewardId: string | null;

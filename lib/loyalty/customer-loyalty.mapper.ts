@@ -31,6 +31,7 @@ export type CustomerRewardRow = {
   redeemed_at: unknown;
   cancelled_at: unknown;
   campaign_id: unknown;
+  reward_product_id: unknown;
   legacy_reward_id: unknown;
   source: unknown;
   source_reference: unknown;
@@ -277,6 +278,11 @@ export function mapCustomerRewardRow(
     campaignId: normalizeOptionalPositiveInteger(
       row.campaign_id,
       "La campaña del premio",
+    ),
+
+    rewardProductId: normalizeOptionalPositiveInteger(
+      row.reward_product_id,
+      "El producto asociado al premio",
     ),
 
     source: normalizeRequiredText(row.source, "El origen del premio"),

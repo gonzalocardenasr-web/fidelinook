@@ -98,6 +98,7 @@ export async function findCustomerLoyaltyData({
       redeemed_at,
       cancelled_at,
       campaign_id,
+      reward_product_id,
       legacy_reward_id,
       source,
       source_reference,

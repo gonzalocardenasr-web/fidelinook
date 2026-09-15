@@ -1,4 +1,7 @@
-import { ClienteSelectorValue } from "../client/ClienteSelector";
+import {
+  ClienteSelectorReward,
+  ClienteSelectorValue,
+} from "../client/ClienteSelector";
 import {
   CartItem,
   OptionValue,
@@ -32,6 +35,9 @@ type Props = {
   discountRate: number;
   potDiscountTotal: number;
   giftDiscountTotal: number;
+  eligibleRewards: ClienteSelectorReward[];
+  selectedRewardId: number | null;
+  rewardDiscountTotal: number;
   discountTotal: number;
   total: number;
   saving: boolean;
@@ -46,6 +52,7 @@ type Props = {
   totalBeforeManualDiscount: number;
   getPrice: (product: Product) => number;
   onClienteChange: (cliente: ClienteSelectorValue | null) => void;
+  onRewardChange: (rewardId: number | null) => void;
   onPaymentMethodChange: (value: string) => void;
   onCashReceivedChange: (value: string) => void;
   onManualDiscountEnabledChange: (value: boolean) => void;
@@ -85,6 +92,9 @@ export default function OrderBuilder({
   discountRate,
   potDiscountTotal,
   giftDiscountTotal,
+  eligibleRewards,
+  selectedRewardId,
+  rewardDiscountTotal,
   discountTotal,
   total,
   saving,
@@ -97,6 +107,7 @@ export default function OrderBuilder({
   manualDiscountAmount,
   totalBeforeManualDiscount,
   getPrice,
+  onRewardChange,
   onPaymentMethodChange,
   onCashReceivedChange,
   onManualDiscountEnabledChange,
@@ -599,6 +610,69 @@ export default function OrderBuilder({
             </div>
           )}
 
+          {eligibleRewards.length > 0 && (
+            <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-black text-emerald-800">
+                    Premio disponible
+                  </p>
+
+                  <p className="text-[9px] text-emerald-700">
+                    Puedes aplicar un premio vigente a esta venta.
+                  </p>
+                </div>
+
+                {selectedRewardId !== null && (
+                  <button
+                    type="button"
+                    onClick={() => onRewardChange(null)}
+                    className="cursor-pointer rounded-md px-2 py-1 text-[10px] font-bold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    No canjear
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 space-y-1">
+                {eligibleRewards.map((reward) => {
+                  const selected = reward.id === selectedRewardId;
+
+                  return (
+                    <button
+                      key={reward.id}
+                      type="button"
+                      onClick={() =>
+                        onRewardChange(selected ? null : reward.id)
+                      }
+                      className={`w-full cursor-pointer rounded-lg border px-2.5 py-2 text-left transition ${
+                        selected
+                          ? "border-emerald-500 bg-emerald-100"
+                          : "border-emerald-200 bg-white hover:bg-emerald-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-neutral-800">
+                          {reward.name}
+                        </span>
+
+                        <span className="text-[9px] font-black uppercase tracking-wide text-emerald-700">
+                          {selected ? "Seleccionado" : "Canjear"}
+                        </span>
+                      </div>
+
+                      {reward.description && (
+                        <p className="mt-0.5 text-[9px] text-neutral-500">
+                          {reward.description}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
             <label className="flex cursor-pointer items-center justify-between gap-3">
               <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
@@ -774,6 +848,7 @@ export default function OrderBuilder({
             discountRate={discountRate}
             potDiscountTotal={potDiscountTotal}
             giftDiscountTotal={giftDiscountTotal}
+            rewardDiscountTotal={rewardDiscountTotal}
             manualDiscountAmount={manualDiscountAmount}
             discountTotal={discountTotal}
             total={total}

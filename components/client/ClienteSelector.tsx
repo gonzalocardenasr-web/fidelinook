@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type ClienteSelectorReward = {
+export type ClienteSelectorReward = {
   id: number;
   customerId: number;
   rewardType: string;
@@ -14,6 +14,7 @@ type ClienteSelectorReward = {
   redeemedAt: string | null;
   cancelledAt: string | null;
   campaignId: number | null;
+  rewardProductId: number | null;
   source: string;
   sourceReference: string | null;
   legacyRewardId: string | null;

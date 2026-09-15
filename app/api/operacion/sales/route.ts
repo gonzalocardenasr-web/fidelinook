@@ -596,6 +596,33 @@ export async function POST(req: Request) {
         ? null
         : Number(body.customerId);
 
+    const rewardId =
+      body.rewardId === null ||
+      body.rewardId === undefined ||
+      body.rewardId === ""
+        ? null
+        : Number(body.rewardId);
+
+    if (rewardId !== null && (!Number.isInteger(rewardId) || rewardId <= 0)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "El premio seleccionado no es válido.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (rewardId !== null && customerId === null) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "El canje de premio requiere un cliente.",
+        },
+        { status: 400 },
+      );
+    }
+
     const rawPaymentMethod = String(body.paymentMethod || "")
       .trim()
       .toLowerCase();
@@ -1190,7 +1217,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabaseAdmin.rpc(
-      "create_local_sale_with_order",
+      "create_local_sale_with_order_v2",
       {
         p_customer_id: customerId,
         p_payment_method: paymentMethod,
@@ -1206,6 +1233,8 @@ export async function POST(req: Request) {
         p_manual_discount_value: manualDiscountValue,
         p_manual_discount_reason: manualDiscountReason,
         p_manual_discount_notes: manualDiscountNotes,
+        p_reward_id: rewardId,
+        p_actor_identifier: null,
       },
     );
 
@@ -1236,6 +1265,7 @@ export async function POST(req: Request) {
           manualDiscountValue,
           manualDiscountReason,
           manualDiscountNotes,
+          rewardId,
         },
 
         correlationId,
@@ -1290,6 +1320,7 @@ export async function POST(req: Request) {
         manualDiscountValue,
         manualDiscountReason,
         manualDiscountNotes,
+        rewardId,
       },
 
       metadata: {
@@ -1302,6 +1333,7 @@ export async function POST(req: Request) {
         manualDiscountValue,
         manualDiscountReason,
         manualDiscountNotes,
+        rewardId,
       },
 
       correlationId,
@@ -1344,6 +1376,7 @@ export async function POST(req: Request) {
           manualDiscountType,
           manualDiscountValue,
           manualDiscountReason,
+          rewardId,
         },
       });
     } catch (eventError) {

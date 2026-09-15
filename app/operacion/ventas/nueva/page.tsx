@@ -48,6 +48,8 @@ export default function NuevaVentaPage() {
   const [selectedCliente, setSelectedCliente] =
     useState<ClienteSelectorValue | null>(null);
 
+  const [selectedRewardId, setSelectedRewardId] = useState<number | null>(null);
+
   const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
     null,
   );
@@ -349,6 +351,48 @@ export default function NuevaVentaPage() {
 
   const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
 
+  const now = Date.now();
+
+  const eligibleRewards = (
+    selectedCliente?.loyalty?.activeRewards ?? []
+  ).filter((reward) => {
+    if (
+      reward.status !== "active" ||
+      !reward.rewardProductId ||
+      reward.customerId !== selectedCliente?.id
+    ) {
+      return false;
+    }
+
+    if (reward.expiresAt && new Date(reward.expiresAt).getTime() < now) {
+      return false;
+    }
+
+    return cart.some(
+      (item) =>
+        item.itemType === "product" &&
+        !item.isGift &&
+        item.product.id === reward.rewardProductId,
+    );
+  });
+
+  const selectedReward =
+    eligibleRewards.find((reward) => reward.id === selectedRewardId) ?? null;
+
+  const rewardProductLine = selectedReward
+    ? cart.find(
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
+          !item.isGift &&
+          item.product.id === selectedReward.rewardProductId,
+      )
+    : undefined;
+
+  const rewardDiscountTotal = rewardProductLine
+    ? getPrice(rewardProductLine.product) +
+      (rewardProductLine.extraUnitPrice || 0)
+    : 0;
+
   const pricing = cart.reduce(
     (acc, item) => {
       if (item.itemType === "custom") {
@@ -367,7 +411,13 @@ export default function NuevaVentaPage() {
 
       if (!item.isGift && potSkus.has(item.product.sku)) {
         acc.potQuantity += item.quantity;
-        acc.potSubtotal += lineTotal;
+
+        const rewardAmountForLine =
+          selectedReward && item.product.id === selectedReward.rewardProductId
+            ? unitPrice
+            : 0;
+
+        acc.potSubtotal += Math.max(0, lineTotal - rewardAmountForLine);
       }
 
       return acc;
@@ -387,7 +437,10 @@ export default function NuevaVentaPage() {
 
   const totalBeforeManualDiscount = Math.max(
     0,
-    pricing.subtotal - potDiscountTotal - pricing.giftDiscountTotal,
+    pricing.subtotal -
+      pricing.giftDiscountTotal -
+      rewardDiscountTotal -
+      potDiscountTotal,
   );
 
   const parsedManualDiscountValue = Number(manualDiscountValue);
@@ -406,9 +459,19 @@ export default function NuevaVentaPage() {
   const discountTotal =
     potDiscountTotal +
     pricing.giftDiscountTotal +
+    rewardDiscountTotal +
     (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
 
   const total = Math.max(0, pricing.subtotal - discountTotal);
+
+  function handleClienteChange(cliente: ClienteSelectorValue | null) {
+    setSelectedCliente(cliente);
+    setSelectedRewardId(null);
+  }
+
+  function handleRewardChange(rewardId: number | null) {
+    setSelectedRewardId(rewardId);
+  }
 
   function handlePaymentMethodChange(value: string) {
     setPaymentMethod(value);
@@ -418,6 +481,10 @@ export default function NuevaVentaPage() {
   function validarVenta() {
     if (cart.length === 0) {
       return "Agrega al menos una línea a la venta.";
+    }
+
+    if (selectedRewardId !== null && !selectedReward) {
+      return "El premio seleccionado ya no está disponible para esta venta.";
     }
 
     if (channel !== "local" && !externalOrderId.trim()) {
@@ -727,6 +794,7 @@ export default function NuevaVentaPage() {
         paymentMethod,
         orderNotes: orderNotes.trim() || null,
         customerId: selectedCliente?.id ?? null,
+        rewardId: selectedReward?.id ?? null,
         promotionalStamps,
         promotionReason: promotionalStamps > 0 ? "Promoción RRSS" : null,
         manualDiscountType: manualDiscountEnabled ? manualDiscountType : null,
@@ -858,6 +926,7 @@ export default function NuevaVentaPage() {
       setCart([]);
       setOrderNotes("");
       setSelectedCliente(null);
+      setSelectedRewardId(null);
       setCashReceived("");
       setChannel("local");
       setExternalOrderId("");
@@ -1032,6 +1101,9 @@ export default function NuevaVentaPage() {
             discountRate={discountRate}
             potDiscountTotal={potDiscountTotal}
             giftDiscountTotal={pricing.giftDiscountTotal}
+            eligibleRewards={eligibleRewards}
+            selectedRewardId={selectedReward?.id ?? null}
+            rewardDiscountTotal={rewardDiscountTotal}
             discountTotal={discountTotal}
             total={total}
             saving={saving}
@@ -1043,7 +1115,8 @@ export default function NuevaVentaPage() {
             manualDiscountAmount={manualDiscountAmount}
             totalBeforeManualDiscount={totalBeforeManualDiscount}
             getPrice={getPrice}
-            onClienteChange={setSelectedCliente}
+            onClienteChange={handleClienteChange}
+            onRewardChange={handleRewardChange}
             onPaymentMethodChange={handlePaymentMethodChange}
             onCashReceivedChange={setCashReceived}
             onManualDiscountEnabledChange={setManualDiscountEnabled}
@@ -1069,7 +1142,7 @@ export default function NuevaVentaPage() {
             cart={cart}
             total={total}
             message={message}
-            onClienteChange={setSelectedCliente}
+            onClienteChange={handleClienteChange}
             clienteSelectorResetKey={clienteSelectorResetKey}
             channel={channel}
             externalOrderId={externalOrderId}
