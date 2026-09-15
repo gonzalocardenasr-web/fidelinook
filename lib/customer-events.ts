@@ -13,6 +13,7 @@ export type CustomerEventType =
   | "loyalty.stamps_reversed"
   | "loyalty.reward_issued"
   | "loyalty.reward_redeemed"
+  | "loyalty.reward_redemption_reversed"
   | "loyalty.reward_expired"
   | "loyalty.adjusted"
   | "campaign.reward_assigned";
