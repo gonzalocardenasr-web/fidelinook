@@ -31,12 +31,40 @@ type PositiveMovementRow = {
 };
 
 const META_SELLOS = 7;
-const VENTANA_PREMIO_DIAS = 3;
+const VENTANA_PREMIO_DIAS = 5;
+const RECORDATORIOS_PREMIO_DIAS = [5, 1] as const;
 const INACTIVIDAD_DIAS = 14;
 const RECORDATORIO_INACTIVIDAD_DIAS = 14;
 
 function differenceInDays(later: Date, earlier: Date): number {
   return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24);
+}
+
+function getRewardExpirationReminderDays(
+  expiresAt: string,
+  now: Date,
+): (typeof RECORDATORIOS_PREMIO_DIAS)[number] | null {
+  const expiration = new Date(expiresAt);
+
+  if (Number.isNaN(expiration.getTime())) {
+    return null;
+  }
+
+  const millisecondsRemaining = expiration.getTime() - now.getTime();
+
+  if (millisecondsRemaining <= 0) {
+    return null;
+  }
+
+  const daysRemaining = Math.ceil(
+    millisecondsRemaining / (24 * 60 * 60 * 1000),
+  );
+
+  return RECORDATORIOS_PREMIO_DIAS.includes(
+    daysRemaining as (typeof RECORDATORIOS_PREMIO_DIAS)[number],
+  )
+    ? (daysRemaining as (typeof RECORDATORIOS_PREMIO_DIAS)[number])
+    : null;
 }
 
 export async function GET(req: Request) {
@@ -125,7 +153,10 @@ export async function GET(req: Request) {
     }
 
     /*
-     * Premios activos que vencen desde ahora hasta los próximos tres días.
+     * Premios activos que vencen dentro de los próximos cinco días.
+     *
+     * La consulta sólo define el universo candidato.
+     * Más abajo se filtran exclusivamente los hitos T-5 y T-1.
      */
     const { data: rewardsData, error: rewardsError } = await supabaseAdmin
       .from("customer_rewards")
@@ -227,6 +258,8 @@ export async function GET(req: Request) {
       rewardId: number;
       premio: string;
       vencimiento: string;
+      reminderDays: number;
+      reminderWindow: string;
       dryRun: boolean;
     }> = [];
 
@@ -267,21 +300,33 @@ export async function GET(req: Request) {
       for (const reward of expiringRewards) {
         if (!reward.expires_at) continue;
 
+        const reminderDays = getRewardExpirationReminderDays(
+          reward.expires_at,
+          ahora,
+        );
+
+        if (reminderDays === null) {
+          continue;
+        }
+
+        const reminderWindow = `T${reminderDays}`;
+
         if (!dryRun) {
           await enqueueEmail({
             recipientEmail: email,
             emailType: "REWARD_EXPIRING",
             priority: 2,
-            idempotencyKey: `reward-expiring:${reward.id}`,
+            idempotencyKey: `reward-expiring:${reward.id}:${reminderWindow}`,
             payload: {
               nombre: customerName,
               premioNombre: reward.name,
               vencimiento: reward.expires_at,
               publicToken,
+              reminderDays,
             },
             customerId,
             sourceType: "daily_crm_reward_expiring",
-            sourceReference: String(reward.id),
+            sourceReference: `${reward.id}:${reminderWindow}`,
             maxAttempts: 5,
           });
         }
@@ -292,6 +337,8 @@ export async function GET(req: Request) {
           rewardId: reward.id,
           premio: reward.name,
           vencimiento: reward.expires_at,
+          reminderDays,
+          reminderWindow,
           dryRun,
         });
       }

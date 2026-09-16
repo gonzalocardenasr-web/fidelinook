@@ -10,17 +10,65 @@ export async function sendPrizeExpiringReminderEmail(
   premioNombre: string,
   vencimiento: string,
   publicToken: string,
+  reminderDays: number,
   idempotencyKey: string,
 ) {
+  if (reminderDays !== 5 && reminderDays !== 1) {
+    throw new Error("reminderDays must be 5 or 1");
+  }
+
   const cardUrl = `https://fidelidad.nookheladeria.cl/t/${publicToken}`;
+  const expirationDate = new Date(vencimiento).toLocaleDateString("es-CL");
+
+  const isLastReminder = reminderDays === 1;
+
+  const subject = isLastReminder
+    ? "Tu premio Fideli-NooK vence mañana"
+    : "Tienes un premio Fideli-NooK por usar";
+
+  const message = isLastReminder
+    ? `
+      Tu premio <strong>${premioNombre}</strong> vence mañana.<br/><br/>
+      Fecha de vencimiento: <strong>${expirationDate}</strong>.<br/><br/>
+      Revísalo en tu tarjeta digital y úsalo antes de que expire.
+    `
+    : `
+      Recuerda que tienes disponible tu premio <strong>${premioNombre}</strong>.<br/><br/>
+      Te quedan 5 días para usarlo. Fecha de vencimiento: <strong>${expirationDate}</strong>.<br/><br/>
+      Revísalo en tu tarjeta digital y disfruta tu premio antes de que expire.
+    `;
+
+  const text = isLastReminder
+    ? `
+Hola ${nombre},
+
+Tu premio ${premioNombre} vence mañana.
+
+Fecha de vencimiento: ${expirationDate}.
+
+Revísalo aquí:
+${cardUrl}
+
+Nook Heladería de Autora
+    `
+    : `
+Hola ${nombre},
+
+Recuerda que tienes disponible tu premio ${premioNombre}.
+
+Te quedan 5 días para usarlo. Fecha de vencimiento: ${expirationDate}.
+
+Revísalo aquí:
+${cardUrl}
+
+Nook Heladería de Autora
+    `;
 
   const html = baseTemplate({
-    titulo: `Hola ${nombre}`,
-    mensaje: `
-      Tu premio <strong>${premioNombre}</strong> está próximo a vencer.<br/><br/>
-      Fecha de vencimiento: <strong>${new Date(vencimiento).toLocaleDateString("es-CL")}</strong>.<br/><br/>
-      Revísalo en tu tarjeta digital y úsalo antes de que expire.
-    `,
+    titulo: isLastReminder
+      ? `¡${nombre}, tu premio vence mañana!`
+      : `Hola ${nombre}`,
+    mensaje: message,
     botonTexto: "Ver mi tarjeta",
     botonUrl: cardUrl,
   });
@@ -29,20 +77,9 @@ export async function sendPrizeExpiringReminderEmail(
     {
       from: FROM_EMAIL,
       to: email,
-      subject: "Tu premio Fideli-NooK está por vencer",
+      subject,
       html,
-      text: `
-Hola ${nombre},
-
-Tu premio ${premioNombre} está próximo a vencer.
-
-Fecha de vencimiento: ${new Date(vencimiento).toLocaleDateString("es-CL")}.
-
-Revísalo aquí:
-${cardUrl}
-
-Nook Heladería de Autora
-    `,
+      text,
     },
     {
       idempotencyKey,

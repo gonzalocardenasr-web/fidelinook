@@ -294,6 +294,7 @@ async function sendQueuedRewardExpiring(
   const premioNombre = email.payload?.premioNombre;
   const vencimiento = email.payload?.vencimiento;
   const publicToken = email.payload?.publicToken;
+  const reminderDays = Number(email.payload?.reminderDays);
 
   if (typeof nombre !== "string" || !nombre.trim()) {
     throw new Error("REWARD_EXPIRING payload requires nombre");
@@ -311,12 +312,17 @@ async function sendQueuedRewardExpiring(
     throw new Error("REWARD_EXPIRING payload requires publicToken");
   }
 
+  if (reminderDays !== 5 && reminderDays !== 1) {
+    throw new Error("REWARD_EXPIRING payload requires reminderDays 5 or 1");
+  }
+
   const result = await sendPrizeExpiringReminderEmail(
     email.recipient_email,
     nombre,
     premioNombre,
     vencimiento,
     publicToken,
+    reminderDays,
     email.idempotency_key,
   );
 
