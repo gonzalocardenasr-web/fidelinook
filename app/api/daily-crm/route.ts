@@ -40,6 +40,32 @@ function differenceInDays(later: Date, earlier: Date): number {
   return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24);
 }
 
+function getSantiagoCalendarDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santiago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    throw new Error("No se pudo determinar la fecha calendario de Santiago.");
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function calendarDaysBetween(startDate: string, endDate: string): number {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+
+  return Math.round((end - start) / (24 * 60 * 60 * 1000));
+}
+
 function getRewardExpirationReminderDays(
   expiresAt: string,
   now: Date,
@@ -50,14 +76,11 @@ function getRewardExpirationReminderDays(
     return null;
   }
 
-  const millisecondsRemaining = expiration.getTime() - now.getTime();
-
-  if (millisecondsRemaining <= 0) {
-    return null;
-  }
-
-  const daysRemaining = Math.ceil(
-    millisecondsRemaining / (24 * 60 * 60 * 1000),
+  const todayInSantiago = getSantiagoCalendarDate(now);
+  const expirationDateInSantiago = getSantiagoCalendarDate(expiration);
+  const daysRemaining = calendarDaysBetween(
+    todayInSantiago,
+    expirationDateInSantiago,
   );
 
   return RECORDATORIOS_PREMIO_DIAS.includes(
