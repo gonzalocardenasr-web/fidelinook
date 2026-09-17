@@ -31,7 +31,7 @@ type PositiveMovementRow = {
 };
 
 const META_SELLOS = 7;
-const VENTANA_PREMIO_DIAS = 5;
+const VENTANA_PREMIO_DIAS = 6;
 const RECORDATORIOS_PREMIO_DIAS = [5, 1] as const;
 const INACTIVIDAD_DIAS = 14;
 const RECORDATORIO_INACTIVIDAD_DIAS = 14;
@@ -176,10 +176,12 @@ export async function GET(req: Request) {
     }
 
     /*
-     * Premios activos que vencen dentro de los próximos cinco días.
+     * Universo técnico de premios próximos a vencer.
      *
-     * La consulta sólo define el universo candidato.
-     * Más abajo se filtran exclusivamente los hitos T-5 y T-1.
+     * Se consultan hasta seis días móviles para cubrir completamente
+     * el hito T-5 por día calendario de America/Santiago.
+     * Esta ventana no define cuándo se envía un recordatorio:
+     * más abajo se filtran exclusivamente los hitos T-5 y T-1.
      */
     const { data: rewardsData, error: rewardsError } = await supabaseAdmin
       .from("customer_rewards")
