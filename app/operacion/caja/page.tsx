@@ -55,6 +55,13 @@ type CashMovementTotals = {
   net: number;
 };
 
+type CashCountEntry = {
+  denomination: number;
+  quantity: number;
+};
+
+type CashCountQuantities = Record<number, string>;
+
 type CashMovementsResponse = {
   ok: boolean;
   hasOpenSession?: boolean;
@@ -247,6 +254,16 @@ type CashClosingDetail = {
   summary: CashClosingDetailSummary;
   movements: CashRegisterMovement[];
   cashSales: CashClosingCashSale[];
+  openingCashCount: Array<
+    CashCountEntry & {
+      subtotal: number;
+    }
+  >;
+  closingCashCount: Array<
+    CashCountEntry & {
+      subtotal: number;
+    }
+  >;
 };
 
 type CashClosingDetailResponse = {
@@ -254,6 +271,52 @@ type CashClosingDetailResponse = {
   detail?: CashClosingDetail;
   message?: string;
 };
+
+const CASH_DENOMINATIONS = [
+  20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10,
+] as const;
+
+function createEmptyCashCount(): CashCountQuantities {
+  return Object.fromEntries(
+    CASH_DENOMINATIONS.map((denomination) => [denomination, ""]),
+  ) as CashCountQuantities;
+}
+
+function cashCountToEntries(quantities: CashCountQuantities): CashCountEntry[] {
+  return CASH_DENOMINATIONS.map((denomination) => {
+    const rawQuantity = quantities[denomination]?.trim() || "";
+    const parsedQuantity = rawQuantity === "" ? 0 : Number(rawQuantity);
+
+    return {
+      denomination,
+      quantity:
+        Number.isInteger(parsedQuantity) && parsedQuantity >= 0
+          ? parsedQuantity
+          : 0,
+    };
+  });
+}
+
+function calculateCashCountTotal(quantities: CashCountQuantities): number {
+  return cashCountToEntries(quantities).reduce(
+    (total, entry) => total + entry.denomination * entry.quantity,
+    0,
+  );
+}
+
+function isValidCashCount(quantities: CashCountQuantities): boolean {
+  return CASH_DENOMINATIONS.every((denomination) => {
+    const rawQuantity = quantities[denomination]?.trim() || "";
+
+    if (rawQuantity === "") {
+      return true;
+    }
+
+    const parsedQuantity = Number(rawQuantity);
+
+    return Number.isInteger(parsedQuantity) && parsedQuantity >= 0;
+  });
+}
 
 const CASH_IN_REASONS: Array<{
   value: CashMovementReason;
@@ -468,6 +531,85 @@ function getDefaultReason(movementType: CashMovementType): CashMovementReason {
   return movementType === "CASH_IN" ? "AUTHORIZED_INCOME" : "MINOR_PURCHASE";
 }
 
+function CashCountForm({
+  title,
+  description,
+  quantities,
+  onQuantityChange,
+  disabled = false,
+}: {
+  title: string;
+  description: string;
+  quantities: CashCountQuantities;
+  onQuantityChange: (denomination: number, value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-neutral-800">{title}</p>
+
+        <p className="mt-1 text-xs text-neutral-500">{description}</p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <div className="grid grid-cols-[1fr_100px_1fr] gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+            Denominación
+          </p>
+
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+            Cantidad
+          </p>
+
+          <p className="text-right text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+            Subtotal
+          </p>
+        </div>
+
+        {CASH_DENOMINATIONS.map((denomination) => {
+          const rawQuantity = quantities[denomination] || "";
+          const parsedQuantity = rawQuantity === "" ? 0 : Number(rawQuantity);
+
+          const subtotal =
+            Number.isInteger(parsedQuantity) && parsedQuantity >= 0
+              ? denomination * parsedQuantity
+              : 0;
+
+          return (
+            <div
+              key={denomination}
+              className="grid grid-cols-[1fr_100px_1fr] items-center gap-3 border-b border-neutral-100 px-4 py-2 last:border-b-0"
+            >
+              <p className="text-sm font-semibold text-neutral-800">
+                {formatCurrency(denomination)}
+              </p>
+
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={rawQuantity}
+                onChange={(event) =>
+                  onQuantityChange(denomination, event.target.value)
+                }
+                placeholder="0"
+                disabled={disabled}
+                aria-label={`Cantidad de ${formatCurrency(denomination)}`}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
+              />
+
+              <p className="text-right text-sm font-semibold text-neutral-700">
+                {formatCurrency(subtotal)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function CashRegisterPage() {
   const [session, setSession] = useState<CashRegisterSession | null>(null);
 
@@ -478,7 +620,9 @@ export default function CashRegisterPage() {
     net: 0,
   });
 
-  const [openingAmount, setOpeningAmount] = useState("");
+  const [openingCashCount, setOpeningCashCount] = useState<CashCountQuantities>(
+    () => createEmptyCashCount(),
+  );
   const [openingNotes, setOpeningNotes] = useState("");
 
   const [movementType, setMovementType] =
@@ -490,7 +634,9 @@ export default function CashRegisterPage() {
   const [showMovementForm, setShowMovementForm] = useState(false);
 
   const [showClosingForm, setShowClosingForm] = useState(false);
-  const [countedCashAmount, setCountedCashAmount] = useState("");
+  const [closingCashCount, setClosingCashCount] = useState<CashCountQuantities>(
+    () => createEmptyCashCount(),
+  );
   const [closingNotes, setClosingNotes] = useState("");
   const [closingPreview, setClosingPreview] =
     useState<CashClosingPreview | null>(null);
@@ -537,6 +683,16 @@ export default function CashRegisterPage() {
   const movementReasons = useMemo(
     () => (movementType === "CASH_IN" ? CASH_IN_REASONS : CASH_OUT_REASONS),
     [movementType],
+  );
+
+  const openingCashTotal = useMemo(
+    () => calculateCashCountTotal(openingCashCount),
+    [openingCashCount],
+  );
+
+  const closingCashTotal = useMemo(
+    () => calculateCashCountTotal(closingCashCount),
+    [closingCashCount],
   );
 
   const closingDetailCashSalesTotal = useMemo(() => {
@@ -808,9 +964,37 @@ export default function CashRegisterPage() {
     setMovementReason(getDefaultReason(movementType));
   }
 
+  function updateCashCountQuantity(
+    type: "OPENING" | "CLOSING",
+    denomination: number,
+    value: string,
+  ) {
+    if (value !== "" && !/^\d+$/.test(value)) {
+      return;
+    }
+
+    if (type === "OPENING") {
+      setOpeningCashCount((current) => ({
+        ...current,
+        [denomination]: value,
+      }));
+
+      return;
+    }
+
+    setClosingCashCount((current) => ({
+      ...current,
+      [denomination]: value,
+    }));
+
+    if (closingPreview) {
+      setClosingPreview(null);
+    }
+  }
+
   function resetClosingState() {
     setShowClosingForm(false);
-    setCountedCashAmount("");
+    setClosingCashCount(createEmptyCashCount());
     setClosingNotes("");
     setClosingPreview(null);
     setLoadingClosingPreview(false);
@@ -819,7 +1003,7 @@ export default function CashRegisterPage() {
 
   function startClosing() {
     closeMovementForm();
-    setCountedCashAmount("");
+    setClosingCashCount(createEmptyCashCount());
     setClosingNotes("");
     setClosingPreview(null);
     setMessage("");
@@ -835,18 +1019,6 @@ export default function CashRegisterPage() {
     setMessage("");
   }
 
-  function handleCountedCashAmountChange(value: string) {
-    setCountedCashAmount(value);
-
-    /*
-     * Si el conteo cambia después de calcular el resumen,
-     * la previsualización deja de ser válida.
-     */
-    if (closingPreview) {
-      setClosingPreview(null);
-    }
-  }
-
   async function previewClosing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -856,33 +1028,27 @@ export default function CashRegisterPage() {
       return;
     }
 
-    const normalizedAmount = countedCashAmount.trim();
-    const parsedAmount = Number(normalizedAmount);
-
-    if (
-      normalizedAmount === "" ||
-      !Number.isInteger(parsedAmount) ||
-      parsedAmount < 0
-    ) {
+    if (!isValidCashCount(closingCashCount)) {
       setMessageType("error");
       setMessage(
-        "El efectivo contado debe ser un número entero mayor o igual a cero.",
+        "Las cantidades por denominación deben ser números enteros mayores o iguales a cero.",
       );
       return;
     }
 
-    try {
-      setLoadingClosingPreview(true);
-      setClosingPreview(null);
-      setMessage("");
+    const cashCount = cashCountToEntries(closingCashCount);
 
+    setLoadingClosingPreview(true);
+    setMessage("");
+
+    try {
       const response = await fetch("/api/operacion/caja/cierre/preview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          countedCashAmount: parsedAmount,
+          cashCount,
         }),
       });
 
@@ -900,21 +1066,13 @@ export default function CashRegisterPage() {
       if (data.preview.cashRegisterSessionId !== session.id) {
         setMessageType("error");
         setMessage(
-          "La sesión de caja cambió durante el cálculo. Actualiza la página antes de continuar.",
+          "La sesión de caja cambió mientras se calculaba el cierre. Actualiza la página e inténtalo nuevamente.",
         );
         return;
       }
 
       setClosingPreview(data.preview);
-
-      setMessageType(data.preview.cashDifference === 0 ? "success" : "info");
-
-      setMessage(
-        data.message ||
-          (data.preview.cashDifference === 0
-            ? "El conteo coincide con el efectivo esperado."
-            : "El conteo presenta una diferencia de caja."),
-      );
+      setMessage("");
     } catch (error) {
       console.error("Error calculando previsualización del cierre:", error);
 
@@ -948,17 +1106,37 @@ export default function CashRegisterPage() {
       return;
     }
 
-    try {
-      setSubmittingClosing(true);
-      setMessage("");
+    if (!isValidCashCount(closingCashCount)) {
+      setMessageType("error");
+      setMessage("La composición del efectivo contado no es válida.");
+      return;
+    }
 
+    const cashCount = cashCountToEntries(closingCashCount);
+
+    if (
+      calculateCashCountTotal(closingCashCount) !==
+      closingPreview.countedCashAmount
+    ) {
+      setClosingPreview(null);
+      setMessageType("error");
+      setMessage(
+        "El conteo cambió después de revisar el cierre. Debes revisarlo nuevamente.",
+      );
+      return;
+    }
+
+    setSubmittingClosing(true);
+    setMessage("");
+
+    try {
       const response = await fetch("/api/operacion/caja/cierre", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          countedCashAmount: closingPreview.countedCashAmount,
+          cashCount,
           closingNotes: normalizedNotes,
         }),
       });
@@ -973,13 +1151,15 @@ export default function CashRegisterPage() {
 
       const completedClosingResult = data.closing;
 
+      setSession(null);
+      setMovements([]);
+      setMovementTotals({
+        cashIn: 0,
+        cashOut: 0,
+        net: 0,
+      });
       resetClosingState();
 
-      /*
-       * El backend ya cerró la sesión. Se recarga el estado para confirmar
-       * que no exista una sesión abierta y luego se conserva el comprobante
-       * recibido desde el cierre transaccional.
-       */
       await loadCashRegister();
 
       setCompletedClosing(completedClosingResult);
@@ -987,10 +1167,10 @@ export default function CashRegisterPage() {
       setMessageType("success");
       setMessage(data.message || "Caja cerrada correctamente.");
     } catch (error) {
-      console.error("Error confirmando cierre de caja:", error);
+      console.error("Error cerrando caja:", error);
 
       setMessageType("error");
-      setMessage("Ocurrió un error inesperado al confirmar el cierre de caja.");
+      setMessage("Ocurrió un error inesperado al cerrar la caja.");
     } finally {
       setSubmittingClosing(false);
     }
@@ -999,7 +1179,7 @@ export default function CashRegisterPage() {
   function finishCompletedClosing() {
     setCompletedClosing(null);
     setMessage("");
-    setOpeningAmount("");
+    setOpeningCashCount(createEmptyCashCount());
     setOpeningNotes("");
   }
 
@@ -1017,20 +1197,15 @@ export default function CashRegisterPage() {
   async function openCashRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const normalizedAmount = openingAmount.trim();
-    const parsedAmount = Number(normalizedAmount);
-
-    if (
-      normalizedAmount === "" ||
-      !Number.isInteger(parsedAmount) ||
-      parsedAmount < 0
-    ) {
+    if (!isValidCashCount(openingCashCount)) {
       setMessageType("error");
       setMessage(
-        "El fondo inicial debe ser un número entero mayor o igual a cero.",
+        "Las cantidades por denominación deben ser números enteros mayores o iguales a cero.",
       );
       return;
     }
+
+    const cashCount = cashCountToEntries(openingCashCount);
 
     try {
       setSubmitting(true);
@@ -1042,7 +1217,7 @@ export default function CashRegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          openingAmount: parsedAmount,
+          cashCount,
           openingNotes: openingNotes.trim(),
         }),
       });
@@ -1060,7 +1235,7 @@ export default function CashRegisterPage() {
       }
 
       setSession(data.session ?? null);
-      setOpeningAmount("");
+      setOpeningCashCount(createEmptyCashCount());
       setOpeningNotes("");
       setCompletedClosing(null);
       setMovements([]);
@@ -1434,14 +1609,17 @@ export default function CashRegisterPage() {
 
                           <input
                             id="movementAmount"
-                            type="number"
-                            min="1"
-                            step="1"
+                            type="text"
                             inputMode="numeric"
+                            pattern="[0-9]*"
                             value={movementAmount}
-                            onChange={(event) =>
-                              setMovementAmount(event.target.value)
-                            }
+                            onChange={(event) => {
+                              const value = event.target.value;
+
+                              if (value === "" || /^\d+$/.test(value)) {
+                                setMovementAmount(value);
+                              }
+                            }}
                             placeholder="0"
                             required
                             className="h-9 w-full rounded-lg border border-neutral-200 bg-white pl-7 pr-3 text-[12px] text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
@@ -1669,41 +1847,42 @@ export default function CashRegisterPage() {
 
                     {!closingPreview && (
                       <div className="mt-5">
-                        <label
-                          htmlFor="countedCashAmount"
-                          className="mb-2 block text-sm font-semibold text-neutral-800"
-                        >
-                          Efectivo contado
-                        </label>
+                        <CashCountForm
+                          title="Conteo físico de efectivo"
+                          description="Ingresa la cantidad física disponible de cada billete y moneda."
+                          quantities={closingCashCount}
+                          onQuantityChange={(denomination, value) =>
+                            updateCashCountQuantity(
+                              "CLOSING",
+                              denomination,
+                              value,
+                            )
+                          }
+                          disabled={loadingClosingPreview || submittingClosing}
+                        />
 
-                        <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
-                            $
-                          </span>
+                        <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                                Total contado
+                              </p>
 
-                          <input
-                            id="countedCashAmount"
-                            type="number"
-                            min="0"
-                            step="1"
-                            inputMode="numeric"
-                            value={countedCashAmount}
-                            onChange={(event) =>
-                              handleCountedCashAmountChange(event.target.value)
-                            }
-                            placeholder="0"
-                            required
-                            autoFocus
-                            disabled={
-                              loadingClosingPreview || submittingClosing
-                            }
-                            className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
-                          />
+                              <p className="mt-1 text-xs text-neutral-500">
+                                Calculado automáticamente desde las
+                                denominaciones ingresadas.
+                              </p>
+                            </div>
+
+                            <p className="text-2xl font-bold text-neutral-950">
+                              {formatCurrency(closingCashTotal)}
+                            </p>
+                          </div>
                         </div>
 
-                        <p className="mt-2 text-xs text-neutral-500">
-                          Cuenta billetes y monedas antes de consultar el
-                          efectivo esperado por el sistema.
+                        <p className="mt-3 text-xs text-neutral-500">
+                          El efectivo esperado permanecerá oculto hasta que
+                          revises este conteo.
                         </p>
                       </div>
                     )}
@@ -2189,35 +2368,34 @@ export default function CashRegisterPage() {
                 className="mt-6 flex flex-col gap-5"
               >
                 <div>
-                  <label
-                    htmlFor="openingAmount"
-                    className="mb-2 block text-sm font-semibold text-neutral-800"
-                  >
-                    Fondo inicial
-                  </label>
+                  <CashCountForm
+                    title="Composición del fondo inicial"
+                    description="Ingresa la cantidad física disponible de cada billete y moneda al iniciar la jornada."
+                    quantities={openingCashCount}
+                    onQuantityChange={(denomination, value) =>
+                      updateCashCountQuantity("OPENING", denomination, value)
+                    }
+                    disabled={submitting}
+                  />
 
-                  <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-semibold text-neutral-500">
-                      $
-                    </span>
+                  <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                          Fondo inicial
+                        </p>
 
-                    <input
-                      id="openingAmount"
-                      type="number"
-                      min="0"
-                      step="1"
-                      inputMode="numeric"
-                      value={openingAmount}
-                      onChange={(event) => setOpeningAmount(event.target.value)}
-                      placeholder="0"
-                      required
-                      className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-8 pr-4 text-sm text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                    />
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Calculado automáticamente desde las denominaciones
+                          ingresadas.
+                        </p>
+                      </div>
+
+                      <p className="text-2xl font-bold text-neutral-950">
+                        {formatCurrency(openingCashTotal)}
+                      </p>
+                    </div>
                   </div>
-
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Ingresa el efectivo físico disponible al iniciar la jornada.
-                  </p>
                 </div>
 
                 <div>
@@ -2581,6 +2759,105 @@ export default function CashRegisterPage() {
                         </p>
                       </div>
                     </div>
+
+                    {(closingDetail.openingCashCount.length > 0 ||
+                      closingDetail.closingCashCount.length > 0) && (
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                                Composición de apertura
+                              </p>
+
+                              <p className="mt-1 text-xs text-neutral-500">
+                                Efectivo físico registrado al abrir la caja.
+                              </p>
+                            </div>
+
+                            <p className="text-lg font-bold text-neutral-950">
+                              {formatCurrency(
+                                closingDetail.summary.openingAmount,
+                              )}
+                            </p>
+                          </div>
+
+                          {closingDetail.openingCashCount.length > 0 ? (
+                            <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200">
+                              {closingDetail.openingCashCount.map((entry) => (
+                                <div
+                                  key={entry.denomination}
+                                  className="grid grid-cols-[1fr_80px_1fr] items-center gap-3 border-b border-neutral-100 px-4 py-2 last:border-b-0"
+                                >
+                                  <p className="text-sm font-semibold text-neutral-800">
+                                    {formatCurrency(entry.denomination)}
+                                  </p>
+
+                                  <p className="text-center text-sm text-neutral-600">
+                                    × {entry.quantity}
+                                  </p>
+
+                                  <p className="text-right text-sm font-semibold text-neutral-800">
+                                    {formatCurrency(entry.subtotal)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-4 text-xs text-neutral-500">
+                              Sin composición de apertura registrada.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                                Composición de cierre
+                              </p>
+
+                              <p className="mt-1 text-xs text-neutral-500">
+                                Efectivo físico registrado al cerrar la caja.
+                              </p>
+                            </div>
+
+                            <p className="text-lg font-bold text-neutral-950">
+                              {formatCurrency(
+                                closingDetail.summary.countedCashAmount,
+                              )}
+                            </p>
+                          </div>
+
+                          {closingDetail.closingCashCount.length > 0 ? (
+                            <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200">
+                              {closingDetail.closingCashCount.map((entry) => (
+                                <div
+                                  key={entry.denomination}
+                                  className="grid grid-cols-[1fr_80px_1fr] items-center gap-3 border-b border-neutral-100 px-4 py-2 last:border-b-0"
+                                >
+                                  <p className="text-sm font-semibold text-neutral-800">
+                                    {formatCurrency(entry.denomination)}
+                                  </p>
+
+                                  <p className="text-center text-sm text-neutral-600">
+                                    × {entry.quantity}
+                                  </p>
+
+                                  <p className="text-right text-sm font-semibold text-neutral-800">
+                                    {formatCurrency(entry.subtotal)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-4 text-xs text-neutral-500">
+                              Sin composición de cierre registrada.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">

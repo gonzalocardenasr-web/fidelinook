@@ -139,19 +139,18 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const openingAmount = Number(body.openingAmount);
+    const cashCount = Array.isArray(body.cashCount) ? body.cashCount : null;
 
     const openingNotes =
       typeof body.openingNotes === "string"
         ? body.openingNotes.trim() || null
         : null;
 
-    if (!Number.isInteger(openingAmount) || openingAmount < 0) {
+    if (!cashCount) {
       return NextResponse.json(
         {
           ok: false,
-          message:
-            "El fondo inicial debe ser un número entero mayor o igual a cero.",
+          message: "Debes registrar la composición del fondo inicial.",
         },
         {
           status: 400,
@@ -217,52 +216,29 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("cash_register_sessions")
-      .insert({
-        status: "OPEN",
-        opened_by_role: operationSession.role,
-        opening_amount: openingAmount,
-        opening_notes: openingNotes,
-      })
-      .select(
-        `
-          id,
-          status,
-          opened_at,
-          opened_by_role,
-          opening_amount,
-          opening_notes,
-          closed_at,
-          closed_by_role,
-          expected_cash_amount,
-          counted_cash_amount,
-          cash_difference,
-          closing_notes,
-          created_at,
-          updated_at
-        `,
-      )
-      .single();
+    const { data, error } = await supabaseAdmin.rpc(
+      "open_cash_register_session",
+      {
+        p_cash_count: cashCount,
+        p_opening_notes: openingNotes,
+        p_opened_by_role: operationSession.role,
+      },
+    );
 
     if (error) {
-      /*
-       * La restricción única de base de datos sigue siendo
-       * la protección definitiva frente a dos aperturas simultáneas.
-       */
-      if (error.code === "23505") {
-        return NextResponse.json(
-          {
-            ok: false,
-            message: "Ya existe una caja abierta.",
-          },
-          {
-            status: 409,
-          },
-        );
-      }
-
       console.error("Error abriendo caja:", error);
+
+      const normalizedMessage = error.message?.toLowerCase() || "";
+
+      const isValidationError =
+        normalizedMessage.includes("denomin") ||
+        normalizedMessage.includes("cantidad") ||
+        normalizedMessage.includes("composición") ||
+        normalizedMessage.includes("conteo");
+
+      const isConflict =
+        error.code === "23505" ||
+        normalizedMessage.includes("ya existe una caja abierta");
 
       return NextResponse.json(
         {
@@ -270,7 +246,7 @@ export async function POST(req: Request) {
           message: error.message || "No fue posible abrir la caja.",
         },
         {
-          status: 500,
+          status: isValidationError ? 400 : isConflict ? 409 : 500,
         },
       );
     }

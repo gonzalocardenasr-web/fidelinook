@@ -66,17 +66,56 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const countedCashAmount = Number(body.countedCashAmount);
+    const cashCount = Array.isArray(body.cashCount) ? body.cashCount : null;
 
-    if (!Number.isInteger(countedCashAmount) || countedCashAmount < 0) {
+    if (!cashCount) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Debes registrar la composición del efectivo contado.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const { data: countedCashData, error: countedCashError } =
+      await supabaseAdmin.rpc("calculate_cash_count_total", {
+        p_cash_count: cashCount,
+      });
+
+    if (countedCashError) {
+      console.error(
+        "Error calculando efectivo contado para previsualización:",
+        countedCashError,
+      );
+
       return NextResponse.json(
         {
           ok: false,
           message:
-            "El efectivo contado debe ser un número entero mayor o igual a cero.",
+            countedCashError.message ||
+            "No fue posible validar la composición del efectivo contado.",
         },
         {
           status: 400,
+        },
+      );
+    }
+
+    const countedCashAmount = Number(countedCashData);
+
+    if (!Number.isInteger(countedCashAmount) || countedCashAmount < 0) {
+      console.error("Total de efectivo contado inválido:", countedCashData);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar el total del efectivo contado.",
+        },
+        {
+          status: 500,
         },
       );
     }

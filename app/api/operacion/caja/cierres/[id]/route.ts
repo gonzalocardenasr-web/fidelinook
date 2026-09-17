@@ -42,6 +42,21 @@ type CashRegisterMovementRow = {
   created_at: string;
 };
 
+type CashRegisterCashCountRow = {
+  id: number;
+  cash_register_session_id: number;
+  count_type: "OPENING" | "CLOSING";
+  denomination: number;
+  quantity: number;
+  created_at: string;
+};
+
+type NormalizedCashCount = {
+  denomination: number;
+  quantity: number;
+  subtotal: number;
+};
+
 type CashSaleOrderRow = {
   id: number;
   display_order_code: string;
@@ -121,6 +136,19 @@ function normalizeMovement(
     id: Number(movement.id),
     cash_register_session_id: Number(movement.cash_register_session_id),
     amount: Number(movement.amount || 0),
+  };
+}
+
+function normalizeCashCount(
+  cashCount: CashRegisterCashCountRow,
+): NormalizedCashCount {
+  const denomination = Number(cashCount.denomination || 0);
+  const quantity = Number(cashCount.quantity || 0);
+
+  return {
+    denomination,
+    quantity,
+    subtotal: denomination * quantity,
   };
 }
 
@@ -272,16 +300,20 @@ export async function GET(
       );
     }
 
-    const [expectedCashResult, movementsResult, cashSalesResult] =
-      await Promise.all([
-        supabaseAdmin.rpc("get_cash_register_expected_cash", {
-          p_cash_register_session_id: cashRegisterSessionId,
-        }),
+    const [
+      expectedCashResult,
+      movementsResult,
+      cashSalesResult,
+      cashCountsResult,
+    ] = await Promise.all([
+      supabaseAdmin.rpc("get_cash_register_expected_cash", {
+        p_cash_register_session_id: cashRegisterSessionId,
+      }),
 
-        supabaseAdmin
-          .from("cash_register_movements")
-          .select(
-            `
+      supabaseAdmin
+        .from("cash_register_movements")
+        .select(
+          `
             id,
             cash_register_session_id,
             movement_type,
@@ -291,16 +323,16 @@ export async function GET(
             created_by_role,
             created_at
           `,
-          )
-          .eq("cash_register_session_id", cashRegisterSessionId)
-          .order("created_at", {
-            ascending: true,
-          }),
+        )
+        .eq("cash_register_session_id", cashRegisterSessionId)
+        .order("created_at", {
+          ascending: true,
+        }),
 
-        supabaseAdmin
-          .from("sales")
-          .select(
-            `
+      supabaseAdmin
+        .from("sales")
+        .select(
+          `
             id,
             sale_number,
             total,
@@ -317,15 +349,32 @@ export async function GET(
               status
             )
           `,
-          )
-          .eq("cash_register_session_id", cashRegisterSessionId)
-          .eq("status", "confirmed")
-          .eq("payment_status", "paid")
-          .ilike("payment_method", "efectivo")
-          .order("confirmed_at", {
-            ascending: true,
-          }),
-      ]);
+        )
+        .eq("cash_register_session_id", cashRegisterSessionId)
+        .eq("status", "confirmed")
+        .eq("payment_status", "paid")
+        .ilike("payment_method", "efectivo")
+        .order("confirmed_at", {
+          ascending: true,
+        }),
+
+      supabaseAdmin
+        .from("cash_register_cash_counts")
+        .select(
+          `
+              id,
+              cash_register_session_id,
+              count_type,
+              denomination,
+              quantity,
+              created_at
+            `,
+        )
+        .eq("cash_register_session_id", cashRegisterSessionId)
+        .order("denomination", {
+          ascending: false,
+        }),
+    ]);
 
     if (expectedCashResult.error) {
       console.error(
@@ -372,6 +421,24 @@ export async function GET(
           ok: false,
           message:
             "No fue posible consultar las ventas en efectivo del cierre.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    if (cashCountsResult.error) {
+      console.error(
+        "Error consultando composición de efectivo del cierre:",
+        cashCountsResult.error,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "No fue posible consultar la composición de efectivo del cierre.",
         },
         {
           status: 500,
@@ -469,6 +536,17 @@ export async function GET(
       );
     }
 
+    const cashCountRows = (cashCountsResult.data ||
+      []) as CashRegisterCashCountRow[];
+
+    const openingCashCount = cashCountRows
+      .filter((row) => row.count_type === "OPENING")
+      .map(normalizeCashCount);
+
+    const closingCashCount = cashCountRows
+      .filter((row) => row.count_type === "CLOSING")
+      .map(normalizeCashCount);
+
     const summary = {
       openingAmount: session.opening_amount,
       cashSalesAmount: expectedCash.cash_sales_amount,
@@ -491,6 +569,8 @@ export async function GET(
         summary,
         movements,
         cashSales,
+        openingCashCount,
+        closingCashCount,
       },
     });
   } catch (error) {

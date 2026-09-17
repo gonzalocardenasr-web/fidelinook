@@ -58,19 +58,18 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const countedCashAmount = Number(body.countedCashAmount);
+    const cashCount = Array.isArray(body.cashCount) ? body.cashCount : null;
 
     const closingNotes =
       typeof body.closingNotes === "string"
         ? body.closingNotes.trim() || null
         : null;
 
-    if (!Number.isInteger(countedCashAmount) || countedCashAmount < 0) {
+    if (!cashCount) {
       return NextResponse.json(
         {
           ok: false,
-          message:
-            "El efectivo contado debe ser un número entero mayor o igual a cero.",
+          message: "Debes registrar la composición del efectivo contado.",
         },
         {
           status: 400,
@@ -138,10 +137,10 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabaseAdmin.rpc(
-      "close_cash_register_session",
+      "close_cash_register_session_with_count",
       {
         p_cash_register_session_id: cashRegisterSessionId,
-        p_counted_cash_amount: countedCashAmount,
+        p_cash_count: cashCount,
         p_closing_notes: closingNotes,
         p_closed_by_role: operationSession.role,
       },
