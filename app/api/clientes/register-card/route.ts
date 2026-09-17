@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       acceptsTerms: aceptaTerminos,
       acceptsMarketing: aceptaMarketing,
       marketingPreferenceDefined: true,
-      termsVersion: "v1.0",
+      termsVersion: "v1.1",
       acceptedAt: verificationCreatedAt,
     });
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         metadata: {
           acceptsMarketing: aceptaMarketing,
           marketingPreferenceDefined: true,
-          termsVersion: "v1.0",
+          termsVersion: "v1.1",
         },
       });
     } catch (eventError) {

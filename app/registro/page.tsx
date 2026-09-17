@@ -257,6 +257,32 @@ export default function RegistroPage() {
                 Regístrate para comenzar a acumular sellos en tus compras
                 presenciales en Nook.
               </p>
+
+              <div className="mt-4 rounded-2xl border border-[#D9C8FF] bg-[#F7F2FF] p-4">
+                <p className="text-sm font-semibold text-[#4c00f7]">
+                  ¿Cómo acumulas sellos?
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-[#555]">
+                  Desde $3.000 de compra diaria comienzas a acumular. Al
+                  alcanzar $20.000 durante el día recibes 1 sello adicional, y
+                  otro por cada nuevo múltiplo de $20.000.
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-[#555]">
+                  En tu primera compra recibes además 1 sello extra por única
+                  vez. Algunas campañas también pueden entregar sellos
+                  adicionales.
+                </p>
+
+                <p className="mt-2 text-sm font-semibold text-[#555]">
+                  Completa 7 sellos y obtén un helado simple a elección.
+                </p>
+
+                <p className="mt-1 text-xs text-[#777]">
+                  El premio tiene una vigencia de 30 días desde su emisión.
+                </p>
+              </div>
             </div>
 
             {!registroExitoso ? (
