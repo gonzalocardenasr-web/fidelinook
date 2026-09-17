@@ -544,6 +544,21 @@ function CashCountForm({
   onQuantityChange: (denomination: number, value: string) => void;
   disabled?: boolean;
 }) {
+  const groups = [
+    {
+      title: "Billetes",
+      denominations: CASH_DENOMINATIONS.filter(
+        (denomination) => denomination >= 1000,
+      ),
+    },
+    {
+      title: "Monedas",
+      denominations: CASH_DENOMINATIONS.filter(
+        (denomination) => denomination < 1000,
+      ),
+    },
+  ];
+
   return (
     <div>
       <div className="mb-3">
@@ -552,59 +567,73 @@ function CashCountForm({
         <p className="mt-1 text-xs text-neutral-500">{description}</p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[1fr_100px_1fr] gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-            Denominación
-          </p>
-
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-            Cantidad
-          </p>
-
-          <p className="text-right text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-            Subtotal
-          </p>
-        </div>
-
-        {CASH_DENOMINATIONS.map((denomination) => {
-          const rawQuantity = quantities[denomination] || "";
-          const parsedQuantity = rawQuantity === "" ? 0 : Number(rawQuantity);
-
-          const subtotal =
-            Number.isInteger(parsedQuantity) && parsedQuantity >= 0
-              ? denomination * parsedQuantity
-              : 0;
-
-          return (
-            <div
-              key={denomination}
-              className="grid grid-cols-[1fr_100px_1fr] items-center gap-3 border-b border-neutral-100 px-4 py-2 last:border-b-0"
-            >
-              <p className="text-sm font-semibold text-neutral-800">
-                {formatCurrency(denomination)}
-              </p>
-
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={rawQuantity}
-                onChange={(event) =>
-                  onQuantityChange(denomination, event.target.value)
-                }
-                placeholder="0"
-                disabled={disabled}
-                aria-label={`Cantidad de ${formatCurrency(denomination)}`}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
-              />
-
-              <p className="text-right text-sm font-semibold text-neutral-700">
-                {formatCurrency(subtotal)}
+      <div className="grid gap-3 md:grid-cols-2">
+        {groups.map((group) => (
+          <div
+            key={group.title}
+            className="overflow-hidden rounded-xl border border-neutral-200 bg-white"
+          >
+            <div className="border-b border-neutral-200 bg-neutral-50 px-3 py-2">
+              <p className="text-xs font-bold text-neutral-800">
+                {group.title}
               </p>
             </div>
-          );
-        })}
+
+            <div className="grid grid-cols-[1fr_76px_1fr] gap-2 border-b border-neutral-200 bg-neutral-50/60 px-3 py-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">
+                Denominación
+              </p>
+
+              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">
+                Cantidad
+              </p>
+
+              <p className="text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">
+                Subtotal
+              </p>
+            </div>
+
+            {group.denominations.map((denomination) => {
+              const rawQuantity = quantities[denomination] || "";
+              const parsedQuantity =
+                rawQuantity === "" ? 0 : Number(rawQuantity);
+
+              const subtotal =
+                Number.isInteger(parsedQuantity) && parsedQuantity >= 0
+                  ? denomination * parsedQuantity
+                  : 0;
+
+              return (
+                <div
+                  key={denomination}
+                  className="grid grid-cols-[1fr_76px_1fr] items-center gap-2 border-b border-neutral-100 px-3 py-1.5 last:border-b-0"
+                >
+                  <p className="text-xs font-semibold text-neutral-800">
+                    {formatCurrency(denomination)}
+                  </p>
+
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={rawQuantity}
+                    onChange={(event) =>
+                      onQuantityChange(denomination, event.target.value)
+                    }
+                    placeholder="0"
+                    disabled={disabled}
+                    aria-label={`Cantidad de ${formatCurrency(denomination)}`}
+                    className="h-8 w-full rounded-lg border border-neutral-200 bg-white px-2 text-center text-xs font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                  />
+
+                  <p className="text-right text-xs font-semibold text-neutral-700">
+                    {formatCurrency(subtotal)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2365,7 +2394,7 @@ export default function CashRegisterPage() {
 
               <form
                 onSubmit={openCashRegister}
-                className="mt-6 flex flex-col gap-5"
+                className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]"
               >
                 <div>
                   <CashCountForm
@@ -2377,11 +2406,13 @@ export default function CashRegisterPage() {
                     }
                     disabled={submitting}
                   />
+                </div>
 
-                  <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
                           Fondo inicial
                         </p>
 
@@ -2391,42 +2422,46 @@ export default function CashRegisterPage() {
                         </p>
                       </div>
 
-                      <p className="text-2xl font-bold text-neutral-950">
+                      <p className="shrink-0 text-2xl font-bold text-neutral-950">
                         {formatCurrency(openingCashTotal)}
                       </p>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label
-                    htmlFor="openingNotes"
-                    className="mb-2 block text-sm font-semibold text-neutral-800"
+                  <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                    <label
+                      htmlFor="openingNotes"
+                      className="mb-2 block text-sm font-semibold text-neutral-800"
+                    >
+                      Observaciones
+                      <span className="ml-1 font-normal text-neutral-500">
+                        opcional
+                      </span>
+                    </label>
+
+                    <textarea
+                      id="openingNotes"
+                      value={openingNotes}
+                      onChange={(event) => setOpeningNotes(event.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Ejemplo: fondo inicial entregado por administración."
+                      className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    />
+
+                    <p className="mt-1 text-right text-[10px] text-neutral-400">
+                      {openingNotes.length}/500
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="mt-auto w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Observaciones
-                    <span className="ml-1 font-normal text-neutral-500">
-                      opcional
-                    </span>
-                  </label>
-
-                  <textarea
-                    id="openingNotes"
-                    value={openingNotes}
-                    onChange={(event) => setOpeningNotes(event.target.value)}
-                    rows={3}
-                    maxLength={500}
-                    placeholder="Ejemplo: fondo inicial entregado por administración."
-                    className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                  />
+                    {submitting ? "Abriendo caja..." : "Abrir caja"}
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitting ? "Abriendo caja..." : "Abrir caja"}
-                </button>
               </form>
             </section>
           )}
