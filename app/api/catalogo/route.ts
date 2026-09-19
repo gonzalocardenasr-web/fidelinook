@@ -39,6 +39,15 @@ export async function GET() {
         price,
         is_active
       ),
+      product_option_prices (
+        id,
+        option_value_id,
+        channel,
+        price_list,
+        price,
+        inventory_quantity,
+        is_active
+      ),
       product_channels (
         channel_code,
         is_enabled

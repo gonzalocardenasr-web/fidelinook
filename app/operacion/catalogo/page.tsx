@@ -27,6 +27,15 @@ type Product = {
     price: number;
     is_active: boolean;
   }[];
+  product_option_prices?: {
+    id: number;
+    option_value_id: number;
+    channel: string;
+    price_list: string;
+    price: number;
+    inventory_quantity: number | string;
+    is_active: boolean;
+  }[];
   product_channels?: {
     channel_code: string;
     is_enabled: boolean;
@@ -116,6 +125,12 @@ export default function CatalogoOperacionPage() {
   const [savingPriceChannel, setSavingPriceChannel] = useState<string | null>(
     null,
   );
+  const [optionPricingValues, setOptionPricingValues] = useState<
+    Record<string, string>
+  >({});
+  const [savingOptionPriceKey, setSavingOptionPriceKey] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     cargarCatalogo();
@@ -274,15 +289,78 @@ export default function CatalogoOperacionPage() {
     return price ? Number(price.price) : null;
   }
 
+  function getCoffeeOptionValues() {
+    return (
+      optionGroups
+        .find((group) => group.code === "coffee_type" && group.is_active)
+        ?.catalog_option_values.filter((option) => option.is_active) ?? []
+    ).sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  function getProductOptionPrice(
+    product: Product,
+    optionValueId: number,
+    channelCode: string,
+  ) {
+    const price = product.product_option_prices?.find(
+      (item) =>
+        Number(item.option_value_id) === optionValueId &&
+        item.channel === channelCode &&
+        item.price_list === "general" &&
+        item.is_active,
+    );
+
+    return price ? Number(price.price) : null;
+  }
+
+  function getProductOptionInventoryQuantity(
+    product: Product,
+    optionValueId: number,
+  ) {
+    const localConfiguration = product.product_option_prices?.find(
+      (item) =>
+        Number(item.option_value_id) === optionValueId &&
+        item.channel === "local" &&
+        item.price_list === "general" &&
+        item.is_active,
+    );
+
+    if (localConfiguration) {
+      return Number(localConfiguration.inventory_quantity);
+    }
+
+    const anyActiveConfiguration = product.product_option_prices?.find(
+      (item) =>
+        Number(item.option_value_id) === optionValueId &&
+        item.is_active &&
+        Number(item.inventory_quantity) > 0,
+    );
+
+    return anyActiveConfiguration
+      ? Number(anyActiveConfiguration.inventory_quantity)
+      : null;
+  }
+
   function abrirPreciosProducto(product: Product) {
     const values: Record<string, string> = {};
+    const optionValues: Record<string, string> = {};
 
     for (const channel of salesChannels) {
       const price = getChannelPrice(product, channel.code);
       values[channel.code] = price === null ? "" : String(price);
     }
 
+    for (const optionPrice of product.product_option_prices ?? []) {
+      if (optionPrice.price_list !== "general" || !optionPrice.is_active) {
+        continue;
+      }
+
+      const key = `${optionPrice.option_value_id}:${optionPrice.channel}`;
+      optionValues[key] = String(optionPrice.price);
+    }
+
     setPricingValues(values);
+    setOptionPricingValues(optionValues);
     setPricingProduct(product);
     setMessage("");
   }
@@ -361,6 +439,109 @@ export default function CatalogoOperacionPage() {
       setMessage("Error actualizando precio.");
     } finally {
       setSavingPriceChannel(null);
+    }
+  }
+
+  async function guardarPrecioOpcion(
+    optionValue: OptionValue,
+    channel: SalesChannel,
+  ) {
+    if (!pricingProduct) return;
+
+    const key = `${optionValue.id}:${channel.code}`;
+    const rawPrice = optionPricingValues[key]?.trim() ?? "";
+
+    if (rawPrice === "") {
+      setMessage(
+        `Ingresa un precio para ${optionValue.name} en ${channel.name}.`,
+      );
+      return;
+    }
+
+    const price = Number(rawPrice);
+
+    if (!Number.isInteger(price) || price < 0) {
+      setMessage(
+        `El precio de ${optionValue.name} en ${channel.name} no es válido.`,
+      );
+      return;
+    }
+
+    try {
+      setSavingOptionPriceKey(key);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/option-prices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: pricingProduct.id,
+          optionValueId: optionValue.id,
+          channelCode: channel.code,
+          priceList: "general",
+          price,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(
+          data.message || "No se pudo actualizar el precio de la opción.",
+        );
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setPricingProduct((current) => {
+        if (!current) return current;
+
+        const currentInventoryQuantity = getProductOptionInventoryQuantity(
+          current,
+          optionValue.id,
+        );
+
+        if (
+          currentInventoryQuantity === null ||
+          currentInventoryQuantity <= 0
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          product_option_prices: [
+            ...(current.product_option_prices ?? []).filter(
+              (item) =>
+                !(
+                  Number(item.option_value_id) === optionValue.id &&
+                  item.channel === channel.code &&
+                  item.price_list === "general" &&
+                  item.is_active
+                ),
+            ),
+            {
+              id: Number(data.priceId),
+              option_value_id: optionValue.id,
+              channel: channel.code,
+              price_list: "general",
+              price,
+              inventory_quantity: currentInventoryQuantity,
+              is_active: true,
+            },
+          ],
+        };
+      });
+
+      setMessage(
+        `Precio de ${optionValue.name} en ${channel.name} actualizado correctamente.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando precio de opción.");
+    } finally {
+      setSavingOptionPriceKey(null);
     }
   }
 
@@ -1094,15 +1275,17 @@ export default function CatalogoOperacionPage() {
       )}
       {pricingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-neutral-200 px-5 py-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
                   Pricing multicanal
                 </p>
+
                 <h2 className="mt-1 text-xl font-black text-neutral-900">
                   {pricingProduct.name}
                 </h2>
+
                 <p className="mt-1 font-mono text-xs text-neutral-500">
                   {pricingProduct.sku}
                 </p>
@@ -1111,98 +1294,233 @@ export default function CatalogoOperacionPage() {
               <button
                 type="button"
                 onClick={() => setPricingProduct(null)}
-                disabled={savingPriceChannel !== null}
+                disabled={
+                  savingPriceChannel !== null || savingOptionPriceKey !== null
+                }
                 className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cerrar
               </button>
             </div>
 
-            <div className="space-y-3 p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
-                <span>Canal</span>
-                <span>Disponibilidad</span>
-                <span>Precio general</span>
-                <span></span>
-              </div>
+            <div className="max-h-[calc(90vh-90px)] overflow-y-auto p-5">
+              {pricingProduct.sku === "CAFE" ? (
+                <div className="space-y-5">
+                  {salesChannels.map((channel) => {
+                    const enabled = isProductEnabledForChannel(
+                      pricingProduct,
+                      channel.code,
+                    );
 
-              {salesChannels.map((channel) => {
-                const enabled = isProductEnabledForChannel(
-                  pricingProduct,
-                  channel.code,
-                );
-                const currentPrice = getChannelPrice(
-                  pricingProduct,
-                  channel.code,
-                );
-                const isSaving = savingPriceChannel === channel.code;
-
-                return (
-                  <div
-                    key={channel.code}
-                    className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
-                  >
-                    <div>
-                      <p className="font-bold text-neutral-900">
-                        {channel.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-neutral-500">
-                        {currentPrice === null
-                          ? "Sin precio vigente"
-                          : `Vigente: ${currentPrice.toLocaleString("es-CL", {
-                              style: "currency",
-                              currency: "CLP",
-                              maximumFractionDigits: 0,
-                            })}`}
-                      </p>
-                    </div>
-
-                    <div>
-                      <span
-                        className={`rounded-full px-2 py-1 text-[10px] font-bold ${
-                          enabled
-                            ? "bg-violet-100 text-violet-700"
-                            : "bg-neutral-100 text-neutral-500"
-                        }`}
+                    return (
+                      <section
+                        key={channel.code}
+                        className="overflow-hidden rounded-xl border border-neutral-200"
                       >
-                        {enabled ? "Habilitado" : "Deshabilitado"}
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <div>
+                            <p className="font-black text-neutral-900">
+                              {channel.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-neutral-500">
+                              Lista general
+                            </p>
+                          </div>
 
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={pricingValues[channel.code] ?? ""}
-                      onChange={(event) =>
-                        setPricingValues((current) => ({
-                          ...current,
-                          [channel.code]: event.target.value,
-                        }))
-                      }
-                      disabled={isSaving}
-                      placeholder="Sin precio"
-                      className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-50"
-                    />
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                              enabled
+                                ? "bg-violet-100 text-violet-700"
+                                : "bg-neutral-200 text-neutral-500"
+                            }`}
+                          >
+                            {enabled ? "Habilitado" : "Deshabilitado"}
+                          </span>
+                        </div>
 
-                    <button
-                      type="button"
-                      onClick={() => guardarPrecioProducto(channel)}
-                      disabled={savingPriceChannel !== null}
-                      className="cursor-pointer rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isSaving ? "Guardando..." : "Guardar"}
-                    </button>
+                        <div className="grid grid-cols-[minmax(0,1fr)_100px_150px_170px_100px] gap-3 border-b border-neutral-100 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                          <span>Tipo</span>
+                          <span>Consumo</span>
+                          <span>Vigente</span>
+                          <span>Precio</span>
+                          <span></span>
+                        </div>
+
+                        {getCoffeeOptionValues().map((optionValue) => {
+                          const key = `${optionValue.id}:${channel.code}`;
+                          const currentPrice = getProductOptionPrice(
+                            pricingProduct,
+                            optionValue.id,
+                            channel.code,
+                          );
+                          const inventoryQuantity =
+                            getProductOptionInventoryQuantity(
+                              pricingProduct,
+                              optionValue.id,
+                            );
+                          const isSaving = savingOptionPriceKey === key;
+
+                          return (
+                            <div
+                              key={optionValue.id}
+                              className="grid grid-cols-[minmax(0,1fr)_100px_150px_170px_100px] items-center gap-3 border-b border-neutral-100 px-4 py-2.5 last:border-b-0"
+                            >
+                              <div>
+                                <p className="text-sm font-bold text-neutral-900">
+                                  {optionValue.name}
+                                </p>
+                                <p className="font-mono text-[10px] text-neutral-400">
+                                  {optionValue.code}
+                                </p>
+                              </div>
+
+                              <span className="text-sm font-semibold text-neutral-600">
+                                {inventoryQuantity === null
+                                  ? "—"
+                                  : inventoryQuantity}
+                              </span>
+
+                              <span className="text-xs font-semibold text-neutral-600">
+                                {currentPrice === null
+                                  ? "Sin precio"
+                                  : currentPrice.toLocaleString("es-CL", {
+                                      style: "currency",
+                                      currency: "CLP",
+                                      maximumFractionDigits: 0,
+                                    })}
+                              </span>
+
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={optionPricingValues[key] ?? ""}
+                                onChange={(event) =>
+                                  setOptionPricingValues((current) => ({
+                                    ...current,
+                                    [key]: event.target.value,
+                                  }))
+                                }
+                                disabled={isSaving}
+                                placeholder="Sin precio"
+                                className="h-9 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-50"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  guardarPrecioOpcion(optionValue, channel)
+                                }
+                                disabled={savingOptionPriceKey !== null}
+                                className="cursor-pointer rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isSaving ? "Guardando..." : "Guardar"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </section>
+                    );
+                  })}
+
+                  <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+                    El precio se administra independientemente para cada tipo de
+                    café y canal. El consumo corresponde a la configuración
+                    operacional de inventario y no se modifica desde pricing. Un
+                    precio puede configurarse antes de habilitar el canal.
                   </div>
-                );
-              })}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                    <span>Canal</span>
+                    <span>Disponibilidad</span>
+                    <span>Precio general</span>
+                    <span></span>
+                  </div>
 
-              <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
-                Un precio puede configurarse antes de habilitar el canal.
-                Cambiar un precio conserva su historial de vigencia; no modifica
-                el estado global del producto ni habilita automáticamente el
-                canal.
-              </div>
+                  {salesChannels.map((channel) => {
+                    const enabled = isProductEnabledForChannel(
+                      pricingProduct,
+                      channel.code,
+                    );
+                    const currentPrice = getChannelPrice(
+                      pricingProduct,
+                      channel.code,
+                    );
+                    const isSaving = savingPriceChannel === channel.code;
+
+                    return (
+                      <div
+                        key={channel.code}
+                        className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
+                      >
+                        <div>
+                          <p className="font-bold text-neutral-900">
+                            {channel.name}
+                          </p>
+                          <p className="mt-0.5 text-xs text-neutral-500">
+                            {currentPrice === null
+                              ? "Sin precio vigente"
+                              : `Vigente: ${currentPrice.toLocaleString(
+                                  "es-CL",
+                                  {
+                                    style: "currency",
+                                    currency: "CLP",
+                                    maximumFractionDigits: 0,
+                                  },
+                                )}`}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                              enabled
+                                ? "bg-violet-100 text-violet-700"
+                                : "bg-neutral-100 text-neutral-500"
+                            }`}
+                          >
+                            {enabled ? "Habilitado" : "Deshabilitado"}
+                          </span>
+                        </div>
+
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={pricingValues[channel.code] ?? ""}
+                          onChange={(event) =>
+                            setPricingValues((current) => ({
+                              ...current,
+                              [channel.code]: event.target.value,
+                            }))
+                          }
+                          disabled={isSaving}
+                          placeholder="Sin precio"
+                          className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-50"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => guardarPrecioProducto(channel)}
+                          disabled={savingPriceChannel !== null}
+                          className="cursor-pointer rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isSaving ? "Guardando..." : "Guardar"}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+                    Un precio puede configurarse antes de habilitar el canal.
+                    Cambiar un precio conserva su historial de vigencia; no
+                    modifica el estado global del producto ni habilita
+                    automáticamente el canal.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
