@@ -108,6 +108,7 @@ export default function CatalogoOperacionPage() {
   const [productForm, setProductForm] =
     useState<ProductForm>(EMPTY_PRODUCT_FORM);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [savingChannelKey, setSavingChannelKey] = useState<string | null>(null);
 
   useEffect(() => {
     cargarCatalogo();
@@ -211,6 +212,47 @@ export default function CatalogoOperacionPage() {
       setMessage("Error guardando producto.");
     } finally {
       setSavingProduct(false);
+    }
+  }
+
+  async function actualizarCanalProducto(
+    product: Product,
+    channel: SalesChannel,
+    isEnabled: boolean,
+  ) {
+    const key = `${product.id}:${channel.code}`;
+
+    try {
+      setSavingChannelKey(key);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/channels", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          channelCode: channel.code,
+          isEnabled,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo actualizar el canal.");
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setMessage(
+        `${channel.name} ${isEnabled ? "habilitado" : "deshabilitado"} para ${product.name}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando canal de venta.");
+    } finally {
+      setSavingChannelKey(null);
     }
   }
 
@@ -488,18 +530,36 @@ export default function CatalogoOperacionPage() {
                                 product,
                                 channel.code,
                               );
+                              const channelKey = `${product.id}:${channel.code}`;
+                              const isSaving = savingChannelKey === channelKey;
 
                               return (
-                                <span
+                                <button
                                   key={channel.code}
-                                  className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                                  type="button"
+                                  disabled={isSaving || !channel.is_active}
+                                  onClick={() =>
+                                    actualizarCanalProducto(
+                                      product,
+                                      channel,
+                                      !enabled,
+                                    )
+                                  }
+                                  title={
+                                    !channel.is_active
+                                      ? `${channel.name} está inactivo como canal de venta`
+                                      : enabled
+                                        ? `Deshabilitar ${channel.name}`
+                                        : `Habilitar ${channel.name}`
+                                  }
+                                  className={`cursor-pointer rounded-full px-2 py-1 text-[10px] font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                                     enabled
-                                      ? "bg-violet-100 text-violet-700"
-                                      : "bg-neutral-100 text-neutral-400"
+                                      ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
+                                      : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600"
                                   }`}
                                 >
-                                  {channel.name}
-                                </span>
+                                  {isSaving ? "Guardando..." : channel.name}
+                                </button>
                               );
                             })}
                           </div>
