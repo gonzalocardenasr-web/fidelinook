@@ -212,22 +212,26 @@ export default function CatalogoOperacionPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+    <main className="min-h-screen bg-[#F6F3FF] p-3">
+      <div className="w-full space-y-2">
+        <header className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-3 shadow-sm">
           <Link
             href="/operacion"
-            className="inline-flex rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition duration-200 hover:bg-white/25 active:scale-[0.98]"
+            className="inline-flex shrink-0 items-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 active:scale-[0.98]"
           >
-            ← Volver a operación
+            ← Operación
           </Link>
 
-          <h1 className="mt-3 text-3xl font-bold">Catálogo operacional</h1>
-
-          <p className="text-sm opacity-90">
-            Administra productos, precios locales y opciones activas del POS.
-          </p>
-        </div>
+          <div>
+            <h1 className="text-2xl font-black text-neutral-900">
+              Catálogo Maestro
+            </h1>
+            <p className="text-sm text-neutral-500">
+              Administra productos, configuración y disponibilidad comercial por
+              canal.
+            </p>
+          </div>
+        </header>
 
         {message && (
           <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-sm text-neutral-700">
@@ -241,7 +245,7 @@ export default function CatalogoOperacionPage() {
           </div>
         ) : (
           <>
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
+            <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-black text-neutral-900">
@@ -253,7 +257,7 @@ export default function CatalogoOperacionPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <input
                   type="search"
                   value={search}
@@ -299,7 +303,7 @@ export default function CatalogoOperacionPage() {
                 </select>
               </div>
 
-              <div className="mt-5 overflow-x-auto">
+              <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[1050px] border-separate border-spacing-y-2 text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
