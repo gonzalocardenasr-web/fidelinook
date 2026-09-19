@@ -221,7 +221,7 @@ export default function CatalogoOperacionPage() {
           price.channel === "local" &&
           price.price_list === "general" &&
           price.is_active,
-      )?.price || 0
+      )?.price ?? null
     );
   }
 
@@ -472,11 +472,13 @@ export default function CatalogoOperacionPage() {
                         </td>
 
                         <td className="bg-[#FCF8FF] px-3 py-3 font-bold text-neutral-900">
-                          {getLocalPrice(product).toLocaleString("es-CL", {
-                            style: "currency",
-                            currency: "CLP",
-                            maximumFractionDigits: 0,
-                          })}
+                          {getLocalPrice(product) === null
+                            ? "Sin precio"
+                            : getLocalPrice(product)!.toLocaleString("es-CL", {
+                                style: "currency",
+                                currency: "CLP",
+                                maximumFractionDigits: 0,
+                              })}
                         </td>
 
                         <td className="bg-[#FCF8FF] px-3 py-3">
