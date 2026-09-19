@@ -109,6 +109,13 @@ export default function CatalogoOperacionPage() {
     useState<ProductForm>(EMPTY_PRODUCT_FORM);
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingChannelKey, setSavingChannelKey] = useState<string | null>(null);
+  const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
+  const [pricingValues, setPricingValues] = useState<Record<string, string>>(
+    {},
+  );
+  const [savingPriceChannel, setSavingPriceChannel] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     cargarCatalogo();
@@ -253,6 +260,107 @@ export default function CatalogoOperacionPage() {
       setMessage("Error actualizando canal de venta.");
     } finally {
       setSavingChannelKey(null);
+    }
+  }
+
+  function getChannelPrice(product: Product, channelCode: string) {
+    const price = product.product_prices?.find(
+      (item) =>
+        item.channel === channelCode &&
+        item.price_list === "general" &&
+        item.is_active,
+    );
+
+    return price ? Number(price.price) : null;
+  }
+
+  function abrirPreciosProducto(product: Product) {
+    const values: Record<string, string> = {};
+
+    for (const channel of salesChannels) {
+      const price = getChannelPrice(product, channel.code);
+      values[channel.code] = price === null ? "" : String(price);
+    }
+
+    setPricingValues(values);
+    setPricingProduct(product);
+    setMessage("");
+  }
+
+  async function guardarPrecioProducto(channel: SalesChannel) {
+    if (!pricingProduct) return;
+
+    const rawPrice = pricingValues[channel.code]?.trim() ?? "";
+
+    if (rawPrice === "") {
+      setMessage(`Ingresa un precio para ${channel.name}.`);
+      return;
+    }
+
+    const price = Number(rawPrice);
+
+    if (!Number.isInteger(price) || price < 0) {
+      setMessage(`El precio de ${channel.name} no es válido.`);
+      return;
+    }
+
+    try {
+      setSavingPriceChannel(channel.code);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/prices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: pricingProduct.id,
+          channelCode: channel.code,
+          priceList: "general",
+          price,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo actualizar el precio.");
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setPricingProduct((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          product_prices: [
+            ...(current.product_prices ?? []).filter(
+              (item) =>
+                !(
+                  item.channel === channel.code &&
+                  item.price_list === "general" &&
+                  item.is_active
+                ),
+            ),
+            {
+              id: Number(data.priceId),
+              channel: channel.code,
+              price_list: "general",
+              price,
+              is_active: true,
+            },
+          ],
+        };
+      });
+
+      setMessage(
+        `Precio de ${channel.name} actualizado para ${pricingProduct.name}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando precio.");
+    } finally {
+      setSavingPriceChannel(null);
     }
   }
 
@@ -578,13 +686,23 @@ export default function CatalogoOperacionPage() {
                         </td>
 
                         <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => abrirEditarProducto(product)}
-                            className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 transition hover:border-violet-300 hover:text-violet-700 active:scale-[0.98]"
-                          >
-                            Editar
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => abrirPreciosProducto(product)}
+                              className="cursor-pointer rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 active:scale-[0.98]"
+                            >
+                              Precios
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => abrirEditarProducto(product)}
+                              className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 transition hover:border-violet-300 hover:text-violet-700 active:scale-[0.98]"
+                            >
+                              Editar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -970,6 +1088,121 @@ export default function CatalogoOperacionPage() {
                     ? "Guardar cambios"
                     : "Crear producto"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {pricingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-neutral-200 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
+                  Pricing multicanal
+                </p>
+                <h2 className="mt-1 text-xl font-black text-neutral-900">
+                  {pricingProduct.name}
+                </h2>
+                <p className="mt-1 font-mono text-xs text-neutral-500">
+                  {pricingProduct.sku}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPricingProduct(null)}
+                disabled={savingPriceChannel !== null}
+                className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-3 p-5">
+              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                <span>Canal</span>
+                <span>Disponibilidad</span>
+                <span>Precio general</span>
+                <span></span>
+              </div>
+
+              {salesChannels.map((channel) => {
+                const enabled = isProductEnabledForChannel(
+                  pricingProduct,
+                  channel.code,
+                );
+                const currentPrice = getChannelPrice(
+                  pricingProduct,
+                  channel.code,
+                );
+                const isSaving = savingPriceChannel === channel.code;
+
+                return (
+                  <div
+                    key={channel.code}
+                    className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
+                  >
+                    <div>
+                      <p className="font-bold text-neutral-900">
+                        {channel.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-neutral-500">
+                        {currentPrice === null
+                          ? "Sin precio vigente"
+                          : `Vigente: ${currentPrice.toLocaleString("es-CL", {
+                              style: "currency",
+                              currency: "CLP",
+                              maximumFractionDigits: 0,
+                            })}`}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                          enabled
+                            ? "bg-violet-100 text-violet-700"
+                            : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {enabled ? "Habilitado" : "Deshabilitado"}
+                      </span>
+                    </div>
+
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={pricingValues[channel.code] ?? ""}
+                      onChange={(event) =>
+                        setPricingValues((current) => ({
+                          ...current,
+                          [channel.code]: event.target.value,
+                        }))
+                      }
+                      disabled={isSaving}
+                      placeholder="Sin precio"
+                      className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-neutral-50"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => guardarPrecioProducto(channel)}
+                      disabled={savingPriceChannel !== null}
+                      className="cursor-pointer rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isSaving ? "Guardando..." : "Guardar"}
+                    </button>
+                  </div>
+                );
+              })}
+
+              <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+                Un precio puede configurarse antes de habilitar el canal.
+                Cambiar un precio conserva su historial de vigencia; no modifica
+                el estado global del producto ni habilita automáticamente el
+                canal.
+              </div>
             </div>
           </div>
         </div>
