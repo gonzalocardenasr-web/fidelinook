@@ -51,6 +51,14 @@ export async function GET() {
       product_channels (
         channel_code,
         is_enabled
+      ),
+      product_option_rules (
+        id,
+        option_group_id,
+        min_quantity,
+        max_quantity,
+        allow_repeat,
+        is_required
       )
     `,
     )

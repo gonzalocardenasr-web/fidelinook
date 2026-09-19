@@ -40,6 +40,14 @@ type Product = {
     channel_code: string;
     is_enabled: boolean;
   }[];
+  product_option_rules?: {
+    id: number;
+    option_group_id: number;
+    min_quantity: number;
+    max_quantity: number;
+    allow_repeat: boolean;
+    is_required: boolean;
+  }[];
 };
 
 type SalesChannel = {
@@ -81,6 +89,7 @@ type ProductForm = {
   maxToppings: number;
   allowsChocolateDip: boolean;
   requiresPreparation: boolean;
+  structuralOptionGroupId: number | null;
   sortOrder: number;
 };
 
@@ -99,6 +108,7 @@ const EMPTY_PRODUCT_FORM: ProductForm = {
   maxToppings: 0,
   allowsChocolateDip: false,
   requiresPreparation: false,
+  structuralOptionGroupId: null,
   sortOrder: 0,
 };
 
@@ -185,6 +195,16 @@ export default function CatalogoOperacionPage() {
       maxToppings: Number(product.max_toppings || 0),
       allowsChocolateDip: product.allows_chocolate_dip,
       requiresPreparation: product.requires_preparation,
+      structuralOptionGroupId:
+        product.product_option_rules?.find((rule) =>
+          optionGroups.some(
+            (group) =>
+              group.id === Number(rule.option_group_id) &&
+              ["brownie_variety", "mineral_water_type", "coffee_type"].includes(
+                group.code,
+              ),
+          ),
+        )?.option_group_id ?? null,
       sortOrder: Number(product.sort_order || 0),
     });
 
@@ -216,6 +236,41 @@ export default function CatalogoOperacionPage() {
 
       if (!res.ok) {
         setMessage(data.message || "No se pudo guardar el producto.");
+        return;
+      }
+
+      const savedProductId = isEditing
+        ? productForm.productId
+        : Number(data.product?.id);
+
+      if (!savedProductId) {
+        setMessage(
+          "El producto fue guardado, pero no fue posible identificarlo para completar su configuración.",
+        );
+        return;
+      }
+
+      const structuralRes = await fetch(
+        "/api/catalogo/products/structural-option",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: savedProductId,
+            optionGroupId: productForm.structuralOptionGroupId,
+          }),
+        },
+      );
+
+      const structuralData = await structuralRes.json();
+
+      if (!structuralRes.ok) {
+        await cargarCatalogo();
+
+        setMessage(
+          structuralData.message ||
+            "El producto fue guardado, pero no fue posible actualizar su opción estructural.",
+        );
         return;
       }
 
@@ -602,6 +657,20 @@ export default function CatalogoOperacionPage() {
     }
   }
 
+  const structuralOptionGroups = useMemo(
+    () =>
+      optionGroups
+        .filter(
+          (group) =>
+            group.is_active &&
+            ["brownie_variety", "mineral_water_type", "coffee_type"].includes(
+              group.code,
+            ),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name, "es")),
+    [optionGroups],
+  );
+
   const categories = useMemo(
     () =>
       [...new Set(products.map((product) => product.category))]
@@ -904,64 +973,74 @@ export default function CatalogoOperacionPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2">
-              {[sabores, toppings].filter(Boolean).map((group) => (
-                <div
-                  key={group!.id}
-                  className="rounded-2xl bg-white p-5 shadow-sm"
-                >
-                  <h2 className="text-xl font-black text-neutral-900">
-                    {group!.name}
-                  </h2>
+              {optionGroups
+                .filter((group) =>
+                  [
+                    "flavor",
+                    "topping",
+                    "brownie_variety",
+                    "mineral_water_type",
+                    "coffee_type",
+                  ].includes(group.code),
+                )
+                .map((group) => (
+                  <div
+                    key={group.id}
+                    className="rounded-2xl bg-white p-5 shadow-sm"
+                  >
+                    <h2 className="text-xl font-black text-neutral-900">
+                      {group.name}
+                    </h2>
 
-                  <div className="mt-4 space-y-3">
-                    {group!.catalog_option_values
-                      .sort((a, b) => a.sort_order - b.sort_order)
-                      .map((option) => (
-                        <div
-                          key={option.id}
-                          className="flex items-center gap-3 rounded-2xl bg-[#FCF8FF] p-3"
-                        >
-                          <input
-                            value={option.name}
-                            onChange={(event) =>
-                              updateOptionLocal(option.id, {
-                                name: event.target.value,
-                              })
-                            }
-                            className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateOptionLocal(option.id, {
-                                is_active: !option.is_active,
-                              })
-                            }
-                            className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition active:scale-95 ${
-                              option.is_active
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
-                            }`}
+                    <div className="mt-4 space-y-3">
+                      {group.catalog_option_values
+                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex items-center gap-3 rounded-2xl bg-[#FCF8FF] p-3"
                           >
-                            {option.is_active ? "Activo" : "Inactivo"}
-                          </button>
+                            <input
+                              value={option.name}
+                              onChange={(event) =>
+                                updateOptionLocal(option.id, {
+                                  name: event.target.value,
+                                })
+                              }
+                              className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                            />
 
-                          <button
-                            type="button"
-                            onClick={() => guardarOpcion(option)}
-                            disabled={savingKey === `option-${option.id}`}
-                            className="cursor-pointer rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition duration-200 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {savingKey === `option-${option.id}`
-                              ? "Guardando..."
-                              : "Guardar"}
-                          </button>
-                        </div>
-                      ))}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateOptionLocal(option.id, {
+                                  is_active: !option.is_active,
+                                })
+                              }
+                              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition active:scale-95 ${
+                                option.is_active
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+                              }`}
+                            >
+                              {option.is_active ? "Activo" : "Inactivo"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => guardarOpcion(option)}
+                              disabled={savingKey === `option-${option.id}`}
+                              className="cursor-pointer rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition duration-200 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {savingKey === `option-${option.id}`
+                                ? "Guardando..."
+                                : "Guardar"}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </section>
           </>
         )}
@@ -1216,6 +1295,37 @@ export default function CatalogoOperacionPage() {
                       />
                     </label>
                   )}
+                </div>
+
+                <div className="rounded-xl border border-neutral-200 p-3">
+                  <label className="block text-sm font-bold text-neutral-800">
+                    Opción estructural
+                    <select
+                      value={productForm.structuralOptionGroupId ?? ""}
+                      onChange={(event) =>
+                        setProductForm((current) => ({
+                          ...current,
+                          structuralOptionGroupId: event.target.value
+                            ? Number(event.target.value)
+                            : null,
+                        }))
+                      }
+                      className="mt-2 h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    >
+                      <option value="">Sin opción estructural</option>
+
+                      {structuralOptionGroups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Cuando se utiliza, el cliente debe seleccionar exactamente
+                    una alternativa.
+                  </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
