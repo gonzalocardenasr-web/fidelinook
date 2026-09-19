@@ -122,6 +122,12 @@ export default function CatalogoOperacionPage() {
   const [channelFilter, setChannelFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [newOptionNames, setNewOptionNames] = useState<Record<number, string>>(
+    {},
+  );
+  const [creatingOptionGroupId, setCreatingOptionGroupId] = useState<
+    number | null
+  >(null);
   const [message, setMessage] = useState("");
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [productForm, setProductForm] =
@@ -657,6 +663,49 @@ export default function CatalogoOperacionPage() {
     }
   }
 
+  async function crearOpcion(group: OptionGroup) {
+    const name = (newOptionNames[group.id] || "").trim();
+
+    if (!name) {
+      setMessage(`Ingresa un nombre para la nueva opción de ${group.name}.`);
+      return;
+    }
+
+    try {
+      setCreatingOptionGroupId(group.id);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId: group.id,
+          name,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo crear la opción.");
+        return;
+      }
+
+      setNewOptionNames((current) => ({
+        ...current,
+        [group.id]: "",
+      }));
+
+      setMessage("Opción creada correctamente.");
+      await cargarCatalogo();
+    } catch (error) {
+      console.error(error);
+      setMessage("Error creando opción.");
+    } finally {
+      setCreatingOptionGroupId(null);
+    }
+  }
+
   const structuralOptionGroups = useMemo(
     () =>
       optionGroups
@@ -991,6 +1040,44 @@ export default function CatalogoOperacionPage() {
                     <h2 className="text-xl font-black text-neutral-900">
                       {group.name}
                     </h2>
+
+                    <div className="mt-4 flex gap-2">
+                      <input
+                        type="text"
+                        value={newOptionNames[group.id] || ""}
+                        onChange={(event) =>
+                          setNewOptionNames((current) => ({
+                            ...current,
+                            [group.id]: event.target.value,
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" &&
+                            creatingOptionGroupId !== group.id
+                          ) {
+                            void crearOpcion(group);
+                          }
+                        }}
+                        placeholder={`Nueva opción de ${group.name.toLowerCase()}`}
+                        disabled={creatingOptionGroupId === group.id}
+                        className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:opacity-60"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => void crearOpcion(group)}
+                        disabled={
+                          creatingOptionGroupId === group.id ||
+                          !(newOptionNames[group.id] || "").trim()
+                        }
+                        className="shrink-0 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {creatingOptionGroupId === group.id
+                          ? "Agregando..."
+                          : "Agregar"}
+                      </button>
+                    </div>
 
                     <div className="mt-4 space-y-3">
                       {group.catalog_option_values
