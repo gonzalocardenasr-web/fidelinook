@@ -23,6 +23,18 @@ type Product = {
     price: number;
     is_active: boolean;
   }[];
+  product_channels?: {
+    channel_code: string;
+    is_enabled: boolean;
+  }[];
+};
+
+type SalesChannel = {
+  code: string;
+  name: string;
+  channel_type: string;
+  is_active: boolean;
+  sort_order: number;
 };
 
 type OptionValue = {
@@ -44,6 +56,11 @@ type OptionGroup = {
 export default function CatalogoOperacionPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+  const [salesChannels, setSalesChannels] = useState<SalesChannel[]>([]);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [channelFilter, setChannelFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -67,6 +84,7 @@ export default function CatalogoOperacionPage() {
 
       setProducts(data.products || []);
       setOptionGroups(data.optionGroups || []);
+      setSalesChannels(data.salesChannels || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -86,38 +104,6 @@ export default function CatalogoOperacionPage() {
     );
   }
 
-  function updateProductLocal(
-    productId: number,
-    patch: Partial<Product> & { localPrice?: number },
-  ) {
-    setProducts((current) =>
-      current.map((product) => {
-        if (product.id !== productId) return product;
-
-        const next = { ...product, ...patch };
-
-        if (patch.localPrice !== undefined) {
-          const activePrice = next.product_prices?.find(
-            (price) =>
-              price.channel === "local" &&
-              price.price_list === "general" &&
-              price.is_active,
-          );
-
-          if (activePrice) {
-            next.product_prices = next.product_prices?.map((price) =>
-              price.id === activePrice.id
-                ? { ...price, price: patch.localPrice! }
-                : price,
-            );
-          }
-        }
-
-        return next;
-      }),
-    );
-  }
-
   function updateOptionLocal(
     optionValueId: number,
     patch: Partial<OptionValue>,
@@ -130,39 +116,6 @@ export default function CatalogoOperacionPage() {
         ),
       })),
     );
-  }
-
-  async function guardarProducto(product: Product) {
-    try {
-      setSavingKey(`product-${product.id}`);
-      setMessage("");
-
-      const res = await fetch("/api/catalogo/products", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          name: product.name,
-          isActive: product.is_active,
-          price: getLocalPrice(product),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.message || "No se pudo guardar producto.");
-        return;
-      }
-
-      setMessage("Producto actualizado correctamente.");
-      await cargarCatalogo();
-    } catch (error) {
-      console.error(error);
-      setMessage("Error guardando producto.");
-    } finally {
-      setSavingKey(null);
-    }
   }
 
   async function guardarOpcion(option: OptionValue) {
@@ -195,6 +148,57 @@ export default function CatalogoOperacionPage() {
     } finally {
       setSavingKey(null);
     }
+  }
+
+  const categories = useMemo(
+    () =>
+      [...new Set(products.map((product) => product.category))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "es")),
+    [products],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        product.name.toLowerCase().includes(normalizedSearch) ||
+        product.sku.toLowerCase().includes(normalizedSearch) ||
+        product.category.toLowerCase().includes(normalizedSearch) ||
+        (product.subcategory || "").toLowerCase().includes(normalizedSearch);
+
+      const matchesCategory =
+        categoryFilter === "all" || product.category === categoryFilter;
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && product.is_active) ||
+        (statusFilter === "inactive" && !product.is_active);
+
+      const matchesChannel =
+        channelFilter === "all" ||
+        product.product_channels?.some(
+          (productChannel) =>
+            productChannel.channel_code === channelFilter &&
+            productChannel.is_enabled,
+        );
+
+      return (
+        matchesSearch && matchesCategory && matchesStatus && matchesChannel
+      );
+    });
+  }, [products, search, categoryFilter, statusFilter, channelFilter]);
+
+  function isProductEnabledForChannel(product: Product, channelCode: string) {
+    return Boolean(
+      product.product_channels?.some(
+        (productChannel) =>
+          productChannel.channel_code === channelCode &&
+          productChannel.is_enabled,
+      ),
+    );
   }
 
   const sabores = useMemo(
@@ -238,110 +242,157 @@ export default function CatalogoOperacionPage() {
         ) : (
           <>
             <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-xl font-black text-neutral-900">Productos</h2>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-neutral-900">
+                    Catálogo Maestro
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {filteredProducts.length} de {products.length} productos
+                  </p>
+                </div>
+              </div>
 
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-sm">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por producto, SKU o categoría"
+                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                />
+
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  className="h-10 cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                >
+                  <option value="all">Todas las categorías</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="h-10 cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                >
+                  <option value="all">Todos los estados</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                </select>
+
+                <select
+                  value={channelFilter}
+                  onChange={(event) => setChannelFilter(event.target.value)}
+                  className="h-10 cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                >
+                  <option value="all">Todos los canales</option>
+                  {salesChannels.map((channel) => (
+                    <option key={channel.code} value={channel.code}>
+                      {channel.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full min-w-[1050px] border-separate border-spacing-y-2 text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
                       <th className="px-3 py-2">Producto</th>
-                      <th className="px-3 py-2">Categoría</th>
+                      <th className="px-3 py-2">Clasificación</th>
                       <th className="px-3 py-2">Tipo</th>
-                      <th className="px-3 py-2">Sabores</th>
-                      <th className="px-3 py-2">Toppings</th>
                       <th className="px-3 py-2">Precio local</th>
-                      <th className="px-3 py-2">Activo</th>
-                      <th className="px-3 py-2 text-right">Acción</th>
+                      <th className="px-3 py-2">Canales</th>
+                      <th className="px-3 py-2">Estado</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                       <tr key={product.id}>
                         <td className="rounded-l-2xl bg-[#FCF8FF] px-3 py-3">
-                          <input
-                            value={product.name}
-                            onChange={(event) =>
-                              updateProductLocal(product.id, {
-                                name: event.target.value,
-                              })
-                            }
-                            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                          />
-                          <p className="mt-1 text-xs text-neutral-500">
+                          <p className="font-bold text-neutral-900">
+                            {product.name}
+                          </p>
+                          <p className="mt-1 font-mono text-xs text-neutral-500">
                             {product.sku}
                           </p>
                         </td>
 
-                        <td className="bg-[#FCF8FF] px-3 py-3 text-neutral-600">
-                          {product.category}
+                        <td className="bg-[#FCF8FF] px-3 py-3">
+                          <p className="font-semibold text-neutral-700">
+                            {product.category}
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {product.subcategory || "Sin subcategoría"}
+                          </p>
                         </td>
 
                         <td className="bg-[#FCF8FF] px-3 py-3 text-neutral-600">
                           {product.operational_type}
                         </td>
 
-                        <td className="bg-[#FCF8FF] px-3 py-3 text-neutral-600">
-                          {product.has_flavors
-                            ? `Sí (${product.max_flavors})`
-                            : "No"}
-                        </td>
-
-                        <td className="bg-[#FCF8FF] px-3 py-3 text-neutral-600">
-                          {product.allows_toppings
-                            ? `Sí (${product.max_toppings})`
-                            : "No"}
+                        <td className="bg-[#FCF8FF] px-3 py-3 font-bold text-neutral-900">
+                          {getLocalPrice(product).toLocaleString("es-CL", {
+                            style: "currency",
+                            currency: "CLP",
+                            maximumFractionDigits: 0,
+                          })}
                         </td>
 
                         <td className="bg-[#FCF8FF] px-3 py-3">
-                          <input
-                            type="number"
-                            min={0}
-                            value={getLocalPrice(product)}
-                            onChange={(event) =>
-                              updateProductLocal(product.id, {
-                                localPrice: Math.max(
-                                  0,
-                                  Number(event.target.value) || 0,
-                                ),
-                              })
-                            }
-                            className="w-28 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                          />
+                          <div className="flex flex-wrap gap-1.5">
+                            {salesChannels.map((channel) => {
+                              const enabled = isProductEnabledForChannel(
+                                product,
+                                channel.code,
+                              );
+
+                              return (
+                                <span
+                                  key={channel.code}
+                                  className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                                    enabled
+                                      ? "bg-violet-100 text-violet-700"
+                                      : "bg-neutral-100 text-neutral-400"
+                                  }`}
+                                >
+                                  {channel.name}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </td>
 
-                        <td className="bg-[#FCF8FF] px-3 py-3">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateProductLocal(product.id, {
-                                is_active: !product.is_active,
-                              })
-                            }
-                            className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition active:scale-95 ${
+                        <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
                               product.is_active
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-neutral-200 text-neutral-600"
                             }`}
                           >
                             {product.is_active ? "Activo" : "Inactivo"}
-                          </button>
-                        </td>
-
-                        <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => guardarProducto(product)}
-                            disabled={savingKey === `product-${product.id}`}
-                            className="cursor-pointer rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition duration-200 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {savingKey === `product-${product.id}`
-                              ? "Guardando..."
-                              : "Guardar"}
-                          </button>
+                          </span>
                         </td>
                       </tr>
                     ))}
+
+                    {filteredProducts.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="rounded-2xl bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500"
+                        >
+                          No hay productos que coincidan con los filtros.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

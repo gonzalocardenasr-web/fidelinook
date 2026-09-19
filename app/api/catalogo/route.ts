@@ -35,6 +35,10 @@ export async function GET() {
         price_list,
         price,
         is_active
+      ),
+      product_channels (
+        channel_code,
+        is_enabled
       )
     `,
     )
@@ -73,9 +77,22 @@ export async function GET() {
     );
   }
 
+  const { data: salesChannels, error: salesChannelsError } = await supabaseAdmin
+    .from("sales_channels")
+    .select("code, name, channel_type, is_active, sort_order")
+    .order("sort_order", { ascending: true });
+
+  if (salesChannelsError) {
+    return NextResponse.json(
+      { ok: false, message: salesChannelsError.message },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     products: products || [],
     optionGroups: optionGroups || [],
+    salesChannels: salesChannels || [],
   });
 }
