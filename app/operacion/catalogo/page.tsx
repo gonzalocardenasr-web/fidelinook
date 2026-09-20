@@ -1974,7 +1974,7 @@ export default function CatalogoOperacionPage() {
                 {inventoryProduct.has_flavors && (
                   <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
                     <p className="mb-3 text-xs font-black uppercase tracking-wide text-neutral-600">
-                      Agregar variante de inventario
+                      Agregar sabor a este producto
                     </p>
 
                     <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
@@ -2028,8 +2028,10 @@ export default function CatalogoOperacionPage() {
                     </div>
 
                     <p className="mt-3 text-[11px] leading-4 text-neutral-500">
-                      Sólo se muestran sabores activos que todavía no tienen una
-                      variante de inventario configurada para este producto.
+                      Selecciona un sabor existente del catálogo maestro para
+                      habilitarlo en este producto. Un mismo sabor puede
+                      utilizarse en distintos productos o formatos de
+                      inventario.
                     </p>
                   </div>
                 )}
