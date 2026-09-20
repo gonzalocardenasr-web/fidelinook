@@ -85,6 +85,7 @@ export default function NuevaVentaPage() {
   const [coffeeOptionPrices, setCoffeeOptionPrices] = useState<
     {
       optionValueId: number;
+      channel: string;
       price: number;
       inventoryQuantity: number;
       stockQuantity: number;
@@ -143,11 +144,15 @@ export default function NuevaVentaPage() {
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
 
-    if (!search) {
-      return products;
-    }
-
     return products.filter((product) => {
+      if (!isProductSellable(product)) {
+        return false;
+      }
+
+      if (!search) {
+        return true;
+      }
+
       const name = product.name?.toLowerCase() || "";
       const sku = product.sku?.toLowerCase() || "";
       const category = product.category?.toLowerCase() || "";
@@ -162,7 +167,7 @@ export default function NuevaVentaPage() {
         subcategory.includes(search)
       );
     });
-  }, [products, productSearch]);
+  }, [products, productSearch, channel, coffeeOptionPrices]);
 
   const flavors = useMemo(() => {
     return (
@@ -211,10 +216,9 @@ export default function NuevaVentaPage() {
     const availableIds = new Set(availableCoffeeTypeIds);
 
     const priceByOptionValueId = new Map(
-      coffeeOptionPrices.map((option) => [
-        Number(option.optionValueId),
-        option,
-      ]),
+      coffeeOptionPrices
+        .filter((option) => option.channel === channel)
+        .map((option) => [Number(option.optionValueId), option]),
     );
 
     return (
@@ -239,7 +243,7 @@ export default function NuevaVentaPage() {
         };
       })
       .sort((a, b) => a.sort_order - b.sort_order);
-  }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices]);
+  }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices, channel]);
 
   const toppings = useMemo(() => {
     return (
@@ -250,15 +254,60 @@ export default function NuevaVentaPage() {
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [optionGroups]);
 
-  function getPrice(product: Product) {
-    return (
-      product.product_prices?.find(
-        (price) =>
-          price.channel === "local" &&
-          price.price_list === "general" &&
-          price.is_active,
-      )?.price || 0
+  function getChannelPrice(product: Product): number | null {
+    const price = product.product_prices?.find(
+      (item) =>
+        item.channel === channel &&
+        item.price_list === "general" &&
+        item.is_active,
     );
+
+    return price ? Number(price.price) : null;
+  }
+
+  function isProductEnabledForChannel(product: Product): boolean {
+    return Boolean(
+      product.product_channels?.some(
+        (item) => item.channel_code === channel && item.is_enabled,
+      ),
+    );
+  }
+
+  function isProductSellable(product: Product): boolean {
+    if (!isProductEnabledForChannel(product)) {
+      return false;
+    }
+
+    if (product.sku === "CAFE") {
+      return coffeeOptionPrices.some(
+        (option) => option.channel === channel && option.isAvailable,
+      );
+    }
+
+    return getChannelPrice(product) !== null;
+  }
+
+  function getPrice(product: Product): number {
+    return getChannelPrice(product) ?? 0;
+  }
+
+  function getItemExtraUnitPrice(item: ProductCartItem): number | null {
+    if (item.product.sku !== "CAFE") {
+      return item.extraUnitPrice || 0;
+    }
+
+    if (!item.coffeeTypeId) {
+      return null;
+    }
+
+    const coffeePrice = coffeeOptionPrices.find(
+      (option) =>
+        option.optionValueId === item.coffeeTypeId &&
+        option.channel === channel &&
+        option.isAvailable,
+    );
+
+    return coffeePrice ? Number(coffeePrice.price) : null;
   }
 
   function addProduct(product: Product) {
@@ -389,8 +438,8 @@ export default function NuevaVentaPage() {
     : undefined;
 
   const rewardDiscountTotal = rewardProductLine
-    ? getPrice(rewardProductLine.product) +
-      (rewardProductLine.extraUnitPrice || 0)
+    ? (getChannelPrice(rewardProductLine.product) ?? 0) +
+      (getItemExtraUnitPrice(rewardProductLine) ?? 0)
     : 0;
 
   const pricing = cart.reduce(
@@ -400,8 +449,16 @@ export default function NuevaVentaPage() {
         return acc;
       }
 
-      const unitPrice = getPrice(item.product) + (item.extraUnitPrice || 0);
-      const lineTotal = unitPrice * item.quantity;
+      const channelPrice = getChannelPrice(item.product);
+      const extraUnitPrice = getItemExtraUnitPrice(item);
+
+      const requiresBasePrice = item.product.sku !== "CAFE";
+      const hasValidBasePrice = !requiresBasePrice || channelPrice !== null;
+      const hasValidExtraPrice = extraUnitPrice !== null;
+
+      const unitPrice = (channelPrice ?? 0) + (extraUnitPrice ?? 0);
+      const lineTotal =
+        hasValidBasePrice && hasValidExtraPrice ? unitPrice * item.quantity : 0;
 
       acc.subtotal += lineTotal;
 
@@ -481,6 +538,25 @@ export default function NuevaVentaPage() {
   function validarVenta() {
     if (cart.length === 0) {
       return "Agrega al menos una línea a la venta.";
+    }
+
+    const unavailableItem = cart.find(
+      (item) => item.itemType === "product" && !isProductSellable(item.product),
+    );
+
+    if (unavailableItem?.itemType === "product") {
+      return `${unavailableItem.product.name} no está disponible para el canal seleccionado o no tiene una configuración comercial válida.`;
+    }
+
+    const unavailableCoffeeItem = cart.find(
+      (item): item is ProductCartItem =>
+        item.itemType === "product" &&
+        item.product.sku === "CAFE" &&
+        getItemExtraUnitPrice(item) === null,
+    );
+
+    if (unavailableCoffeeItem) {
+      return "El tipo de café seleccionado no tiene un precio disponible para el canal actual.";
     }
 
     if (selectedRewardId !== null && !selectedReward) {

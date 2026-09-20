@@ -15,6 +15,10 @@ export type Product = {
     price_list: string;
     is_active: boolean;
   }[];
+  product_channels?: {
+    channel_code: string;
+    is_enabled: boolean;
+  }[];
 };
 
 export type OptionValue = {

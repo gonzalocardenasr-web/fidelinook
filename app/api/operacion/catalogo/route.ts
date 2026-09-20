@@ -25,6 +25,7 @@ type OpenBatchRow = {
 type CoffeeOptionPriceRow = {
   product_id: number;
   option_value_id: number;
+  channel: string;
   price: number;
 };
 
@@ -64,6 +65,10 @@ export async function GET() {
             is_active,
             valid_from,
             valid_to
+          ),
+          product_channels (
+            channel_code,
+            is_enabled
           )
         `,
       )
@@ -121,10 +126,10 @@ export async function GET() {
         `
       product_id,
       option_value_id,
+      channel,
       price
     `,
       )
-      .eq("channel", "local")
       .eq("price_list", "general")
       .eq("is_active", true),
   ]);
@@ -307,6 +312,7 @@ export async function GET() {
 
       return {
         optionValueId,
+        channel: String(row.channel),
         price,
         inventoryQuantity: consumptionQuantity,
         stockQuantity,
