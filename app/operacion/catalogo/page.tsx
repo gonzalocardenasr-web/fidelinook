@@ -58,6 +58,36 @@ type Product = {
     inventory_source: string | null;
     is_active: boolean;
   }[];
+  product_inventory_mappings?: {
+    id: number;
+    inventory_item_id: number;
+    quantity: number | string;
+    is_active: boolean;
+    notes: string | null;
+    inventory_items: {
+      id: number;
+      code: string;
+      name: string;
+      item_type: string;
+      unit: string;
+      product_id: number | null;
+      option_value_id: number | null;
+      inventory_source: string | null;
+      is_active: boolean;
+    } | null;
+  }[];
+};
+
+type InventoryComponentCandidate = {
+  id: number;
+  code: string;
+  name: string;
+  item_type: string;
+  unit: string;
+  product_id: number | null;
+  option_value_id: number | null;
+  inventory_source: string | null;
+  is_active: boolean;
 };
 
 type SalesChannel = {
@@ -126,6 +156,8 @@ export default function CatalogoOperacionPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
   const [salesChannels, setSalesChannels] = useState<SalesChannel[]>([]);
+  const [inventoryComponentCandidates, setInventoryComponentCandidates] =
+    useState<InventoryComponentCandidate[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -167,6 +199,18 @@ export default function CatalogoOperacionPage() {
     number | null
   >(null);
 
+  const [inventoryMappingValues, setInventoryMappingValues] = useState<
+    Record<number, string>
+  >({});
+  const [newInventoryComponentId, setNewInventoryComponentId] =
+    useState<string>("");
+  const [newInventoryComponentQuantity, setNewInventoryComponentQuantity] =
+    useState("1");
+  const [savingInventoryMappingId, setSavingInventoryMappingId] = useState<
+    number | null
+  >(null);
+  const [addingInventoryMapping, setAddingInventoryMapping] = useState(false);
+
   useEffect(() => {
     cargarCatalogo();
   }, []);
@@ -187,6 +231,7 @@ export default function CatalogoOperacionPage() {
       setProducts(data.products || []);
       setOptionGroups(data.optionGroups || []);
       setSalesChannels(data.salesChannels || []);
+      setInventoryComponentCandidates(data.inventoryComponentCandidates || []);
     } catch (error) {
       console.error(error);
       setMessage("Error cargando catálogo.");
@@ -395,6 +440,7 @@ export default function CatalogoOperacionPage() {
 
   function abrirInventarioProducto(product: Product) {
     const values: Record<number, string> = {};
+    const mappingValues: Record<number, string> = {};
 
     for (const inventoryItem of product.inventory_items ?? []) {
       if (!inventoryItem.is_active) {
@@ -404,7 +450,14 @@ export default function CatalogoOperacionPage() {
       values[inventoryItem.id] = String(inventoryItem.consumption_quantity);
     }
 
+    for (const mapping of product.product_inventory_mappings ?? []) {
+      mappingValues[mapping.id] = String(mapping.quantity);
+    }
+
     setInventoryConsumptionValues(values);
+    setInventoryMappingValues(mappingValues);
+    setNewInventoryComponentId("");
+    setNewInventoryComponentQuantity("1");
     setInventoryProduct(product);
     setMessage("");
   }
@@ -493,6 +546,149 @@ export default function CatalogoOperacionPage() {
       setMessage("Error actualizando consumo de inventario.");
     } finally {
       setSavingInventoryItemId(null);
+    }
+  }
+
+  async function guardarMappingInventario(
+    mapping: NonNullable<Product["product_inventory_mappings"]>[number],
+    isActive = mapping.is_active,
+  ) {
+    if (!inventoryProduct) return;
+
+    const rawQuantity = inventoryMappingValues[mapping.id]?.trim() ?? "";
+    const quantity = Number(rawQuantity);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setMessage("La cantidad del componente debe ser mayor que cero.");
+      return;
+    }
+
+    try {
+      setSavingInventoryMappingId(mapping.id);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/inventory-mappings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: inventoryProduct.id,
+          inventoryItemId: mapping.inventory_item_id,
+          quantity,
+          isActive,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo actualizar el componente.");
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setInventoryProduct((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          product_inventory_mappings: (
+            current.product_inventory_mappings ?? []
+          ).map((item) =>
+            item.id === mapping.id
+              ? {
+                  ...item,
+                  quantity,
+                  is_active: isActive,
+                }
+              : item,
+          ),
+        };
+      });
+
+      setMessage(
+        isActive
+          ? `Componente actualizado para ${inventoryProduct.name}.`
+          : `Componente desactivado para ${inventoryProduct.name}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando componente de inventario.");
+    } finally {
+      setSavingInventoryMappingId(null);
+    }
+  }
+
+  async function agregarMappingInventario() {
+    if (!inventoryProduct) return;
+
+    const inventoryItemId = Number(newInventoryComponentId);
+    const quantity = Number(newInventoryComponentQuantity);
+
+    if (!Number.isInteger(inventoryItemId) || inventoryItemId <= 0) {
+      setMessage("Selecciona un componente.");
+      return;
+    }
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setMessage("La cantidad del componente debe ser mayor que cero.");
+      return;
+    }
+
+    try {
+      setAddingInventoryMapping(true);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/inventory-mappings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: inventoryProduct.id,
+          inventoryItemId,
+          quantity,
+          isActive: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo agregar el componente.");
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setInventoryProduct((current) => {
+        if (!current) return current;
+
+        const currentMappings = current.product_inventory_mappings ?? [];
+        const returnedMapping = data.mapping;
+
+        return {
+          ...current,
+          product_inventory_mappings: [
+            ...currentMappings.filter(
+              (item) => item.id !== Number(returnedMapping.id),
+            ),
+            returnedMapping,
+          ],
+        };
+      });
+
+      setInventoryMappingValues((current) => ({
+        ...current,
+        [Number(data.mapping.id)]: String(data.mapping.quantity),
+      }));
+
+      setNewInventoryComponentId("");
+      setNewInventoryComponentQuantity("1");
+      setMessage(`Componente agregado para ${inventoryProduct.name}.`);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error agregando componente de inventario.");
+    } finally {
+      setAddingInventoryMapping(false);
     }
   }
 
@@ -1586,102 +1782,311 @@ export default function CatalogoOperacionPage() {
               <button
                 type="button"
                 onClick={() => setInventoryProduct(null)}
-                disabled={savingInventoryItemId !== null}
+                disabled={
+                  savingInventoryItemId !== null ||
+                  savingInventoryMappingId !== null ||
+                  addingInventoryMapping
+                }
                 className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cerrar
               </button>
             </div>
 
-            <div className="max-h-[calc(90vh-90px)] overflow-y-auto p-5">
-              {(inventoryProduct.inventory_items ?? []).filter(
-                (item) => item.is_active,
-              ).length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    <span>Ítem de inventario</span>
-                    <span>Opción</span>
-                    <span>Consumo por unidad</span>
-                    <span></span>
-                  </div>
+            <div className="max-h-[calc(90vh-90px)] space-y-6 overflow-y-auto p-5">
+              <section>
+                <div className="mb-3">
+                  <h3 className="text-sm font-black text-neutral-900">
+                    Consumo directo
+                  </h3>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Define cuánto inventario propio descuenta cada unidad u
+                    opción vendida.
+                  </p>
+                </div>
 
-                  {(inventoryProduct.inventory_items ?? [])
-                    .filter((item) => item.is_active)
-                    .sort((a, b) => a.id - b.id)
-                    .map((inventoryItem) => {
-                      const isSaving =
-                        savingInventoryItemId === inventoryItem.id;
+                {(inventoryProduct.inventory_items ?? []).filter(
+                  (item) => item.is_active,
+                ).length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                      <span>Ítem de inventario</span>
+                      <span>Opción</span>
+                      <span>Consumo por unidad</span>
+                      <span></span>
+                    </div>
 
-                      return (
-                        <div
-                          key={inventoryItem.id}
-                          className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-neutral-900">
-                              {inventoryItem.name}
-                            </p>
-                            <p className="mt-0.5 font-mono text-[10px] text-neutral-400">
-                              {inventoryItem.code}
-                            </p>
-                          </div>
+                    {(inventoryProduct.inventory_items ?? [])
+                      .filter((item) => item.is_active)
+                      .sort((a, b) => a.id - b.id)
+                      .map((inventoryItem) => {
+                        const isSaving =
+                          savingInventoryItemId === inventoryItem.id;
 
-                          <span className="text-xs font-semibold text-neutral-600">
-                            {getInventoryOptionName(
-                              inventoryItem.option_value_id,
-                            ) ?? "Producto base"}
-                          </span>
-
-                          <input
-                            type="number"
-                            min={0.0001}
-                            step="any"
-                            value={
-                              inventoryConsumptionValues[inventoryItem.id] ?? ""
-                            }
-                            onChange={(event) =>
-                              setInventoryConsumptionValues((current) => ({
-                                ...current,
-                                [inventoryItem.id]: event.target.value,
-                              }))
-                            }
-                            disabled={isSaving}
-                            className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-neutral-50"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              guardarConsumoInventario(inventoryItem.id)
-                            }
-                            disabled={savingInventoryItemId !== null}
-                            className="cursor-pointer rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                        return (
+                          <div
+                            key={inventoryItem.id}
+                            className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
                           >
-                            {isSaving ? "Guardando..." : "Guardar"}
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div>
+                              <p className="text-sm font-bold text-neutral-900">
+                                {inventoryItem.name}
+                              </p>
+                              <p className="mt-0.5 font-mono text-[10px] text-neutral-400">
+                                {inventoryItem.code}
+                              </p>
+                            </div>
 
-                  <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
-                    El consumo indica cuántas unidades de este ítem de
-                    inventario descuenta la venta de una unidad del producto u
-                    opción. Modificarlo no altera el stock actual ni los
-                    precios.
+                            <span className="text-xs font-semibold text-neutral-600">
+                              {getInventoryOptionName(
+                                inventoryItem.option_value_id,
+                              ) ?? "Producto base"}
+                            </span>
+
+                            <input
+                              type="number"
+                              min={0.0001}
+                              step="any"
+                              value={
+                                inventoryConsumptionValues[inventoryItem.id] ??
+                                ""
+                              }
+                              onChange={(event) =>
+                                setInventoryConsumptionValues((current) => ({
+                                  ...current,
+                                  [inventoryItem.id]: event.target.value,
+                                }))
+                              }
+                              disabled={isSaving}
+                              className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-neutral-50"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                guardarConsumoInventario(inventoryItem.id)
+                              }
+                              disabled={
+                                savingInventoryItemId !== null ||
+                                savingInventoryMappingId !== null ||
+                                addingInventoryMapping
+                              }
+                              className="cursor-pointer rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isSaving ? "Guardando..." : "Guardar"}
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                    <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+                      El consumo indica cuántas unidades de este ítem de
+                      inventario descuenta la venta de una unidad del producto u
+                      opción. Modificarlo no altera el stock actual ni los
+                      precios.
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-neutral-300 px-5 py-8 text-center">
-                  <p className="text-sm font-bold text-neutral-700">
-                    Este producto no tiene ítems de inventario directos
-                    configurados.
+                ) : (
+                  <div className="rounded-xl border border-dashed border-neutral-300 px-5 py-5">
+                    <p className="text-sm font-bold text-neutral-700">
+                      Este producto no tiene inventario directo configurado.
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Puede configurarse como producto compuesto mediante los
+                      componentes de inventario de la sección siguiente.
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              <section className="border-t border-neutral-200 pt-5">
+                <div className="mb-3">
+                  <h3 className="text-sm font-black text-neutral-900">
+                    Componentes consumidos
+                  </h3>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Para productos compuestos, define qué otros ítems de
+                    inventario se descuentan y en qué cantidad.
                   </p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Los consumos compuestos o excepcionales se administrarán
-                    mediante sus mappings de inventario.
+                </div>
+
+                {(inventoryProduct.product_inventory_mappings ?? []).length >
+                0 ? (
+                  <div className="space-y-3">
+                    {(inventoryProduct.product_inventory_mappings ?? [])
+                      .slice()
+                      .sort((a, b) => a.id - b.id)
+                      .map((mapping) => {
+                        const isSaving =
+                          savingInventoryMappingId === mapping.id;
+                        const component = mapping.inventory_items;
+
+                        return (
+                          <div
+                            key={mapping.id}
+                            className={`grid grid-cols-[minmax(0,1fr)_150px_110px] items-center gap-3 rounded-xl border px-3 py-3 ${
+                              mapping.is_active
+                                ? "border-neutral-200"
+                                : "border-neutral-200 bg-neutral-50 opacity-70"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-neutral-900">
+                                  {component?.name ??
+                                    `Ítem #${mapping.inventory_item_id}`}
+                                </p>
+
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    mapping.is_active
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-neutral-200 text-neutral-600"
+                                  }`}
+                                >
+                                  {mapping.is_active ? "Activo" : "Inactivo"}
+                                </span>
+                              </div>
+
+                              <p className="mt-0.5 font-mono text-[10px] text-neutral-400">
+                                {component?.code ??
+                                  `inventory_item_id=${mapping.inventory_item_id}`}
+                              </p>
+                            </div>
+
+                            <input
+                              type="number"
+                              min={0.0001}
+                              step="any"
+                              value={inventoryMappingValues[mapping.id] ?? ""}
+                              onChange={(event) =>
+                                setInventoryMappingValues((current) => ({
+                                  ...current,
+                                  [mapping.id]: event.target.value,
+                                }))
+                              }
+                              disabled={isSaving}
+                              className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-neutral-100"
+                            />
+
+                            <div className="flex flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  guardarMappingInventario(mapping)
+                                }
+                                disabled={
+                                  savingInventoryMappingId !== null ||
+                                  savingInventoryItemId !== null ||
+                                  addingInventoryMapping
+                                }
+                                className="cursor-pointer rounded-lg bg-emerald-600 px-2 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isSaving ? "Guardando..." : "Guardar"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  guardarMappingInventario(
+                                    mapping,
+                                    !mapping.is_active,
+                                  )
+                                }
+                                disabled={
+                                  savingInventoryMappingId !== null ||
+                                  savingInventoryItemId !== null ||
+                                  addingInventoryMapping
+                                }
+                                className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-2 py-2 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {mapping.is_active ? "Desactivar" : "Reactivar"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-neutral-300 px-5 py-5">
+                    <p className="text-sm font-bold text-neutral-700">
+                      Sin componentes configurados.
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Si este SKU consume otro producto del inventario, puedes
+                      agregarlo a continuación.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-neutral-600">
+                    Agregar componente
+                  </p>
+
+                  <div className="grid grid-cols-[minmax(0,1fr)_140px_110px] gap-3">
+                    <select
+                      value={newInventoryComponentId}
+                      onChange={(event) =>
+                        setNewInventoryComponentId(event.target.value)
+                      }
+                      disabled={addingInventoryMapping}
+                      className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                    >
+                      <option value="">Seleccionar componente...</option>
+
+                      {inventoryComponentCandidates
+                        .filter(
+                          (candidate) =>
+                            candidate.product_id !== inventoryProduct.id &&
+                            !(
+                              inventoryProduct.product_inventory_mappings ?? []
+                            ).some(
+                              (mapping) =>
+                                mapping.inventory_item_id === candidate.id &&
+                                mapping.is_active,
+                            ),
+                        )
+                        .map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidate.name} ({candidate.code})
+                          </option>
+                        ))}
+                    </select>
+
+                    <input
+                      type="number"
+                      min={0.0001}
+                      step="any"
+                      value={newInventoryComponentQuantity}
+                      onChange={(event) =>
+                        setNewInventoryComponentQuantity(event.target.value)
+                      }
+                      disabled={addingInventoryMapping}
+                      className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={agregarMappingInventario}
+                      disabled={
+                        addingInventoryMapping ||
+                        savingInventoryMappingId !== null ||
+                        savingInventoryItemId !== null
+                      }
+                      className="cursor-pointer rounded-xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {addingInventoryMapping ? "Agregando..." : "Agregar"}
+                    </button>
+                  </div>
+
+                  <p className="mt-3 text-[11px] leading-4 text-neutral-500">
+                    Un producto con inventario directo activo no puede
+                    convertirse accidentalmente en compuesto. Esta regla también
+                    se valida en base de datos.
                   </p>
                 </div>
-              )}
+              </section>
             </div>
           </div>
         </div>

@@ -69,6 +69,24 @@ export async function GET() {
         unit,
         inventory_source,
         is_active
+      ),
+      product_inventory_mappings (
+        id,
+        inventory_item_id,
+        quantity,
+        is_active,
+        notes,
+        inventory_items (
+          id,
+          code,
+          name,
+          item_type,
+          unit,
+          product_id,
+          option_value_id,
+          inventory_source,
+          is_active
+        )
       )
     `,
     )
@@ -119,10 +137,44 @@ export async function GET() {
     );
   }
 
+  const {
+    data: inventoryComponentCandidates,
+    error: inventoryComponentCandidatesError,
+  } = await supabaseAdmin
+    .from("inventory_items")
+    .select(
+      `
+      id,
+      code,
+      name,
+      item_type,
+      unit,
+      product_id,
+      option_value_id,
+      inventory_source,
+      is_active
+    `,
+    )
+    .eq("is_active", true)
+    .eq("inventory_source", "PRODUCT")
+    .is("option_value_id", null)
+    .order("name", { ascending: true });
+
+  if (inventoryComponentCandidatesError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: inventoryComponentCandidatesError.message,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     products: products || [],
     optionGroups: optionGroups || [],
     salesChannels: salesChannels || [],
+    inventoryComponentCandidates: inventoryComponentCandidates || [],
   });
 }
