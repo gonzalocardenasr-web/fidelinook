@@ -210,6 +210,9 @@ export default function CatalogoOperacionPage() {
     number | null
   >(null);
   const [addingInventoryMapping, setAddingInventoryMapping] = useState(false);
+  const [newInventoryVariantOptionId, setNewInventoryVariantOptionId] =
+    useState<string>("");
+  const [addingInventoryVariant, setAddingInventoryVariant] = useState(false);
 
   useEffect(() => {
     cargarCatalogo();
@@ -458,6 +461,7 @@ export default function CatalogoOperacionPage() {
     setInventoryMappingValues(mappingValues);
     setNewInventoryComponentId("");
     setNewInventoryComponentQuantity("1");
+    setNewInventoryVariantOptionId("");
     setInventoryProduct(product);
     setMessage("");
   }
@@ -478,6 +482,68 @@ export default function CatalogoOperacionPage() {
     }
 
     return `Opción #${optionValueId}`;
+  }
+
+  async function agregarVarianteInventario() {
+    if (!inventoryProduct) return;
+
+    const optionValueId = Number(newInventoryVariantOptionId);
+
+    if (!Number.isInteger(optionValueId) || optionValueId <= 0) {
+      setMessage("Selecciona un sabor.");
+      return;
+    }
+
+    try {
+      setAddingInventoryVariant(true);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/inventory-variants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: inventoryProduct.id,
+          optionValueId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(
+          data.message || "No se pudo crear la variante de inventario.",
+        );
+        return;
+      }
+
+      const newItem = data.inventoryItem;
+
+      setInventoryProduct((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          inventory_items: [...(current.inventory_items ?? []), newItem],
+        };
+      });
+
+      setInventoryConsumptionValues((current) => ({
+        ...current,
+        [newItem.id]: String(newItem.consumption_quantity),
+      }));
+
+      setNewInventoryVariantOptionId("");
+      await cargarCatalogo();
+
+      setMessage(
+        `Variante ${newItem.name} agregada correctamente al inventario.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error creando variante de inventario.");
+    } finally {
+      setAddingInventoryVariant(false);
+    }
   }
 
   async function guardarConsumoInventario(inventoryItemId: number) {
@@ -1785,7 +1851,8 @@ export default function CatalogoOperacionPage() {
                 disabled={
                   savingInventoryItemId !== null ||
                   savingInventoryMappingId !== null ||
-                  addingInventoryMapping
+                  addingInventoryMapping ||
+                  addingInventoryVariant
                 }
                 className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -1900,6 +1967,69 @@ export default function CatalogoOperacionPage() {
                     <p className="mt-1 text-xs text-neutral-500">
                       Puede configurarse como producto compuesto mediante los
                       componentes de inventario de la sección siguiente.
+                    </p>
+                  </div>
+                )}
+
+                {inventoryProduct.has_flavors && (
+                  <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                    <p className="mb-3 text-xs font-black uppercase tracking-wide text-neutral-600">
+                      Agregar variante de inventario
+                    </p>
+
+                    <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+                      <select
+                        value={newInventoryVariantOptionId}
+                        onChange={(event) =>
+                          setNewInventoryVariantOptionId(event.target.value)
+                        }
+                        disabled={addingInventoryVariant}
+                        className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                      >
+                        <option value="">Seleccionar sabor...</option>
+
+                        {(
+                          optionGroups
+                            .find(
+                              (group) =>
+                                group.code === "flavor" && group.is_active,
+                            )
+                            ?.catalog_option_values.filter(
+                              (option) =>
+                                option.is_active &&
+                                !(inventoryProduct.inventory_items ?? []).some(
+                                  (item) =>
+                                    item.option_value_id === option.id &&
+                                    item.is_active,
+                                ),
+                            )
+                            .sort((a, b) => a.sort_order - b.sort_order) ?? []
+                        ).map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={agregarVarianteInventario}
+                        disabled={
+                          addingInventoryVariant ||
+                          savingInventoryItemId !== null ||
+                          savingInventoryMappingId !== null ||
+                          addingInventoryMapping ||
+                          !newInventoryVariantOptionId
+                        }
+                        className="cursor-pointer rounded-xl bg-neutral-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {addingInventoryVariant ? "Agregando..." : "Agregar"}
+                      </button>
+                    </div>
+
+                    <p className="mt-3 text-[11px] leading-4 text-neutral-500">
+                      Sólo se muestran sabores activos que todavía no tienen una
+                      variante de inventario configurada para este producto.
                     </p>
                   </div>
                 )}
