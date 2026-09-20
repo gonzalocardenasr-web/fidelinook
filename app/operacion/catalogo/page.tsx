@@ -48,6 +48,16 @@ type Product = {
     allow_repeat: boolean;
     is_required: boolean;
   }[];
+  inventory_items?: {
+    id: number;
+    code: string;
+    name: string;
+    option_value_id: number | null;
+    consumption_quantity: number | string;
+    unit: string;
+    inventory_source: string | null;
+    is_active: boolean;
+  }[];
 };
 
 type SalesChannel = {
@@ -146,6 +156,15 @@ export default function CatalogoOperacionPage() {
   >({});
   const [savingOptionPriceKey, setSavingOptionPriceKey] = useState<
     string | null
+  >(null);
+  const [inventoryProduct, setInventoryProduct] = useState<Product | null>(
+    null,
+  );
+  const [inventoryConsumptionValues, setInventoryConsumptionValues] = useState<
+    Record<number, string>
+  >({});
+  const [savingInventoryItemId, setSavingInventoryItemId] = useState<
+    number | null
   >(null);
 
   useEffect(() => {
@@ -374,32 +393,107 @@ export default function CatalogoOperacionPage() {
     return price ? Number(price.price) : null;
   }
 
-  function getProductOptionInventoryQuantity(
-    product: Product,
-    optionValueId: number,
-  ) {
-    const localConfiguration = product.product_option_prices?.find(
-      (item) =>
-        Number(item.option_value_id) === optionValueId &&
-        item.channel === "local" &&
-        item.price_list === "general" &&
-        item.is_active,
-    );
+  function abrirInventarioProducto(product: Product) {
+    const values: Record<number, string> = {};
 
-    if (localConfiguration) {
-      return Number(localConfiguration.inventory_quantity);
+    for (const inventoryItem of product.inventory_items ?? []) {
+      if (!inventoryItem.is_active) {
+        continue;
+      }
+
+      values[inventoryItem.id] = String(inventoryItem.consumption_quantity);
     }
 
-    const anyActiveConfiguration = product.product_option_prices?.find(
-      (item) =>
-        Number(item.option_value_id) === optionValueId &&
-        item.is_active &&
-        Number(item.inventory_quantity) > 0,
-    );
+    setInventoryConsumptionValues(values);
+    setInventoryProduct(product);
+    setMessage("");
+  }
 
-    return anyActiveConfiguration
-      ? Number(anyActiveConfiguration.inventory_quantity)
-      : null;
+  function getInventoryOptionName(optionValueId: number | null) {
+    if (optionValueId === null) {
+      return null;
+    }
+
+    for (const group of optionGroups) {
+      const optionValue = group.catalog_option_values.find(
+        (option) => option.id === optionValueId,
+      );
+
+      if (optionValue) {
+        return optionValue.name;
+      }
+    }
+
+    return `Opción #${optionValueId}`;
+  }
+
+  async function guardarConsumoInventario(inventoryItemId: number) {
+    if (!inventoryProduct) return;
+
+    const rawQuantity =
+      inventoryConsumptionValues[inventoryItemId]?.trim() ?? "";
+
+    if (rawQuantity === "") {
+      setMessage("Ingresa una cantidad de consumo.");
+      return;
+    }
+
+    const consumptionQuantity = Number(rawQuantity);
+
+    if (!Number.isFinite(consumptionQuantity) || consumptionQuantity <= 0) {
+      setMessage("El consumo debe ser mayor que cero.");
+      return;
+    }
+
+    try {
+      setSavingInventoryItemId(inventoryItemId);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/inventory-consumption", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inventoryItemId,
+          consumptionQuantity,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(
+          data.message || "No se pudo actualizar el consumo de inventario.",
+        );
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setInventoryProduct((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          inventory_items: (current.inventory_items ?? []).map((item) =>
+            item.id === inventoryItemId
+              ? {
+                  ...item,
+                  consumption_quantity: consumptionQuantity,
+                }
+              : item,
+          ),
+        };
+      });
+
+      setMessage(
+        `Consumo de inventario actualizado para ${inventoryProduct.name}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando consumo de inventario.");
+    } finally {
+      setSavingInventoryItemId(null);
+    }
   }
 
   function abrirPreciosProducto(product: Product) {
@@ -558,18 +652,6 @@ export default function CatalogoOperacionPage() {
       setPricingProduct((current) => {
         if (!current) return current;
 
-        const currentInventoryQuantity = getProductOptionInventoryQuantity(
-          current,
-          optionValue.id,
-        );
-
-        if (
-          currentInventoryQuantity === null ||
-          currentInventoryQuantity <= 0
-        ) {
-          return current;
-        }
-
         return {
           ...current,
           product_option_prices: [
@@ -588,7 +670,12 @@ export default function CatalogoOperacionPage() {
               channel: channel.code,
               price_list: "general",
               price,
-              inventory_quantity: currentInventoryQuantity,
+              inventory_quantity:
+                current.product_option_prices?.find(
+                  (item) =>
+                    Number(item.option_value_id) === optionValue.id &&
+                    item.is_active,
+                )?.inventory_quantity ?? 1,
               is_active: true,
             },
           ],
@@ -986,6 +1073,14 @@ export default function CatalogoOperacionPage() {
 
                         <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3 text-right">
                           <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => abrirInventarioProducto(product)}
+                              className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98]"
+                            >
+                              Inventario
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => abrirPreciosProducto(product)}
@@ -1470,6 +1565,127 @@ export default function CatalogoOperacionPage() {
           </div>
         </div>
       )}
+      {inventoryProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-neutral-200 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
+                  Integración de inventario
+                </p>
+
+                <h2 className="mt-1 text-xl font-black text-neutral-900">
+                  {inventoryProduct.name}
+                </h2>
+
+                <p className="mt-1 font-mono text-xs text-neutral-500">
+                  {inventoryProduct.sku}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setInventoryProduct(null)}
+                disabled={savingInventoryItemId !== null}
+                className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="max-h-[calc(90vh-90px)] overflow-y-auto p-5">
+              {(inventoryProduct.inventory_items ?? []).filter(
+                (item) => item.is_active,
+              ).length > 0 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                    <span>Ítem de inventario</span>
+                    <span>Opción</span>
+                    <span>Consumo por unidad</span>
+                    <span></span>
+                  </div>
+
+                  {(inventoryProduct.inventory_items ?? [])
+                    .filter((item) => item.is_active)
+                    .sort((a, b) => a.id - b.id)
+                    .map((inventoryItem) => {
+                      const isSaving =
+                        savingInventoryItemId === inventoryItem.id;
+
+                      return (
+                        <div
+                          key={inventoryItem.id}
+                          className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] items-center gap-3 rounded-xl border border-neutral-200 px-3 py-3"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-neutral-900">
+                              {inventoryItem.name}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[10px] text-neutral-400">
+                              {inventoryItem.code}
+                            </p>
+                          </div>
+
+                          <span className="text-xs font-semibold text-neutral-600">
+                            {getInventoryOptionName(
+                              inventoryItem.option_value_id,
+                            ) ?? "Producto base"}
+                          </span>
+
+                          <input
+                            type="number"
+                            min={0.0001}
+                            step="any"
+                            value={
+                              inventoryConsumptionValues[inventoryItem.id] ?? ""
+                            }
+                            onChange={(event) =>
+                              setInventoryConsumptionValues((current) => ({
+                                ...current,
+                                [inventoryItem.id]: event.target.value,
+                              }))
+                            }
+                            disabled={isSaving}
+                            className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-neutral-50"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              guardarConsumoInventario(inventoryItem.id)
+                            }
+                            disabled={savingInventoryItemId !== null}
+                            className="cursor-pointer rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isSaving ? "Guardando..." : "Guardar"}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+                    El consumo indica cuántas unidades de este ítem de
+                    inventario descuenta la venta de una unidad del producto u
+                    opción. Modificarlo no altera el stock actual ni los
+                    precios.
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-neutral-300 px-5 py-8 text-center">
+                  <p className="text-sm font-bold text-neutral-700">
+                    Este producto no tiene ítems de inventario directos
+                    configurados.
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Los consumos compuestos o excepcionales se administrarán
+                    mediante sus mappings de inventario.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {pricingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl">
@@ -1535,9 +1751,8 @@ export default function CatalogoOperacionPage() {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-[minmax(0,1fr)_100px_150px_170px_100px] gap-3 border-b border-neutral-100 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        <div className="grid grid-cols-[minmax(0,1fr)_150px_170px_100px] gap-3 border-b border-neutral-100 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                           <span>Tipo</span>
-                          <span>Consumo</span>
                           <span>Vigente</span>
                           <span>Precio</span>
                           <span></span>
@@ -1550,11 +1765,6 @@ export default function CatalogoOperacionPage() {
                             optionValue.id,
                             channel.code,
                           );
-                          const inventoryQuantity =
-                            getProductOptionInventoryQuantity(
-                              pricingProduct,
-                              optionValue.id,
-                            );
                           const isSaving = savingOptionPriceKey === key;
 
                           return (
@@ -1570,12 +1780,6 @@ export default function CatalogoOperacionPage() {
                                   {optionValue.code}
                                 </p>
                               </div>
-
-                              <span className="text-sm font-semibold text-neutral-600">
-                                {inventoryQuantity === null
-                                  ? "—"
-                                  : inventoryQuantity}
-                              </span>
 
                               <span className="text-xs font-semibold text-neutral-600">
                                 {currentPrice === null
@@ -1622,9 +1826,9 @@ export default function CatalogoOperacionPage() {
 
                   <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
                     El precio se administra independientemente para cada tipo de
-                    café y canal. El consumo corresponde a la configuración
-                    operacional de inventario y no se modifica desde pricing. Un
-                    precio puede configurarse antes de habilitar el canal.
+                    café y canal. La configuración operacional de consumo se
+                    administra desde Inventario. Un precio puede configurarse
+                    antes de habilitar el canal.
                   </div>
                 </div>
               ) : (

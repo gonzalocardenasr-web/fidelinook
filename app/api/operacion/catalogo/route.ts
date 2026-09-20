@@ -11,6 +11,7 @@ type StockRelation =
 type InventoryItemRow = {
   product_id: number | null;
   option_value_id: number | null;
+  consumption_quantity: number | string;
   inventory_stock: StockRelation;
 };
 
@@ -25,7 +26,6 @@ type CoffeeOptionPriceRow = {
   product_id: number;
   option_value_id: number;
   price: number;
-  inventory_quantity: number | string;
 };
 
 function firstRelation<T>(value: T | T[] | null): T | null {
@@ -106,6 +106,7 @@ export async function GET() {
         `
       product_id,
       option_value_id,
+      consumption_quantity,
       inventory_stock (
         quantity
       )
@@ -120,8 +121,7 @@ export async function GET() {
         `
       product_id,
       option_value_id,
-      price,
-      inventory_quantity
+      price
     `,
       )
       .eq("channel", "local")
@@ -198,6 +198,7 @@ export async function GET() {
   const availableMineralWaterTypeIds = new Set<number>();
 
   const coffeeStockByOptionValueId = new Map<number, number>();
+  const coffeeConsumptionByOptionValueId = new Map<number, number>();
 
   const brownieProduct = (products ?? []).find(
     (product) => String(product.sku || "").trim() === "BROWNIE",
@@ -283,6 +284,15 @@ export async function GET() {
       optionValueId > 0
     ) {
       coffeeStockByOptionValueId.set(optionValueId, quantity);
+
+      const consumptionQuantity = Number(row.consumption_quantity);
+
+      if (Number.isFinite(consumptionQuantity) && consumptionQuantity > 0) {
+        coffeeConsumptionByOptionValueId.set(
+          optionValueId,
+          consumptionQuantity,
+        );
+      }
     }
   }
 
@@ -291,15 +301,19 @@ export async function GET() {
     .map((row) => {
       const optionValueId = Number(row.option_value_id);
       const price = Number(row.price);
-      const inventoryQuantity = Number(row.inventory_quantity);
+      const consumptionQuantity =
+        coffeeConsumptionByOptionValueId.get(optionValueId) ?? null;
       const stockQuantity = coffeeStockByOptionValueId.get(optionValueId) ?? 0;
 
       return {
         optionValueId,
         price,
-        inventoryQuantity,
+        inventoryQuantity: consumptionQuantity,
         stockQuantity,
-        isAvailable: stockQuantity >= inventoryQuantity,
+        isAvailable:
+          consumptionQuantity !== null &&
+          consumptionQuantity > 0 &&
+          stockQuantity >= consumptionQuantity,
       };
     });
 

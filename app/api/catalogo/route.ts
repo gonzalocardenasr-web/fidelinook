@@ -59,6 +59,16 @@ export async function GET() {
         max_quantity,
         allow_repeat,
         is_required
+      ),
+      inventory_items (
+        id,
+        code,
+        name,
+        option_value_id,
+        consumption_quantity,
+        unit,
+        inventory_source,
+        is_active
       )
     `,
     )
