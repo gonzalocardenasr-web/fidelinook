@@ -1794,6 +1794,12 @@ export default function CatalogoOperacionPage() {
             </div>
 
             <div className="max-h-[calc(90vh-90px)] space-y-6 overflow-y-auto p-5">
+              {message && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                  {message}
+                </div>
+              )}
+
               <section>
                 <div className="mb-3">
                   <h3 className="text-sm font-black text-neutral-900">
