@@ -1012,6 +1012,45 @@ export default function CatalogoOperacionPage() {
     }
   }
 
+  async function eliminarOpcion(option: OptionValue) {
+    const confirmed = window.confirm(
+      `¿Eliminar definitivamente "${option.name}"?\n\n` +
+        "Esta acción solo se realizará si la opción no tiene información asociada.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSavingKey(`delete-option-${option.id}`);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/options", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          optionValueId: option.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo eliminar la opción.");
+        return;
+      }
+
+      setMessage(`"${option.name}" eliminada correctamente.`);
+      await cargarCatalogo();
+    } catch (error) {
+      console.error(error);
+      setMessage("Error eliminando opción.");
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   async function crearOpcion(group: OptionGroup) {
     const name = (newOptionNames[group.id] || "").trim();
 
@@ -1476,12 +1515,23 @@ export default function CatalogoOperacionPage() {
                             <button
                               type="button"
                               onClick={() => guardarOpcion(option)}
-                              disabled={savingKey === `option-${option.id}`}
+                              disabled={savingKey !== null}
                               className="cursor-pointer rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition duration-200 hover:bg-violet-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {savingKey === `option-${option.id}`
                                 ? "Guardando..."
                                 : "Guardar"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => void eliminarOpcion(option)}
+                              disabled={savingKey !== null}
+                              className="cursor-pointer rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-700 transition duration-200 hover:bg-red-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {savingKey === `delete-option-${option.id}`
+                                ? "Eliminando..."
+                                : "Eliminar"}
                             </button>
                           </div>
                         ))}

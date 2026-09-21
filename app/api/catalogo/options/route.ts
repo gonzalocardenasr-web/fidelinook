@@ -247,3 +247,160 @@ export async function PATCH(req: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(req: Request) {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return NextResponse.json(
+      { ok: false, message: "No autenticado." },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const body = (await req.json()) as Record<string, unknown>;
+    const optionValueId = Number(body.optionValueId);
+
+    if (!Number.isInteger(optionValueId) || optionValueId <= 0) {
+      return NextResponse.json(
+        { ok: false, message: "Opción inválida." },
+        { status: 400 },
+      );
+    }
+
+    const { data: option, error: optionError } = await supabaseAdmin
+      .from("catalog_option_values")
+      .select(
+        `
+        id,
+        name,
+        group_id,
+        catalog_option_groups!inner (
+          code,
+          is_active
+        )
+      `,
+      )
+      .eq("id", optionValueId)
+      .single();
+
+    if (optionError || !option) {
+      return NextResponse.json(
+        { ok: false, message: "Opción no encontrada." },
+        { status: 404 },
+      );
+    }
+
+    const groupRelation = Array.isArray(option.catalog_option_groups)
+      ? option.catalog_option_groups[0]
+      : option.catalog_option_groups;
+
+    if (
+      !groupRelation?.is_active ||
+      !MANAGEABLE_GROUPS.has(groupRelation.code)
+    ) {
+      return NextResponse.json(
+        { ok: false, message: "Grupo de opciones no administrable." },
+        { status: 400 },
+      );
+    }
+
+    const [
+      inventoryBatchesResult,
+      inventoryItemsResult,
+      optionPricesResult,
+      saleItemOptionsResult,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("inventory_batches")
+        .select("id", { count: "exact", head: true })
+        .eq("catalog_option_value_id", optionValueId),
+
+      supabaseAdmin
+        .from("inventory_items")
+        .select("id", { count: "exact", head: true })
+        .eq("option_value_id", optionValueId),
+
+      supabaseAdmin
+        .from("product_option_prices")
+        .select("id", { count: "exact", head: true })
+        .eq("option_value_id", optionValueId),
+
+      supabaseAdmin
+        .from("sale_item_options")
+        .select("id", { count: "exact", head: true })
+        .eq("option_value_id", optionValueId),
+    ]);
+
+    const dependencyResults = [
+      inventoryBatchesResult,
+      inventoryItemsResult,
+      optionPricesResult,
+      saleItemOptionsResult,
+    ];
+
+    const dependencyError = dependencyResults.find((result) => result.error);
+
+    if (dependencyError?.error) {
+      return NextResponse.json(
+        { ok: false, message: dependencyError.error.message },
+        { status: 500 },
+      );
+    }
+
+    const hasDependencies = dependencyResults.some(
+      (result) => Number(result.count || 0) > 0,
+    );
+
+    if (hasDependencies) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "No se puede eliminar esta opción porque tiene información asociada. Puedes mantenerla desactivada.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from("catalog_option_values")
+      .delete()
+      .eq("id", optionValueId);
+
+    if (deleteError) {
+      if (deleteError.code === "23503") {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "No se puede eliminar esta opción porque tiene información asociada. Puedes mantenerla desactivada.",
+          },
+          { status: 409 },
+        );
+      }
+
+      return NextResponse.json(
+        { ok: false, message: deleteError.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      deletedOptionValueId: optionValueId,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "No fue posible eliminar la opción.",
+      },
+      { status: 400 },
+    );
+  }
+}
