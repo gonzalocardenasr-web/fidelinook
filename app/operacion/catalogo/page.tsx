@@ -365,6 +365,46 @@ export default function CatalogoOperacionPage() {
     }
   }
 
+  async function actualizarEstadoProducto(product: Product, isActive: boolean) {
+    const action = isActive ? "activar" : "desactivar";
+
+    if (!window.confirm(`¿Confirmas que deseas ${action} "${product.name}"?`)) {
+      return;
+    }
+
+    try {
+      setSavingProduct(true);
+      setMessage("");
+
+      const res = await fetch("/api/catalogo/products/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          isActive,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || `No se pudo ${action} el producto.`);
+        return;
+      }
+
+      await cargarCatalogo();
+
+      setMessage(
+        `${product.name} ${isActive ? "activado" : "desactivado"} correctamente.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage(`Error al ${action} el producto.`);
+    } finally {
+      setSavingProduct(false);
+    }
+  }
+
   async function actualizarCanalProducto(
     product: Product,
     channel: SalesChannel,
@@ -1376,6 +1416,24 @@ export default function CatalogoOperacionPage() {
 
                         <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3 text-right">
                           <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              disabled={savingProduct}
+                              onClick={() =>
+                                actualizarEstadoProducto(
+                                  product,
+                                  !product.is_active,
+                                )
+                              }
+                              className={`cursor-pointer rounded-xl border px-3 py-2 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
+                                product.is_active
+                                  ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                                  : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                              }`}
+                            >
+                              {product.is_active ? "Desactivar" : "Activar"}
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => abrirInventarioProducto(product)}
