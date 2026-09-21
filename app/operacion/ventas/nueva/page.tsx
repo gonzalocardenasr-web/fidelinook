@@ -311,6 +311,7 @@ export default function NuevaVentaPage() {
   }
 
   function addProduct(product: Product) {
+    setEditingItem(null);
     setConfiguringProduct(product);
   }
 
@@ -488,14 +489,41 @@ export default function NuevaVentaPage() {
   );
 
   const discountRate =
-    pricing.potQuantity >= 6 ? 0.15 : pricing.potQuantity >= 4 ? 0.1 : 0;
+    channel === "local"
+      ? pricing.potQuantity >= 6
+        ? 0.15
+        : pricing.potQuantity >= 4
+          ? 0.1
+          : 0
+      : channel === "shopify"
+        ? pricing.potQuantity >= 9
+          ? 0.15
+          : pricing.potQuantity >= 4 && pricing.potQuantity !== 6
+            ? 0.1
+            : 0
+        : 0;
 
-  const potDiscountTotal = Math.round(pricing.potSubtotal * discountRate);
+  const mysteryRewardDiscountTotal =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? products.find((product) => product.sku === "POT-16-LISTO")
+        ? (getChannelPrice(
+            products.find((product) => product.sku === "POT-16-LISTO")!,
+          ) ?? 0)
+        : 0
+      : 0;
+
+  const potDiscountBase =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? Math.max(0, pricing.potSubtotal - mysteryRewardDiscountTotal)
+      : pricing.potSubtotal;
+
+  const potDiscountTotal = Math.round(potDiscountBase * discountRate);
 
   const totalBeforeManualDiscount = Math.max(
     0,
     pricing.subtotal -
       pricing.giftDiscountTotal -
+      mysteryRewardDiscountTotal -
       rewardDiscountTotal -
       potDiscountTotal,
   );
@@ -516,6 +544,7 @@ export default function NuevaVentaPage() {
   const discountTotal =
     potDiscountTotal +
     pricing.giftDiscountTotal +
+    mysteryRewardDiscountTotal +
     rewardDiscountTotal +
     (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
 
@@ -538,6 +567,10 @@ export default function NuevaVentaPage() {
   function validarVenta() {
     if (cart.length === 0) {
       return "Agrega al menos una línea a la venta.";
+    }
+
+    if (channel === "shopify" && pricing.potQuantity === 6) {
+      return "Un pedido Shopify de 6 potes no es válido: desde 6 potes pagados, Shopify incorpora un séptimo pote como Premio Misterioso.";
     }
 
     const unavailableItem = cart.find(
@@ -1177,6 +1210,7 @@ export default function NuevaVentaPage() {
             discountRate={discountRate}
             potDiscountTotal={potDiscountTotal}
             giftDiscountTotal={pricing.giftDiscountTotal}
+            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
             eligibleRewards={eligibleRewards}
             selectedRewardId={selectedReward?.id ?? null}
             rewardDiscountTotal={rewardDiscountTotal}

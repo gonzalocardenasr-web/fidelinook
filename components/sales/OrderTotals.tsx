@@ -4,6 +4,7 @@ type Props = {
   discountRate: number;
   potDiscountTotal: number;
   giftDiscountTotal: number;
+  mysteryRewardDiscountTotal: number;
   rewardDiscountTotal: number;
   manualDiscountAmount: number;
   discountTotal: number;
@@ -20,6 +21,7 @@ export default function OrderTotals({
   discountRate,
   potDiscountTotal,
   giftDiscountTotal,
+  mysteryRewardDiscountTotal,
   rewardDiscountTotal,
   manualDiscountAmount,
   discountTotal,
@@ -61,6 +63,16 @@ export default function OrderTotals({
 
               <span className="shrink-0 font-bold">
                 -{formatCurrency(giftDiscountTotal)}
+              </span>
+            </div>
+          )}
+
+          {mysteryRewardDiscountTotal > 0 && (
+            <div className="flex items-center justify-between gap-3 text-[11px] text-emerald-700">
+              <span className="font-bold">Descuento premio misterioso</span>
+
+              <span className="shrink-0 font-bold">
+                -{formatCurrency(mysteryRewardDiscountTotal)}
               </span>
             </div>
           )}

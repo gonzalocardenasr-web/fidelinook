@@ -35,6 +35,7 @@ type Props = {
   discountRate: number;
   potDiscountTotal: number;
   giftDiscountTotal: number;
+  mysteryRewardDiscountTotal: number;
   eligibleRewards: ClienteSelectorReward[];
   selectedRewardId: number | null;
   rewardDiscountTotal: number;
@@ -92,6 +93,7 @@ export default function OrderBuilder({
   discountRate,
   potDiscountTotal,
   giftDiscountTotal,
+  mysteryRewardDiscountTotal,
   eligibleRewards,
   selectedRewardId,
   rewardDiscountTotal,
@@ -848,6 +850,7 @@ export default function OrderBuilder({
             discountRate={discountRate}
             potDiscountTotal={potDiscountTotal}
             giftDiscountTotal={giftDiscountTotal}
+            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
             rewardDiscountTotal={rewardDiscountTotal}
             manualDiscountAmount={manualDiscountAmount}
             discountTotal={discountTotal}
