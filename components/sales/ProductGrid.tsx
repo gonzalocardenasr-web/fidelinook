@@ -44,7 +44,11 @@ export default function ProductGrid({
         return current;
       }
 
-      return categoryNames[0] ?? null;
+      const heladosCategory = categoryNames.find(
+        (category) => category.trim().toLowerCase() === "helados",
+      );
+
+      return heladosCategory ?? categoryNames[0] ?? null;
     });
   }, [categoryNames]);
 
