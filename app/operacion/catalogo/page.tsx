@@ -422,7 +422,7 @@ export default function CatalogoOperacionPage() {
       optionGroups
         .find((group) => group.code === "coffee_type" && group.is_active)
         ?.catalog_option_values.filter((option) => option.is_active) ?? []
-    ).sort((a, b) => a.sort_order - b.sort_order);
+    ).sort((a, b) => a.name.localeCompare(b.name, "es"));
   }
 
   function getProductOptionPrice(
@@ -1080,34 +1080,36 @@ export default function CatalogoOperacionPage() {
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return products.filter((product) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.sku.toLowerCase().includes(normalizedSearch) ||
-        product.category.toLowerCase().includes(normalizedSearch) ||
-        (product.subcategory || "").toLowerCase().includes(normalizedSearch);
+    return products
+      .filter((product) => {
+        const matchesSearch =
+          !normalizedSearch ||
+          product.name.toLowerCase().includes(normalizedSearch) ||
+          product.sku.toLowerCase().includes(normalizedSearch) ||
+          product.category.toLowerCase().includes(normalizedSearch) ||
+          (product.subcategory || "").toLowerCase().includes(normalizedSearch);
 
-      const matchesCategory =
-        categoryFilter === "all" || product.category === categoryFilter;
+        const matchesCategory =
+          categoryFilter === "all" || product.category === categoryFilter;
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && product.is_active) ||
-        (statusFilter === "inactive" && !product.is_active);
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && product.is_active) ||
+          (statusFilter === "inactive" && !product.is_active);
 
-      const matchesChannel =
-        channelFilter === "all" ||
-        product.product_channels?.some(
-          (productChannel) =>
-            productChannel.channel_code === channelFilter &&
-            productChannel.is_enabled,
+        const matchesChannel =
+          channelFilter === "all" ||
+          product.product_channels?.some(
+            (productChannel) =>
+              productChannel.channel_code === channelFilter &&
+              productChannel.is_enabled,
+          );
+
+        return (
+          matchesSearch && matchesCategory && matchesStatus && matchesChannel
         );
-
-      return (
-        matchesSearch && matchesCategory && matchesStatus && matchesChannel
-      );
-    });
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [products, search, categoryFilter, statusFilter, channelFilter]);
 
   function isProductEnabledForChannel(product: Product, channelCode: string) {
@@ -1438,7 +1440,8 @@ export default function CatalogoOperacionPage() {
 
                     <div className="mt-4 space-y-3">
                       {group.catalog_option_values
-                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .slice()
+                        .sort((a, b) => a.name.localeCompare(b.name, "es"))
                         .map((option) => (
                           <div
                             key={option.id}
@@ -1891,7 +1894,7 @@ export default function CatalogoOperacionPage() {
 
                     {(inventoryProduct.inventory_items ?? [])
                       .filter((item) => item.is_active)
-                      .sort((a, b) => a.id - b.id)
+                      .sort((a, b) => a.name.localeCompare(b.name, "es"))
                       .map((inventoryItem) => {
                         const isSaving =
                           savingInventoryItemId === inventoryItem.id;
@@ -2003,7 +2006,9 @@ export default function CatalogoOperacionPage() {
                                     item.is_active,
                                 ),
                             )
-                            .sort((a, b) => a.sort_order - b.sort_order) ?? []
+                            .sort((a, b) =>
+                              a.name.localeCompare(b.name, "es"),
+                            ) ?? []
                         ).map((option) => (
                           <option key={option.id} value={option.id}>
                             {option.name}
@@ -2053,7 +2058,12 @@ export default function CatalogoOperacionPage() {
                   <div className="space-y-3">
                     {(inventoryProduct.product_inventory_mappings ?? [])
                       .slice()
-                      .sort((a, b) => a.id - b.id)
+                      .sort((a, b) =>
+                        (a.inventory_items?.name ?? "").localeCompare(
+                          b.inventory_items?.name ?? "",
+                          "es",
+                        ),
+                      )
                       .map((mapping) => {
                         const isSaving =
                           savingInventoryMappingId === mapping.id;

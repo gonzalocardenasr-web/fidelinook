@@ -144,29 +144,31 @@ export default function NuevaVentaPage() {
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
 
-    return products.filter((product) => {
-      if (!isProductSellable(product)) {
-        return false;
-      }
+    return products
+      .filter((product) => {
+        if (!isProductSellable(product)) {
+          return false;
+        }
 
-      if (!search) {
-        return true;
-      }
+        if (!search) {
+          return true;
+        }
 
-      const name = product.name?.toLowerCase() || "";
-      const sku = product.sku?.toLowerCase() || "";
-      const category = product.category?.toLowerCase() || "";
-      const operationalType = product.operational_type?.toLowerCase() || "";
-      const subcategory = product.subcategory?.toLowerCase() || "";
+        const name = product.name?.toLowerCase() || "";
+        const sku = product.sku?.toLowerCase() || "";
+        const category = product.category?.toLowerCase() || "";
+        const operationalType = product.operational_type?.toLowerCase() || "";
+        const subcategory = product.subcategory?.toLowerCase() || "";
 
-      return (
-        name.includes(search) ||
-        sku.includes(search) ||
-        category.includes(search) ||
-        operationalType.includes(search) ||
-        subcategory.includes(search)
-      );
-    });
+        return (
+          name.includes(search) ||
+          sku.includes(search) ||
+          category.includes(search) ||
+          operationalType.includes(search) ||
+          subcategory.includes(search)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [products, productSearch, channel, coffeeOptionPrices]);
 
   const flavors = useMemo(() => {
@@ -175,7 +177,7 @@ export default function NuevaVentaPage() {
         ?.catalog_option_values || []
     )
       .filter((option) => option.is_active)
-      .sort((a, b) => a.sort_order - b.sort_order);
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [optionGroups]);
 
   const openBatchFlavors = useMemo(() => {
@@ -198,7 +200,7 @@ export default function NuevaVentaPage() {
         ?.catalog_option_values || []
     )
       .filter((option) => option.is_active && availableIds.has(option.id))
-      .sort((a, b) => a.sort_order - b.sort_order);
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [optionGroups, availableBrownieVarietyIds]);
 
   const mineralWaterTypes = useMemo(() => {
@@ -209,7 +211,7 @@ export default function NuevaVentaPage() {
         ?.catalog_option_values || []
     )
       .filter((option) => option.is_active && availableIds.has(option.id))
-      .sort((a, b) => a.sort_order - b.sort_order);
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [optionGroups, availableMineralWaterTypeIds]);
 
   const coffeeTypes = useMemo<CoffeeOption[]>(() => {
@@ -242,7 +244,7 @@ export default function NuevaVentaPage() {
           isAvailable: Boolean(priceData?.isAvailable),
         };
       })
-      .sort((a, b) => a.sort_order - b.sort_order);
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices, channel]);
 
   const toppings = useMemo(() => {
@@ -251,7 +253,7 @@ export default function NuevaVentaPage() {
         ?.catalog_option_values || []
     )
       .filter((option) => option.is_active)
-      .sort((a, b) => a.sort_order - b.sort_order);
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [optionGroups]);
 
   function getChannelPrice(product: Product): number | null {
