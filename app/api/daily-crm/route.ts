@@ -9,6 +9,7 @@ type CustomerRow = {
   correo: string | null;
   public_token: string | null;
   fecha_ultimo_recordatorio_inactividad: string | null;
+  acepta_marketing: boolean | null;
 };
 
 type LoyaltyAccountRow = {
@@ -135,7 +136,7 @@ export async function GET(req: Request) {
     const { data: customersData, error: customersError } = await supabaseAdmin
       .from("clientes")
       .select(
-        "id, nombre, correo, public_token, fecha_ultimo_recordatorio_inactividad",
+        "id, nombre, correo, public_token, fecha_ultimo_recordatorio_inactividad, acepta_marketing",
       )
       .order("id", { ascending: true });
 
@@ -370,7 +371,14 @@ export async function GET(req: Request) {
 
       /*
        * Reactivación por inactividad.
+       *
+       * Esta comunicación es de marketing/CRM y sólo corresponde
+       * a clientes que aceptan marketing.
        */
+      if (customer.acepta_marketing !== true) {
+        continue;
+      }
+
       const currentStampBalance = accountsByCustomerId.get(customerId) || 0;
 
       if (currentStampBalance <= 0 || currentStampBalance >= META_SELLOS) {
