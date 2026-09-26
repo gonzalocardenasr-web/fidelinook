@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  recommendCashWithdrawal,
+  type CashWithdrawalRecommendation,
+} from "../../../lib/cash/cashWithdrawalRecommendation";
 
 type CashRegisterSession = {
   id: number;
@@ -734,6 +738,30 @@ export default function CashRegisterPage() {
       0,
     );
   }, [closingDetail]);
+
+  const closingWithdrawalRecommendation =
+    useMemo<CashWithdrawalRecommendation | null>(() => {
+      if (!closingPreview) {
+        return null;
+      }
+
+      return recommendCashWithdrawal(
+        cashCountToEntries(closingCashCount),
+        closingPreview.openingAmount,
+      );
+    }, [closingPreview, closingCashCount]);
+
+  const completedClosingWithdrawalRecommendation =
+    useMemo<CashWithdrawalRecommendation | null>(() => {
+      if (!completedClosing) {
+        return null;
+      }
+
+      return recommendCashWithdrawal(
+        cashCountToEntries(closingCashCount),
+        completedClosing.opening_amount,
+      );
+    }, [completedClosing, closingCashCount]);
 
   const closingDetailCashSalesMatch =
     closingDetail !== null &&
@@ -2055,6 +2083,123 @@ export default function CashRegisterPage() {
                           </div>
                         </div>
 
+                        {closingWithdrawalRecommendation && (
+                          <div
+                            className={`rounded-2xl border p-5 ${
+                              closingWithdrawalRecommendation.status ===
+                              "exact_composition_unavailable"
+                                ? "border-amber-200 bg-amber-50"
+                                : "border-emerald-200 bg-emerald-50"
+                            }`}
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600">
+                              Retiro recomendado
+                            </p>
+
+                            {closingWithdrawalRecommendation.status ===
+                              "exact" && (
+                              <div className="mt-3 grid gap-5 lg:grid-cols-2">
+                                <div>
+                                  <p className="text-3xl font-bold text-neutral-950">
+                                    {formatCurrency(
+                                      closingWithdrawalRecommendation.withdrawalAmount,
+                                    )}
+                                  </p>
+
+                                  <p className="mt-2 text-sm text-neutral-700">
+                                    Fondo de apertura que queda en caja:{" "}
+                                    <strong>
+                                      {formatCurrency(
+                                        closingWithdrawalRecommendation.targetRetainedAmount,
+                                      )}
+                                    </strong>
+                                  </p>
+                                </div>
+
+                                <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                                    Retirar físicamente
+                                  </p>
+
+                                  <div className="mt-3 space-y-2">
+                                    {closingWithdrawalRecommendation.withdrawalCashCount
+                                      .filter((entry) => entry.quantity > 0)
+                                      .map((entry) => (
+                                        <div
+                                          key={entry.denomination}
+                                          className="flex items-center justify-between gap-4 text-sm"
+                                        >
+                                          <span>
+                                            {formatCurrency(entry.denomination)}{" "}
+                                            × {entry.quantity}
+                                          </span>
+
+                                          <strong>
+                                            {formatCurrency(entry.subtotal)}
+                                          </strong>
+                                        </div>
+                                      ))}
+
+                                    {closingWithdrawalRecommendation.withdrawalAmount ===
+                                      0 && (
+                                      <p className="text-sm text-neutral-600">
+                                        No corresponde retirar efectivo.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {closingWithdrawalRecommendation.status ===
+                              "insufficient_cash" && (
+                              <div className="mt-3">
+                                <p className="text-2xl font-bold text-neutral-950">
+                                  No corresponde retirar efectivo
+                                </p>
+
+                                <p className="mt-2 text-sm text-neutral-700">
+                                  El efectivo contado es menor que el fondo de
+                                  apertura de{" "}
+                                  <strong>
+                                    {formatCurrency(
+                                      closingWithdrawalRecommendation.targetRetainedAmount,
+                                    )}
+                                  </strong>
+                                  . Todo el efectivo contado debe permanecer en
+                                  caja.
+                                </p>
+
+                                <p className="mt-2 text-xs text-neutral-600">
+                                  Esto no modifica la diferencia de caja, que se
+                                  determina independientemente contra el
+                                  efectivo esperado.
+                                </p>
+                              </div>
+                            )}
+
+                            {closingWithdrawalRecommendation.status ===
+                              "exact_composition_unavailable" && (
+                              <div className="mt-3">
+                                <p className="text-sm font-semibold text-amber-900">
+                                  Hay efectivo suficiente, pero las
+                                  denominaciones contadas no permiten dejar
+                                  exactamente el fondo de apertura de{" "}
+                                  {formatCurrency(
+                                    closingWithdrawalRecommendation.targetRetainedAmount,
+                                  )}
+                                  .
+                                </p>
+
+                                <p className="mt-2 text-xs text-amber-800">
+                                  Reorganiza o cambia las denominaciones antes
+                                  de confirmar el cierre.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div>
                           <label
                             htmlFor="closingNotes"
@@ -2127,7 +2272,11 @@ export default function CashRegisterPage() {
                           <button
                             type="button"
                             onClick={() => void confirmClosing()}
-                            disabled={submittingClosing}
+                            disabled={
+                              submittingClosing ||
+                              closingWithdrawalRecommendation?.status ===
+                                "exact_composition_unavailable"
+                            }
                             className="cursor-pointer rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {submittingClosing
@@ -2307,21 +2456,89 @@ export default function CashRegisterPage() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-                  Efectivo para respaldar
-                </p>
+              {completedClosingWithdrawalRecommendation && (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                    Retiro de efectivo
+                  </p>
 
-                <p className="mt-2 text-3xl font-bold text-violet-950">
-                  {formatCurrency(completedClosing.counted_cash_amount)}
-                </p>
+                  {completedClosingWithdrawalRecommendation.status ===
+                  "exact" ? (
+                    <div className="mt-3 grid gap-5 lg:grid-cols-2">
+                      <div>
+                        <p className="text-3xl font-bold text-emerald-950">
+                          {formatCurrency(
+                            completedClosingWithdrawalRecommendation.withdrawalAmount,
+                          )}
+                        </p>
 
-                <p className="mt-2 text-sm text-violet-800">
-                  Este monto corresponde al efectivo físico declarado al cerrar
-                  la sesión y debe quedar asociado al comprobante o sobre de
-                  caja.
-                </p>
-              </div>
+                        <p className="mt-2 text-sm text-emerald-800">
+                          Retira este monto y deja en caja el fondo de apertura
+                          de{" "}
+                          <strong>
+                            {formatCurrency(
+                              completedClosingWithdrawalRecommendation.targetRetainedAmount,
+                            )}
+                          </strong>
+                          .
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                          Composición a retirar
+                        </p>
+
+                        <div className="mt-3 space-y-2">
+                          {completedClosingWithdrawalRecommendation.withdrawalCashCount
+                            .filter((entry) => entry.quantity > 0)
+                            .map((entry) => (
+                              <div
+                                key={entry.denomination}
+                                className="flex items-center justify-between gap-4 text-sm"
+                              >
+                                <span className="text-neutral-700">
+                                  {formatCurrency(entry.denomination)} ×{" "}
+                                  {entry.quantity}
+                                </span>
+
+                                <strong className="text-neutral-950">
+                                  {formatCurrency(entry.subtotal)}
+                                </strong>
+                              </div>
+                            ))}
+
+                          {completedClosingWithdrawalRecommendation.withdrawalAmount ===
+                            0 && (
+                            <p className="text-sm text-neutral-600">
+                              No corresponde retirar efectivo.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : completedClosingWithdrawalRecommendation.status ===
+                    "insufficient_cash" ? (
+                    <div className="mt-3">
+                      <p className="text-xl font-bold text-emerald-950">
+                        No corresponde retirar efectivo
+                      </p>
+
+                      <p className="mt-2 text-sm text-emerald-800">
+                        El efectivo contado es menor que el fondo de apertura.
+                        Todo el efectivo contado debe permanecer en caja.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <p className="text-sm font-semibold text-amber-900">
+                        No fue posible determinar un retiro exacto con las
+                        denominaciones registradas.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
@@ -2363,18 +2580,29 @@ export default function CashRegisterPage() {
                 </p>
 
                 <p className="mt-1 text-xs text-amber-800">
-                  Confirma que el efectivo haya sido retirado o resguardado
-                  según el procedimiento operativo de Nook.
+                  Confirma que hayas separado el retiro indicado y dejado en
+                  caja el fondo correspondiente antes de finalizar.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={finishCompletedClosing}
-                className="mt-5 w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-              >
-                Finalizar y volver a apertura
-              </button>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Link
+                  href={`/operacion/caja/cierre/${completedClosing.id}/imprimir`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center rounded-xl border border-violet-200 bg-white px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+                >
+                  Imprimir comprobante
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={finishCompletedClosing}
+                  className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                >
+                  Finalizar y volver a apertura
+                </button>
+              </div>
             </section>
           ) : (
             <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
