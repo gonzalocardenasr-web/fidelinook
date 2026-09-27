@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { getSubscriptionCycle } from "../../../../lib/subscriptionCycle";
 import {
   buildCustomerEventIdempotencyKey,
@@ -26,6 +27,21 @@ function normalizePositiveInteger(value: unknown) {
 
 async function validateOperationalUser() {
   const session = await getOperationSession();
+
+    const authorization = authorizeOperationSession(
+      session,
+      "subscriptions.operate",
+    );
+
+    if (!authorization.ok) {
+      return {
+        error: NextResponse.json(
+          { ok: false, message: authorization.message },
+          { status: authorization.status },
+        ),
+        role: null,
+      };
+    }
 
   if (!session.ok || !session.userId) {
     return {

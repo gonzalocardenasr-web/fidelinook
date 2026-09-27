@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 async function validateOperationalUser() {
   const session = await getOperationSession();
+
+    const authorization = authorizeOperationSession(
+      session,
+      "subscriptions.manage",
+    );
+
+    if (!authorization.ok) {
+      return {
+        error: NextResponse.json(
+          { ok: false, message: authorization.message },
+          { status: authorization.status },
+        ),
+      };
+    }
 
   if (!session.ok || !session.userId) {
     return {

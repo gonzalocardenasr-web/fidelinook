@@ -15,6 +15,7 @@ export type OperationPermission =
   | "campaigns.manage"
   | "subscriptions.operate"
   | "subscriptions.manage"
+  | "subscriptions.delete"
   | "analytics.view"
   | "users.manage";
 
@@ -42,6 +43,7 @@ const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
 
 const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
   ...ADMIN_PERMISSIONS,
+  "subscriptions.delete",
   "users.manage",
 ];
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 type BillingPeriod = "mensual" | "trimestral" | "semestral" | "anual";
@@ -112,6 +113,18 @@ async function getOrCreateTemplate(params: {
 export async function POST(req: Request) {
   try {
     const session = await getOperationSession();
+
+    const authorization = authorizeOperationSession(
+      session,
+      "subscriptions.manage",
+    );
+
+    if (!authorization.ok) {
+      return NextResponse.json(
+        { ok: false, message: authorization.message },
+        { status: authorization.status },
+      );
+    }
 
     if (!session.ok) {
       return NextResponse.json(
