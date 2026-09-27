@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type PostReceiptBody = {
   transactionId?: unknown;
@@ -11,24 +12,15 @@ export async function POST(req: Request) {
   try {
     const session = await getOperationSession();
 
-    if (!session.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "Tu sesión no se encuentra activa.",
-        },
-        { status: 401 },
-      );
-    }
+    const authorization = authorizeOperationSession(
+      session,
+      "inventory.receipts.manage",
+    );
 
-    if (!session.userId) {
+    if (!authorization.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Tu sesión debe renovarse para identificar al usuario. Cierra sesión e inicia sesión nuevamente.",
-        },
-        { status: 401 },
+        { ok: false, message: authorization.message },
+        { status: authorization.status },
       );
     }
 
@@ -48,53 +40,26 @@ export async function POST(req: Request) {
     const { data: operationalUser, error: operationalUserError } =
       await supabaseAdmin
         .from("operational_users")
-        .select("id, role, is_active, auth_user_id")
-        .eq("id", session.userId)
+        .select("auth_user_id")
+        .eq("id", authorization.session.userId)
         .maybeSingle();
 
     if (operationalUserError) {
       console.error(
-        "Error validando usuario operacional para recepción:",
+        "Error obteniendo identidad operacional para recepción:",
         operationalUserError,
       );
 
       return NextResponse.json(
         {
           ok: false,
-          message: "No fue posible validar al usuario operacional.",
+          message: "No fue posible obtener la identidad operacional.",
         },
         { status: 500 },
       );
     }
 
-    if (!operationalUser || !operationalUser.is_active) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "El usuario operacional no se encuentra activo.",
-        },
-        { status: 403 },
-      );
-    }
-
-    if (operationalUser.role !== session.role) {
-      console.error(
-        "Rol inconsistente al publicar recepción:",
-        session.userId,
-        session.role,
-        operationalUser.role,
-      );
-
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "La sesión operacional no es válida.",
-        },
-        { status: 403 },
-      );
-    }
-
-    if (!operationalUser.auth_user_id) {
+    if (!operationalUser?.auth_user_id) {
       return NextResponse.json(
         {
           ok: false,
