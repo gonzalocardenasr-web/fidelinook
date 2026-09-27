@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 const MANAGEABLE_GROUPS = new Set([
   "flavor",
@@ -49,10 +50,15 @@ function buildOptionCode(groupCode: string, name: string) {
 export async function POST(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
@@ -203,10 +209,15 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
@@ -251,10 +262,15 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 

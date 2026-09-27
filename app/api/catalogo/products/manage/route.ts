@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 const OPERATIONAL_TYPES = new Set(["directo", "servido", "preparado"]);
 
@@ -87,10 +88,15 @@ function isUniqueViolation(error: { code?: string | null } | null) {
 export async function POST(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
@@ -162,10 +168,15 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 

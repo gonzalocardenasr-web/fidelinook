@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 
 type ProductChannelRow = {
@@ -28,10 +29,15 @@ function firstRelation<T>(value: T | T[] | null): T | null {
 export async function PATCH(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "catalog.manage",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
