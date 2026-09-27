@@ -1035,7 +1035,7 @@ export default function HistorialVentasPage() {
                       onClick={() => changeSort("date")}
                       className="cursor-pointer hover:text-violet-700"
                     >
-                      Fecha y hora{" "}
+                      FECHA Y HORA{" "}
                       {sortField === "date"
                         ? sortDirection === "asc"
                           ? "↑"
@@ -1043,16 +1043,18 @@ export default function HistorialVentasPage() {
                         : ""}
                     </button>
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
-                    Pedido
+                    PEDIDO
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     <button
                       type="button"
                       onClick={() => changeSort("channel")}
                       className="cursor-pointer hover:text-violet-700"
                     >
-                      Canal{" "}
+                      CANAL{" "}
                       {sortField === "channel"
                         ? sortDirection === "asc"
                           ? "↑"
@@ -1060,17 +1062,18 @@ export default function HistorialVentasPage() {
                         : ""}
                     </button>
                   </th>
-                  9
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
-                    Ref. externa
+                    REF. EXTERNA
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     <button
                       type="button"
                       onClick={() => changeSort("customer")}
                       className="cursor-pointer hover:text-violet-700"
                     >
-                      Cliente{" "}
+                      CLIENTE{" "}
                       {sortField === "customer"
                         ? sortDirection === "asc"
                           ? "↑"
@@ -1078,19 +1081,22 @@ export default function HistorialVentasPage() {
                         : ""}
                     </button>
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
-                    Pago
+                    PAGO
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
-                    Estado
+                    ESTADO
                   </th>
+
                   <th className="whitespace-nowrap px-3 py-2 text-right text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     <button
                       type="button"
                       onClick={() => changeSort("total")}
                       className="cursor-pointer hover:text-violet-700"
                     >
-                      Total{" "}
+                      TOTAL{" "}
                       {sortField === "total"
                         ? sortDirection === "asc"
                           ? "↑"
@@ -1098,8 +1104,9 @@ export default function HistorialVentasPage() {
                         : ""}
                     </button>
                   </th>
+
                   <th className="w-16 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-neutral-500">
-                    Acción
+                    ACCIÓN
                   </th>
                 </tr>
               </thead>
