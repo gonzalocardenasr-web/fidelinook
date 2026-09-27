@@ -13,14 +13,6 @@ type Cliente = {
   email_verificado: boolean | null;
 };
 
-function normalizarTexto(value: string | null | undefined) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
 export async function GET(req: Request) {
   const session = await getOperationSession();
 
@@ -43,12 +35,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, clientes: [] });
   }
 
-  const queryNormalizada = normalizarTexto(query);
+  const escapedQuery = query
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+
+  const searchPattern = `%${escapedQuery}%`;
 
   const { data, error } = await supabaseAdmin
     .from("clientes")
     .select("id, nombre, correo, telefono, tarjeta_activa, email_verificado")
-    .order("nombre", { ascending: true });
+    .or(
+      `nombre.ilike.${searchPattern},correo.ilike.${searchPattern},telefono.ilike.${searchPattern}`,
+    )
+    .order("nombre", { ascending: true })
+    .limit(10);
 
   if (error) {
     return NextResponse.json(
@@ -58,33 +59,20 @@ export async function GET(req: Request) {
   }
 
   const clientes = await Promise.all(
-    ((data || []) as Cliente[])
-      .filter((cliente) => {
-        const nombre = normalizarTexto(cliente.nombre);
-        const correo = normalizarTexto(cliente.correo);
-        const telefono = normalizarTexto(cliente.telefono);
+    ((data || []) as Cliente[]).map(async (cliente) => {
+      const loyalty = await getCustomerLoyalty(cliente.id);
 
-        return (
-          nombre.includes(queryNormalizada) ||
-          correo.includes(queryNormalizada) ||
-          telefono.includes(queryNormalizada)
-        );
-      })
-      .slice(0, 10)
-      .map(async (cliente) => {
-        const loyalty = await getCustomerLoyalty(cliente.id);
-
-        return {
-          ...cliente,
-          loyalty: {
-            currentStampBalance: loyalty.currentStampBalance,
-            activeRewards: loyalty.activeRewards,
-            activeRewardsCount: loyalty.activeRewards.length,
-          },
-          sellos: loyalty.currentStampBalance,
-          premios: loyalty.activeRewards,
-        };
-      }),
+      return {
+        ...cliente,
+        loyalty: {
+          currentStampBalance: loyalty.currentStampBalance,
+          activeRewards: loyalty.activeRewards,
+          activeRewardsCount: loyalty.activeRewards.length,
+        },
+        sellos: loyalty.currentStampBalance,
+        premios: loyalty.activeRewards,
+      };
+    }),
   );
 
   return NextResponse.json({

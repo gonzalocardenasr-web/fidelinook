@@ -1,0 +1,782 @@
+﻿INC-PERF-01.5 - POS CUSTOMER SEARCH
+
+=== API CLIENTES SEARCH ===
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../lib/operation-auth";
+import { getCustomerLoyalty } from "../../../../lib/loyalty";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
+type Cliente = {
+  id: number;
+  nombre: string | null;
+  correo: string | null;
+  telefono: string | null;
+  tarjeta_activa: boolean | null;
+  email_verificado: boolean | null;
+};
+
+function normalizarTexto(value: string | null | undefined) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+export async function GET(req: Request) {
+  const session = await getOperationSession();
+
+  const authorization = authorizeOperationSession(session, "customers.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  const { searchParams } = new URL(req.url);
+  const query = String(searchParams.get("q") || "").trim();
+
+  if (query.length < 2) {
+    return NextResponse.json({ ok: true, clientes: [] });
+  }
+
+  const queryNormalizada = normalizarTexto(query);
+
+  const { data, error } = await supabaseAdmin
+    .from("clientes")
+    .select("id, nombre, correo, telefono, tarjeta_activa, email_verificado")
+    .order("nombre", { ascending: true });
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, message: error.message },
+      { status: 500 },
+    );
+  }
+
+  const clientes = await Promise.all(
+    ((data || []) as Cliente[])
+      .filter((cliente) => {
+        const nombre = normalizarTexto(cliente.nombre);
+        const correo = normalizarTexto(cliente.correo);
+        const telefono = normalizarTexto(cliente.telefono);
+
+        return (
+          nombre.includes(queryNormalizada) ||
+          correo.includes(queryNormalizada) ||
+          telefono.includes(queryNormalizada)
+        );
+      })
+      .slice(0, 10)
+      .map(async (cliente) => {
+        const loyalty = await getCustomerLoyalty(cliente.id);
+
+        return {
+          ...cliente,
+          loyalty: {
+            currentStampBalance: loyalty.currentStampBalance,
+            activeRewards: loyalty.activeRewards,
+            activeRewardsCount: loyalty.activeRewards.length,
+          },
+          sellos: loyalty.currentStampBalance,
+          premios: loyalty.activeRewards,
+        };
+      }),
+  );
+
+  return NextResponse.json({
+    ok: true,
+    clientes,
+  });
+}
+
+=== REFERENCIAS FRONTEND ===
+
+  app\operacion\ventas\nueva\page.tsx:1:"use client";
+  app\operacion\ventas\nueva\page.tsx:2:
+  app\operacion\ventas\nueva\page.tsx:3:import { useEffect, useMemo, useState } from "react";
+> app\operacion\ventas\nueva\page.tsx:4:import { ClienteSelectorValue } from "../../../../components/client/ClienteSelector";
+  app\operacion\ventas\nueva\page.tsx:5:import ProductGrid from "../../../../components/sales/ProductGrid";
+  app\operacion\ventas\nueva\page.tsx:6:import OrderBuilder from "../../../../components/sales/OrderBuilder";
+  app\operacion\ventas\nueva\page.tsx:7:import {
+  app\operacion\ventas\nueva\page.tsx:8:  CartItem,
+  app\operacion\ventas\nueva\page.tsx:9:  CoffeeOption,
+  app\operacion\ventas\nueva\page.tsx:10:  CustomCartItem,
+  app\operacion\ventas\nueva\page.tsx:11:  OptionGroup,
+  app\operacion\ventas\nueva\page.tsx:12:  Product,
+  app\operacion\ventas\nueva\page.tsx:13:  ProductCartItem,
+  app\operacion\ventas\nueva\page.tsx:14:} from "../../../../types/sales";
+  app\operacion\ventas\nueva\page.tsx:15:import POSLayout from "../../../../components/pos/POSLayout";
+  app\operacion\ventas\nueva\page.tsx:16:import POSContextPanel from "../../../../components/pos/POSContextPanel";
+  app\operacion\ventas\nueva\page.tsx:17:import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
+  app\operacion\ventas\nueva\page.tsx:18:import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
+  app\operacion\ventas\nueva\page.tsx:19:import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
+  app\operacion\ventas\nueva\page.tsx:20:
+  app\operacion\ventas\nueva\page.tsx:21:type ManualDiscountType = "percent" | "fixed";
+  app\operacion\ventas\nueva\page.tsx:22:
+  app\operacion\ventas\nueva\page.tsx:23:type ManualDiscountReason =
+  app\operacion\ventas\nueva\page.tsx:24:  | "courtesy"
+  app\operacion\ventas\nueva\page.tsx:25:  | "complaint"
+  app\operacion\ventas\nueva\page.tsx:26:  | "agreement"
+  app\operacion\ventas\nueva\page.tsx:27:  | "exceptional_promotion"
+  app\operacion\ventas\nueva\page.tsx:28:  | "service_error"
+  app\operacion\ventas\nueva\page.tsx:29:  | "other";
+  app\operacion\ventas\nueva\page.tsx:30:
+  app\operacion\ventas\nueva\page.tsx:31:export default function NuevaVentaPage() {
+  app\operacion\ventas\nueva\page.tsx:32:  const [products, setProducts] = useState<Product[]>([]);
+  app\operacion\ventas\nueva\page.tsx:33:  const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+  app\operacion\ventas\nueva\page.tsx:34:  const [cart, setCart] = useState<CartItem[]>([]);
+  app\operacion\ventas\nueva\page.tsx:35:  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  app\operacion\ventas\nueva\page.tsx:36:  const [cashReceived, setCashReceived] = useState("");
+  app\operacion\ventas\nueva\page.tsx:37:  const [loading, setLoading] = useState(true);
+  app\operacion\ventas\nueva\page.tsx:38:  const [saving, setSaving] = useState(false);
+  app\operacion\ventas\nueva\page.tsx:39:  const [message, setMessage] = useState("");
+  app\operacion\ventas\nueva\page.tsx:40:  const [productSearch, setProductSearch] = useState("");
+  app\operacion\ventas\nueva\page.tsx:41:  const [orderNotes, setOrderNotes] = useState("");
+> app\operacion\ventas\nueva\page.tsx:42:  const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
+  app\operacion\ventas\nueva\page.tsx:43:  const [editingItem, setEditingItem] = useState<ProductCartItem | null>(null);
+  app\operacion\ventas\nueva\page.tsx:44:
+  app\operacion\ventas\nueva\page.tsx:45:  const [channel, setChannel] = useState<SalesChannel>("local");
+  app\operacion\ventas\nueva\page.tsx:46:  const [externalOrderId, setExternalOrderId] = useState("");
+  app\operacion\ventas\nueva\page.tsx:47:
+  app\operacion\ventas\nueva\page.tsx:48:  const [selectedCliente, setSelectedCliente] =
+> app\operacion\ventas\nueva\page.tsx:49:    useState<ClienteSelectorValue | null>(null);
+  app\operacion\ventas\nueva\page.tsx:50:
+  app\operacion\ventas\nueva\page.tsx:51:  const [selectedRewardId, setSelectedRewardId] = useState<number | null>(null);
+  app\operacion\ventas\nueva\page.tsx:52:
+  app\operacion\ventas\nueva\page.tsx:53:  const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
+  app\operacion\ventas\nueva\page.tsx:54:    null,
+  app\operacion\ventas\nueva\page.tsx:55:  );
+  app\operacion\ventas\nueva\page.tsx:56:
+  app\operacion\ventas\nueva\page.tsx:57:  const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
+  app\operacion\ventas\nueva\page.tsx:58:
+  app\operacion\ventas\nueva\page.tsx:59:  const [promotionalStamps, setPromotionalStamps] = useState(0);
+  app\operacion\ventas\nueva\page.tsx:60:
+  app\operacion\ventas\nueva\page.tsx:61:  const [manualDiscountEnabled, setManualDiscountEnabled] = useState(false);
+  app\operacion\ventas\nueva\page.tsx:62:  const [manualDiscountType, setManualDiscountType] =
+  app\operacion\ventas\nueva\page.tsx:63:    useState<ManualDiscountType>("percent");
+  app\operacion\ventas\nueva\page.tsx:64:  const [manualDiscountValue, setManualDiscountValue] = useState("");
+  app\operacion\ventas\nueva\page.tsx:65:  const [manualDiscountReason, setManualDiscountReason] = useState<
+  app\operacion\ventas\nueva\page.tsx:66:    ManualDiscountReason | ""
+  app\operacion\ventas\nueva\page.tsx:67:  >("");
+  app\operacion\ventas\nueva\page.tsx:68:  const [manualDiscountNotes, setManualDiscountNotes] = useState("");
+  app\operacion\ventas\nueva\page.tsx:69:
+  app\operacion\ventas\nueva\page.tsx:70:  const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
+  app\operacion\ventas\nueva\page.tsx:71:
+  app\operacion\ventas\nueva\page.tsx:72:  const [readyPotFlavorIds, setReadyPotFlavorIds] = useState<number[]>([]);
+  app\operacion\ventas\nueva\page.tsx:73:
+  app\operacion\ventas\nueva\page.tsx:74:  const [availableBrownieVarietyIds, setAvailableBrownieVarietyIds] = useState<
+  app\operacion\ventas\nueva\page.tsx:75:    number[]
+  app\operacion\ventas\nueva\page.tsx:76:  >([]);
+  app\operacion\ventas\nueva\page.tsx:77:
+  app\operacion\ventas\nueva\page.tsx:78:  const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =
+  app\operacion\ventas\nueva\page.tsx:79:    useState<number[]>([]);
+  app\operacion\ventas\nueva\page.tsx:540:            (totalBeforeManualDiscount * parsedManualDiscountValue) / 100,
+  app\operacion\ventas\nueva\page.tsx:541:          ),
+  app\operacion\ventas\nueva\page.tsx:542:        )
+  app\operacion\ventas\nueva\page.tsx:543:      : Math.min(totalBeforeManualDiscount, parsedManualDiscountValue)
+  app\operacion\ventas\nueva\page.tsx:544:    : 0;
+  app\operacion\ventas\nueva\page.tsx:545:
+  app\operacion\ventas\nueva\page.tsx:546:  const discountTotal =
+  app\operacion\ventas\nueva\page.tsx:547:    potDiscountTotal +
+  app\operacion\ventas\nueva\page.tsx:548:    pricing.giftDiscountTotal +
+  app\operacion\ventas\nueva\page.tsx:549:    mysteryRewardDiscountTotal +
+  app\operacion\ventas\nueva\page.tsx:550:    rewardDiscountTotal +
+  app\operacion\ventas\nueva\page.tsx:551:    (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
+  app\operacion\ventas\nueva\page.tsx:552:
+  app\operacion\ventas\nueva\page.tsx:553:  const total = Math.max(0, pricing.subtotal - discountTotal);
+  app\operacion\ventas\nueva\page.tsx:554:
+> app\operacion\ventas\nueva\page.tsx:555:  function handleClienteChange(cliente: ClienteSelectorValue | null) {
+  app\operacion\ventas\nueva\page.tsx:556:    setSelectedCliente(cliente);
+  app\operacion\ventas\nueva\page.tsx:557:    setSelectedRewardId(null);
+  app\operacion\ventas\nueva\page.tsx:558:  }
+  app\operacion\ventas\nueva\page.tsx:559:
+  app\operacion\ventas\nueva\page.tsx:560:  function handleRewardChange(rewardId: number | null) {
+  app\operacion\ventas\nueva\page.tsx:561:    setSelectedRewardId(rewardId);
+  app\operacion\ventas\nueva\page.tsx:562:  }
+  app\operacion\ventas\nueva\page.tsx:563:
+  app\operacion\ventas\nueva\page.tsx:564:  function handlePaymentMethodChange(value: string) {
+  app\operacion\ventas\nueva\page.tsx:565:    setPaymentMethod(value);
+  app\operacion\ventas\nueva\page.tsx:566:    setCashReceived("");
+  app\operacion\ventas\nueva\page.tsx:567:  }
+  app\operacion\ventas\nueva\page.tsx:568:
+  app\operacion\ventas\nueva\page.tsx:569:  function validarVenta() {
+  app\operacion\ventas\nueva\page.tsx:570:    if (cart.length === 0) {
+  app\operacion\ventas\nueva\page.tsx:571:      return "Agrega al menos una línea a la venta.";
+  app\operacion\ventas\nueva\page.tsx:572:    }
+  app\operacion\ventas\nueva\page.tsx:573:
+  app\operacion\ventas\nueva\page.tsx:574:    if (channel === "shopify" && pricing.potQuantity === 6) {
+  app\operacion\ventas\nueva\page.tsx:575:      return "Un pedido Shopify de 6 potes no es válido: desde 6 potes pagados, Shopify incorpora un séptimo pote como Premio Misterioso.";
+  app\operacion\ventas\nueva\page.tsx:576:    }
+  app\operacion\ventas\nueva\page.tsx:577:
+  app\operacion\ventas\nueva\page.tsx:578:    const unavailableItem = cart.find(
+  app\operacion\ventas\nueva\page.tsx:579:      (item) => item.itemType === "product" && !isProductSellable(item.product),
+  app\operacion\ventas\nueva\page.tsx:580:    );
+  app\operacion\ventas\nueva\page.tsx:581:
+  app\operacion\ventas\nueva\page.tsx:582:    if (unavailableItem?.itemType === "product") {
+  app\operacion\ventas\nueva\page.tsx:583:      return `${unavailableItem.product.name} no está disponible para el canal seleccionado o no tiene una configuración comercial válida.`;
+  app\operacion\ventas\nueva\page.tsx:584:    }
+  app\operacion\ventas\nueva\page.tsx:585:
+  app\operacion\ventas\nueva\page.tsx:1029:
+  app\operacion\ventas\nueva\page.tsx:1030:      const displayOrderCode =
+  app\operacion\ventas\nueva\page.tsx:1031:        data.result?.display_order_code ||
+  app\operacion\ventas\nueva\page.tsx:1032:        data.result?.order?.display_order_code ||
+  app\operacion\ventas\nueva\page.tsx:1033:        `Pedido creado`;
+  app\operacion\ventas\nueva\page.tsx:1034:
+  app\operacion\ventas\nueva\page.tsx:1035:      imprimirVentaEnSegundoPlano(createdSaleId);
+  app\operacion\ventas\nueva\page.tsx:1036:
+  app\operacion\ventas\nueva\page.tsx:1037:      setCart([]);
+  app\operacion\ventas\nueva\page.tsx:1038:      setOrderNotes("");
+  app\operacion\ventas\nueva\page.tsx:1039:      setSelectedCliente(null);
+  app\operacion\ventas\nueva\page.tsx:1040:      setSelectedRewardId(null);
+  app\operacion\ventas\nueva\page.tsx:1041:      setCashReceived("");
+  app\operacion\ventas\nueva\page.tsx:1042:      setChannel("local");
+  app\operacion\ventas\nueva\page.tsx:1043:      setExternalOrderId("");
+> app\operacion\ventas\nueva\page.tsx:1044:      setClienteSelectorResetKey((current) => current + 1);
+  app\operacion\ventas\nueva\page.tsx:1045:      setPromotionalStamps(0);
+  app\operacion\ventas\nueva\page.tsx:1046:      setManualDiscountEnabled(false);
+  app\operacion\ventas\nueva\page.tsx:1047:      setManualDiscountType("percent");
+  app\operacion\ventas\nueva\page.tsx:1048:      setManualDiscountValue("");
+  app\operacion\ventas\nueva\page.tsx:1049:      setManualDiscountReason("");
+  app\operacion\ventas\nueva\page.tsx:1050:      setManualDiscountNotes("");
+  app\operacion\ventas\nueva\page.tsx:1051:
+  app\operacion\ventas\nueva\page.tsx:1052:      const warnings = Array.isArray(data.warnings)
+  app\operacion\ventas\nueva\page.tsx:1053:        ? data.warnings.filter(
+  app\operacion\ventas\nueva\page.tsx:1054:            (warning: unknown) => typeof warning === "string" && warning.trim(),
+  app\operacion\ventas\nueva\page.tsx:1055:          )
+  app\operacion\ventas\nueva\page.tsx:1056:        : [];
+  app\operacion\ventas\nueva\page.tsx:1057:
+  app\operacion\ventas\nueva\page.tsx:1058:      setMessage(
+  app\operacion\ventas\nueva\page.tsx:1059:        warnings.length > 0
+  app\operacion\ventas\nueva\page.tsx:1060:          ? `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+  app\operacion\ventas\nueva\page.tsx:1061:              `Preparando impresión. Advertencia: ${warnings.join(" ")}`
+  app\operacion\ventas\nueva\page.tsx:1062:          : `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+  app\operacion\ventas\nueva\page.tsx:1063:              "Preparando impresión.",
+  app\operacion\ventas\nueva\page.tsx:1064:      );
+  app\operacion\ventas\nueva\page.tsx:1065:    } catch (error) {
+  app\operacion\ventas\nueva\page.tsx:1066:      console.error(error);
+  app\operacion\ventas\nueva\page.tsx:1067:
+  app\operacion\ventas\nueva\page.tsx:1068:      setMessage("Error inesperado al confirmar venta.");
+  app\operacion\ventas\nueva\page.tsx:1069:    } finally {
+  app\operacion\ventas\nueva\page.tsx:1070:      setSaving(false);
+  app\operacion\ventas\nueva\page.tsx:1071:    }
+  app\operacion\ventas\nueva\page.tsx:1072:  }
+  app\operacion\ventas\nueva\page.tsx:1073:
+  app\operacion\ventas\nueva\page.tsx:1074:  function duplicateItem(item: ProductCartItem) {
+  app\operacion\ventas\nueva\page.tsx:1194:                onUpdateConfigured={updateConfiguredProduct}
+  app\operacion\ventas\nueva\page.tsx:1195:              />
+  app\operacion\ventas\nueva\page.tsx:1196:            )}
+  app\operacion\ventas\nueva\page.tsx:1197:          </div>
+  app\operacion\ventas\nueva\page.tsx:1198:        }
+  app\operacion\ventas\nueva\page.tsx:1199:        right={
+  app\operacion\ventas\nueva\page.tsx:1200:          <OrderBuilder
+  app\operacion\ventas\nueva\page.tsx:1201:            cart={cart}
+  app\operacion\ventas\nueva\page.tsx:1202:            flavors={flavors}
+  app\operacion\ventas\nueva\page.tsx:1203:            toppings={toppings}
+  app\operacion\ventas\nueva\page.tsx:1204:            selectedCliente={selectedCliente}
+  app\operacion\ventas\nueva\page.tsx:1205:            paymentMethod={paymentMethod}
+  app\operacion\ventas\nueva\page.tsx:1206:            channel={channel}
+  app\operacion\ventas\nueva\page.tsx:1207:            cashReceived={cashReceived}
+  app\operacion\ventas\nueva\page.tsx:1208:            orderNotes={orderNotes}
+> app\operacion\ventas\nueva\page.tsx:1209:            clienteSelectorResetKey={clienteSelectorResetKey}
+  app\operacion\ventas\nueva\page.tsx:1210:            subtotal={pricing.subtotal}
+  app\operacion\ventas\nueva\page.tsx:1211:            potQuantity={pricing.potQuantity}
+  app\operacion\ventas\nueva\page.tsx:1212:            discountRate={discountRate}
+  app\operacion\ventas\nueva\page.tsx:1213:            potDiscountTotal={potDiscountTotal}
+  app\operacion\ventas\nueva\page.tsx:1214:            giftDiscountTotal={pricing.giftDiscountTotal}
+  app\operacion\ventas\nueva\page.tsx:1215:            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+  app\operacion\ventas\nueva\page.tsx:1216:            eligibleRewards={eligibleRewards}
+  app\operacion\ventas\nueva\page.tsx:1217:            selectedRewardId={selectedReward?.id ?? null}
+  app\operacion\ventas\nueva\page.tsx:1218:            rewardDiscountTotal={rewardDiscountTotal}
+  app\operacion\ventas\nueva\page.tsx:1219:            discountTotal={discountTotal}
+  app\operacion\ventas\nueva\page.tsx:1220:            total={total}
+  app\operacion\ventas\nueva\page.tsx:1221:            saving={saving}
+  app\operacion\ventas\nueva\page.tsx:1222:            manualDiscountEnabled={manualDiscountEnabled}
+  app\operacion\ventas\nueva\page.tsx:1223:            manualDiscountType={manualDiscountType}
+  app\operacion\ventas\nueva\page.tsx:1224:            manualDiscountValue={manualDiscountValue}
+  app\operacion\ventas\nueva\page.tsx:1225:            manualDiscountReason={manualDiscountReason}
+  app\operacion\ventas\nueva\page.tsx:1226:            manualDiscountNotes={manualDiscountNotes}
+  app\operacion\ventas\nueva\page.tsx:1227:            manualDiscountAmount={manualDiscountAmount}
+  app\operacion\ventas\nueva\page.tsx:1228:            totalBeforeManualDiscount={totalBeforeManualDiscount}
+  app\operacion\ventas\nueva\page.tsx:1229:            getPrice={getPrice}
+  app\operacion\ventas\nueva\page.tsx:1230:            onClienteChange={handleClienteChange}
+  app\operacion\ventas\nueva\page.tsx:1231:            onRewardChange={handleRewardChange}
+  app\operacion\ventas\nueva\page.tsx:1232:            onPaymentMethodChange={handlePaymentMethodChange}
+  app\operacion\ventas\nueva\page.tsx:1233:            onCashReceivedChange={setCashReceived}
+  app\operacion\ventas\nueva\page.tsx:1234:            onManualDiscountEnabledChange={setManualDiscountEnabled}
+  app\operacion\ventas\nueva\page.tsx:1235:            onManualDiscountTypeChange={setManualDiscountType}
+  app\operacion\ventas\nueva\page.tsx:1236:            onManualDiscountValueChange={setManualDiscountValue}
+  app\operacion\ventas\nueva\page.tsx:1237:            onManualDiscountReasonChange={setManualDiscountReason}
+  app\operacion\ventas\nueva\page.tsx:1238:            onManualDiscountNotesChange={setManualDiscountNotes}
+  app\operacion\ventas\nueva\page.tsx:1239:            onOrderNotesChange={setOrderNotes}
+  app\operacion\ventas\nueva\page.tsx:1243:            onToggleFlavor={toggleFlavor}
+  app\operacion\ventas\nueva\page.tsx:1244:            onToggleTopping={toggleTopping}
+  app\operacion\ventas\nueva\page.tsx:1245:            onRemoveFlavorSelection={removeFlavorSelection}
+  app\operacion\ventas\nueva\page.tsx:1246:            onConfirm={confirmarVenta}
+  app\operacion\ventas\nueva\page.tsx:1247:            onDuplicateItem={duplicateItem}
+  app\operacion\ventas\nueva\page.tsx:1248:            onReconfigureItem={reconfigureItem}
+  app\operacion\ventas\nueva\page.tsx:1249:          />
+  app\operacion\ventas\nueva\page.tsx:1250:        }
+  app\operacion\ventas\nueva\page.tsx:1251:        context={
+  app\operacion\ventas\nueva\page.tsx:1252:          <POSContextPanel
+  app\operacion\ventas\nueva\page.tsx:1253:            selectedCliente={selectedCliente}
+  app\operacion\ventas\nueva\page.tsx:1254:            cart={cart}
+  app\operacion\ventas\nueva\page.tsx:1255:            total={total}
+  app\operacion\ventas\nueva\page.tsx:1256:            message={message}
+  app\operacion\ventas\nueva\page.tsx:1257:            onClienteChange={handleClienteChange}
+> app\operacion\ventas\nueva\page.tsx:1258:            clienteSelectorResetKey={clienteSelectorResetKey}
+  app\operacion\ventas\nueva\page.tsx:1259:            channel={channel}
+  app\operacion\ventas\nueva\page.tsx:1260:            externalOrderId={externalOrderId}
+  app\operacion\ventas\nueva\page.tsx:1261:            onChannelChange={setChannel}
+  app\operacion\ventas\nueva\page.tsx:1262:            onExternalOrderIdChange={setExternalOrderId}
+  app\operacion\ventas\nueva\page.tsx:1263:            onOpenCustomMessage={() => setCustomMessageModalOpen(true)}
+  app\operacion\ventas\nueva\page.tsx:1264:            promotionalStamps={promotionalStamps}
+  app\operacion\ventas\nueva\page.tsx:1265:            onPromotionalStampsChange={setPromotionalStamps}
+  app\operacion\ventas\nueva\page.tsx:1266:          />
+  app\operacion\ventas\nueva\page.tsx:1267:        }
+  app\operacion\ventas\nueva\page.tsx:1268:      />
+  app\operacion\ventas\nueva\page.tsx:1269:
+  app\operacion\ventas\nueva\page.tsx:1270:      <CustomMessagePrintModal
+  app\operacion\ventas\nueva\page.tsx:1271:        open={customMessageModalOpen}
+  app\operacion\ventas\nueva\page.tsx:1272:        onClose={() => setCustomMessageModalOpen(false)}
+  app\operacion\ventas\nueva\page.tsx:1273:      />
+  app\operacion\ventas\nueva\page.tsx:1274:    </>
+  app\operacion\ventas\nueva\page.tsx:1275:  );
+  app\operacion\ventas\nueva\page.tsx:1276:}
+  app\operacion\ventas\page.tsx:1:"use client";
+  app\operacion\ventas\page.tsx:2:
+  app\operacion\ventas\page.tsx:3:import Link from "next/link";
+  app\operacion\ventas\page.tsx:4:import { useEffect, useMemo, useState } from "react";
+  app\operacion\ventas\page.tsx:5:
+> app\operacion\ventas\page.tsx:6:import ClienteSelector, {
+> app\operacion\ventas\page.tsx:7:  ClienteSelectorValue,
+> app\operacion\ventas\page.tsx:8:} from "../../../components/client/ClienteSelector";
+  app\operacion\ventas\page.tsx:9:
+  app\operacion\ventas\page.tsx:10:type SaleItemOption = {
+  app\operacion\ventas\page.tsx:11:  id: number;
+  app\operacion\ventas\page.tsx:12:  option_group_code: string;
+  app\operacion\ventas\page.tsx:13:  option_value_name: string;
+  app\operacion\ventas\page.tsx:14:  quantity: number;
+  app\operacion\ventas\page.tsx:15:};
+  app\operacion\ventas\page.tsx:16:
+  app\operacion\ventas\page.tsx:17:type SaleItem = {
+  app\operacion\ventas\page.tsx:18:  id: number;
+  app\operacion\ventas\page.tsx:19:  product_sku?: string | null;
+  app\operacion\ventas\page.tsx:20:  product_name: string;
+  app\operacion\ventas\page.tsx:21:  quantity: number;
+  app\operacion\ventas\page.tsx:22:  unit_price: number;
+  app\operacion\ventas\page.tsx:23:  total_price: number;
+  app\operacion\ventas\page.tsx:24:  notes?: string | null;
+  app\operacion\ventas\page.tsx:25:  sale_item_options?: SaleItemOption[];
+  app\operacion\ventas\page.tsx:26:};
+  app\operacion\ventas\page.tsx:27:
+  app\operacion\ventas\page.tsx:28:type SaleOrder = {
+  app\operacion\ventas\page.tsx:29:  id: number;
+  app\operacion\ventas\page.tsx:30:  business_date?: string | null;
+  app\operacion\ventas\page.tsx:31:  daily_order_number?: number | null;
+  app\operacion\ventas\page.tsx:32:  display_order_code: string;
+  app\operacion\ventas\page.tsx:33:  status: string;
+  app\operacion\ventas\page.tsx:34:  notes?: string | null;
+  app\operacion\ventas\page.tsx:35:  created_at?: string | null;
+  app\operacion\ventas\page.tsx:36:};
+  app\operacion\ventas\page.tsx:37:
+  app\operacion\ventas\page.tsx:38:type SaleCustomer = {
+  app\operacion\ventas\page.tsx:256:    )
+  app\operacion\ventas\page.tsx:257:    .map((option) => option.option_value_name)
+  app\operacion\ventas\page.tsx:258:    .filter(Boolean);
+  app\operacion\ventas\page.tsx:259:
+  app\operacion\ventas\page.tsx:260:  return {
+  app\operacion\ventas\page.tsx:261:    flavors,
+  app\operacion\ventas\page.tsx:262:    toppings,
+  app\operacion\ventas\page.tsx:263:  };
+  app\operacion\ventas\page.tsx:264:}
+  app\operacion\ventas\page.tsx:265:
+  app\operacion\ventas\page.tsx:266:export default function HistorialVentasPage() {
+  app\operacion\ventas\page.tsx:267:  const [sales, setSales] = useState<Sale[]>([]);
+  app\operacion\ventas\page.tsx:268:  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  app\operacion\ventas\page.tsx:269:  const [editingCustomer, setEditingCustomer] = useState(false);
+  app\operacion\ventas\page.tsx:270:  const [customerCandidate, setCustomerCandidate] =
+> app\operacion\ventas\page.tsx:271:    useState<ClienteSelectorValue | null>(null);
+  app\operacion\ventas\page.tsx:272:  const [customerChangeReason, setCustomerChangeReason] = useState("");
+  app\operacion\ventas\page.tsx:273:  const [savingCustomer, setSavingCustomer] = useState(false);
+  app\operacion\ventas\page.tsx:274:  const [customerChangeMessage, setCustomerChangeMessage] = useState("");
+  app\operacion\ventas\page.tsx:275:  const [customerSelectorResetKey, setCustomerSelectorResetKey] = useState(0);
+  app\operacion\ventas\page.tsx:276:  const [loading, setLoading] = useState(true);
+  app\operacion\ventas\page.tsx:277:  const [loadingSaleId, setLoadingSaleId] = useState<number | null>(null);
+  app\operacion\ventas\page.tsx:278:  const [message, setMessage] = useState("");
+  app\operacion\ventas\page.tsx:279:
+  app\operacion\ventas\page.tsx:280:  const [page, setPage] = useState(1);
+  app\operacion\ventas\page.tsx:281:  const [pageSize] = useState(50);
+  app\operacion\ventas\page.tsx:282:  const [totalSales, setTotalSales] = useState(0);
+  app\operacion\ventas\page.tsx:283:  const [totalPages, setTotalPages] = useState(1);
+  app\operacion\ventas\page.tsx:284:
+  app\operacion\ventas\page.tsx:285:  const [dateFrom, setDateFrom] = useState("");
+  app\operacion\ventas\page.tsx:286:  const [dateTo, setDateTo] = useState("");
+  app\operacion\ventas\page.tsx:287:
+  app\operacion\ventas\page.tsx:288:  const [search, setSearch] = useState("");
+  app\operacion\ventas\page.tsx:289:  const [channelFilter, setChannelFilter] = useState("all");
+  app\operacion\ventas\page.tsx:290:  const [paymentFilter, setPaymentFilter] = useState("all");
+  app\operacion\ventas\page.tsx:291:  const [statusFilter, setStatusFilter] = useState("all");
+  app\operacion\ventas\page.tsx:292:  const [customerFilter, setCustomerFilter] = useState("all");
+  app\operacion\ventas\page.tsx:293:
+  app\operacion\ventas\page.tsx:294:  const [sortField, setSortField] = useState<SortField>("date");
+  app\operacion\ventas\page.tsx:295:  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  app\operacion\ventas\page.tsx:296:
+  app\operacion\ventas\page.tsx:297:  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(
+  app\operacion\ventas\page.tsx:298:    null,
+  app\operacion\ventas\page.tsx:299:  );
+  app\operacion\ventas\page.tsx:300:
+  app\operacion\ventas\page.tsx:301:  useEffect(() => {
+  app\operacion\ventas\page.tsx:1390:                  </div>
+  app\operacion\ventas\page.tsx:1391:
+  app\operacion\ventas\page.tsx:1392:                  {!editingCustomer && (
+  app\operacion\ventas\page.tsx:1393:                    <button
+  app\operacion\ventas\page.tsx:1394:                      type="button"
+  app\operacion\ventas\page.tsx:1395:                      onClick={startCustomerChange}
+  app\operacion\ventas\page.tsx:1396:                      className="shrink-0 cursor-pointer rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-black text-violet-700 transition hover:bg-violet-100 active:scale-[0.98]"
+  app\operacion\ventas\page.tsx:1397:                    >
+  app\operacion\ventas\page.tsx:1398:                      {selectedSale.clientes ? "Cambiar" : "Asignar"}
+  app\operacion\ventas\page.tsx:1399:                    </button>
+  app\operacion\ventas\page.tsx:1400:                  )}
+  app\operacion\ventas\page.tsx:1401:                </div>
+  app\operacion\ventas\page.tsx:1402:
+  app\operacion\ventas\page.tsx:1403:                {editingCustomer && (
+  app\operacion\ventas\page.tsx:1404:                  <div className="mt-3 border-t border-neutral-100 pt-3">
+> app\operacion\ventas\page.tsx:1405:                    <ClienteSelector
+  app\operacion\ventas\page.tsx:1406:                      value={customerCandidate}
+  app\operacion\ventas\page.tsx:1407:                      onChange={setCustomerCandidate}
+  app\operacion\ventas\page.tsx:1408:                      resetKey={customerSelectorResetKey}
+  app\operacion\ventas\page.tsx:1409:                    />
+  app\operacion\ventas\page.tsx:1410:
+  app\operacion\ventas\page.tsx:1411:                    <div className="mt-2">
+  app\operacion\ventas\page.tsx:1412:                      <label className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+  app\operacion\ventas\page.tsx:1413:                        Motivo opcional
+  app\operacion\ventas\page.tsx:1414:                      </label>
+  app\operacion\ventas\page.tsx:1415:
+  app\operacion\ventas\page.tsx:1416:                      <input
+  app\operacion\ventas\page.tsx:1417:                        value={customerChangeReason}
+  app\operacion\ventas\page.tsx:1418:                        onChange={(event) =>
+  app\operacion\ventas\page.tsx:1419:                          setCustomerChangeReason(event.target.value)
+  app\operacion\ventas\page.tsx:1420:                        }
+  app\operacion\ventas\page.tsx:1421:                        maxLength={500}
+  app\operacion\ventas\page.tsx:1422:                        placeholder="Ej: cliente se registró después de la compra"
+  app\operacion\ventas\page.tsx:1423:                        className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+  app\operacion\ventas\page.tsx:1424:                      />
+  app\operacion\ventas\page.tsx:1425:                    </div>
+  app\operacion\ventas\page.tsx:1426:
+  app\operacion\ventas\page.tsx:1427:                    {customerChangeMessage && (
+  app\operacion\ventas\page.tsx:1428:                      <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[10px] font-semibold leading-snug text-amber-800">
+  app\operacion\ventas\page.tsx:1429:                        {customerChangeMessage}
+  app\operacion\ventas\page.tsx:1430:                      </p>
+  app\operacion\ventas\page.tsx:1431:                    )}
+  app\operacion\ventas\page.tsx:1432:
+  app\operacion\ventas\page.tsx:1433:                    <div className="mt-2 grid grid-cols-2 gap-2">
+  app\operacion\ventas\page.tsx:1434:                      <button
+  app\operacion\ventas\page.tsx:1435:                        type="button"
+  components\client\ClienteSelector.tsx:1:"use client";
+  components\client\ClienteSelector.tsx:2:
+  components\client\ClienteSelector.tsx:3:import { useEffect, useState } from "react";
+  components\client\ClienteSelector.tsx:4:
+> components\client\ClienteSelector.tsx:5:export type ClienteSelectorReward = {
+  components\client\ClienteSelector.tsx:6:  id: number;
+  components\client\ClienteSelector.tsx:7:  customerId: number;
+  components\client\ClienteSelector.tsx:8:  rewardType: string;
+  components\client\ClienteSelector.tsx:9:  name: string;
+  components\client\ClienteSelector.tsx:10:  description: string | null;
+  components\client\ClienteSelector.tsx:11:  status: "active" | "redeemed" | "expired" | "cancelled";
+  components\client\ClienteSelector.tsx:12:  issuedAt: string;
+  components\client\ClienteSelector.tsx:13:  expiresAt: string | null;
+  components\client\ClienteSelector.tsx:14:  redeemedAt: string | null;
+  components\client\ClienteSelector.tsx:15:  cancelledAt: string | null;
+  components\client\ClienteSelector.tsx:16:  campaignId: number | null;
+  components\client\ClienteSelector.tsx:17:  rewardProductId: number | null;
+  components\client\ClienteSelector.tsx:18:  source: string;
+  components\client\ClienteSelector.tsx:19:  sourceReference: string | null;
+  components\client\ClienteSelector.tsx:20:  legacyRewardId: string | null;
+  components\client\ClienteSelector.tsx:21:  metadata: Record<string, unknown>;
+  components\client\ClienteSelector.tsx:22:};
+  components\client\ClienteSelector.tsx:23:
+> components\client\ClienteSelector.tsx:24:export type ClienteSelectorValue = {
+  components\client\ClienteSelector.tsx:25:  id: number;
+  components\client\ClienteSelector.tsx:26:  nombre: string;
+  components\client\ClienteSelector.tsx:27:  correo?: string | null;
+  components\client\ClienteSelector.tsx:28:  telefono?: string | null;
+  components\client\ClienteSelector.tsx:29:  loyalty?: {
+  components\client\ClienteSelector.tsx:30:    currentStampBalance: number;
+> components\client\ClienteSelector.tsx:31:    activeRewards: ClienteSelectorReward[];
+  components\client\ClienteSelector.tsx:32:    activeRewardsCount: number;
+  components\client\ClienteSelector.tsx:33:  };
+  components\client\ClienteSelector.tsx:34:  tarjeta_activa?: boolean | null;
+  components\client\ClienteSelector.tsx:35:  email_verificado?: boolean | null;
+  components\client\ClienteSelector.tsx:36:};
+  components\client\ClienteSelector.tsx:37:
+  components\client\ClienteSelector.tsx:38:type Props = {
+> components\client\ClienteSelector.tsx:39:  value: ClienteSelectorValue | null;
+> components\client\ClienteSelector.tsx:40:  onChange: (cliente: ClienteSelectorValue | null) => void;
+  components\client\ClienteSelector.tsx:41:  resetKey?: number;
+  components\client\ClienteSelector.tsx:42:};
+  components\client\ClienteSelector.tsx:43:
+> components\client\ClienteSelector.tsx:44:export default function ClienteSelector({ value, onChange, resetKey }: Props) {
+  components\client\ClienteSelector.tsx:45:  const [query, setQuery] = useState("");
+> components\client\ClienteSelector.tsx:46:  const [clientes, setClientes] = useState<ClienteSelectorValue[]>([]);
+  components\client\ClienteSelector.tsx:47:  const [loading, setLoading] = useState(false);
+  components\client\ClienteSelector.tsx:48:  const [message, setMessage] = useState("");
+  components\client\ClienteSelector.tsx:49:
+  components\client\ClienteSelector.tsx:50:  useEffect(() => {
+  components\client\ClienteSelector.tsx:51:    if (value) return;
+  components\client\ClienteSelector.tsx:52:
+  components\client\ClienteSelector.tsx:53:    const trimmed = query.trim();
+  components\client\ClienteSelector.tsx:54:
+  components\client\ClienteSelector.tsx:55:    if (trimmed.length < 2) {
+  components\client\ClienteSelector.tsx:56:      setClientes([]);
+  components\client\ClienteSelector.tsx:57:      setMessage("");
+  components\client\ClienteSelector.tsx:58:      return;
+  components\client\ClienteSelector.tsx:59:    }
+  components\client\ClienteSelector.tsx:60:
+  components\client\ClienteSelector.tsx:61:    const timeout = window.setTimeout(() => {
+  components\client\ClienteSelector.tsx:62:      buscarClientes(trimmed);
+  components\client\ClienteSelector.tsx:63:    }, 300);
+  components\client\ClienteSelector.tsx:64:
+  components\client\ClienteSelector.tsx:65:    return () => window.clearTimeout(timeout);
+  components\client\ClienteSelector.tsx:66:  }, [query, value]);
+  components\client\ClienteSelector.tsx:67:
+  components\client\ClienteSelector.tsx:68:  useEffect(() => {
+  components\client\ClienteSelector.tsx:69:    if (resetKey === undefined) return;
+  components\client\ClienteSelector.tsx:70:
+  components\client\ClienteSelector.tsx:71:    setQuery("");
+  components\client\ClienteSelector.tsx:72:    setClientes([]);
+  components\client\ClienteSelector.tsx:73:    setMessage("");
+  components\client\ClienteSelector.tsx:74:    setLoading(false);
+  components\client\ClienteSelector.tsx:75:  }, [resetKey]);
+  components\client\ClienteSelector.tsx:76:
+  components\client\ClienteSelector.tsx:77:  async function buscarClientes(texto: string) {
+  components\client\ClienteSelector.tsx:78:    try {
+  components\client\ClienteSelector.tsx:79:      setLoading(true);
+  components\client\ClienteSelector.tsx:80:      setMessage("");
+  components\client\ClienteSelector.tsx:81:
+  components\client\ClienteSelector.tsx:82:      const res = await fetch(
+> components\client\ClienteSelector.tsx:83:        `/api/clientes/search?q=${encodeURIComponent(texto)}`,
+  components\client\ClienteSelector.tsx:84:      );
+  components\client\ClienteSelector.tsx:85:
+  components\client\ClienteSelector.tsx:86:      const data = await res.json();
+  components\client\ClienteSelector.tsx:87:
+  components\client\ClienteSelector.tsx:88:      if (!res.ok) {
+  components\client\ClienteSelector.tsx:89:        setMessage(data.message || "No se pudo buscar clientes.");
+  components\client\ClienteSelector.tsx:90:        setClientes([]);
+  components\client\ClienteSelector.tsx:91:        return;
+  components\client\ClienteSelector.tsx:92:      }
+  components\client\ClienteSelector.tsx:93:
+  components\client\ClienteSelector.tsx:94:      setClientes(data.clientes || []);
+  components\client\ClienteSelector.tsx:95:    } catch (error) {
+  components\client\ClienteSelector.tsx:96:      console.error(error);
+  components\client\ClienteSelector.tsx:97:      setMessage("Error buscando clientes.");
+  components\client\ClienteSelector.tsx:98:      setClientes([]);
+  components\client\ClienteSelector.tsx:99:    } finally {
+  components\client\ClienteSelector.tsx:100:      setLoading(false);
+  components\client\ClienteSelector.tsx:101:    }
+  components\client\ClienteSelector.tsx:102:  }
+  components\client\ClienteSelector.tsx:103:
+  components\client\ClienteSelector.tsx:104:  if (value) {
+  components\client\ClienteSelector.tsx:105:    return (
+  components\client\ClienteSelector.tsx:106:      <div className="flex items-center justify-between gap-2 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-2">
+  components\client\ClienteSelector.tsx:107:        <div className="min-w-0">
+  components\client\ClienteSelector.tsx:108:          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+  components\client\ClienteSelector.tsx:109:            Cliente seleccionado
+  components\client\ClienteSelector.tsx:110:          </p>
+  components\client\ClienteSelector.tsx:111:
+  components\client\ClienteSelector.tsx:112:          <p className="truncate text-[13px] font-black leading-tight text-neutral-900">
+  components\client\ClienteSelector.tsx:113:            {value.nombre}
+  components\pos\POSContextPanel.tsx:1:import { CartItem } from "../../types/sales";
+> components\pos\POSContextPanel.tsx:2:import ClienteSelector, {
+> components\pos\POSContextPanel.tsx:3:  ClienteSelectorValue,
+> components\pos\POSContextPanel.tsx:4:} from "../client/ClienteSelector";
+  components\pos\POSContextPanel.tsx:5:import SalesChannelSelector, { SalesChannel } from "./SalesChannelSelector";
+  components\pos\POSContextPanel.tsx:6:
+  components\pos\POSContextPanel.tsx:7:type Props = {
+> components\pos\POSContextPanel.tsx:8:  selectedCliente: ClienteSelectorValue | null;
+  components\pos\POSContextPanel.tsx:9:  cart: CartItem[];
+  components\pos\POSContextPanel.tsx:10:  total: number;
+  components\pos\POSContextPanel.tsx:11:  message?: string;
+> components\pos\POSContextPanel.tsx:12:  onClienteChange: (cliente: ClienteSelectorValue | null) => void;
+> components\pos\POSContextPanel.tsx:13:  clienteSelectorResetKey: number;
+  components\pos\POSContextPanel.tsx:14:  channel: SalesChannel;
+  components\pos\POSContextPanel.tsx:15:  externalOrderId: string;
+  components\pos\POSContextPanel.tsx:16:  onChannelChange: (channel: SalesChannel) => void;
+  components\pos\POSContextPanel.tsx:17:  onExternalOrderIdChange: (value: string) => void;
+  components\pos\POSContextPanel.tsx:18:  onOpenCustomMessage: () => void;
+  components\pos\POSContextPanel.tsx:19:  promotionalStamps: number;
+  components\pos\POSContextPanel.tsx:20:  onPromotionalStampsChange: (value: number) => void;
+  components\pos\POSContextPanel.tsx:21:};
+  components\pos\POSContextPanel.tsx:22:
+  components\pos\POSContextPanel.tsx:23:export default function POSContextPanel({
+  components\pos\POSContextPanel.tsx:24:  selectedCliente,
+  components\pos\POSContextPanel.tsx:25:  cart,
+  components\pos\POSContextPanel.tsx:26:  total,
+  components\pos\POSContextPanel.tsx:27:  message,
+  components\pos\POSContextPanel.tsx:28:  onClienteChange,
+> components\pos\POSContextPanel.tsx:29:  clienteSelectorResetKey,
+  components\pos\POSContextPanel.tsx:30:  channel,
+  components\pos\POSContextPanel.tsx:31:  externalOrderId,
+  components\pos\POSContextPanel.tsx:32:  onChannelChange,
+  components\pos\POSContextPanel.tsx:33:  onExternalOrderIdChange,
+  components\pos\POSContextPanel.tsx:34:  onOpenCustomMessage,
+  components\pos\POSContextPanel.tsx:35:  promotionalStamps,
+  components\pos\POSContextPanel.tsx:36:  onPromotionalStampsChange,
+  components\pos\POSContextPanel.tsx:37:}: Props) {
+  components\pos\POSContextPanel.tsx:38:  const premiosActivos = selectedCliente?.loyalty?.activeRewardsCount ?? 0;
+  components\pos\POSContextPanel.tsx:39:
+  components\pos\POSContextPanel.tsx:40:  const sellosDisponibles = selectedCliente?.loyalty?.currentStampBalance ?? 0;
+  components\pos\POSContextPanel.tsx:41:
+  components\pos\POSContextPanel.tsx:42:  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+  components\pos\POSContextPanel.tsx:43:
+  components\pos\POSContextPanel.tsx:44:  const isSuccessMessage =
+  components\pos\POSContextPanel.tsx:45:    Boolean(message) &&
+  components\pos\POSContextPanel.tsx:46:    message?.toLowerCase().includes("venta creada correctamente");
+  components\pos\POSContextPanel.tsx:47:
+  components\pos\POSContextPanel.tsx:48:  return (
+  components\pos\POSContextPanel.tsx:49:    <aside className="flex h-full min-h-0 flex-col">
+  components\pos\POSContextPanel.tsx:50:      <h2 className="shrink-0 text-[13px] font-black uppercase tracking-wide text-neutral-500">
+> components\pos\POSContextPanel.tsx:51:        Contexto
+  components\pos\POSContextPanel.tsx:52:      </h2>
+  components\pos\POSContextPanel.tsx:53:
+  components\pos\POSContextPanel.tsx:54:      <div className="mt-2 shrink-0">
+  components\pos\POSContextPanel.tsx:55:        <SalesChannelSelector
+  components\pos\POSContextPanel.tsx:56:          channel={channel}
+  components\pos\POSContextPanel.tsx:57:          externalOrderId={externalOrderId}
+  components\pos\POSContextPanel.tsx:58:          onChannelChange={onChannelChange}
+  components\pos\POSContextPanel.tsx:59:          onExternalOrderIdChange={onExternalOrderIdChange}
+  components\pos\POSContextPanel.tsx:60:        />
+  components\pos\POSContextPanel.tsx:61:      </div>
+  components\pos\POSContextPanel.tsx:62:
+  components\pos\POSContextPanel.tsx:63:      <section className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-white p-2.5">
+> components\pos\POSContextPanel.tsx:64:        <ClienteSelector
+  components\pos\POSContextPanel.tsx:65:          value={selectedCliente}
+  components\pos\POSContextPanel.tsx:66:          onChange={onClienteChange}
+> components\pos\POSContextPanel.tsx:67:          resetKey={clienteSelectorResetKey}
+  components\pos\POSContextPanel.tsx:68:        />
+  components\pos\POSContextPanel.tsx:69:
+  components\pos\POSContextPanel.tsx:70:        {selectedCliente && (
+  components\pos\POSContextPanel.tsx:71:          <div className="mt-2">
+  components\pos\POSContextPanel.tsx:72:            <div className="min-w-0 text-[10px] leading-tight text-neutral-500">
+  components\pos\POSContextPanel.tsx:73:              {selectedCliente.telefono && (
+  components\pos\POSContextPanel.tsx:74:                <p className="truncate">{selectedCliente.telefono}</p>
+  components\pos\POSContextPanel.tsx:75:              )}
+  components\pos\POSContextPanel.tsx:76:
+  components\pos\POSContextPanel.tsx:77:              {selectedCliente.correo && (
+  components\pos\POSContextPanel.tsx:78:                <p className="mt-0.5 truncate">{selectedCliente.correo}</p>
+  components\pos\POSContextPanel.tsx:79:              )}
+  components\pos\POSContextPanel.tsx:80:
+  components\pos\POSContextPanel.tsx:81:              {!selectedCliente.telefono && !selectedCliente.correo && (
+  components\pos\POSContextPanel.tsx:82:                <p>Sin datos de contacto</p>
+  components\pos\POSContextPanel.tsx:83:              )}
+  components\pos\POSContextPanel.tsx:84:            </div>
+  components\pos\POSContextPanel.tsx:85:
+  components\pos\POSContextPanel.tsx:86:            <div className="mt-2 grid grid-cols-2 gap-1.5">
+  components\pos\POSContextPanel.tsx:87:              <div className="flex items-center justify-between rounded-md bg-neutral-50 px-2 py-1.5">
+  components\pos\POSContextPanel.tsx:88:                <span className="text-[10px] font-semibold text-neutral-500">
+  components\pos\POSContextPanel.tsx:89:                  Sellos
+  components\pos\POSContextPanel.tsx:90:                </span>
+  components\pos\POSContextPanel.tsx:91:
+  components\pos\POSContextPanel.tsx:92:                <span className="text-[13px] font-black text-violet-700">
+  components\pos\POSContextPanel.tsx:93:                  {sellosDisponibles}
+  components\pos\POSContextPanel.tsx:94:                </span>
+  components\pos\POSContextPanel.tsx:95:              </div>
+  components\pos\POSContextPanel.tsx:96:
+  components\pos\POSContextPanel.tsx:97:              <div className="flex items-center justify-between rounded-md bg-neutral-50 px-2 py-1.5">
+  components\sales\OrderBuilder.tsx:1:import {
+> components\sales\OrderBuilder.tsx:2:  ClienteSelectorReward,
+> components\sales\OrderBuilder.tsx:3:  ClienteSelectorValue,
+> components\sales\OrderBuilder.tsx:4:} from "../client/ClienteSelector";
+  components\sales\OrderBuilder.tsx:5:import {
+  components\sales\OrderBuilder.tsx:6:  CartItem,
+  components\sales\OrderBuilder.tsx:7:  OptionValue,
+  components\sales\OrderBuilder.tsx:8:  Product,
+  components\sales\OrderBuilder.tsx:9:  ProductCartItem,
+  components\sales\OrderBuilder.tsx:10:} from "../../types/sales";
+  components\sales\OrderBuilder.tsx:11:import OrderItemCard from "./OrderItemCard";
+  components\sales\OrderBuilder.tsx:12:import OrderTotals from "./OrderTotals";
+  components\sales\OrderBuilder.tsx:13:import { useRef, useState } from "react";
+  components\sales\OrderBuilder.tsx:14:
+  components\sales\OrderBuilder.tsx:15:type ManualDiscountType = "percent" | "fixed";
+  components\sales\OrderBuilder.tsx:16:
+  components\sales\OrderBuilder.tsx:17:type ManualDiscountReason =
+  components\sales\OrderBuilder.tsx:18:  | "courtesy"
+  components\sales\OrderBuilder.tsx:19:  | "complaint"
+  components\sales\OrderBuilder.tsx:20:  | "agreement"
+  components\sales\OrderBuilder.tsx:21:  | "exceptional_promotion"
+  components\sales\OrderBuilder.tsx:22:  | "service_error"
+  components\sales\OrderBuilder.tsx:23:  | "other";
+  components\sales\OrderBuilder.tsx:24:
+  components\sales\OrderBuilder.tsx:25:type Props = {
+  components\sales\OrderBuilder.tsx:26:  cart: CartItem[];
+  components\sales\OrderBuilder.tsx:27:  flavors: OptionValue[];
+  components\sales\OrderBuilder.tsx:28:  toppings: OptionValue[];
+> components\sales\OrderBuilder.tsx:29:  selectedCliente: ClienteSelectorValue | null;
+  components\sales\OrderBuilder.tsx:30:  paymentMethod: string;
+  components\sales\OrderBuilder.tsx:31:  channel: "local" | "shopify" | "uber_eats" | "rappi";
+  components\sales\OrderBuilder.tsx:32:  cashReceived: string;
+  components\sales\OrderBuilder.tsx:33:  subtotal: number;
+  components\sales\OrderBuilder.tsx:34:  potQuantity: number;
+  components\sales\OrderBuilder.tsx:35:  discountRate: number;
+  components\sales\OrderBuilder.tsx:36:  potDiscountTotal: number;
+  components\sales\OrderBuilder.tsx:37:  giftDiscountTotal: number;
+  components\sales\OrderBuilder.tsx:38:  mysteryRewardDiscountTotal: number;
+> components\sales\OrderBuilder.tsx:39:  eligibleRewards: ClienteSelectorReward[];
+  components\sales\OrderBuilder.tsx:40:  selectedRewardId: number | null;
+  components\sales\OrderBuilder.tsx:41:  rewardDiscountTotal: number;
+  components\sales\OrderBuilder.tsx:42:  discountTotal: number;
+  components\sales\OrderBuilder.tsx:43:  total: number;
+  components\sales\OrderBuilder.tsx:44:  saving: boolean;
+  components\sales\OrderBuilder.tsx:45:  orderNotes: string;
+> components\sales\OrderBuilder.tsx:46:  clienteSelectorResetKey: number;
+  components\sales\OrderBuilder.tsx:47:  manualDiscountEnabled: boolean;
+  components\sales\OrderBuilder.tsx:48:  manualDiscountType: ManualDiscountType;
+  components\sales\OrderBuilder.tsx:49:  manualDiscountValue: string;
+  components\sales\OrderBuilder.tsx:50:  manualDiscountReason: ManualDiscountReason | "";
+  components\sales\OrderBuilder.tsx:51:  manualDiscountNotes: string;
+  components\sales\OrderBuilder.tsx:52:  manualDiscountAmount: number;
+  components\sales\OrderBuilder.tsx:53:  totalBeforeManualDiscount: number;
+  components\sales\OrderBuilder.tsx:54:  getPrice: (product: Product) => number;
+> components\sales\OrderBuilder.tsx:55:  onClienteChange: (cliente: ClienteSelectorValue | null) => void;
+  components\sales\OrderBuilder.tsx:56:  onRewardChange: (rewardId: number | null) => void;
+  components\sales\OrderBuilder.tsx:57:  onPaymentMethodChange: (value: string) => void;
+  components\sales\OrderBuilder.tsx:58:  onCashReceivedChange: (value: string) => void;
+  components\sales\OrderBuilder.tsx:59:  onManualDiscountEnabledChange: (value: boolean) => void;
+  components\sales\OrderBuilder.tsx:60:  onManualDiscountTypeChange: (value: ManualDiscountType) => void;
+  components\sales\OrderBuilder.tsx:61:  onManualDiscountValueChange: (value: string) => void;
+  components\sales\OrderBuilder.tsx:62:  onManualDiscountReasonChange: (value: ManualDiscountReason | "") => void;
+  components\sales\OrderBuilder.tsx:63:  onManualDiscountNotesChange: (value: string) => void;
+  components\sales\OrderBuilder.tsx:64:  onRemoveItem: (localId: string) => void;
+  components\sales\OrderBuilder.tsx:65:  onDuplicateItem: (item: ProductCartItem) => void;
+  components\sales\OrderBuilder.tsx:66:  onReconfigureItem: (item: ProductCartItem) => void;
+  components\sales\OrderBuilder.tsx:67:  onUpdateItem: (localId: string, patch: Partial<CartItem>) => void;
+  components\sales\OrderBuilder.tsx:68:  onToggleFlavor: (item: ProductCartItem, flavorId: number) => void;
+  components\sales\OrderBuilder.tsx:69:  onToggleTopping: (item: ProductCartItem, toppingId: number) => void;
+  components\sales\OrderBuilder.tsx:70:  onRemoveFlavorSelection: (
+  components\sales\OrderBuilder.tsx:71:    item: ProductCartItem,
+  components\sales\OrderBuilder.tsx:72:    selectionIndex: number,
+  components\sales\OrderBuilder.tsx:73:  ) => void;
+  components\sales\OrderBuilder.tsx:74:  onOrderNotesChange: (value: string) => void;
+  components\sales\OrderBuilder.tsx:75:  onConfirm: () => void;
+  components\sales\OrderBuilder.tsx:76:  onAddCustomItem: (item: {
+  components\sales\OrderBuilder.tsx:77:    customName: string;
+  components\sales\OrderBuilder.tsx:78:    customUnitPrice: number;
+  components\sales\OrderBuilder.tsx:79:    quantity: number;
+  components\sales\OrderBuilder.tsx:80:    loyaltyEligible: boolean;
+  components\sales\OrderBuilder.tsx:81:  }) => void;
+  components\sales\OrderBuilder.tsx:82:};
+  components\sales\OrderBuilder.tsx:83:
+  components\sales\OrderBuilder.tsx:84:export default function OrderBuilder({
+  components\sales\OrderBuilder.tsx:85:  cart,
+
+
+
+
+=== GIT STATUS ===
+?? INC-PERF-01_PS-CLIENT-SEARCH.txt
