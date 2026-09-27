@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type CashRegisterClosedSessionRow = {
   id: number;
@@ -49,15 +50,19 @@ function parseLimit(value: string | null): number {
 
 export async function GET(req: Request) {
   const operationSession = await getOperationSession();
+  const authorization = authorizeOperationSession(
+    operationSession,
+    "cash.operate",
+  );
 
-  if (!operationSession.ok) {
+  if (!authorization.ok) {
     return NextResponse.json(
       {
         ok: false,
-        message: "No autenticado.",
+        message: authorization.message,
       },
       {
-        status: 401,
+        status: authorization.status,
       },
     );
   }
