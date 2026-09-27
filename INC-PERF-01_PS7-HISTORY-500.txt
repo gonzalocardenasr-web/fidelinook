@@ -1,0 +1,1410 @@
+﻿============================================================
+INC-PERF-01 — PS7 HISTORY 500 / REGRESSION CHECK
+Generated: 2026-09-27 18:00:26
+============================================================
+
+============================================================
+1. GIT STATUS
+============================================================
+
+============================================================
+2. ULTIMOS 12 COMMITS
+============================================================
+6f78d0b (HEAD -> main, origin/main, origin/HEAD) INC-PERF-01.HIST-01: acotar historial operacional a 15 dias
+63aef7c INC-PERF-01.2B: instrumentar camino cr├¡tico de confirmaci├│n de venta
+91d2e95 INC-PERF-01.2A: reducir latencia cr├¡tica de confirmaci├│n de venta
+bb7b89e INC-AUTH-01: robustecer activaci├│n de usuarios operacionales
+a349215 DOCS: actualizar Status Pack posterior a DEV-AUTH-01
+ba81c5c DEV-AUTH-01.5: retirar autenticaci├│n legacy y cerrar matriz RBAC
+71c52a1 DEV-AUTH-01.4: robustecer invitaci├│n y rollback de usuarios
+eaad1ee DEV-AUTH-01.4: implementar gesti├│n de usuarios operacionales
+3ad0427 DEV-AUTH-01.3H: restringir dashboard anal├¡tico por rol
+025a1d0 DEV-AUTH-01.3G: aplicar RBAC a gesti├│n de campa├▒as
+8884d8c DEV-AUTH-01.3F: aplicar RBAC a operaci├│n y gesti├│n de suscripciones
+b8c5b3d DEV-AUTH-01.3E: aplicar RBAC a lectura y gesti├│n de cat├ílogo
+
+============================================================
+3. HISTORIAL DEL ARCHIVO SALES ROUTE
+============================================================
+6f78d0b INC-PERF-01.HIST-01: acotar historial operacional a 15 dias
+63aef7c INC-PERF-01.2B: instrumentar camino cr├¡tico de confirmaci├│n de venta
+91d2e95 INC-PERF-01.2A: reducir latencia cr├¡tica de confirmaci├│n de venta
+86c8719 DEV-AUTH-01.3A: aplicar RBAC a ventas pedidos clientes y fidelizaci├│n
+3d05605 DEV-LOY-RED-01: implementar canje transaccional y elegibilidad de premios en POS
+cedbe06 feat: simplify sales payment methods
+eaa0b4f Allow mixed pot sales without flavor selection
+fe57f07 P0.04: snapshot sale item loyalty eligibility
+53b2c30 DEV-037.3A: soportar items personalizados en contrato y API de ventas
+8cc81b1 GL-016.5.2: exigir caja abierta y asociarla a las ventas
+9a06eb3 GL-015.02: incorporar soporte backend para descuentos manuales en ventas
+056aba7 feat: agrega soporte para productos de regalo con control de descuentos
+
+============================================================
+4. DIFF ULTIMOS 5 COMMITS DEL SALES ROUTE
+============================================================
+commit 6f78d0b1cc31a22115872443c6083403c02312fc
+Author: Gonzalo C├írdenas <gonzalo.cardenasr@gmail.com>
+Date:   Sun Sep 27 17:57:46 2026 -0300
+
+    INC-PERF-01.HIST-01: acotar historial operacional a 15 dias
+
+diff --git a/app/api/operacion/sales/route.ts b/app/api/operacion/sales/route.ts
+index aac4054..4a577d7 100644
+--- a/app/api/operacion/sales/route.ts
++++ b/app/api/operacion/sales/route.ts
+@@ -119,6 +119,96 @@ function getItemFlavorIds(item: unknown): number[] {
+     );
+ }
+ 
++const OPERATIONAL_HISTORY_TIME_ZONE = "America/Santiago";
++const OPERATIONAL_HISTORY_DAYS_BACK = 14;
++
++function getOperationalHistoryStartIso(now = new Date()): string {
++  /*
++   * Regla funcional:
++   * - d├¡a calendario actual en Chile
++   * - m├ís los 14 d├¡as calendario completos anteriores
++   * - total: ventana m├│vil de 15 d├¡as calendario
++   *
++   * Ejemplo:
++   * 27/09/2026 -> desde 13/09/2026 00:00 America/Santiago.
++   */
++
++  const dateParts = new Intl.DateTimeFormat("en-CA", {
++    timeZone: OPERATIONAL_HISTORY_TIME_ZONE,
++    year: "numeric",
++    month: "2-digit",
++    day: "2-digit",
++  }).formatToParts(now);
++
++  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
++    dateParts.find((part) => part.type === type)?.value || "";
++
++  const year = Number(getPart("year"));
++  const month = Number(getPart("month"));
++  const day = Number(getPart("day"));
++
++  if (
++    !Number.isInteger(year) ||
++    !Number.isInteger(month) ||
++    !Number.isInteger(day)
++  ) {
++    throw new Error("No fue posible calcular la fecha operacional.");
++  }
++
++  /*
++   * Trabajamos primero como fecha calendario, no como instante,
++   * para retroceder exactamente 14 d├¡as independientemente
++   * de cambios de horario de verano/invierno.
++   */
++  const startCalendarDate = new Date(Date.UTC(year, month - 1, day));
++
++  startCalendarDate.setUTCDate(
++    startCalendarDate.getUTCDate() - OPERATIONAL_HISTORY_DAYS_BACK,
++  );
++
++  const targetYear = startCalendarDate.getUTCFullYear();
++  const targetMonth = startCalendarDate.getUTCMonth() + 1;
++  const targetDay = startCalendarDate.getUTCDate();
++
++  /*
++   * Determinamos el offset real de America/Santiago para la fecha
++   * inicial. No fijamos manualmente -03:00 o -04:00.
++   */
++  const offsetProbe = new Date(
++    Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0),
++  );
++
++  const offsetParts = new Intl.DateTimeFormat("en-US", {
++    timeZone: OPERATIONAL_HISTORY_TIME_ZONE,
++    timeZoneName: "longOffset",
++  }).formatToParts(offsetProbe);
++
++  const offsetLabel =
++    offsetParts.find((part) => part.type === "timeZoneName")?.value || "";
++
++  const offsetMatch = offsetLabel.match(/^GMT([+-])(\d{2}):(\d{2})$/);
++
++  if (!offsetMatch) {
++    throw new Error(
++      "No fue posible determinar el huso horario operacional.",
++    );
++  }
++
++  const sign = offsetMatch[1] === "+" ? 1 : -1;
++
++  const offsetMinutes =
++    sign * (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3]));
++
++  /*
++   * Convertimos las 00:00 de Chile de la fecha inicial
++   * al instante UTC correspondiente para consultar timestamptz.
++   */
++  const utcTimestamp =
++    Date.UTC(targetYear, targetMonth - 1, targetDay, 0, 0, 0) -
++    offsetMinutes * 60_000;
++
++  return new Date(utcTimestamp).toISOString();
++}
+ export async function GET(req: Request) {
+   const session = await getOperationSession();
+   const authDurationMs = performance.now() - requestStartedAt;
+@@ -151,8 +241,37 @@ export async function GET(req: Request) {
+         ? Math.min(Math.floor(requestedPageSize), 100)
+         : 50;
+ 
+-    const dateFrom = searchParams.get("dateFrom");
++    const requestedDateFrom = searchParams.get("dateFrom");
+     const dateTo = searchParams.get("dateTo");
++
++    /*
++     * El historial operacional nunca puede consultar antes del inicio
++     * de la ventana m├│vil de 15 d├¡as calendario.
++     *
++     * Si el usuario selecciona una fecha inicial m├ís reciente,
++     * respetamos ese filtro.
++     */
++    const operationalHistoryStartIso = getOperationalHistoryStartIso();
++
++    let dateFrom = operationalHistoryStartIso;
++
++    if (requestedDateFrom) {
++      const parsedRequestedDateFrom = new Date(requestedDateFrom);
++
++      if (Number.isNaN(parsedRequestedDateFrom.getTime())) {
++        return NextResponse.json(
++          { ok: false, message: "Fecha inicial inv├ílida." },
++          { status: 400 },
++        );
++      }
++
++      if (
++        parsedRequestedDateFrom.getTime() >
++        new Date(operationalHistoryStartIso).getTime()
++      ) {
++        dateFrom = parsedRequestedDateFrom.toISOString();
++      }
++    }
+     const search = String(searchParams.get("search") || "").trim();
+     const channel = String(searchParams.get("channel") || "").trim();
+     const paymentMethod = String(
+@@ -192,7 +311,8 @@ export async function GET(req: Request) {
+       const { data: statusOrders, error: statusError } = await supabaseAdmin
+         .from("orders")
+         .select("sale_id")
+-        .eq("status", orderStatus);
++        .eq("status", orderStatus)
++        .gte("created_at", operationalHistoryStartIso);
+ 
+       if (statusError) {
+         return NextResponse.json(
+@@ -216,6 +336,7 @@ export async function GET(req: Request) {
+       const { data: directSales, error: directSalesError } = await supabaseAdmin
+         .from("sales")
+         .select("id")
++        .gte("created_at", operationalHistoryStartIso)
+         .or(
+           [
+             `sale_number.ilike.%${safeSearch}%`,
+@@ -285,7 +406,8 @@ export async function GET(req: Request) {
+           await supabaseAdmin
+             .from("sales")
+             .select("id")
+-            .in("customer_id", customerIds);
++            .in("customer_id", customerIds)
++            .gte("created_at", operationalHistoryStartIso);
+ 
+         if (customerSalesError) {
+           return NextResponse.json(
+@@ -302,6 +424,7 @@ export async function GET(req: Request) {
+       const { data: matchingOrders, error: ordersError } = await supabaseAdmin
+         .from("orders")
+         .select("sale_id")
++        .gte("created_at", operationalHistoryStartIso)
+         .or(
+           [
+             `display_order_code.ilike.%${safeSearch}%`,
+
+commit 63aef7c6ef5e5934ab7e5e42d4983ee463a66f18
+Author: Gonzalo C├írdenas <gonzalo.cardenasr@gmail.com>
+Date:   Sun Sep 27 17:26:38 2026 -0300
+
+    INC-PERF-01.2B: instrumentar camino cr├¡tico de confirmaci├│n de venta
+
+diff --git a/app/api/operacion/sales/route.ts b/app/api/operacion/sales/route.ts
+index 96f7618..aac4054 100644
+--- a/app/api/operacion/sales/route.ts
++++ b/app/api/operacion/sales/route.ts
+@@ -121,6 +121,7 @@ function getItemFlavorIds(item: unknown): number[] {
+ 
+ export async function GET(req: Request) {
+   const session = await getOperationSession();
++  const authDurationMs = performance.now() - requestStartedAt;
+ 
+   const authorization = authorizeOperationSession(session, "sales.operate");
+ 
+@@ -504,6 +505,7 @@ export async function POST(req: Request) {
+   const requestStartedAt = performance.now();
+ 
+   const session = await getOperationSession();
++  const authDurationMs = performance.now() - requestStartedAt;
+ 
+   const authorization = authorizeOperationSession(session, "sales.operate");
+ 
+@@ -522,6 +524,8 @@ export async function POST(req: Request) {
+ 
+     const correlationId = createCorrelationId("sale-create");
+ 
++    const cashValidationStartedAt = performance.now();
++
+     const { data: activeCashSession, error: activeCashSessionError } =
+       await supabaseAdmin
+         .from("cash_register_sessions")
+@@ -575,6 +579,9 @@ export async function POST(req: Request) {
+       );
+     }
+ 
++    const cashValidationDurationMs =
++      performance.now() - cashValidationStartedAt;
++
+     const orderNotes = String(body.orderNotes || "").trim();
+ 
+     const channel = String(body.channel || "local")
+@@ -1024,6 +1031,8 @@ export async function POST(req: Request) {
+      * - informaci├│n desactualizada en el POS;
+      * - cambios de inventario entre configuraci├│n y confirmaci├│n.
+      */
++    const prevalidationStartedAt = performance.now();
++
+     const productItems = normalizedItems.filter(
+       (item) => item.item_type === "PRODUCT",
+     );
+@@ -1229,6 +1238,9 @@ export async function POST(req: Request) {
+       }
+     }
+ 
++    const prevalidationDurationMs =
++      performance.now() - prevalidationStartedAt;
++
+     const rpcStartedAt = performance.now();
+ 
+     const { data, error } = await supabaseAdmin.rpc(
+@@ -1311,6 +1323,8 @@ export async function POST(req: Request) {
+       );
+     }
+ 
++    const postSaleStartedAt = performance.now();
++
+     const warnings: string[] = [];
+ 
+     /*
+@@ -1417,6 +1431,7 @@ export async function POST(req: Request) {
+       );
+     }
+ 
++    const postSaleDurationMs = performance.now() - postSaleStartedAt;
+     const totalDurationMs = performance.now() - requestStartedAt;
+ 
+     return NextResponse.json(
+@@ -1433,7 +1448,11 @@ export async function POST(req: Request) {
+       {
+         headers: {
+           "Server-Timing": [
++            `sale-auth;dur=${authDurationMs.toFixed(1)}`,
++            `sale-cash;dur=${cashValidationDurationMs.toFixed(1)}`,
++            `sale-prevalidation;dur=${prevalidationDurationMs.toFixed(1)}`,
+             `sale-rpc;dur=${rpcDurationMs.toFixed(1)}`,
++            `sale-post;dur=${postSaleDurationMs.toFixed(1)}`,
+             `sale-total;dur=${totalDurationMs.toFixed(1)}`,
+           ].join(", "),
+         },
+
+commit 91d2e955f1ff3cadf8944f11b375100b7c073599
+Author: Gonzalo C├írdenas <gonzalo.cardenasr@gmail.com>
+Date:   Sun Sep 27 17:09:08 2026 -0300
+
+    INC-PERF-01.2A: reducir latencia cr├¡tica de confirmaci├│n de venta
+
+diff --git a/app/api/operacion/sales/route.ts b/app/api/operacion/sales/route.ts
+index 9ad261c..96f7618 100644
+--- a/app/api/operacion/sales/route.ts
++++ b/app/api/operacion/sales/route.ts
+@@ -501,6 +501,8 @@ export async function GET(req: Request) {
+ }
+ 
+ export async function POST(req: Request) {
++  const requestStartedAt = performance.now();
++
+   const session = await getOperationSession();
+ 
+   const authorization = authorizeOperationSession(session, "sales.operate");
+@@ -1227,6 +1229,8 @@ export async function POST(req: Request) {
+       }
+     }
+ 
++    const rpcStartedAt = performance.now();
++
+     const { data, error } = await supabaseAdmin.rpc(
+       "create_local_sale_with_order_v2",
+       {
+@@ -1249,6 +1253,8 @@ export async function POST(req: Request) {
+       },
+     );
+ 
++    const rpcDurationMs = performance.now() - rpcStartedAt;
++
+     if (error) {
+       await recordAuditLogSafely({
+         module: "pos",
+@@ -1305,7 +1311,20 @@ export async function POST(req: Request) {
+       );
+     }
+ 
+-    await recordAuditLogSafely({
++    const warnings: string[] = [];
++
++    /*
++     * La venta ya fue creada correctamente por el RPC.
++     *
++     * Auditor├¡a y evento de cliente son trazabilidad posterior.
++     * Ambos se ejecutan en paralelo para no sumar sus latencias
++     * secuencialmente al tiempo de confirmaci├│n del POS.
++     *
++     * Seguimos esperando ambos antes de responder:
++     * no sacrificamos trazabilidad ni dependemos de trabajo
++     * as├¡ncrono no garantizado despu├®s de finalizar la request.
++     */
++    const auditPromise = recordAuditLogSafely({
+       module: "pos",
+       action: "sale.created",
+ 
+@@ -1356,44 +1375,41 @@ export async function POST(req: Request) {
+       ]),
+     });
+ 
+-    const warnings: string[] = [];
++    const customerEventPromise = recordCustomerEvent({
++      customerId,
++      eventType: "sale.created",
++      sourceModule: "sales",
++      sourceEntityType: "sale",
++      sourceEntityId: createdSaleId,
++      saleId: createdSaleId,
++      actorRole: session.role,
++      idempotencyKey: buildCustomerEventIdempotencyKey([
++        "sale-created",
++        createdSaleId,
++      ]),
++      metadata: {
++        channel,
++        externalOrderId: externalOrderId || null,
++        cashRegisterSessionId,
++        paymentMethod,
++        itemLines: normalizedItems.length,
++        hasCustomer: customerId !== null,
++        manualDiscountType,
++        manualDiscountValue,
++        manualDiscountReason,
++        rewardId,
++      },
++    });
+ 
+-    /*
+-     * La venta ya fue creada correctamente.
+-     * El registro del evento es trazabilidad secundaria:
+-     * si falla, no debemos informar al cajero que la venta fall├│,
+-     * porque eso podr├¡a provocar una venta duplicada.
+-     */
+-    try {
+-      await recordCustomerEvent({
+-        customerId,
+-        eventType: "sale.created",
+-        sourceModule: "sales",
+-        sourceEntityType: "sale",
+-        sourceEntityId: createdSaleId,
+-        saleId: createdSaleId,
+-        actorRole: session.role,
+-        idempotencyKey: buildCustomerEventIdempotencyKey([
+-          "sale-created",
+-          createdSaleId,
+-        ]),
+-        metadata: {
+-          channel,
+-          externalOrderId: externalOrderId || null,
+-          cashRegisterSessionId,
+-          paymentMethod,
+-          itemLines: normalizedItems.length,
+-          hasCustomer: customerId !== null,
+-          manualDiscountType,
+-          manualDiscountValue,
+-          manualDiscountReason,
+-          rewardId,
+-        },
+-      });
+-    } catch (eventError) {
++    const [, customerEventResult] = await Promise.allSettled([
++      auditPromise,
++      customerEventPromise,
++    ]);
++
++    if (customerEventResult.status === "rejected") {
+       console.error(
+         "Venta creada, pero fall├│ el registro del evento sale.created:",
+-        eventError,
++        customerEventResult.reason,
+       );
+ 
+       warnings.push(
+@@ -1401,16 +1417,28 @@ export async function POST(req: Request) {
+       );
+     }
+ 
+-    return NextResponse.json({
+-      ok: true,
+-      saleId: createdSaleId,
+-      result: data,
+-      warnings,
+-      message:
+-        warnings.length > 0
+-          ? "Venta creada correctamente, con advertencias."
+-          : "Venta creada correctamente.",
+-    });
++    const totalDurationMs = performance.now() - requestStartedAt;
++
++    return NextResponse.json(
++      {
++        ok: true,
++        saleId: createdSaleId,
++        result: data,
++        warnings,
++        message:
++          warnings.length > 0
++            ? "Venta creada correctamente, con advertencias."
++            : "Venta creada correctamente.",
++      },
++      {
++        headers: {
++          "Server-Timing": [
++            `sale-rpc;dur=${rpcDurationMs.toFixed(1)}`,
++            `sale-total;dur=${totalDurationMs.toFixed(1)}`,
++          ].join(", "),
++        },
++      },
++    );
+   } catch (error) {
+     console.error("Error creando venta:", error);
+ 
+
+commit 86c8719deee4d15eb90e53b6397833aae18162ac
+Author: Gonzalo C├írdenas <gonzalo.cardenasr@gmail.com>
+Date:   Sun Sep 27 00:43:53 2026 -0300
+
+    DEV-AUTH-01.3A: aplicar RBAC a ventas pedidos clientes y fidelizaci├│n
+
+diff --git a/app/api/operacion/sales/route.ts b/app/api/operacion/sales/route.ts
+index b56ab08..9ad261c 100644
+--- a/app/api/operacion/sales/route.ts
++++ b/app/api/operacion/sales/route.ts
+@@ -10,6 +10,7 @@ import {
+   createCorrelationId,
+   recordAuditLogSafely,
+ } from "../../../../lib/audit-logs";
++import { authorizeOperationSession } from "@/lib/operation-rbac";
+ 
+ function getCreatedSaleId(result: unknown): number | null {
+   if (!result) return null;
+@@ -121,10 +122,15 @@ function getItemFlavorIds(item: unknown): number[] {
+ export async function GET(req: Request) {
+   const session = await getOperationSession();
+ 
+-  if (!session.ok) {
++  const authorization = authorizeOperationSession(session, "sales.operate");
++
++  if (!authorization.ok) {
+     return NextResponse.json(
+-      { ok: false, message: "No autenticado." },
+-      { status: 401 },
++      {
++        ok: false,
++        message: authorization.message,
++      },
++      { status: authorization.status },
+     );
+   }
+ 
+@@ -497,10 +503,15 @@ export async function GET(req: Request) {
+ export async function POST(req: Request) {
+   const session = await getOperationSession();
+ 
+-  if (!session.ok) {
++  const authorization = authorizeOperationSession(session, "sales.operate");
++
++  if (!authorization.ok) {
+     return NextResponse.json(
+-      { ok: false, message: "No autenticado." },
+-      { status: 401 },
++      {
++        ok: false,
++        message: authorization.message,
++      },
++      { status: authorization.status },
+     );
+   }
+ 
+
+commit 3d056059b3709b0c98d055ff69ef7156430c742c
+Author: Gonzalo C├írdenas <gonzalo.cardenasr@gmail.com>
+Date:   Tue Sep 15 11:10:02 2026 -0300
+
+    DEV-LOY-RED-01: implementar canje transaccional y elegibilidad de premios en POS
+
+diff --git a/app/api/operacion/sales/route.ts b/app/api/operacion/sales/route.ts
+index c6c2882..b56ab08 100644
+--- a/app/api/operacion/sales/route.ts
++++ b/app/api/operacion/sales/route.ts
+@@ -596,6 +596,33 @@ export async function POST(req: Request) {
+         ? null
+         : Number(body.customerId);
+ 
++    const rewardId =
++      body.rewardId === null ||
++      body.rewardId === undefined ||
++      body.rewardId === ""
++        ? null
++        : Number(body.rewardId);
++
++    if (rewardId !== null && (!Number.isInteger(rewardId) || rewardId <= 0)) {
++      return NextResponse.json(
++        {
++          ok: false,
++          message: "El premio seleccionado no es v├ílido.",
++        },
++        { status: 400 },
++      );
++    }
++
++    if (rewardId !== null && customerId === null) {
++      return NextResponse.json(
++        {
++          ok: false,
++          message: "El canje de premio requiere un cliente.",
++        },
++        { status: 400 },
++      );
++    }
++
+     const rawPaymentMethod = String(body.paymentMethod || "")
+       .trim()
+       .toLowerCase();
+@@ -1190,7 +1217,7 @@ export async function POST(req: Request) {
+     }
+ 
+     const { data, error } = await supabaseAdmin.rpc(
+-      "create_local_sale_with_order",
++      "create_local_sale_with_order_v2",
+       {
+         p_customer_id: customerId,
+         p_payment_method: paymentMethod,
+@@ -1206,6 +1233,8 @@ export async function POST(req: Request) {
+         p_manual_discount_value: manualDiscountValue,
+         p_manual_discount_reason: manualDiscountReason,
+         p_manual_discount_notes: manualDiscountNotes,
++        p_reward_id: rewardId,
++        p_actor_identifier: null,
+       },
+     );
+ 
+@@ -1236,6 +1265,7 @@ export async function POST(req: Request) {
+           manualDiscountValue,
+           manualDiscountReason,
+           manualDiscountNotes,
++          rewardId,
+         },
+ 
+         correlationId,
+@@ -1290,6 +1320,7 @@ export async function POST(req: Request) {
+         manualDiscountValue,
+         manualDiscountReason,
+         manualDiscountNotes,
++        rewardId,
+       },
+ 
+       metadata: {
+@@ -1302,6 +1333,7 @@ export async function POST(req: Request) {
+         manualDiscountValue,
+         manualDiscountReason,
+         manualDiscountNotes,
++        rewardId,
+       },
+ 
+       correlationId,
+@@ -1344,6 +1376,7 @@ export async function POST(req: Request) {
+           manualDiscountType,
+           manualDiscountValue,
+           manualDiscountReason,
++          rewardId,
+         },
+       });
+     } catch (eventError) {
+
+============================================================
+5. GET ACTUAL COMPLETO HASTA POST
+============================================================
+export async function GET(req: Request) {
+  const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
+
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+
+    const requestedPage = Number(searchParams.get("page") || 1);
+    const requestedPageSize = Number(searchParams.get("pageSize") || 50);
+
+    const page =
+      Number.isFinite(requestedPage) && requestedPage > 0
+        ? Math.floor(requestedPage)
+        : 1;
+
+    const pageSize =
+      Number.isFinite(requestedPageSize) && requestedPageSize > 0
+        ? Math.min(Math.floor(requestedPageSize), 100)
+        : 50;
+
+    const requestedDateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
+
+    /*
+     * El historial operacional nunca puede consultar antes del inicio
+     * de la ventana móvil de 15 días calendario.
+     *
+     * Si el usuario selecciona una fecha inicial más reciente,
+     * respetamos ese filtro.
+     */
+    const operationalHistoryStartIso = getOperationalHistoryStartIso();
+
+    let dateFrom = operationalHistoryStartIso;
+
+    if (requestedDateFrom) {
+      const parsedRequestedDateFrom = new Date(requestedDateFrom);
+
+      if (Number.isNaN(parsedRequestedDateFrom.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha inicial inválida." },
+          { status: 400 },
+        );
+      }
+
+      if (
+        parsedRequestedDateFrom.getTime() >
+        new Date(operationalHistoryStartIso).getTime()
+      ) {
+        dateFrom = parsedRequestedDateFrom.toISOString();
+      }
+    }
+    const search = String(searchParams.get("search") || "").trim();
+    const channel = String(searchParams.get("channel") || "").trim();
+    const paymentMethod = String(
+      searchParams.get("paymentMethod") || "",
+    ).trim();
+    const orderStatus = String(searchParams.get("orderStatus") || "").trim();
+    const customerType = String(searchParams.get("customerType") || "").trim();
+
+    const rangeFrom = (page - 1) * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+
+    /*
+     * Algunos filtros dependen de tablas relacionadas:
+     * - estado del pedido → orders
+     * - búsqueda por cliente → clientes
+     * - búsqueda por código del pedido → orders
+     *
+     * Primero obtenemos los IDs de ventas candidatas y luego
+     * aplicamos esa lista a la consulta principal.
+     */
+    let candidateSaleIds: Set<number> | null = null;
+
+    function intersectCandidateIds(
+      currentIds: Set<number> | null,
+      ids: number[],
+    ): Set<number> {
+      const nextIds = new Set(ids);
+
+      if (currentIds === null) {
+        return nextIds;
+      }
+
+      return new Set([...currentIds].filter((id) => nextIds.has(id)));
+    }
+
+    if (orderStatus) {
+      const { data: statusOrders, error: statusError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .eq("status", orderStatus)
+        .gte("created_at", operationalHistoryStartIso);
+
+      if (statusError) {
+        return NextResponse.json(
+          { ok: false, message: statusError.message },
+          { status: 500 },
+        );
+      }
+
+      candidateSaleIds = intersectCandidateIds(
+        candidateSaleIds,
+        (statusOrders || [])
+          .map((order) => Number(order.sale_id))
+          .filter((id) => Number.isFinite(id)),
+      );
+    }
+
+    if (search) {
+      const safeSearch = search.replace(/[,%()]/g, " ").trim();
+      const searchSaleIds = new Set<number>();
+
+      const { data: directSales, error: directSalesError } = await supabaseAdmin
+        .from("sales")
+        .select("id")
+        .gte("created_at", operationalHistoryStartIso)
+        .or(
+          [
+            `sale_number.ilike.%${safeSearch}%`,
+            `external_order_id.ilike.%${safeSearch}%`,
+            `channel.ilike.%${safeSearch}%`,
+            `payment_method.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (directSalesError) {
+        return NextResponse.json(
+          { ok: false, message: directSalesError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const sale of directSales || []) {
+        searchSaleIds.add(Number(sale.id));
+      }
+
+      const numericSearch = Number(search);
+
+      if (Number.isInteger(numericSearch) && numericSearch > 0) {
+        const { data: numericSale, error: numericSaleError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .eq("id", numericSearch);
+
+        if (numericSaleError) {
+          return NextResponse.json(
+            { ok: false, message: numericSaleError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of numericSale || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingCustomers, error: customersError } =
+        await supabaseAdmin
+          .from("clientes")
+          .select("id")
+          .or(
+            [
+              `nombre.ilike.%${safeSearch}%`,
+              `correo.ilike.%${safeSearch}%`,
+              `telefono.ilike.%${safeSearch}%`,
+            ].join(","),
+          );
+
+      if (customersError) {
+        return NextResponse.json(
+          { ok: false, message: customersError.message },
+          { status: 500 },
+        );
+      }
+
+      const customerIds = (matchingCustomers || [])
+        .map((customer) => Number(customer.id))
+        .filter((id) => Number.isFinite(id));
+
+      if (customerIds.length > 0) {
+        const { data: customerSales, error: customerSalesError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .in("customer_id", customerIds)
+            .gte("created_at", operationalHistoryStartIso);
+
+        if (customerSalesError) {
+          return NextResponse.json(
+            { ok: false, message: customerSalesError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of customerSales || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingOrders, error: ordersError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .gte("created_at", operationalHistoryStartIso)
+        .or(
+          [
+            `display_order_code.ilike.%${safeSearch}%`,
+            `status.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (ordersError) {
+        return NextResponse.json(
+          { ok: false, message: ordersError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const order of matchingOrders || []) {
+        const saleId = Number(order.sale_id);
+
+        if (Number.isFinite(saleId)) {
+          searchSaleIds.add(saleId);
+        }
+      }
+
+      candidateSaleIds = intersectCandidateIds(candidateSaleIds, [
+        ...searchSaleIds,
+      ]);
+    }
+
+    /*
+     * Si los filtros relacionados no encontraron ninguna venta,
+     * respondemos inmediatamente sin ejecutar una consulta inválida
+     * con .in("id", []).
+     */
+    if (candidateSaleIds !== null && candidateSaleIds.size === 0) {
+      return NextResponse.json({
+        ok: true,
+        sales: [],
+        pagination: {
+          page: 1,
+          pageSize,
+          total: 0,
+          totalPages: 1,
+          from: 0,
+          to: 0,
+        },
+      });
+    }
+
+    let query = supabaseAdmin.from("sales").select(
+      `
+        id,
+        sale_number,
+        channel,
+        external_order_id,
+        integration_source,
+        received_at,
+        customer_id,
+        status,
+        subtotal,
+        discount_total,
+        manual_discount_type,
+        manual_discount_value,
+        manual_discount_amount,
+        manual_discount_reason,
+        manual_discount_notes,
+        total,
+        loyalty_eligible_total,
+        payment_status,
+        payment_method,
+        actor_role,
+        confirmed_at,
+        created_at,
+        clientes (
+          id,
+          nombre,
+          correo,
+          telefono
+        ),
+        orders (
+          id,
+          business_date,
+          daily_order_number,
+          display_order_code,
+          status,
+          notes,
+          created_at
+        ),
+        sale_items (
+        id,
+        item_type,
+        product_id,
+        product_sku,
+        product_name,
+        quantity,
+        list_unit_price,
+        unit_price,
+        discount_total,
+        total_price,
+        is_gift,
+        gift_reason,
+        loyalty_eligible,
+        notes,
+          sale_item_options (
+            id,
+            option_group_code,
+            option_value_name,
+            quantity
+          )
+        )
+      `,
+      {
+        count: "exact",
+      },
+    );
+
+    if (candidateSaleIds !== null) {
+      query = query.in("id", [...candidateSaleIds]);
+    }
+
+    if (channel) {
+      query = query.eq("channel", channel);
+    }
+
+    if (paymentMethod) {
+      query = query.eq("payment_method", paymentMethod);
+    }
+
+    if (customerType === "identified") {
+      query = query.not("customer_id", "is", null);
+    }
+
+    if (customerType === "counter") {
+      query = query.is("customer_id", null);
+    }
+
+    if (dateFrom) {
+      const parsedDateFrom = new Date(dateFrom);
+
+      if (Number.isNaN(parsedDateFrom.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha inicial inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.gte("created_at", parsedDateFrom.toISOString());
+    }
+
+    if (dateTo) {
+      const parsedDateTo = new Date(dateTo);
+
+      if (Number.isNaN(parsedDateTo.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha final inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.lt("created_at", parsedDateTo.toISOString());
+    }
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(rangeFrom, rangeTo);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, message: error.message },
+        { status: 500 },
+      );
+    }
+
+    const total = count || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return NextResponse.json({
+      ok: true,
+      sales: data || [],
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        from: total === 0 ? 0 : rangeFrom + 1,
+        to: Math.min(rangeFrom + (data?.length || 0), total),
+      },
+    });
+  } catch (error) {
+    console.error("Error cargando historial de ventas:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Error inesperado al cargar el historial de ventas.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  const requestStartedAt = performance.now();
+
+  const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
+
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const body = await req.json();
+
+    const correlationId = createCorrelationId("sale-create");
+
+    const cashValidationStartedAt = performance.now();
+
+    const { data: activeCashSession, error: activeCashSessionError } =
+      await supabaseAdmin
+        .from("cash_register_sessions")
+        .select("id, status")
+        .eq("status", "OPEN")
+        .limit(1)
+        .maybeSingle();
+
+    if (activeCashSessionError) {
+      console.error(
+        "Error consultando caja abierta antes de crear venta:",
+        activeCashSessionError,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar el estado de la caja.",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!activeCashSession) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Debes abrir la caja antes de registrar una venta.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const cashRegisterSessionId = Number(activeCashSession.id);
+
+    if (
+      !Number.isInteger(cashRegisterSessionId) ||
+      cashRegisterSessionId <= 0
+    ) {
+      console.error(
+        "Caja abierta con identificador inválido:",
+        activeCashSession,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La sesión de caja activa no es válida.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const cashValidationDurationMs =
+      performance.now() - cashValidationStartedAt;
+
+    const orderNotes = String(body.orderNotes || "").trim();
+
+    const channel = String(body.channel || "local")
+      .trim()
+      .toLowerCase();
+
+============================================================
+6. HEAD DEL ARCHIVO
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../lib/operation-auth";
+import {
+  buildCustomerEventIdempotencyKey,
+  recordCustomerEvent,
+} from "../../../../lib/customer-events";
+import {
+  buildAuditIdempotencyKey,
+  createCorrelationId,
+  recordAuditLogSafely,
+} from "../../../../lib/audit-logs";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
+function getCreatedSaleId(result: unknown): number | null {
+  if (!result) return null;
+
+  if (Array.isArray(result)) {
+    for (const item of result) {
+      const saleId = getCreatedSaleId(item);
+
+      if (saleId) return saleId;
+    }
+
+    return null;
+  }
+
+  if (typeof result !== "object") {
+    return null;
+  }
+
+  const record = result as Record<string, unknown>;
+
+  const directCandidates = [record.sale_id, record.saleId, record.id];
+
+  for (const candidate of directCandidates) {
+    const parsed = Number(candidate);
+
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  if (record.sale && typeof record.sale === "object") {
+    return getCreatedSaleId(record.sale);
+  }
+
+  if (record.result && typeof record.result === "object") {
+    return getCreatedSaleId(record.result);
+  }
+
+  return null;
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+type SaleItemType = "PRODUCT" | "CUSTOM";
+
+function getItemType(item: unknown): SaleItemType | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const itemRecord = item as Record<string, unknown>;
+
+  const rawItemType = String(itemRecord.item_type || "PRODUCT")
+    .trim()
+    .toUpperCase();
+
+  if (rawItemType === "PRODUCT" || rawItemType === "CUSTOM") {
+    return rawItemType;
+  }
+
+  return null;
+}
+
+function getItemProductId(item: unknown): number | null {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const productId = Number((item as Record<string, unknown>).product_id);
+
+  return Number.isInteger(productId) && productId > 0 ? productId : null;
+}
+
+function getItemFlavorIds(item: unknown): number[] {
+  if (!item || typeof item !== "object") {
+    return [];
+  }
+
+  const options = (item as Record<string, unknown>).options;
+
+  if (!Array.isArray(options)) {
+    return [];
+  }
+
+  return options
+    .filter((option) => {
+      if (!option || typeof option !== "object") {
+        return false;
+      }
+
+      return (
+        String((option as Record<string, unknown>).option_group_code || "")
+          .trim()
+          .toLowerCase() === "flavor"
+      );
+    })
+    .map((option) =>
+      Number((option as Record<string, unknown>).option_value_id),
+    )
+    .filter(
+      (optionValueId) => Number.isInteger(optionValueId) && optionValueId > 0,
+    );
+}
+
+const OPERATIONAL_HISTORY_TIME_ZONE = "America/Santiago";
+const OPERATIONAL_HISTORY_DAYS_BACK = 14;
+
+function getOperationalHistoryStartIso(now = new Date()): string {
+  /*
+   * Regla funcional:
+   * - día calendario actual en Chile
+   * - más los 14 días calendario completos anteriores
+   * - total: ventana móvil de 15 días calendario
+   *
+   * Ejemplo:
+   * 27/09/2026 -> desde 13/09/2026 00:00 America/Santiago.
+   */
+
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: OPERATIONAL_HISTORY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    dateParts.find((part) => part.type === type)?.value || "";
+
+  const year = Number(getPart("year"));
+  const month = Number(getPart("month"));
+  const day = Number(getPart("day"));
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    throw new Error("No fue posible calcular la fecha operacional.");
+  }
+
+  /*
+   * Trabajamos primero como fecha calendario, no como instante,
+   * para retroceder exactamente 14 días independientemente
+   * de cambios de horario de verano/invierno.
+   */
+  const startCalendarDate = new Date(Date.UTC(year, month - 1, day));
+
+  startCalendarDate.setUTCDate(
+    startCalendarDate.getUTCDate() - OPERATIONAL_HISTORY_DAYS_BACK,
+  );
+
+  const targetYear = startCalendarDate.getUTCFullYear();
+  const targetMonth = startCalendarDate.getUTCMonth() + 1;
+  const targetDay = startCalendarDate.getUTCDate();
+
+  /*
+   * Determinamos el offset real de America/Santiago para la fecha
+   * inicial. No fijamos manualmente -03:00 o -04:00.
+   */
+  const offsetProbe = new Date(
+    Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0),
+  );
+
+
+============================================================
+7. DOCUMENT ROUTE
+============================================================
+import { NextResponse } from "next/server";
+import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+import { buildSaleDocument } from "../../../../../lib/documents/sales/build-sale-document";
+
+export async function GET(req: Request) {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "No autenticado.",
+      },
+      { status: 401 },
+    );
+  }
+  const authorization = authorizeOperationSession(
+    session,
+    "sales.operate",
+  );
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: authorization.code,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const saleId = Number(searchParams.get("saleId"));
+
+    if (!Number.isInteger(saleId) || saleId <= 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La venta indicada no es válida.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const document = await buildSaleDocument(saleId);
+
+    return NextResponse.json({
+      ok: true,
+      document,
+    });
+  } catch (error) {
+    console.error("Error construyendo documento de venta:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se pudo construir el documento.",
+      },
+      { status: 500 },
+    );
+  }
+}
+

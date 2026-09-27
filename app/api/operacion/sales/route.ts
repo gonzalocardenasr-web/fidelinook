@@ -211,7 +211,6 @@ function getOperationalHistoryStartIso(now = new Date()): string {
 }
 export async function GET(req: Request) {
   const session = await getOperationSession();
-  const authDurationMs = performance.now() - requestStartedAt;
 
   const authorization = authorizeOperationSession(session, "sales.operate");
 
