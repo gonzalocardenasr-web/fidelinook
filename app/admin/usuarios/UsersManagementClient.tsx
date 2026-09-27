@@ -43,6 +43,7 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat("es-CL", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "America/Santiago",
   }).format(new Date(value));
 }
 
@@ -240,12 +241,9 @@ export default function UsersManagementClient({
     setProcessingId(user.id);
 
     try {
-      const response = await fetch(
-        `/api/admin/users/${user.id}/invite`,
-        {
-          method: "POST",
-        },
-      );
+      const response = await fetch(`/api/admin/users/${user.id}/invite`, {
+        method: "POST",
+      });
 
       const data = await response.json();
 
@@ -278,9 +276,7 @@ export default function UsersManagementClient({
                   Superadmin
                 </p>
 
-                <h1 className="mt-2 text-3xl font-bold">
-                  Gestión de usuarios
-                </h1>
+                <h1 className="mt-2 text-3xl font-bold">Gestión de usuarios</h1>
 
                 <p className="mt-2 text-sm text-white/85">
                   Crea, activa y administra los accesos operacionales de
@@ -333,16 +329,13 @@ export default function UsersManagementClient({
             </h2>
 
             <p className="mt-1 text-sm text-[#666]">
-              Para un usuario nuevo deja “Nuevo usuario” seleccionado. Si
-              existe un registro legacy pendiente, selecciónalo para vincular
-              su identidad Auth sin duplicarlo.
+              Para un usuario nuevo deja “Nuevo usuario” seleccionado. Si existe
+              un registro legacy pendiente, selecciónalo para vincular su
+              identidad Auth sin duplicarlo.
             </p>
           </div>
 
-          <form
-            onSubmit={handleCreate}
-            className="grid gap-4 md:grid-cols-2"
-          >
+          <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-medium text-[#444]">
                 Tipo de alta
@@ -350,9 +343,7 @@ export default function UsersManagementClient({
 
               <select
                 value={legacyUserId}
-                onChange={(event) =>
-                  handleLegacySelection(event.target.value)
-                }
+                onChange={(event) => handleLegacySelection(event.target.value)}
                 className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-3 text-[#222]"
               >
                 <option value="">Nuevo usuario</option>
@@ -402,9 +393,7 @@ export default function UsersManagementClient({
 
               <select
                 value={role}
-                onChange={(event) =>
-                  setRole(event.target.value as Role)
-                }
+                onChange={(event) => setRole(event.target.value as Role)}
                 className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-3 text-[#222]"
               >
                 <option value="cashier">Cashier</option>
@@ -454,10 +443,7 @@ export default function UsersManagementClient({
               const processing = processingId === user.id;
 
               return (
-                <article
-                  key={user.id}
-                  className="px-6 py-6 md:px-8"
-                >
+                <article key={user.id} className="px-6 py-6 md:px-8">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -540,9 +526,7 @@ export default function UsersManagementClient({
                           <button
                             type="button"
                             disabled={processing}
-                            onClick={() =>
-                              void resendInvitation(user)
-                            }
+                            onClick={() => void resendInvitation(user)}
                             className="rounded-xl border border-[#DDD1E7] px-3 py-2 text-sm font-semibold text-[#4C00F7] disabled:opacity-50"
                           >
                             Enviar acceso

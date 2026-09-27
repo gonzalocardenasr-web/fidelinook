@@ -11,11 +11,9 @@ type InvitationInput = {
 };
 
 export async function sendOperatorInvitation(input: InvitationInput) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-  if (!siteUrl) {
-    throw new Error("NEXT_PUBLIC_SITE_URL is not configured");
-  }
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://fidelidad.nookheladeria.cl";
 
   const redirectTo = `${siteUrl.replace(/\/$/, "")}/activar-acceso`;
 

@@ -88,6 +88,8 @@ export async function POST(request: Request) {
   }
 
   let createdAuthUserId: string | null = null;
+  let affectedOperationalUserId: string | null = null;
+  let linkedExistingOperationalUser = false;
 
   try {
     const body = await request.json();
@@ -201,6 +203,8 @@ export async function POST(request: Request) {
       }
 
       operationalUser = data;
+      affectedOperationalUserId = data.id;
+      linkedExistingOperationalUser = true;
     } else {
       const { data, error } = await supabaseAdmin
         .from("operational_users")
@@ -220,6 +224,7 @@ export async function POST(request: Request) {
       }
 
       operationalUser = data;
+      affectedOperationalUserId = data.id;
     }
 
     await sendOperatorInvitation({
@@ -245,11 +250,35 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creating operational user:", error);
 
+    if (affectedOperationalUserId) {
+      try {
+        if (linkedExistingOperationalUser) {
+          await supabaseAdmin
+            .from("operational_users")
+            .update({
+              auth_user_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", affectedOperationalUserId);
+        } else {
+          await supabaseAdmin
+            .from("operational_users")
+            .delete()
+            .eq("id", affectedOperationalUserId);
+        }
+      } catch (operationalRollbackError) {
+        console.error(
+          "Could not rollback operational user:",
+          operationalRollbackError,
+        );
+      }
+    }
+
     if (createdAuthUserId) {
       try {
         await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
-      } catch (rollbackError) {
-        console.error("Could not rollback Auth user:", rollbackError);
+      } catch (authRollbackError) {
+        console.error("Could not rollback Auth user:", authRollbackError);
       }
     }
 
