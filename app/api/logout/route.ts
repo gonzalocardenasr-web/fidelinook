@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 const COOKIES_TO_CLEAR = [
   "nook_op_access_token",
+  "nook_op_refresh_token",
   "fidelinook_user_id",
   "fidelinook_role",
   "fidelinook_auth",

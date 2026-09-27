@@ -5,6 +5,43 @@ import { useEffect, useState } from "react";
 import OrderQueue from "../../../components/operations/OrderQueue";
 import { QueueOrder, OrderStatus } from "../../../types/operations";
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshOperationalSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch("/api/session/refresh", {
+      method: "POST",
+      cache: "no-store",
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+
+  return refreshInFlight;
+}
+
+async function fetchWithSessionRecovery(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const response = await fetch(input, init);
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refreshed = await refreshOperationalSession();
+
+  if (!refreshed) {
+    return response;
+  }
+
+  return fetch(input, init);
+}
+
 export default function ColaPreparacionPage() {
   const [orders, setOrders] = useState<QueueOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +57,9 @@ export default function ColaPreparacionPage() {
 
   async function cargarPedidos() {
     try {
-      const res = await fetch("/api/operacion/orders");
+      const res = await fetchWithSessionRecovery("/api/operacion/orders", {
+        cache: "no-store",
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -41,13 +80,16 @@ export default function ColaPreparacionPage() {
     try {
       setMessage("");
 
-      const res = await fetch("/api/operacion/orders/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const res = await fetchWithSessionRecovery(
+        "/api/operacion/orders/status",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ orderId, newStatus }),
         },
-        body: JSON.stringify({ orderId, newStatus }),
-      });
+      );
 
       const data = await res.json();
 

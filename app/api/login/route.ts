@@ -5,16 +5,28 @@ import { getOperationalUserByAuthUserId } from "@/lib/operation-auth";
 
 const OP_ACCESS_COOKIE = "nook_op_access_token";
 
+const OP_REFRESH_COOKIE = "nook_op_refresh_token";
+
 function setOperationalAuthCookies(
   response: NextResponse,
   accessToken: string,
+  refreshToken: string,
+  expiresIn: number,
 ) {
   response.cookies.set(OP_ACCESS_COOKIE, accessToken, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 12,
+    maxAge: expiresIn,
+  });
+
+  response.cookies.set(OP_REFRESH_COOKIE, refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
   });
 }
 
@@ -31,6 +43,8 @@ async function trySupabaseOperationalLogin(
         role: "cashier" | "admin" | "superadmin";
       };
       accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
     }
   | { ok: false }
 > {
@@ -72,6 +86,8 @@ async function trySupabaseOperationalLogin(
     ok: true,
     operationalUser,
     accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token,
+    expiresIn: data.session.expires_in,
   };
 }
 
@@ -92,10 +108,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabaseLogin = await trySupabaseOperationalLogin(
-      usuario,
-      password,
-    );
+    const supabaseLogin = await trySupabaseOperationalLogin(usuario, password);
 
     if (!supabaseLogin.ok) {
       return NextResponse.json(
@@ -118,6 +131,8 @@ export async function POST(req: Request) {
     setOperationalAuthCookies(
       response,
       supabaseLogin.accessToken,
+      supabaseLogin.refreshToken,
+      supabaseLogin.expiresIn,
     );
 
     return response;
