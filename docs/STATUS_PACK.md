@@ -1,7 +1,7 @@
-﻿# STATUS PACK — PLATAFORMA NOOK
+# STATUS PACK — PLATAFORMA NOOK
 
-**Última actualización:** 26-09-2026  
-**Estado:** Documento vivo  
+**Última actualización:** 27-09-2026
+**Estado:** Documento vivo
 **Propósito:** Fuente de continuidad técnica y funcional del desarrollo de Plataforma Nook.
 
 ---
@@ -62,22 +62,28 @@ Los usuarios operacionales constituyen un dominio de identidad separado de los c
 - DEV-CAT-01
 - SEC-P0-01
 - DEV-ANL-01
-- DEV-AUTH-01.0 — Radiografía de autenticación, usuarios y autorización
+- DEV-AUTH-01
+  - DEV-AUTH-01.0 — Radiografía de autenticación/autorización
+  - DEV-AUTH-01.1 — Motor de autenticación operacional
+  - DEV-AUTH-01.2 — Motor RBAC
+  - DEV-AUTH-01.3A–01.3I — Aplicación de matriz de roles
+  - DEV-AUTH-01.4 — Gestión de usuarios operacionales
+  - DEV-AUTH-01.5 — Retiro legacy, cierre RBAC y pruebas negativas
 
 SEC-P0-01 está cerrado y no debe reabrirse sin nueva evidencia.
 
-### En curso / siguiente desarrollo
+### Siguiente desarrollo
 
-- DEV-AUTH-01 — Usuarios, roles y permisos
-  - DEV-AUTH-01.0 — Radiografía: CERRADO
-  - DEV-AUTH-01.1 — Motor de autenticación: SIGUIENTE
-  - DEV-AUTH-01.2 — Motor de autorización/RBAC
-  - DEV-AUTH-01.3 — Aplicación de matriz de roles
-  - DEV-AUTH-01.4 — Gestión de usuarios operacionales por superadmin
-  - DEV-AUTH-01.5 — Retiro de auth legacy + auditoría final + pruebas negativas
+- DEV-UX-ARCH-01 — Rediseñar arquitectura de información, navegación y superficies por rol.
 
-### Deuda / futuros conocidos
+El frontend Analytics se construirá después de definir esta arquitectura y deberá consumir la capa analítica ya cerrada en DEV-ANL-01.
 
+### Backlog / deuda conocida
+
+- DEV-AUDIT-01 — Auditoría operacional por usuario, estación y evento
+- DEV-LOY-EXP-02 — Automatizar expiración de premios y revisar acción manual global
+- DEV-AUTH-UX-01 — Estándar UX para creación/definición de contraseñas
+- DEV-UX-POS-01 — Evolución del workspace POS dentro de la arquitectura definitiva
 - SEC-HARD-01
 - DEV-SUP-01
 - DEV-OPS-01.1/01.2
@@ -85,16 +91,16 @@ SEC-P0-01 está cerrado y no debe reabrirse sin nueva evidencia.
 - DEV-POS-PERF-01
 - DEV-ENV-01
 - AUD-GOLIVE-01
-- DEV-LOY-EXP-02
 - OBS-EMAIL-01
 - TECH-CAT-01
 - TECH-CAT-02
 - deuda de hardcode CAT
+- deuda TypeScript preexistente
+- deuda ESLint preexistente
 
 Mailing/Resend permanece en stand-by por decisión explícita.
 
 ---
-
 ## 4. DEV-ANL-01 — Backend analítico
 
 **Estado: CERRADO**
@@ -401,18 +407,22 @@ Commit de implementación:
 
 ## 12. DEV-AUTH-01 — Usuarios, roles y permisos
 
-**Estado general: EN CURSO**
+**Estado general: CERRADO**
 
-### DEV-AUTH-01.0 — Radiografía
+DEV-AUTH-01 estableció la arquitectura definitiva de identidad y autorización operacional.
 
-**Estado: CERRADO**
+### Arquitectura vigente
 
-La radiografía confirmó que existen dos dominios conceptualmente distintos:
+`Supabase Auth → auth.users → operational_users → sesión operacional verificada → RBAC server-side`
 
-1. clientes/usuarios de cuenta cliente;
+Existen dos dominios separados:
+
+1. clientes del programa de fidelización;
 2. usuarios operacionales de Plataforma Nook.
 
-No deben mezclarse.
+`clientes` NO representa usuarios operacionales.
+
+La coincidencia de email entre ambos dominios no crea relación de identidad ni permisos.
 
 ### Identidad operacional
 
@@ -430,156 +440,187 @@ Campos relevantes:
 - `legacy_key`
 - `auth_user_id`
 
-Roles modelados actualmente:
+`legacy_key` permanece físicamente en la tabla como deuda de limpieza, pero ya no participa en autenticación ni autorización.
 
-- `superadmin`
-- `admin`
+Roles operacionales vigentes:
+
 - `cashier`
-
-La tabla tiene RLS habilitado y acceso directo restringido a `service_role`.
-
-### Estado actual observado
-
-Existen al menos los usuarios operacionales legacy:
-
-- Super Administrador — `superadmin`
-- Administrador — `admin`
-
-El usuario `superadmin` se encuentra vinculado mediante `auth_user_id` a Supabase Auth.
-
-El usuario `admin` todavía no tiene `auth_user_id`.
-
-La existencia de un registro en `auth.users` NO convierte por sí sola a una persona en usuario operacional. El acceso operacional requiere una vinculación válida con `operational_users`.
-
-### Autenticación legacy actual
-
-El login operacional actual todavía utiliza credenciales definidas por variables de entorno para `admin` y `superadmin`.
-
-Después del login se generan cookies:
-
-- `fidelinook_auth`
-- `fidelinook_role`
-- `fidelinook_user_id`
-
-El helper operacional actual acepta solamente:
-
 - `admin`
 - `superadmin`
 
-Por tanto, aunque `cashier` existe en el modelo de datos, todavía no puede utilizar el esquema operacional general de autenticación/autorización.
+Supabase Auth actúa como proveedor de identidad.
 
-La sesión legacy actual no constituye todavía una identidad operacional verificada server-side contra Supabase Auth en cada solicitud.
+Para obtener una sesión operacional válida deben cumplirse:
 
-### Middleware
-
-El middleware actual es legacy y de alcance insuficiente.
-
-Protege explícitamente solamente:
-
-- `/`
-- `/admin`
-
-No debe considerarse la barrera definitiva de autorización de la plataforma.
-
-### APIs
-
-La autorización está distribuida entre:
-
-- `getOperationSession`;
-- validaciones de rol específicas en APIs;
-- controles frontend;
-- mecanismos independientes para funcionalidades públicas/cliente/cron/email.
-
-La radiografía identificó 79 rutas API:
-
-- 60 utilizan `getOperationSession`;
-- 19 no lo utilizan.
-
-Las 19 rutas restantes NO deben clasificarse automáticamente como vulnerables: incluyen rutas públicas, cliente, autenticación, cron y email con modelos de acceso distintos.
-
-Cada una deberá evaluarse según su función durante la fase de hardening/autorización.
-
----
-
-## 13. Arquitectura objetivo de autenticación
-
-Arquitectura acordada:
-
-`Supabase Auth → auth.users → operational_users → sesión operacional verificada → RBAC`
-
-Supabase Auth actuará como proveedor de identidad.
-
-`operational_users` continuará siendo la fuente canónica para:
-
-- pertenencia al dominio operacional;
-- rol;
-- estado activo/inactivo;
-- identidad operacional estable.
-
-Un usuario operacional válido deberá cumplir, como mínimo:
-
-- sesión Supabase Auth válida;
-- vínculo mediante `auth_user_id`;
-- registro existente en `operational_users`;
+- token Supabase Auth válido;
+- `auth.users.id ↔ operational_users.auth_user_id`;
+- usuario operacional existente;
 - `is_active = true`;
 - rol operacional válido.
 
-No utilizar `service_role` en browser.
+La existencia aislada de un usuario en `auth.users` no concede acceso operacional.
 
-No confiar en ocultamiento frontend como mecanismo de autorización.
+### Autenticación
 
-La autorización efectiva debe verificarse server-side.
+La autenticación operacional legacy fue retirada en DEV-AUTH-01.5.
 
-Las credenciales legacy y cookies legacy deberán retirarse progresivamente después de completar y validar el nuevo flujo.
+Ya no se aceptan:
+
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`;
+- `SUPERADMIN_USERNAME` / `SUPERADMIN_PASSWORD`;
+- login mediante `legacy_key`;
+- cookies `fidelinook_*` como prueba de identidad.
+
+Las cookies legacy solamente pueden seguir siendo eliminadas por `/api/logout` como limpieza transitoria de navegadores antiguos.
+
+La cookie operacional vigente es:
+
+`nook_op_access_token`
+
+La identidad asociada se valida server-side contra Supabase Auth y `operational_users`.
+
+### Gestión de usuarios
+
+DEV-AUTH-01.4 incorporó gestión de usuarios operacionales exclusiva para `superadmin`.
+
+Superficie actual:
+
+`/admin/usuarios`
+
+Permite:
+
+- listar usuarios operacionales;
+- crear cashier/admin/superadmin;
+- vincular identidad Supabase Auth;
+- enviar/re-enviar invitación;
+- editar nombre;
+- cambiar rol;
+- activar/desactivar usuario.
+
+No se utiliza hard delete como operación normal.
+
+Guardrails implementados:
+
+- un superadmin no puede desactivarse a sí mismo;
+- un superadmin no puede degradarse a sí mismo;
+- no se puede dejar la plataforma sin al menos un superadmin activo.
+
+El flujo de alta es:
+
+`superadmin crea usuario → Supabase Auth → operational_users → invitación → usuario define contraseña → login operacional`
+
+### Validación productiva
+
+DEV-AUTH-01.5 fue desplegado y validado en producción el 27-09-2026.
+
+QA aprobado:
+
+- login cashier: OK;
+- login admin: OK;
+- login superadmin: OK;
+- credencial legacy admin: rechazada;
+- credencial legacy superadmin: rechazada;
+- logout operacional: OK;
+- redirección posterior a logout: `/admin/login`.
 
 ---
 
-## 14. Matriz de roles aprobada
+## 13. Motor RBAC vigente
 
-Se utilizará RBAC simple.
+La autorización operacional utiliza capacidades explícitas.
 
-No construir inicialmente un motor dinámico de permisos por usuario.
+No se utiliza una jerarquía numérica implícita de roles.
+
+Principio:
+
+`identidad autenticada ≠ autorización`
+
+`lib/operation-auth.ts` resuelve quién es el usuario.
+
+`lib/operation-rbac.ts` resuelve qué capacidades tiene.
+
+La autorización efectiva debe aplicarse server-side.
+
+El ocultamiento de botones, links o módulos en frontend no constituye autorización.
+
+### Capacidades vigentes
+
+- `sales.operate`
+- `sales.export`
+- `orders.operate`
+- `customers.operate`
+- `loyalty.operate`
+- `cash.operate`
+- `catalog.read`
+- `catalog.manage`
+- `inventory.stock.read`
+- `inventory.movements.operate`
+- `inventory.receipts.manage`
+- `inventory.config.manage`
+- `campaigns.manage`
+- `subscriptions.operate`
+- `subscriptions.manage`
+- `subscriptions.delete`
+- `analytics.view`
+- `users.manage`
+
+### Respuesta de autorización
+
+- sesión inválida/no autenticada → HTTP 401
+- sesión válida sin capacidad → HTTP 403
+
+---
+
+## 14. Matriz de roles vigente
 
 ### Cashier
 
-Acceso operacional cotidiano:
+Capacidades operacionales:
 
-- POS / registrar ventas;
+- POS / ventas;
 - pedidos y preparación;
-- búsqueda de clientes;
+- búsqueda/operación de clientes necesaria para venta;
 - loyalty y canjes;
-- caja diaria;
-- lectura de catálogo necesaria para vender;
+- caja;
+- lectura de catálogo;
 - inventario operacional;
 - suscripciones operacionales.
 
-No accede a Analytics.
+No posee:
+
+- `sales.export`;
+- Analytics;
+- gestión de catálogo;
+- recepciones/configuración de inventario;
+- gestión de campañas;
+- gestión de planes/configuración de suscripciones;
+- gestión de usuarios.
+
+La capacidad `customers.operate` no implica que la arquitectura definitiva deba exponer al cashier una pantalla administrativa global de Clientes. Esa separación entre capacidad operacional y superficie de navegación se resolverá en DEV-UX-ARCH-01.
 
 ### Admin
 
-Incluye operación normal más gestión:
+Incluye capacidades operacionales y además:
 
-- capacidades operacionales;
 - Analytics;
+- exportaciones;
 - catálogo y precios;
-- compras/recepciones de inventario;
+- recepciones/compras;
 - configuración de inventario;
 - campañas/CRM;
-- exportaciones;
-- configuración/planes de suscripciones.
+- gestión/configuración de suscripciones.
 
-No administra usuarios/roles ni acciones de máxima sensibilidad reservadas a `superadmin`.
+No administra usuarios ni acciones reservadas explícitamente a superadmin.
 
 ### Superadmin
 
-Acceso completo.
+Incluye las capacidades de admin y además:
 
-Además:
-
-- crear/gestionar usuarios operacionales;
-- cambiar roles;
-- activar/desactivar operadores;
-- acciones destructivas o sensibles de máximo nivel.
+- gestión de usuarios;
+- roles;
+- activación/desactivación;
+- eliminación de suscripciones;
+- acciones sensibles reservadas a máximo privilegio.
 
 ### Inventario
 
@@ -602,47 +643,218 @@ Además:
 
 ---
 
-## 15. Estrategia DEV-AUTH-01
+## 15. Decisiones de arquitectura pendientes
 
-Descomposición acordada:
+El cierre de AUTH permite iniciar el rediseño de arquitectura de información y navegación sin volver a intervenir el fundamento de identidad.
 
-### DEV-AUTH-01.1 — Motor de autenticación
+El siguiente desarrollo es:
 
-Objetivo:
+**DEV-UX-ARCH-01 — Rediseñar arquitectura de información y navegación por rol**
 
-Migrar la identidad operacional desde credenciales legacy/cookies de confianza hacia una sesión Supabase Auth verificable server-side y vinculada a `operational_users`.
+No asumir que la estructura histórica de páginas constituye la arquitectura final.
 
-### DEV-AUTH-01.2 — Motor de autorización
+### Workspace operacional
 
-Objetivo:
+Hipótesis a evaluar:
 
-Construir una capa RBAC centralizada sobre la identidad operacional verificada.
+`/operacion` puede evolucionar hacia el workspace principal de operación local.
 
-### DEV-AUTH-01.3 — Aplicación de matriz de roles
+Capacidades candidatas dentro de ese workspace:
 
-Objetivo:
+- POS;
+- Cola de Preparación;
+- Historial;
+- Inventario operacional;
+- Caja;
+- contexto operacional de campañas vigentes.
 
-Aplicar sistemáticamente la matriz `cashier/admin/superadmin` a APIs y superficies funcionales existentes.
+La denominación “Nueva Venta” debería revisarse a favor de “POS”.
 
-### DEV-AUTH-01.4 — Gestión de usuarios
+### Gestión vs operación
 
-Objetivo:
+Separar explícitamente:
 
-Permitir a `superadmin` administrar usuarios operacionales, roles y estado activo/inactivo.
+- capacidad operacional;
+- capacidad administrativa;
+- superficie visible/navegable.
 
-### DEV-AUTH-01.5 — Retiro legacy y auditoría final
+Ejemplo:
 
-Objetivo:
+`customers.operate` puede ser necesario para que cashier busque y seleccione clientes en POS sin que ello obligue a exponer una pantalla administrativa global de Clientes.
 
-- retirar credenciales/env legacy;
-- retirar cookies legacy como prueba de identidad;
-- revisar rutas restantes;
-- ejecutar pruebas negativas de autorización;
-- verificar ausencia de escalamiento horizontal/vertical de privilegios.
+Otro ejemplo:
+
+`campaigns.manage` corresponde a administración de campañas por admin/superadmin, mientras el cashier necesita únicamente contexto operacional sobre campañas vigentes: beneficio, condiciones, vigencia y forma de aplicación.
+
+### Navegación y preservación de estado POS
+
+Requisito:
+
+Navegar hacia otros módulos no debe provocar pérdida accidental de una venta activa ni del estado relevante del POS.
+
+Abrir todos los módulos en pestañas separadas es una alternativa de diseño, no una decisión cerrada. DEV-UX-ARCH-01 deberá resolver el patrón definitivo evitando tanto pérdida de estado como proliferación innecesaria de pestañas.
+
+### Contexto de caja
+
+El workspace deberá permitir identificar claramente quién abrió la caja y/o quién es responsable de la sesión vigente.
+
+### Espacio disponible del POS
+
+Evaluar el uso del espacio disponible para información operacional relevante, incluyendo campañas activas, alertas o accesos contextuales, sin degradar velocidad de operación.
 
 ---
 
-## 16. Decisiones pendientes de negocio/métrica
+## 16. Estaciones/tablets de preparación
+
+Existe un requerimiento adicional para dispositivos dedicados a preparación.
+
+Situación:
+
+- actualmente existe una tablet utilizada para cola de preparación;
+- se proyecta una segunda tablet dedicada a preparación de pedidos web.
+
+No utilizar cuentas `admin` en tablets compartidas.
+
+Objetivo:
+
+Una estación de preparación debe:
+
+- autenticarse con identidad restringida;
+- ingresar directamente a su cola correspondiente;
+- visualizar únicamente las funciones necesarias;
+- no acceder a POS, caja, clientes, loyalty, administración, Analytics, catálogo administrativo ni otras superficies no requeridas;
+- quedar protegida server-side, no solamente mediante ocultamiento de navegación.
+
+Identidades candidatas:
+
+- Preparación Local;
+- Preparación Web.
+
+Todavía NO está cerrada la decisión de modelar estas estaciones mediante un nuevo rol `preparation` o mediante una extensión de capacidades/identidad de estación.
+
+DEV-UX-ARCH-01 deberá resolver la experiencia y superficie.
+
+DEV-AUDIT-01 deberá distinguir conceptualmente:
+
+- actor/persona;
+- estación/dispositivo.
+
+Una identidad de estación permite conocer qué dispositivo ejecutó una acción, pero no necesariamente qué persona física estaba utilizándolo.
+
+---
+
+## 17. DEV-AUDIT-01 — Auditoría operacional
+
+**Estado: BACKLOG**
+
+La nueva identidad individual de operadores habilita trazabilidad, pero todavía no existe un log operacional integral.
+
+Objetivo futuro:
+
+Registrar eventos relevantes de manera append-only.
+
+Campos candidatos:
+
+- usuario operacional;
+- auth user;
+- rol al momento del evento;
+- estación/dispositivo cuando corresponda;
+- tipo de evento;
+- recurso;
+- identificador del recurso;
+- timestamp UTC;
+- metadata;
+- IP/user-agent cuando sea técnicamente pertinente.
+
+Eventos candidatos:
+
+- LOGIN_SUCCESS;
+- LOGOUT;
+- SALE_CREATED;
+- ORDER_STATUS_CHANGED;
+- CASH_OPENED;
+- CASH_CLOSED;
+- INVENTORY_ADJUSTMENT;
+- RECEIPT_CREATED;
+- CAMPAIGN_CHANGED;
+- USER_CHANGED.
+
+Inicialmente, accesos fuera de horario deben observarse/auditarse; no bloquearse automáticamente sin una regla de negocio explícita.
+
+---
+
+## 18. DEV-LOY-EXP-02 — Expiración de premios
+
+**Estado: BACKLOG**
+
+Revisar el ciclo completo de expiración de premios de campañas.
+
+Principio funcional esperado:
+
+Un premio debe expirar por su fecha límite/vigencia, no porque un usuario presione manualmente un botón global.
+
+El DEV deberá:
+
+- identificar la fuente canónica de vencimiento;
+- revisar la semántica real de `expire_customer_rewards`;
+- automatizar la expiración cuando termine la vigencia;
+- verificar cómo consultas/canjes tratan premios vencidos;
+- revisar la necesidad de mantener una acción manual de contingencia.
+
+Si permanece una acción manual global, su autorización deberá evaluarse para admin/superadmin y nunca asumirse como operación cashier.
+
+No mezclar este cambio con AUTH ya cerrado.
+
+---
+
+## 19. DEV-AUTH-UX-01 — UX de contraseñas
+
+**Estado: BACKLOG**
+
+Toda superficie en que un usuario cree o defina contraseña debe incorporar:
+
+- control mostrar/ocultar contraseña;
+- confirmación de contraseña;
+- validación de coincidencia antes de enviar.
+
+Auditar como mínimo `/activar-acceso` y cualquier otro flujo vigente de definición/restablecimiento de contraseña.
+
+---
+
+## 20. Deuda técnica conocida
+
+### TypeScript
+
+Existe deuda TypeScript preexistente al cierre de DEV-AUTH-01.
+
+Baseline observado: 12 errores primarios conocidos en:
+
+- `app/api/dashboard/overview/route.ts`;
+- `app/api/operacion/sales/export/route.ts`;
+- `app/api/subscriptions/register-consumption/route.ts`;
+- `app/clientes/page.tsx`;
+- `app/operacion/page.tsx`;
+- `components/operations/OrderQueueCard.tsx`.
+
+No atribuir estos errores automáticamente a DEV posteriores.
+
+Resolverlos mediante trabajo técnico controlado cuando corresponda.
+
+### ESLint
+
+Existe deuda ESLint preexistente.
+
+Último diagnóstico conocido:
+
+- 46 problemas;
+- 16 errores;
+- 30 warnings.
+
+No mezclar correcciones masivas de lint con DEV funcionales no relacionados.
+
+---
+
+## 21. Decisiones pendientes de negocio/métrica
 
 No forzar definiciones hasta contar con criterio suficiente para:
 
@@ -655,75 +867,91 @@ No forzar definiciones hasta contar con criterio suficiente para:
 
 ---
 
-## 17. Secuencia estratégica acordada
+## 22. Secuencia estratégica vigente
 
-No construir todavía el frontend Analytics.
+Secuencia acordada:
 
-Secuencia:
+1. DEV-AUTH-01 — CERRADO;
+2. actualizar Status Pack — ESTE CORTE;
+3. DEV-UX-ARCH-01 — arquitectura final de información/navegación/workspaces por rol;
+4. iniciar implementación de frontend/flujo definitivo según arquitectura aprobada;
+5. construir Analytics UI dentro de esa arquitectura;
+6. abordar DEV específicos del backlog según prioridad y dependencia.
 
-1. completar DEV-AUTH-01;
-2. revisar y corregir autorización existente/legacy;
-3. definir arquitectura final del frontend;
-4. construir Analytics UI sobre la capa analítica ya cerrada.
+Analytics backend permanece cerrado y disponible para consumo.
 
-Analytics permanece `service_role`-only mientras DEV-AUTH-01 no esté cerrado.
+El frontend Analytics no debe construirse como una arquitectura paralela ni utilizarse para definir la navegación general de Plataforma Nook.
 
 ---
 
-## 18. Documentación legacy
+## 23. Documentación legacy
 
 Los documentos históricos de `docs/` creados durante etapas anteriores continúan siendo útiles como referencia conceptual, pero varios estados funcionales quedaron obsoletos.
 
-En particular, documentación que aún presenta Ventas, Inventario o Inteligencia Comercial como módulos futuros NO representa el estado actual.
+En particular, documentación que aún presenta Ventas, Inventario, Inteligencia Comercial o AUTH como módulos futuros/en curso NO representa el estado vigente.
 
 No eliminar ni reescribir masivamente esos documentos sin un DEV documental específico.
 
 ---
 
-## 19. Punto exacto de continuidad
+## 24. Punto exacto de continuidad
 
 ### Cerrado inmediatamente antes de este corte
 
-- DEV-ANL-01 — backend analítico
-- DEV-CASH-02 — retiro recomendado y comprobante de cierre
-- DEV-AUTH-01.0 — radiografía de autenticación/autorización
+- DEV-ANL-01 — backend analítico;
+- DEV-CASH-02 — retiro recomendado y comprobante de cierre;
+- DEV-AUTH-01 — identidad operacional, RBAC, gestión de usuarios y retiro legacy.
 
 ### Siguiente trabajo
 
-**DEV-AUTH-01.1 — Motor de autenticación operacional**
+**DEV-UX-ARCH-01 — Rediseñar arquitectura de información y navegación por rol**
 
-Objetivo inmediato:
+Objetivo:
 
-Reemplazar progresivamente el esquema legacy basado en credenciales de entorno y cookies de confianza por autenticación operacional basada en Supabase Auth, vinculada a `operational_users` y verificada server-side.
+Definir la arquitectura final del frontend antes de continuar agregando superficies independientes.
 
-### Restricciones de implementación
+Debe resolver, como mínimo:
 
+- shell/navegación por rol;
+- workspace operacional;
+- módulos visibles por rol;
+- separación entre operación y administración;
+- preservación de estado del POS;
+- pantalla global de Clientes vs uso contextual de clientes;
+- campañas vigentes para operación vs gestión de campañas;
+- caja y responsable de sesión;
+- estaciones/tablets de preparación;
+- convivencia futura de Analytics dentro de la arquitectura;
+- superficies legacy que se mantienen, migran o desaparecen;
+- orden de migración hacia la arquitectura definitiva.
+
+### Restricciones
+
+- no debilitar RBAC ya cerrado;
+- no usar ocultamiento frontend como sustituto de autorización;
 - no mezclar clientes con usuarios operacionales;
 - no abrir Analytics directamente a `authenticated`;
 - no utilizar `service_role` en browser;
-- no retirar el mecanismo legacy hasta tener el reemplazo validado;
-- no romper acceso productivo durante la migración;
-- mantener posibilidad de rollback durante el cambio de autenticación;
-- aplicar cambios de autorización después de establecer una identidad operacional confiable.
+- no diseñar navegación únicamente alrededor de las URLs históricas;
+- priorizar continuidad operacional del POS durante la migración.
 
-### Primera acción DEV-AUTH-01.1
+### Primera acción DEV-UX-ARCH-01
 
-Inspeccionar y definir el mecanismo exacto de sesión Supabase Auth para operadores considerando la arquitectura actual:
+Levantar un inventario funcional de las superficies actuales y clasificarlas por:
 
-- `lib/supabase-server.ts`;
-- `lib/supabase.ts`;
-- `lib/supabase-admin.ts`;
-- `/api/login`;
-- `/api/session`;
-- `/api/logout`;
-- `/admin/login`;
-- `lib/operation-auth.ts`.
+1. operación;
+2. administración;
+3. analítica;
+4. cliente/público;
+5. infraestructura/técnico.
 
-Resolver explícitamente la convivencia entre:
+Luego mapear cada superficie contra:
 
-- autenticación cliente existente;
-- autenticación operacional;
-- cookies SSR de Supabase;
-- vínculo `auth.users ↔ operational_users`.
+- rol autorizado;
+- capacidad RBAC;
+- frecuencia de uso;
+- criticidad operacional;
+- dependencia con POS;
+- estado actual: conservar / mover / rediseñar / retirar.
 
-No modificar autenticación productiva hasta cerrar este diseño técnico.
+No implementar todavía cambios masivos de frontend antes de cerrar este blueprint.
