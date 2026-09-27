@@ -501,6 +501,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const requestStartedAt = performance.now();
+
   const session = await getOperationSession();
 
   const authorization = authorizeOperationSession(session, "sales.operate");
@@ -1227,6 +1229,8 @@ export async function POST(req: Request) {
       }
     }
 
+    const rpcStartedAt = performance.now();
+
     const { data, error } = await supabaseAdmin.rpc(
       "create_local_sale_with_order_v2",
       {
@@ -1248,6 +1252,8 @@ export async function POST(req: Request) {
         p_actor_identifier: null,
       },
     );
+
+    const rpcDurationMs = performance.now() - rpcStartedAt;
 
     if (error) {
       await recordAuditLogSafely({
@@ -1305,7 +1311,20 @@ export async function POST(req: Request) {
       );
     }
 
-    await recordAuditLogSafely({
+    const warnings: string[] = [];
+
+    /*
+     * La venta ya fue creada correctamente por el RPC.
+     *
+     * Auditoría y evento de cliente son trazabilidad posterior.
+     * Ambos se ejecutan en paralelo para no sumar sus latencias
+     * secuencialmente al tiempo de confirmación del POS.
+     *
+     * Seguimos esperando ambos antes de responder:
+     * no sacrificamos trazabilidad ni dependemos de trabajo
+     * asíncrono no garantizado después de finalizar la request.
+     */
+    const auditPromise = recordAuditLogSafely({
       module: "pos",
       action: "sale.created",
 
@@ -1356,44 +1375,41 @@ export async function POST(req: Request) {
       ]),
     });
 
-    const warnings: string[] = [];
+    const customerEventPromise = recordCustomerEvent({
+      customerId,
+      eventType: "sale.created",
+      sourceModule: "sales",
+      sourceEntityType: "sale",
+      sourceEntityId: createdSaleId,
+      saleId: createdSaleId,
+      actorRole: session.role,
+      idempotencyKey: buildCustomerEventIdempotencyKey([
+        "sale-created",
+        createdSaleId,
+      ]),
+      metadata: {
+        channel,
+        externalOrderId: externalOrderId || null,
+        cashRegisterSessionId,
+        paymentMethod,
+        itemLines: normalizedItems.length,
+        hasCustomer: customerId !== null,
+        manualDiscountType,
+        manualDiscountValue,
+        manualDiscountReason,
+        rewardId,
+      },
+    });
 
-    /*
-     * La venta ya fue creada correctamente.
-     * El registro del evento es trazabilidad secundaria:
-     * si falla, no debemos informar al cajero que la venta falló,
-     * porque eso podría provocar una venta duplicada.
-     */
-    try {
-      await recordCustomerEvent({
-        customerId,
-        eventType: "sale.created",
-        sourceModule: "sales",
-        sourceEntityType: "sale",
-        sourceEntityId: createdSaleId,
-        saleId: createdSaleId,
-        actorRole: session.role,
-        idempotencyKey: buildCustomerEventIdempotencyKey([
-          "sale-created",
-          createdSaleId,
-        ]),
-        metadata: {
-          channel,
-          externalOrderId: externalOrderId || null,
-          cashRegisterSessionId,
-          paymentMethod,
-          itemLines: normalizedItems.length,
-          hasCustomer: customerId !== null,
-          manualDiscountType,
-          manualDiscountValue,
-          manualDiscountReason,
-          rewardId,
-        },
-      });
-    } catch (eventError) {
+    const [, customerEventResult] = await Promise.allSettled([
+      auditPromise,
+      customerEventPromise,
+    ]);
+
+    if (customerEventResult.status === "rejected") {
       console.error(
         "Venta creada, pero falló el registro del evento sale.created:",
-        eventError,
+        customerEventResult.reason,
       );
 
       warnings.push(
@@ -1401,16 +1417,28 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      saleId: createdSaleId,
-      result: data,
-      warnings,
-      message:
-        warnings.length > 0
-          ? "Venta creada correctamente, con advertencias."
-          : "Venta creada correctamente.",
-    });
+    const totalDurationMs = performance.now() - requestStartedAt;
+
+    return NextResponse.json(
+      {
+        ok: true,
+        saleId: createdSaleId,
+        result: data,
+        warnings,
+        message:
+          warnings.length > 0
+            ? "Venta creada correctamente, con advertencias."
+            : "Venta creada correctamente.",
+      },
+      {
+        headers: {
+          "Server-Timing": [
+            `sale-rpc;dur=${rpcDurationMs.toFixed(1)}`,
+            `sale-total;dur=${totalDurationMs.toFixed(1)}`,
+          ].join(", "),
+        },
+      },
+    );
   } catch (error) {
     console.error("Error creando venta:", error);
 
