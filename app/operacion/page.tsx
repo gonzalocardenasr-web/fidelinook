@@ -485,7 +485,7 @@ export default function OperacionPage() {
       await fetch("/api/logout", {
         method: "POST",
       });
-      window.location.href = "/login";
+      window.location.href = "/admin/login";
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
       setTipoMensaje("error");
