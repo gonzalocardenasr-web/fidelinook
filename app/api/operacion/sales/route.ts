@@ -121,6 +121,7 @@ function getItemFlavorIds(item: unknown): number[] {
 
 export async function GET(req: Request) {
   const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
 
   const authorization = authorizeOperationSession(session, "sales.operate");
 
@@ -504,6 +505,7 @@ export async function POST(req: Request) {
   const requestStartedAt = performance.now();
 
   const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
 
   const authorization = authorizeOperationSession(session, "sales.operate");
 
@@ -521,6 +523,8 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const correlationId = createCorrelationId("sale-create");
+
+    const cashValidationStartedAt = performance.now();
 
     const { data: activeCashSession, error: activeCashSessionError } =
       await supabaseAdmin
@@ -574,6 +578,9 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
+
+    const cashValidationDurationMs =
+      performance.now() - cashValidationStartedAt;
 
     const orderNotes = String(body.orderNotes || "").trim();
 
@@ -1024,6 +1031,8 @@ export async function POST(req: Request) {
      * - información desactualizada en el POS;
      * - cambios de inventario entre configuración y confirmación.
      */
+    const prevalidationStartedAt = performance.now();
+
     const productItems = normalizedItems.filter(
       (item) => item.item_type === "PRODUCT",
     );
@@ -1229,6 +1238,9 @@ export async function POST(req: Request) {
       }
     }
 
+    const prevalidationDurationMs =
+      performance.now() - prevalidationStartedAt;
+
     const rpcStartedAt = performance.now();
 
     const { data, error } = await supabaseAdmin.rpc(
@@ -1310,6 +1322,8 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
+
+    const postSaleStartedAt = performance.now();
 
     const warnings: string[] = [];
 
@@ -1417,6 +1431,7 @@ export async function POST(req: Request) {
       );
     }
 
+    const postSaleDurationMs = performance.now() - postSaleStartedAt;
     const totalDurationMs = performance.now() - requestStartedAt;
 
     return NextResponse.json(
@@ -1433,7 +1448,11 @@ export async function POST(req: Request) {
       {
         headers: {
           "Server-Timing": [
+            `sale-auth;dur=${authDurationMs.toFixed(1)}`,
+            `sale-cash;dur=${cashValidationDurationMs.toFixed(1)}`,
+            `sale-prevalidation;dur=${prevalidationDurationMs.toFixed(1)}`,
             `sale-rpc;dur=${rpcDurationMs.toFixed(1)}`,
+            `sale-post;dur=${postSaleDurationMs.toFixed(1)}`,
             `sale-total;dur=${totalDurationMs.toFixed(1)}`,
           ].join(", "),
         },
