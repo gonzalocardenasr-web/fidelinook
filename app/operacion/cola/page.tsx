@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import OrderQueue from "../../../components/operations/OrderQueue";
 import { QueueOrder, OrderStatus } from "../../../types/operations";
+import { supabase } from "../../../lib/supabase";
 
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -47,19 +48,14 @@ export default function ColaPreparacionPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    cargarPedidos();
+  const realtimeRefreshTimeoutRef = useRef<number | null>(null);
 
-    const interval = window.setInterval(cargarPedidos, 5000);
-
-    return () => window.clearInterval(interval);
-  }, []);
-
-  async function cargarPedidos() {
+  const cargarPedidos = useCallback(async () => {
     try {
       const res = await fetchWithSessionRecovery("/api/operacion/orders", {
         cache: "no-store",
       });
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -68,13 +64,63 @@ export default function ColaPreparacionPage() {
       }
 
       setOrders(data.orders || []);
+      setMessage("");
     } catch (error) {
       console.error(error);
       setMessage("Error cargando cola.");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void cargarPedidos();
+
+    const scheduleRealtimeRefresh = () => {
+      if (realtimeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        realtimeRefreshTimeoutRef.current = null;
+        void cargarPedidos();
+      }, 300);
+    };
+
+    const channel = supabase
+      .channel("nook-preparation-orders")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          scheduleRealtimeRefresh();
+        },
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Preparation queue Realtime status:", status);
+        }
+      });
+
+    const fallbackInterval = window.setInterval(() => {
+      void cargarPedidos();
+    }, 120000);
+
+    return () => {
+      window.clearInterval(fallbackInterval);
+
+      if (realtimeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+
+      void supabase.removeChannel(channel);
+    };
+  }, [cargarPedidos]);
 
   async function cambiarEstado(orderId: number, newStatus: OrderStatus) {
     try {
