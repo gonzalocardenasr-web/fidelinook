@@ -8,6 +8,7 @@ import { sendReactivationEmail } from "./sendReactivationEmail";
 import { sendPrizeExpiringReminderEmail } from "./sendPrizeExpiringReminderEmail";
 import { sendCardActivatedEmail } from "./sendCardActivatedEmail";
 import { sendResetPasswordEmail } from "./sendResetPasswordEmail";
+import { sendOperatorInvitationEmail } from "./sendOperatorInvitationEmail";
 import { sendCampaignRewardAssignedEmail } from "./sendCampaignRewardAssignedEmail";
 import { sendPrizeEmail } from "./sendPrizeEmail";
 import { sendRewardRedeemedEmail } from "./sendRewardRedeemedEmail";
@@ -233,6 +234,8 @@ async function sendQueuedEmail(email: EmailQueueRow): Promise<string | null> {
 
     case "PASSWORD_RESET":
       return sendQueuedPasswordReset(email);
+    case "OPERATOR_INVITATION":
+      return sendQueuedOperatorInvitation(email);
 
     case "CAMPAIGN_REWARD_ASSIGNED":
       return sendQueuedCampaignRewardAssigned(email);
@@ -371,6 +374,33 @@ async function sendQueuedPasswordReset(
   return result.data?.id ?? null;
 }
 
+async function sendQueuedOperatorInvitation(
+  email: EmailQueueRow,
+): Promise<string | null> {
+  const displayName = email.payload?.displayName;
+  const activationUrl = email.payload?.activationUrl;
+
+  if (typeof displayName !== "string" || !displayName.trim()) {
+    throw new Error(
+      "OPERATOR_INVITATION payload requires displayName",
+    );
+  }
+
+  if (typeof activationUrl !== "string" || !activationUrl.trim()) {
+    throw new Error(
+      "OPERATOR_INVITATION payload requires activationUrl",
+    );
+  }
+
+  const result = await sendOperatorInvitationEmail(
+    email.recipient_email,
+    displayName,
+    activationUrl,
+    email.idempotency_key,
+  );
+
+  return result.data?.id ?? null;
+}
 async function sendQueuedCampaignRewardAssigned(
   email: EmailQueueRow,
 ): Promise<string | null> {
