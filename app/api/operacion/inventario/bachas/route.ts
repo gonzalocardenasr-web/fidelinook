@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { InventoryBatchItem } from "@/lib/inventory/batches";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type InventoryItemRow = {
   id: number;
@@ -102,10 +103,15 @@ async function loadBatchItems(): Promise<InventoryBatchItem[]> {
 export async function GET() {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.stock.read",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
@@ -132,10 +138,15 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.movements.operate",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 

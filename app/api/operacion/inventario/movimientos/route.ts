@@ -6,6 +6,7 @@ import type {
 } from "@/lib/inventory/movements";
 import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type InventoryItemRelation = {
   id: number;
@@ -163,10 +164,15 @@ function buildOptions(
 export async function GET(request: NextRequest) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.movements.operate",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 

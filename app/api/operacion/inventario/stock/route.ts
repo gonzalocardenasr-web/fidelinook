@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { InventoryStockItem } from "@/lib/inventory/stock";
 import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type OperationalStockRow = {
   inventory_item_id: number | string;
@@ -37,15 +38,15 @@ function mapStockItem(row: OperationalStockRow): InventoryStockItem {
 export async function GET() {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.stock.read",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      {
-        ok: false,
-        message: "No autenticado.",
-      },
-      {
-        status: 401,
-      },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 

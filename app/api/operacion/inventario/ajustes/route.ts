@@ -6,6 +6,7 @@ import type {
 } from "@/lib/inventory/adjustments";
 import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 const VALID_KINDS = new Set<InventoryAdjustmentKind>([
   "ADJUSTMENT_POSITIVE",
@@ -78,10 +79,15 @@ async function loadItems(): Promise<InventoryAdjustmentItem[]> {
 export async function GET() {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.movements.operate",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
@@ -105,10 +111,15 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok || !session.role) {
+  const authorization = authorizeOperationSession(
+    session,
+    "inventory.movements.operate",
+  );
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      { ok: false, message: authorization.message },
+      { status: authorization.status },
     );
   }
 
