@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type ExportOrder = {
   display_order_code?: string | null;
@@ -189,6 +190,21 @@ export async function GET(req: Request) {
     return NextResponse.json(
       { ok: false, message: "No autenticado." },
       { status: 401 },
+    );
+  }
+  const authorization = authorizeOperationSession(
+    session,
+    "sales.export",
+  );
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: authorization.code,
+        message: authorization.message,
+      },
+      { status: authorization.status },
     );
   }
 

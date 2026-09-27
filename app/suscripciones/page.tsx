@@ -370,8 +370,10 @@ export default function SuscripcionesPage() {
 
   const cerrarSesion = async () => {
     try {
-      await supabase.auth.signOut();
-      router.push("/login");
+      await fetch("/api/logout", {
+        method: "POST",
+      });
+      router.push("/admin/login");
     } catch (error) {
       console.error("Error cerrando sesión:", error);
     }

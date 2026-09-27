@@ -18,7 +18,7 @@ export type OperationSession =
       userId: string;
       authUserId: string | null;
       displayName: string | null;
-      source: "supabase" | "legacy";
+      source: "supabase";
     }
   | {
       ok: false;
@@ -129,49 +129,6 @@ async function getSupabaseOperationSession(): Promise<OperationSession> {
   };
 }
 
-async function getLegacyOperationSession(): Promise<OperationSession> {
-  const cookieStore = await cookies();
-
-  const auth = cookieStore.get("fidelinook_auth")?.value;
-  const role = cookieStore.get("fidelinook_role")?.value;
-  const userId = cookieStore.get("fidelinook_user_id")?.value ?? null;
-
-  if (auth !== "ok" || (role !== "admin" && role !== "superadmin") || !userId) {
-    return emptyOperationSession();
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("operational_users")
-    .select("id, auth_user_id, display_name, role, is_active")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (
-    error ||
-    !data ||
-    !data.is_active ||
-    data.role !== role ||
-    !isOperationRole(data.role)
-  ) {
-    return emptyOperationSession();
-  }
-
-  return {
-    ok: true,
-    role: data.role,
-    userId: data.id,
-    authUserId: data.auth_user_id ?? null,
-    displayName: data.display_name ?? null,
-    source: "legacy",
-  };
-}
-
 export async function getOperationSession(): Promise<OperationSession> {
-  const supabaseSession = await getSupabaseOperationSession();
-
-  if (supabaseSession.ok) {
-    return supabaseSession;
-  }
-
-  return getLegacyOperationSession();
+  return getSupabaseOperationSession();
 }

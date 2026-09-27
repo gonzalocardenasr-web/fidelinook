@@ -12,10 +12,7 @@ export function middleware(req: NextRequest) {
 
   const operationalAccessToken = req.cookies.get("nook_op_access_token")?.value;
 
-  const legacyAuth = req.cookies.get("fidelinook_auth")?.value;
-
-  const tieneSesionOperacional =
-    Boolean(operationalAccessToken) || legacyAuth === "ok";
+  const tieneSesionOperacional = Boolean(operationalAccessToken);
 
   if (!tieneSesionOperacional) {
     const loginUrl = new URL("/admin/login", req.url);

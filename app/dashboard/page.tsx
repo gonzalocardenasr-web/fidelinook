@@ -407,7 +407,7 @@ export default function DashboardPage() {
   const cerrarSesion = async () => {
   try {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/admin/login");
   } catch (error) {
     console.error("Error cerrando sesión:", error);
   }

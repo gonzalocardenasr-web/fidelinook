@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getOperationSession } from "../../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 
 type RouteContext = {
@@ -21,6 +22,21 @@ export async function GET(_req: Request, context: RouteContext) {
       {
         status: 401,
       },
+    );
+  }
+  const authorization = authorizeOperationSession(
+    session,
+    "sales.operate",
+  );
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: authorization.code,
+        message: authorization.message,
+      },
+      { status: authorization.status },
     );
   }
 

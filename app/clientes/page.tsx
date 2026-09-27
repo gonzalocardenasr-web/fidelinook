@@ -284,7 +284,7 @@ export default function ClientesPage() {
       await fetch("/api/logout", {
         method: "POST",
       });
-      window.location.href = "/login";
+      window.location.href = "/admin/login";
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
       setMensaje("No se pudo cerrar sesión.");

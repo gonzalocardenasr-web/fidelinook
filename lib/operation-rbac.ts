@@ -2,6 +2,7 @@ import type { OperationRole, OperationSession } from "@/lib/operation-auth";
 
 export type OperationPermission =
   | "sales.operate"
+  | "sales.export"
   | "orders.operate"
   | "customers.operate"
   | "loyalty.operate"
@@ -33,6 +34,7 @@ const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
 
 const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
   ...CASHIER_PERMISSIONS,
+  "sales.export",
   "catalog.manage",
   "inventory.receipts.manage",
   "inventory.config.manage",
