@@ -1,20 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  const auth = req.cookies.get("fidelinook_auth")?.value;
-  const role = req.cookies.get("fidelinook_role")?.value;
-  const userId = req.cookies.get("fidelinook_user_id")?.value ?? null;
+import { getOperationSession } from "@/lib/operation-auth";
 
-  if (auth !== "ok" || (role !== "admin" && role !== "superadmin")) {
+export async function GET() {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
+      {
+        ok: false,
+        message: "No autenticado.",
+      },
       { status: 401 },
     );
   }
 
   return NextResponse.json({
     ok: true,
-    role,
-    userId,
+    role: session.role,
+    userId: session.userId,
+    authUserId: session.authUserId,
+    displayName: session.displayName,
+    authSource: session.source,
   });
 }
