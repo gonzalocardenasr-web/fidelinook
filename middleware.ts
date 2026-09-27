@@ -10,10 +10,15 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const auth = req.cookies.get("fidelinook_auth")?.value;
+  const operationalAccessToken = req.cookies.get("nook_op_access_token")?.value;
 
-  if (auth !== "ok") {
-    const loginUrl = new URL("/login", req.url);
+  const legacyAuth = req.cookies.get("fidelinook_auth")?.value;
+
+  const tieneSesionOperacional =
+    Boolean(operationalAccessToken) || legacyAuth === "ok";
+
+  if (!tieneSesionOperacional) {
+    const loginUrl = new URL("/admin/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
