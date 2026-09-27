@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../lib/operation-auth";
 import {
@@ -189,9 +189,7 @@ function getOperationalHistoryStartIso(now = new Date()): string {
   const offsetMatch = offsetLabel.match(/^GMT([+-])(\d{2}):(\d{2})$/);
 
   if (!offsetMatch) {
-    throw new Error(
-      "No fue posible determinar el huso horario operacional.",
-    );
+    throw new Error("No fue posible determinar el huso horario operacional.");
   }
 
   const sign = offsetMatch[1] === "+" ? 1 : -1;
@@ -509,28 +507,6 @@ export async function GET(req: Request) {
           status,
           notes,
           created_at
-        ),
-        sale_items (
-        id,
-        item_type,
-        product_id,
-        product_sku,
-        product_name,
-        quantity,
-        list_unit_price,
-        unit_price,
-        discount_total,
-        total_price,
-        is_gift,
-        gift_reason,
-        loyalty_eligible,
-        notes,
-          sale_item_options (
-            id,
-            option_group_code,
-            option_value_name,
-            quantity
-          )
         )
       `,
       {
@@ -1360,8 +1336,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const prevalidationDurationMs =
-      performance.now() - prevalidationStartedAt;
+    const prevalidationDurationMs = performance.now() - prevalidationStartedAt;
 
     const rpcStartedAt = performance.now();
 
