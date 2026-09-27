@@ -24,6 +24,8 @@ import {
   recordAuditLogSafely,
 } from "../../../../../lib/audit-logs";
 
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
 const allowedStatuses = [
   "pending",
   "preparing",
@@ -41,13 +43,15 @@ function isAllowedStatus(value: string): value is AllowedStatus {
 export async function POST(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(session, "orders.operate");
+
+  if (!authorization.ok) {
     return NextResponse.json(
       {
         ok: false,
-        message: "No autenticado.",
+        message: authorization.message,
       },
-      { status: 401 },
+      { status: authorization.status },
     );
   }
 

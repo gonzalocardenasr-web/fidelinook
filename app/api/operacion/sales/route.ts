@@ -10,6 +10,7 @@ import {
   createCorrelationId,
   recordAuditLogSafely,
 } from "../../../../lib/audit-logs";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 function getCreatedSaleId(result: unknown): number | null {
   if (!result) return null;
@@ -121,10 +122,15 @@ function getItemFlavorIds(item: unknown): number[] {
 export async function GET(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
     );
   }
 
@@ -497,10 +503,15 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
     return NextResponse.json(
-      { ok: false, message: "No autenticado." },
-      { status: 401 },
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
     );
   }
 

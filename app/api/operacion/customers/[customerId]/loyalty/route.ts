@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
 import { getOperationSession } from "../../../../../../lib/operation-auth";
 import { getCustomerLoyalty } from "../../../../../../lib/loyalty";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 
 type RouteContext = {
   params: Promise<{
@@ -13,13 +14,15 @@ type RouteContext = {
 export async function GET(_req: Request, context: RouteContext) {
   const session = await getOperationSession();
 
-  if (!session.ok) {
+  const authorization = authorizeOperationSession(session, "loyalty.operate");
+
+  if (!authorization.ok) {
     return NextResponse.json(
       {
         ok: false,
-        message: "No autenticado.",
+        message: authorization.message,
       },
-      { status: 401 },
+      { status: authorization.status },
     );
   }
 
