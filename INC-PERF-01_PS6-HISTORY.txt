@@ -1,0 +1,2746 @@
+﻿============================================================
+INC-PERF-01 — PS6 HISTORIAL OPERACIONAL
+Generated: 2026-09-27 17:52:29
+============================================================
+
+============================================================
+1. GET /api/operacion/sales
+============================================================
+export async function GET(req: Request) {
+  const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
+
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+
+    const requestedPage = Number(searchParams.get("page") || 1);
+    const requestedPageSize = Number(searchParams.get("pageSize") || 50);
+
+    const page =
+      Number.isFinite(requestedPage) && requestedPage > 0
+        ? Math.floor(requestedPage)
+        : 1;
+
+    const pageSize =
+      Number.isFinite(requestedPageSize) && requestedPageSize > 0
+        ? Math.min(Math.floor(requestedPageSize), 100)
+        : 50;
+
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
+    const search = String(searchParams.get("search") || "").trim();
+    const channel = String(searchParams.get("channel") || "").trim();
+    const paymentMethod = String(
+      searchParams.get("paymentMethod") || "",
+    ).trim();
+    const orderStatus = String(searchParams.get("orderStatus") || "").trim();
+    const customerType = String(searchParams.get("customerType") || "").trim();
+
+    const rangeFrom = (page - 1) * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+
+    /*
+     * Algunos filtros dependen de tablas relacionadas:
+     * - estado del pedido → orders
+     * - búsqueda por cliente → clientes
+     * - búsqueda por código del pedido → orders
+     *
+     * Primero obtenemos los IDs de ventas candidatas y luego
+     * aplicamos esa lista a la consulta principal.
+     */
+    let candidateSaleIds: Set<number> | null = null;
+
+    function intersectCandidateIds(
+      currentIds: Set<number> | null,
+      ids: number[],
+    ): Set<number> {
+      const nextIds = new Set(ids);
+
+      if (currentIds === null) {
+        return nextIds;
+      }
+
+      return new Set([...currentIds].filter((id) => nextIds.has(id)));
+    }
+
+    if (orderStatus) {
+      const { data: statusOrders, error: statusError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .eq("status", orderStatus);
+
+      if (statusError) {
+        return NextResponse.json(
+          { ok: false, message: statusError.message },
+          { status: 500 },
+        );
+      }
+
+      candidateSaleIds = intersectCandidateIds(
+        candidateSaleIds,
+        (statusOrders || [])
+          .map((order) => Number(order.sale_id))
+          .filter((id) => Number.isFinite(id)),
+      );
+    }
+
+    if (search) {
+      const safeSearch = search.replace(/[,%()]/g, " ").trim();
+      const searchSaleIds = new Set<number>();
+
+      const { data: directSales, error: directSalesError } = await supabaseAdmin
+        .from("sales")
+        .select("id")
+        .or(
+          [
+            `sale_number.ilike.%${safeSearch}%`,
+            `external_order_id.ilike.%${safeSearch}%`,
+            `channel.ilike.%${safeSearch}%`,
+            `payment_method.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (directSalesError) {
+        return NextResponse.json(
+          { ok: false, message: directSalesError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const sale of directSales || []) {
+        searchSaleIds.add(Number(sale.id));
+      }
+
+      const numericSearch = Number(search);
+
+      if (Number.isInteger(numericSearch) && numericSearch > 0) {
+        const { data: numericSale, error: numericSaleError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .eq("id", numericSearch);
+
+        if (numericSaleError) {
+          return NextResponse.json(
+            { ok: false, message: numericSaleError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of numericSale || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingCustomers, error: customersError } =
+        await supabaseAdmin
+          .from("clientes")
+          .select("id")
+          .or(
+            [
+              `nombre.ilike.%${safeSearch}%`,
+              `correo.ilike.%${safeSearch}%`,
+              `telefono.ilike.%${safeSearch}%`,
+            ].join(","),
+          );
+
+      if (customersError) {
+        return NextResponse.json(
+          { ok: false, message: customersError.message },
+          { status: 500 },
+        );
+      }
+
+      const customerIds = (matchingCustomers || [])
+        .map((customer) => Number(customer.id))
+        .filter((id) => Number.isFinite(id));
+
+      if (customerIds.length > 0) {
+        const { data: customerSales, error: customerSalesError } =
+          await supabaseAdmin
+            .from("sales")
+            .select("id")
+            .in("customer_id", customerIds);
+
+        if (customerSalesError) {
+          return NextResponse.json(
+            { ok: false, message: customerSalesError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const sale of customerSales || []) {
+          searchSaleIds.add(Number(sale.id));
+        }
+      }
+
+      const { data: matchingOrders, error: ordersError } = await supabaseAdmin
+        .from("orders")
+        .select("sale_id")
+        .or(
+          [
+            `display_order_code.ilike.%${safeSearch}%`,
+            `status.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+
+      if (ordersError) {
+        return NextResponse.json(
+          { ok: false, message: ordersError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const order of matchingOrders || []) {
+        const saleId = Number(order.sale_id);
+
+        if (Number.isFinite(saleId)) {
+          searchSaleIds.add(saleId);
+        }
+      }
+
+      candidateSaleIds = intersectCandidateIds(candidateSaleIds, [
+        ...searchSaleIds,
+      ]);
+    }
+
+    /*
+     * Si los filtros relacionados no encontraron ninguna venta,
+     * respondemos inmediatamente sin ejecutar una consulta inválida
+     * con .in("id", []).
+     */
+    if (candidateSaleIds !== null && candidateSaleIds.size === 0) {
+      return NextResponse.json({
+        ok: true,
+        sales: [],
+        pagination: {
+          page: 1,
+          pageSize,
+          total: 0,
+          totalPages: 1,
+          from: 0,
+          to: 0,
+        },
+      });
+    }
+
+    let query = supabaseAdmin.from("sales").select(
+      `
+        id,
+        sale_number,
+        channel,
+        external_order_id,
+        integration_source,
+        received_at,
+        customer_id,
+        status,
+        subtotal,
+        discount_total,
+        manual_discount_type,
+        manual_discount_value,
+        manual_discount_amount,
+        manual_discount_reason,
+        manual_discount_notes,
+        total,
+        loyalty_eligible_total,
+        payment_status,
+        payment_method,
+        actor_role,
+        confirmed_at,
+        created_at,
+        clientes (
+          id,
+          nombre,
+          correo,
+          telefono
+        ),
+        orders (
+          id,
+          business_date,
+          daily_order_number,
+          display_order_code,
+          status,
+          notes,
+          created_at
+        ),
+        sale_items (
+        id,
+        item_type,
+        product_id,
+        product_sku,
+        product_name,
+        quantity,
+        list_unit_price,
+        unit_price,
+        discount_total,
+        total_price,
+        is_gift,
+        gift_reason,
+        loyalty_eligible,
+        notes,
+          sale_item_options (
+            id,
+            option_group_code,
+            option_value_name,
+            quantity
+          )
+        )
+      `,
+      {
+        count: "exact",
+      },
+    );
+
+    if (candidateSaleIds !== null) {
+      query = query.in("id", [...candidateSaleIds]);
+    }
+
+    if (channel) {
+      query = query.eq("channel", channel);
+    }
+
+    if (paymentMethod) {
+      query = query.eq("payment_method", paymentMethod);
+    }
+
+    if (customerType === "identified") {
+      query = query.not("customer_id", "is", null);
+    }
+
+    if (customerType === "counter") {
+      query = query.is("customer_id", null);
+    }
+
+    if (dateFrom) {
+      const parsedDateFrom = new Date(dateFrom);
+
+      if (Number.isNaN(parsedDateFrom.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha inicial inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.gte("created_at", parsedDateFrom.toISOString());
+    }
+
+    if (dateTo) {
+      const parsedDateTo = new Date(dateTo);
+
+      if (Number.isNaN(parsedDateTo.getTime())) {
+        return NextResponse.json(
+          { ok: false, message: "Fecha final inválida." },
+          { status: 400 },
+        );
+      }
+
+      query = query.lt("created_at", parsedDateTo.toISOString());
+    }
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(rangeFrom, rangeTo);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, message: error.message },
+        { status: 500 },
+      );
+    }
+
+    const total = count || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return NextResponse.json({
+      ok: true,
+      sales: data || [],
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        from: total === 0 ? 0 : rangeFrom + 1,
+        to: Math.min(rangeFrom + (data?.length || 0), total),
+      },
+    });
+  } catch (error) {
+    console.error("Error cargando historial de ventas:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Error inesperado al cargar el historial de ventas.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  const requestStartedAt = performance.now();
+
+  const session = await getOperationSession();
+  const authDurationMs = performance.now() - requestStartedAt;
+
+  const authorization = authorizeOperationSession(session, "sales.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const body = await req.json();
+
+    const correlationId = createCorrelationId("sale-create");
+
+    const cashValidationStartedAt = performance.now();
+
+    const { data: activeCashSession, error: activeCashSessionError } =
+      await supabaseAdmin
+        .from("cash_register_sessions")
+        .select("id, status")
+        .eq("status", "OPEN")
+        .limit(1)
+        .maybeSingle();
+
+    if (activeCashSessionError) {
+      console.error(
+        "Error consultando caja abierta antes de crear venta:",
+        activeCashSessionError,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar el estado de la caja.",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!activeCashSession) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Debes abrir la caja antes de registrar una venta.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const cashRegisterSessionId = Number(activeCashSession.id);
+
+    if (
+      !Number.isInteger(cashRegisterSessionId) ||
+      cashRegisterSessionId <= 0
+    ) {
+      console.error(
+        "Caja abierta con identificador inválido:",
+        activeCashSession,
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "La sesión de caja activa no es válida.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const cashValidationDurationMs =
+      performance.now() - cashValidationStartedAt;
+
+    const orderNotes = String(body.orderNotes || "").trim();
+
+    const channel = String(body.channel || "local")
+      .trim()
+      .toLowerCase();
+
+    const externalOrderId = String(body.externalOrderId || "").trim();
+
+    const allowedChannels = ["local", "shopify", "uber_eats", "rappi"];
+
+    if (!allowedChannels.includes(channel)) {
+      return NextResponse.json(
+        { ok: false, message: "Canal de venta inválido." },
+        { status: 400 },
+      );
+    }
+
+    if (channel !== "local" && !externalOrderId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Los pedidos digitales requieren un número externo.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const customerId =
+      body.customerId === null ||
+      body.customerId === undefined ||
+      body.customerId === ""
+        ? null
+        : Number(body.customerId);
+
+    const rewardId =
+      body.rewardId === null ||
+      body.rewardId === undefined ||
+      body.rewardId === ""
+
+============================================================
+2. HISTORIAL DE VENTAS
+============================================================
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+import ClienteSelector, {
+  ClienteSelectorValue,
+} from "../../../components/client/ClienteSelector";
+
+type SaleItemOption = {
+  id: number;
+  option_group_code: string;
+  option_value_name: string;
+  quantity: number;
+};
+
+type SaleItem = {
+  id: number;
+  product_sku?: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes?: string | null;
+  sale_item_options?: SaleItemOption[];
+};
+
+type SaleOrder = {
+  id: number;
+  business_date?: string | null;
+  daily_order_number?: number | null;
+  display_order_code: string;
+  status: string;
+  notes?: string | null;
+  created_at?: string | null;
+};
+
+type SaleCustomer = {
+  id: number;
+  nombre?: string | null;
+  correo?: string | null;
+  telefono?: string | null;
+};
+
+type Sale = {
+  id: number;
+  sale_number?: string | null;
+  channel: string;
+  external_order_id?: string | null;
+  integration_source?: string | null;
+  received_at?: string | null;
+  customer_id?: number | null;
+  status: string;
+  subtotal: number;
+  discount_total: number;
+  manual_discount_type?: "percent" | "fixed" | null;
+  manual_discount_value?: number | null;
+  manual_discount_amount?: number | null;
+  manual_discount_reason?: string | null;
+  manual_discount_notes?: string | null;
+  total: number;
+  payment_status: string;
+  payment_method: string;
+  actor_role?: string | null;
+  confirmed_at?: string | null;
+  created_at: string;
+  clientes?: SaleCustomer | null;
+  orders?: SaleOrder[];
+  sale_items?: SaleItem[];
+};
+
+type SortField = "date" | "total" | "customer" | "channel";
+type SortDirection = "asc" | "desc";
+
+function formatMoney(value?: number | null) {
+  return `$${Number(value || 0).toLocaleString("es-CL")}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Santiago",
+  }).format(new Date(value));
+}
+
+function getChannelLabel(channel?: string | null) {
+  const normalized = String(channel || "local").toLowerCase();
+
+  if (normalized === "shopify") return "Shopify";
+
+  if (
+    normalized === "uber" ||
+    normalized === "uber_eats" ||
+    normalized === "ubereats"
+  ) {
+    return "Uber Eats";
+  }
+
+  if (normalized === "rappi") return "Rappi";
+
+  if (
+    normalized === "pedidosya" ||
+    normalized === "pedidos_ya" ||
+    normalized === "pedidos ya"
+  ) {
+    return "PedidosYa";
+  }
+
+  return "Local";
+}
+
+function getChannelClassName(channel?: string | null) {
+  const normalized = String(channel || "local").toLowerCase();
+
+  if (normalized === "shopify") {
+    return "bg-blue-100 text-blue-800";
+  }
+
+  if (
+    normalized === "uber" ||
+    normalized === "uber_eats" ||
+    normalized === "ubereats"
+  ) {
+    return "bg-green-100 text-green-800";
+  }
+
+  if (normalized === "rappi") {
+    return "bg-orange-100 text-orange-800";
+  }
+
+  if (
+    normalized === "pedidosya" ||
+    normalized === "pedidos_ya" ||
+    normalized === "pedidos ya"
+  ) {
+    return "bg-red-100 text-red-800";
+  }
+
+  return "bg-violet-100 text-violet-800";
+}
+
+function getPaymentMethodLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "efectivo") return "Efectivo";
+  if (normalized === "tarjeta") return "Tarjeta";
+  if (normalized === "transferencia") return "Transferencia";
+  if (normalized === "pago_electronico") return "Pago electrónico";
+
+  // Valores históricos: se mantienen para ventas anteriores.
+  if (normalized === "debito") return "Débito";
+  if (normalized === "credito") return "Crédito";
+  if (normalized === "manual") return "Plataforma";
+
+  return value || "—";
+}
+
+function getManualDiscountTypeLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "percent") return "Porcentaje";
+  if (normalized === "fixed") return "Monto fijo";
+
+  return value || "—";
+}
+
+function getManualDiscountReasonLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "courtesy") return "Cortesía comercial";
+  if (normalized === "complaint") return "Reclamo cliente";
+  if (normalized === "agreement") return "Convenio";
+  if (normalized === "exceptional_promotion") {
+    return "Promoción excepcional";
+  }
+  if (normalized === "service_error") return "Error en atención";
+  if (normalized === "other") return "Otro";
+
+  return value || "—";
+}
+
+function getOrderStatusLabel(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "pending") return "Pendiente";
+  if (normalized === "preparing") return "Preparando";
+  if (normalized === "ready") return "Listo";
+  if (normalized === "delivered") return "Entregado";
+  if (normalized === "cancelled") return "Cancelado";
+
+  return value || "—";
+}
+
+function getStatusClassName(value?: string | null) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized === "pending") {
+    return "bg-amber-100 text-amber-800";
+  }
+
+  if (normalized === "preparing") {
+    return "bg-blue-100 text-blue-800";
+  }
+
+  if (normalized === "ready") {
+    return "bg-emerald-100 text-emerald-800";
+  }
+
+  if (normalized === "delivered") {
+    return "bg-neutral-200 text-neutral-700";
+  }
+
+  if (normalized === "cancelled") {
+    return "bg-red-100 text-red-800";
+  }
+
+  return "bg-neutral-100 text-neutral-600";
+}
+
+function formatRepeatedNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+    .join(" + ");
+}
+
+function getItemOptions(item: SaleItem) {
+  const options = Array.isArray(item.sale_item_options)
+    ? item.sale_item_options
+    : [];
+
+  const flavors = options
+    .filter(
+      (option) =>
+        option.option_group_code === "flavor" ||
+        option.option_group_code === "sabor",
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  const toppings = options
+    .filter(
+      (option) =>
+        option.option_group_code === "topping" ||
+        option.option_group_code === "toppings",
+    )
+    .map((option) => option.option_value_name)
+    .filter(Boolean);
+
+  return {
+    flavors,
+    toppings,
+  };
+}
+
+export default function HistorialVentasPage() {
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [customerCandidate, setCustomerCandidate] =
+    useState<ClienteSelectorValue | null>(null);
+  const [customerChangeReason, setCustomerChangeReason] = useState("");
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerChangeMessage, setCustomerChangeMessage] = useState("");
+  const [customerSelectorResetKey, setCustomerSelectorResetKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [channelFilter, setChannelFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState("all");
+
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(
+    null,
+  );
+
+  useEffect(() => {
+    cargarVentas();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSale) {
+      setEditingCustomer(false);
+      setCustomerCandidate(null);
+      setCustomerChangeReason("");
+      setCustomerChangeMessage("");
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (editingCustomer) {
+          cancelCustomerChange();
+          return;
+        }
+
+        setSelectedSale(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedSale, editingCustomer]);
+
+  async function cargarVentas(
+    targetPage = page,
+    filterOverrides?: {
+      dateFrom?: string;
+      dateTo?: string;
+      search?: string;
+      channel?: string;
+      paymentMethod?: string;
+      orderStatus?: string;
+      customerType?: string;
+    },
+  ) {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const effectiveDateFrom =
+        filterOverrides?.dateFrom !== undefined
+          ? filterOverrides.dateFrom
+          : dateFrom;
+
+      const effectiveDateTo =
+        filterOverrides?.dateTo !== undefined ? filterOverrides.dateTo : dateTo;
+
+      const effectiveSearch =
+        filterOverrides?.search !== undefined ? filterOverrides.search : search;
+
+      const effectiveChannel =
+        filterOverrides?.channel !== undefined
+          ? filterOverrides.channel
+          : channelFilter;
+
+      const effectivePaymentMethod =
+        filterOverrides?.paymentMethod !== undefined
+          ? filterOverrides.paymentMethod
+          : paymentFilter;
+
+      const effectiveOrderStatus =
+        filterOverrides?.orderStatus !== undefined
+          ? filterOverrides.orderStatus
+          : statusFilter;
+
+      const effectiveCustomerType =
+        filterOverrides?.customerType !== undefined
+          ? filterOverrides.customerType
+          : customerFilter;
+
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        pageSize: String(pageSize),
+      });
+
+      if (effectiveDateFrom) {
+        const startDate = new Date(`${effectiveDateFrom}T00:00:00`);
+
+        params.set("dateFrom", startDate.toISOString());
+      }
+
+      if (effectiveDateTo) {
+        const endDateExclusive = new Date(`${effectiveDateTo}T00:00:00`);
+
+        endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+
+        params.set("dateTo", endDateExclusive.toISOString());
+      }
+
+      if (effectiveSearch.trim()) {
+        params.set("search", effectiveSearch.trim());
+      }
+
+      if (effectiveChannel !== "all") {
+        params.set("channel", effectiveChannel);
+      }
+
+      if (effectivePaymentMethod !== "all") {
+        params.set("paymentMethod", effectivePaymentMethod);
+      }
+
+      if (effectiveOrderStatus !== "all") {
+        params.set("orderStatus", effectiveOrderStatus);
+      }
+
+      if (effectiveCustomerType !== "all") {
+        params.set("customerType", effectiveCustomerType);
+      }
+
+      const res = await fetch(`/api/operacion/sales?${params.toString()}`);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo cargar historial.");
+        return;
+      }
+
+      const nextSales = Array.isArray(data.sales) ? data.sales : [];
+
+      setSales(nextSales);
+
+      setSelectedSale((current) => {
+        if (!current) return null;
+
+        return nextSales.find((sale: Sale) => sale.id === current.id) || null;
+      });
+
+      setPage(data.pagination?.page || targetPage);
+      setTotalSales(data.pagination?.total || 0);
+      setTotalPages(data.pagination?.totalPages || 1);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error cargando historial.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function exportarCsv() {
+    try {
+      setExporting(true);
+      setMessage("");
+
+      if (dateFrom && dateTo && dateFrom > dateTo) {
+        setMessage("La fecha inicial no puede ser posterior a la fecha final.");
+        return;
+      }
+
+      const params = new URLSearchParams();
+
+      if (dateFrom) {
+        const startDate = new Date(`${dateFrom}T00:00:00`);
+
+        params.set("dateFrom", startDate.toISOString());
+      }
+
+      if (dateTo) {
+        const endDateExclusive = new Date(`${dateTo}T00:00:00`);
+
+        endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+
+        params.set("dateTo", endDateExclusive.toISOString());
+      }
+
+      if (search.trim()) {
+        params.set("search", search.trim());
+      }
+
+      if (channelFilter !== "all") {
+        params.set("channel", channelFilter);
+      }
+
+      if (paymentFilter !== "all") {
+        params.set("paymentMethod", paymentFilter);
+      }
+
+      if (statusFilter !== "all") {
+        params.set("orderStatus", statusFilter);
+      }
+
+      if (customerFilter !== "all") {
+        params.set("customerType", customerFilter);
+      }
+
+      const queryString = params.toString();
+
+      const res = await fetch(
+        `/api/operacion/sales/export${queryString ? `?${queryString}` : ""}`,
+      );
+
+      if (!res.ok) {
+        let errorMessage = "No se pudo exportar el historial.";
+
+        try {
+          const data = await res.json();
+          errorMessage = data.message || errorMessage;
+        } catch {
+          // La respuesta podría no ser JSON.
+        }
+
+        setMessage(errorMessage);
+        return;
+      }
+
+      const blob = await res.blob();
+
+      const disposition = res.headers.get("Content-Disposition") || "";
+
+      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+
+      const filename = filenameMatch?.[1] || "ventas-nook.csv";
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error exportando ventas:", error);
+      setMessage("Error inesperado al exportar las ventas.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function startCustomerChange() {
+    setCustomerCandidate(null);
+    setCustomerChangeReason("");
+    setCustomerChangeMessage("");
+    setCustomerSelectorResetKey((current) => current + 1);
+    setEditingCustomer(true);
+  }
+
+  function cancelCustomerChange() {
+    setEditingCustomer(false);
+    setCustomerCandidate(null);
+    setCustomerChangeReason("");
+    setCustomerChangeMessage("");
+    setCustomerSelectorResetKey((current) => current + 1);
+  }
+
+  async function saveCustomerChange() {
+    if (!selectedSale) return;
+
+    if (!customerCandidate) {
+      setCustomerChangeMessage("Selecciona un cliente.");
+      return;
+    }
+
+    try {
+      setSavingCustomer(true);
+      setCustomerChangeMessage("");
+
+      const res = await fetch("/api/operacion/sales/customer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          saleId: selectedSale.id,
+          customerId: customerCandidate.id,
+          reason: customerChangeReason.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomerChangeMessage(
+          data.message || "No se pudo asignar el cliente.",
+        );
+        return;
+      }
+
+      const updatedCustomer = data.sale?.clientes || null;
+      const updatedCustomerId = data.sale?.customer_id || null;
+
+      const updateSale = (sale: Sale): Sale => {
+        if (sale.id !== selectedSale.id) return sale;
+
+        return {
+          ...sale,
+          customer_id: updatedCustomerId,
+          clientes: updatedCustomer,
+        };
+      };
+
+      setSales((current) => current.map(updateSale));
+
+      setSelectedSale((current) => (current ? updateSale(current) : current));
+
+      setCustomerChangeMessage(
+        data.message || "Cliente asignado correctamente.",
+      );
+
+      setEditingCustomer(false);
+      setCustomerCandidate(null);
+      setCustomerChangeReason("");
+      setCustomerSelectorResetKey((current) => current + 1);
+    } catch (error) {
+      console.error("Error asignando cliente:", error);
+      setCustomerChangeMessage("Error inesperado al asignar el cliente.");
+    } finally {
+      setSavingCustomer(false);
+    }
+  }
+
+  function applyFilters() {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setMessage("La fecha inicial no puede ser posterior a la fecha final.");
+      return;
+    }
+
+    setPage(1);
+    setSelectedSale(null);
+    cargarVentas(1);
+  }
+
+  function clearDateFilters() {
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+    setSelectedSale(null);
+
+    cargarVentas(1, {
+      dateFrom: "",
+      dateTo: "",
+    });
+  }
+
+  function goToPage(nextPage: number) {
+    if (nextPage < 1 || nextPage > totalPages || loading) {
+      return;
+    }
+
+    setPage(nextPage);
+    cargarVentas(nextPage);
+  }
+
+  function changeSort(field: SortField) {
+    if (sortField === field) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortField(field);
+    setSortDirection(field === "date" ? "desc" : "asc");
+  }
+
+  function clearFilters() {
+    setSearch("");
+    setChannelFilter("all");
+    setPaymentFilter("all");
+    setStatusFilter("all");
+    setCustomerFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setSortField("date");
+    setSortDirection("desc");
+    setPage(1);
+    setSelectedSale(null);
+
+    cargarVentas(1, {
+      dateFrom: "",
+      dateTo: "",
+      search: "",
+      channel: "all",
+      paymentMethod: "all",
+      orderStatus: "all",
+      customerType: "all",
+    });
+  }
+
+  const filteredSales = useMemo(() => {
+    return [...sales].sort((a, b) => {
+      let comparison = 0;
+
+      if (sortField === "date") {
+        const dateA = new Date(a.confirmed_at || a.created_at).getTime();
+
+        const dateB = new Date(b.confirmed_at || b.created_at).getTime();
+
+        comparison = dateA - dateB;
+      }
+
+      if (sortField === "total") {
+        comparison = Number(a.total || 0) - Number(b.total || 0);
+      }
+
+      if (sortField === "customer") {
+        comparison = String(a.clientes?.nombre || "Mostrador").localeCompare(
+          String(b.clientes?.nombre || "Mostrador"),
+          "es",
+        );
+      }
+
+      if (sortField === "channel") {
+        comparison = getChannelLabel(a.channel).localeCompare(
+          getChannelLabel(b.channel),
+          "es",
+        );
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [sales, sortField, sortDirection]);
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    channelFilter !== "all" ||
+    paymentFilter !== "all" ||
+    statusFilter !== "all" ||
+    customerFilter !== "all" ||
+    dateFrom !== "" ||
+    dateTo !== "";
+
+  const selectedOrder = selectedSale?.orders?.[0] || null;
+  const selectedItems = selectedSale?.sale_items || [];
+
+  const selectedManualDiscountAmount = Number(
+    selectedSale?.manual_discount_amount || 0,
+  );
+
+  const selectedAutomaticDiscountAmount = Math.max(
+    0,
+    Number(selectedSale?.discount_total || 0) - selectedManualDiscountAmount,
+  );
+
+  function imprimirDocumentoEnSegundoPlano({
+    saleId,
+    documentType,
+  }: {
+    saleId: number;
+    documentType: "receipt" | "ticket";
+  }) {
+    const iframe = window.document.createElement("iframe");
+
+    const printId = `nook-print-${documentType}-${saleId}-${Date.now()}`;
+
+    iframe.id = printId;
+    iframe.title =
+      documentType === "receipt"
+        ? "Impresión de comprobante Nook"
+        : "Impresión de ticket Nook";
+
+    iframe.setAttribute("aria-hidden", "true");
+
+    const route =
+      documentType === "receipt"
+        ? `/operacion/ventas/imprimir/${saleId}`
+        : `/operacion/ventas/ticket/${saleId}`;
+
+    iframe.src = `${route}?autoPrint=1`;
+
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "80mm",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
+    });
+
+    let cleaned = false;
+
+    function cleanup() {
+      if (cleaned) return;
+
+      cleaned = true;
+
+      window.clearTimeout(cleanupTimeout);
+
+      window.removeEventListener("message", handlePrintMessage);
+
+      iframe.remove();
+    }
+
+    function handlePrintMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "NOOK_PRINT_COMPLETED" &&
+        Number(event.data?.saleId) === saleId &&
+        event.data?.documentType === documentType
+      ) {
+        window.setTimeout(cleanup, 500);
+      }
+    }
+
+    window.addEventListener("message", handlePrintMessage);
+
+    const cleanupTimeout = window.setTimeout(cleanup, 60000);
+
+    window.document.body.appendChild(iframe);
+  }
+
+  async function cancelarPedidoSeleccionado() {
+    if (!selectedSale || !selectedOrder) {
+      setMessage("No se pudo identificar el pedido que deseas anular.");
+      return;
+    }
+
+    const cancellableStatuses = ["pending", "preparing", "ready"];
+
+    if (
+      !cancellableStatuses.includes(
+        String(selectedOrder.status || "").toLowerCase(),
+      )
+    ) {
+      setMessage(
+        selectedOrder.status === "delivered"
+          ? "Los pedidos entregados requieren un proceso de devolución y no pueden anularse desde esta acción."
+          : "Este pedido ya no se encuentra disponible para anulación.",
+      );
+      return;
+    }
+
+    const reason = window.prompt(
+      `Indica el motivo de anulación del pedido ${selectedOrder.display_order_code}:`,
+    );
+
+    if (reason === null) {
+      return;
+    }
+
+    const normalizedReason = reason.trim();
+
+    if (!normalizedReason) {
+      setMessage("Debes ingresar un motivo para anular el pedido.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Confirmas la anulación de ${selectedOrder.display_order_code}?\n\nEsta acción cancelará el pedido y la venta asociada.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingOrderId(selectedOrder.id);
+      setMessage("");
+
+      const res = await fetch("/api/operacion/orders/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: selectedOrder.id,
+          newStatus: "cancelled",
+          notes: normalizedReason,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo anular el pedido.");
+        return;
+      }
+
+      setSelectedSale(null);
+
+      await cargarVentas(page);
+
+      setMessage(
+        `Pedido ${selectedOrder.display_order_code} anulado correctamente.`,
+      );
+    } catch (error) {
+      console.error("Error anulando pedido:", error);
+
+      setMessage("Ocurrió un error inesperado al anular el pedido.");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F6F3FF] p-3">
+      <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1600px] flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-4 rounded-xl bg-white px-4 py-3 shadow-sm">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/operacion"
+              className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50"
+            >
+              ← Operación
+            </Link>
+
+            <div className="min-w-0">
+              <h1 className="text-lg font-black leading-tight text-neutral-900">
+                Historial de ventas
+              </h1>
+
+              <p className="text-[11px] text-neutral-500">
+                Consulta operacional de ventas locales y digitales.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={exportarCsv}
+              disabled={loading || exporting}
+              className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[12px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting ? "Exportando..." : "Exportar CSV"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => cargarVentas(page)}
+              disabled={loading}
+              className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
+        </header>
+
+        {message && (
+          <div className="mt-2 shrink-0 rounded-lg border border-red-100 bg-white px-3 py-2 text-[12px] font-semibold text-red-700">
+            {message}
+          </div>
+        )}
+
+        <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
+          <div className="shrink-0">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Desde
+                </label>
+
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-2 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Hasta
+                </label>
+
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-2 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={clearDateFilters}
+                disabled={loading || (!dateFrom && !dateTo)}
+                className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Todas las fechas
+              </button>
+              <div className="min-w-[260px] flex-1">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Búsqueda general
+                </label>
+
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      applyFilters();
+                    }
+                  }}
+                  placeholder="Pedido, cliente, canal, teléfono o referencia"
+                  className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Canal
+                </label>
+
+                <select
+                  value={channelFilter}
+                  onChange={(event) => setChannelFilter(event.target.value)}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="all">Todos</option>
+                  <option value="local">Local</option>
+                  <option value="shopify">Shopify</option>
+                  <option value="uber_eats">Uber Eats</option>
+                  <option value="rappi">Rappi</option>
+                  <option value="pedidosya">PedidosYa</option>
+                </select>
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Pago
+                </label>
+
+                <select
+                  value={paymentFilter}
+                  onChange={(event) => setPaymentFilter(event.target.value)}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="all">Todos</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="pago_electronico">Pago electrónico</option>
+                  <option value="debito">Débito (histórico)</option>
+                  <option value="credito">Crédito (histórico)</option>
+                  <option value="manual">Plataforma (histórico)</option>
+                </select>
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Estado
+                </label>
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="all">Todos</option>
+                  <option value="pending">Pendiente</option>
+                  <option value="preparing">Preparando</option>
+                  <option value="ready">Listo</option>
+                  <option value="delivered">Entregado</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+              </div>
+
+              <div className="w-36">
+                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Cliente
+                </label>
+
+                <select
+                  value={customerFilter}
+                  onChange={(event) => setCustomerFilter(event.target.value)}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="all">Todos</option>
+                  <option value="identified">Identificado</option>
+                  <option value="counter">Mostrador</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={applyFilters}
+                disabled={loading}
+                className="h-9 cursor-pointer rounded-lg bg-neutral-900 px-3 text-[11px] font-bold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Aplicar filtros
+              </button>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Limpiar
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-neutral-500">
+                <strong className="font-black text-neutral-900">
+                  {filteredSales.length}
+                </strong>{" "}
+                resultado{filteredSales.length === 1 ? "" : "s"} en esta página
+              </p>
+
+              <p className="text-[10px] text-neutral-500">
+                Mostrando{" "}
+                <strong className="font-black text-neutral-800">
+                  {totalSales === 0 ? 0 : (page - 1) * pageSize + 1}
+                </strong>
+                {"–"}
+                <strong className="font-black text-neutral-800">
+                  {Math.min(page * pageSize, totalSales)}
+                </strong>{" "}
+                de{" "}
+                <strong className="font-black text-neutral-800">
+                  {totalSales}
+                </strong>{" "}
+                ventas
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-2 min-h-0 flex-1 overflow-auto rounded-lg border border-neutral-200">
+            <table className="w-full min-w-[1050px] border-collapse text-left">
+              <thead className="sticky top-0 z-10 bg-neutral-100">
+                <tr className="border-b border-neutral-200">
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    <button
+                      type="button"
+                      onClick={() => changeSort("date")}
+                      className="cursor-pointer hover:text-violet-700"
+                    >
+                      Fecha y hora{" "}
+                      {sortField === "date"
+                        ? sortDirection === "asc"
+                          ? "↑"
+                          : "↓"
+                        : ""}
+                    </button>
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Pedido
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    <button
+                      type="button"
+                      onClick={() => changeSort("channel")}
+                      className="cursor-pointer hover:text-violet-700"
+                    >
+                      Canal{" "}
+                      {sortField === "channel"
+                        ? sortDirection === "asc"
+                          ? "↑"
+                          : "↓"
+                        : ""}
+                    </button>
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Ref. externa
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    <button
+                      type="button"
+                      onClick={() => changeSort("customer")}
+                      className="cursor-pointer hover:text-violet-700"
+                    >
+                      Cliente{" "}
+                      {sortField === "customer"
+                        ? sortDirection === "asc"
+                          ? "↑"
+                          : "↓"
+                        : ""}
+                    </button>
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Ítems
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Pago
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Estado
+                  </th>
+
+                  <th className="whitespace-nowrap px-3 py-2 text-right text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    <button
+                      type="button"
+                      onClick={() => changeSort("total")}
+                      className="cursor-pointer hover:text-violet-700"
+                    >
+                      Total{" "}
+                      {sortField === "total"
+                        ? sortDirection === "asc"
+                          ? "↑"
+                          : "↓"
+                        : ""}
+                    </button>
+                  </th>
+
+                  <th className="w-16 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Acción
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-neutral-100 bg-white">
+                {loading && sales.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-4 py-8 text-center text-[12px] text-neutral-500"
+                    >
+                      Cargando ventas...
+                    </td>
+                  </tr>
+                ) : filteredSales.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-4 py-8 text-center text-[12px] text-neutral-400"
+                    >
+                      No hay ventas que coincidan con los filtros.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSales.map((sale) => {
+                    const order = sale.orders?.[0] || null;
+
+                    const totalItems = (sale.sale_items || []).reduce(
+                      (acc, item) => acc + item.quantity,
+                      0,
+                    );
+
+                    return (
+                      <tr
+                        key={sale.id}
+                        className="transition hover:bg-violet-50/50"
+                      >
+                        <td className="whitespace-nowrap px-3 py-2 text-[11px] text-neutral-600">
+                          {formatDateTime(sale.confirmed_at || sale.created_at)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <p className="text-[11px] font-black text-neutral-900">
+                            {order?.display_order_code ||
+                              sale.sale_number ||
+                              `Venta #${sale.id}`}
+                          </p>
+
+                          <p className="text-[9px] text-neutral-400">
+                            Venta #{sale.id}
+                          </p>
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getChannelClassName(
+                              sale.channel,
+                            )}`}
+                          >
+                            {getChannelLabel(sale.channel)}
+                          </span>
+                        </td>
+
+                        <td className="max-w-40 truncate px-3 py-2 text-[11px] text-neutral-600">
+                          {sale.external_order_id || "—"}
+                        </td>
+
+                        <td className="max-w-48 px-3 py-2">
+                          <p className="truncate text-[11px] font-bold text-neutral-800">
+                            {sale.clientes?.nombre || "Mostrador"}
+                          </p>
+
+                          {sale.clientes?.telefono && (
+                            <p className="truncate text-[9px] text-neutral-400">
+                              {sale.clientes.telefono}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2 text-center text-[11px] font-bold text-neutral-700">
+                          {totalItems}
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2 text-[11px] text-neutral-600">
+                          {getPaymentMethodLabel(sale.payment_method)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${getStatusClassName(
+                              order?.status,
+                            )}`}
+                          >
+                            {getOrderStatusLabel(order?.status)}
+                          </span>
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2 text-right text-[12px] font-black text-violet-700">
+                          {formatMoney(sale.total)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSale(sale)}
+                            className="cursor-pointer rounded-md border border-violet-200 bg-white px-2 py-1 text-[10px] font-bold text-violet-700 transition hover:bg-violet-50 active:scale-[0.98]"
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <footer className="mt-2 flex shrink-0 items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1 || loading}
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Anterior
+            </button>
+
+            <div className="text-center">
+              <p className="text-[11px] font-bold text-neutral-700">
+                Página {page} de {totalPages}
+              </p>
+
+              <p className="text-[9px] text-neutral-400">
+                Hasta {pageSize} transacciones por página
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages || loading}
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Siguiente →
+            </button>
+          </footer>
+        </section>
+      </div>
+      {selectedSale && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/20">
+          <button
+            type="button"
+            aria-label="Cerrar detalle"
+            onClick={() => {
+              if (editingCustomer) {
+                cancelCustomerChange();
+                return;
+              }
+
+              setSelectedSale(null);
+            }}
+            className="absolute inset-0 cursor-default"
+          />
+
+          <aside className="relative z-10 flex h-full w-full max-w-[460px] flex-col border-l border-neutral-200 bg-white shadow-2xl">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-violet-600">
+                  Detalle de venta
+                </p>
+
+                <h2 className="mt-0.5 text-lg font-black leading-tight text-neutral-900">
+                  {selectedOrder?.display_order_code ||
+                    selectedSale.sale_number ||
+                    `Venta #${selectedSale.id}`}
+                </h2>
+
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getChannelClassName(
+                      selectedSale.channel,
+                    )}`}
+                  >
+                    {getChannelLabel(selectedSale.channel)}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${getStatusClassName(
+                      selectedOrder?.status,
+                    )}`}
+                  >
+                    {getOrderStatusLabel(selectedOrder?.status)}
+                  </span>
+                </div>
+
+                {selectedSale.external_order_id && (
+                  <p className="mt-1 text-[10px] font-semibold text-neutral-500">
+                    Ref. externa: {selectedSale.external_order_id}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingCustomer) {
+                    cancelCustomerChange();
+                    return;
+                  }
+
+                  setSelectedSale(null);
+                }}
+                className="shrink-0 cursor-pointer rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50"
+              >
+                Cerrar
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <section className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Fecha y hora
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {formatDateTime(
+                      selectedSale.confirmed_at || selectedSale.created_at,
+                    )}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Medio de pago
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {getPaymentMethodLabel(selectedSale.payment_method)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Estado del pago
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {selectedSale.payment_status || "—"}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-neutral-50 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                    Operador
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] font-bold text-neutral-800">
+                    {selectedSale.actor_role || "—"}
+                  </p>
+                </div>
+              </section>
+
+              <section className="mt-3 rounded-lg border border-neutral-200 px-3 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                      Cliente
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[12px] font-black text-neutral-900">
+                      {selectedSale.clientes?.nombre || "Mostrador"}
+                    </p>
+
+                    {(selectedSale.clientes?.telefono ||
+                      selectedSale.clientes?.correo) && (
+                      <div className="mt-1 space-y-0.5 text-[10px] text-neutral-500">
+                        {selectedSale.clientes?.telefono && (
+                          <p>{selectedSale.clientes.telefono}</p>
+                        )}
+
+                        {selectedSale.clientes?.correo && (
+                          <p className="break-all">
+                            {selectedSale.clientes.correo}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {!editingCustomer && (
+                    <button
+                      type="button"
+                      onClick={startCustomerChange}
+                      className="shrink-0 cursor-pointer rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-black text-violet-700 transition hover:bg-violet-100 active:scale-[0.98]"
+                    >
+                      {selectedSale.clientes ? "Cambiar" : "Asignar"}
+                    </button>
+                  )}
+                </div>
+
+                {editingCustomer && (
+                  <div className="mt-3 border-t border-neutral-100 pt-3">
+                    <ClienteSelector
+                      value={customerCandidate}
+                      onChange={setCustomerCandidate}
+                      resetKey={customerSelectorResetKey}
+                    />
+
+                    <div className="mt-2">
+                      <label className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                        Motivo opcional
+                      </label>
+
+                      <input
+                        value={customerChangeReason}
+                        onChange={(event) =>
+                          setCustomerChangeReason(event.target.value)
+                        }
+                        maxLength={500}
+                        placeholder="Ej: cliente se registró después de la compra"
+                        className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[11px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                    </div>
+
+                    {customerChangeMessage && (
+                      <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[10px] font-semibold leading-snug text-amber-800">
+                        {customerChangeMessage}
+                      </p>
+                    )}
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={cancelCustomerChange}
+                        disabled={savingCustomer}
+                        className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={saveCustomerChange}
+                        disabled={!customerCandidate || savingCustomer}
+                        className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingCustomer ? "Guardando..." : "Asignar cliente"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!editingCustomer && customerChangeMessage && (
+                  <p className="mt-2 rounded-md bg-green-50 px-2 py-1.5 text-[10px] font-semibold leading-snug text-green-800">
+                    {customerChangeMessage}
+                  </p>
+                )}
+              </section>
+
+              <section className="mt-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                    Productos
+                  </p>
+
+                  <span className="text-[10px] text-neutral-400">
+                    {selectedItems.reduce(
+                      (acc, item) => acc + item.quantity,
+                      0,
+                    )}{" "}
+                    ítems
+                  </span>
+                </div>
+
+                <div className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-neutral-50">
+                  {selectedItems.map((item) => {
+                    const { flavors, toppings } = getItemOptions(item);
+
+                    return (
+                      <div key={item.id} className="px-3 py-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-black text-neutral-900">
+                              {item.quantity}x {item.product_name}
+                            </p>
+
+                            {item.product_sku && (
+                              <p className="mt-0.5 text-[9px] text-neutral-400">
+                                SKU: {item.product_sku}
+                              </p>
+                            )}
+                          </div>
+
+                          <p className="shrink-0 text-[11px] font-black text-violet-700">
+                            {formatMoney(item.total_price)}
+                          </p>
+                        </div>
+
+                        <div className="mt-1 space-y-0.5 text-[10px] leading-snug text-neutral-600">
+                          {flavors.length > 0 && (
+                            <p>
+                              <span className="font-bold">Sabores:</span>{" "}
+                              {formatRepeatedNames(flavors)}
+                            </p>
+                          )}
+
+                          {toppings.length > 0 && (
+                            <p>
+                              <span className="font-bold">Toppings:</span>{" "}
+                              {formatRepeatedNames(toppings)}
+                            </p>
+                          )}
+
+                          {item.notes && (
+                            <p>
+                              <span className="font-bold">Detalle:</span>{" "}
+                              {item.notes}
+                            </p>
+                          )}
+
+                          <p className="text-neutral-400">
+                            Unitario: {formatMoney(item.unit_price)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {selectedOrder?.notes && (
+                <section className="mt-3 rounded-lg bg-amber-50 px-3 py-2.5 text-[10px] font-semibold leading-snug text-amber-800">
+                  <span className="font-black">Nota del pedido:</span>{" "}
+                  {selectedOrder.notes}
+                </section>
+              )}
+
+              {selectedManualDiscountAmount > 0 && (
+                <section className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">
+                      Descuento manual
+                    </p>
+
+                    <span className="text-[12px] font-black text-amber-800">
+                      -{formatMoney(selectedManualDiscountAmount)}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Tipo
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {getManualDiscountTypeLabel(
+                          selectedSale.manual_discount_type,
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Valor ingresado
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {selectedSale.manual_discount_type === "percent"
+                          ? `${Number(
+                              selectedSale.manual_discount_value || 0,
+                            ).toLocaleString("es-CL")}%`
+                          : formatMoney(
+                              selectedSale.manual_discount_value || 0,
+                            )}
+                      </p>
+                    </div>
+
+                    <div className="col-span-2">
+                      <p className="font-bold uppercase tracking-wide text-amber-600">
+                        Motivo
+                      </p>
+
+                      <p className="mt-0.5 font-bold text-amber-900">
+                        {getManualDiscountReasonLabel(
+                          selectedSale.manual_discount_reason,
+                        )}
+                      </p>
+                    </div>
+
+                    {selectedSale.manual_discount_notes && (
+                      <div className="col-span-2">
+                        <p className="font-bold uppercase tracking-wide text-amber-600">
+                          Detalle
+                        </p>
+
+                        <p className="mt-0.5 whitespace-pre-wrap font-semibold leading-snug text-amber-900">
+                          {selectedSale.manual_discount_notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              <section className="mt-3 rounded-lg border border-neutral-200 bg-white p-3">
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex items-center justify-between gap-3 text-neutral-600">
+                    <span>Subtotal</span>
+                    <span className="font-bold">
+                      {formatMoney(selectedSale.subtotal)}
+                    </span>
+                  </div>
+
+                  {selectedAutomaticDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-neutral-600">
+                      <span>Descuentos automáticos</span>
+
+                      <span className="font-bold">
+                        -{formatMoney(selectedAutomaticDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedManualDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-amber-700">
+                      <span className="font-bold">Descuento manual</span>
+
+                      <span className="font-bold">
+                        -{formatMoney(selectedManualDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {Number(selectedSale.discount_total || 0) === 0 && (
+                    <div className="flex items-center justify-between gap-3 text-neutral-400">
+                      <span>Descuentos</span>
+                      <span className="font-bold">{formatMoney(0)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
+                    <span className="text-[12px] font-black text-neutral-900">
+                      Total
+                    </span>
+
+                    <span className="text-base font-black text-violet-700">
+                      {formatMoney(selectedSale.total)}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <footer className="grid shrink-0 grid-cols-3 gap-2 border-t border-neutral-200 bg-white p-3">
+              <button
+                type="button"
+                onClick={() =>
+                  imprimirDocumentoEnSegundoPlano({
+                    saleId: selectedSale.id,
+                    documentType: "receipt",
+                  })
+                }
+                className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 py-2 text-center text-[10px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
+              >
+                Comprobante
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  imprimirDocumentoEnSegundoPlano({
+                    saleId: selectedSale.id,
+                    documentType: "ticket",
+                  })
+                }
+                className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 py-2 text-center text-[10px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
+              >
+                Ticket atención
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelarPedidoSeleccionado}
+                disabled={
+                  !selectedOrder ||
+                  !["pending", "preparing", "ready"].includes(
+                    String(selectedOrder?.status || "").toLowerCase(),
+                  ) ||
+                  cancellingOrderId === selectedOrder?.id
+                }
+                title={
+                  selectedOrder?.status === "delivered"
+                    ? "Los pedidos entregados requieren una devolución auditada."
+                    : selectedOrder?.status === "cancelled"
+                      ? "El pedido ya está cancelado."
+                      : "Anular pedido y venta."
+                }
+                className="cursor-pointer rounded-lg border border-red-200 bg-red-50 px-2 py-2 text-[10px] font-black text-red-700 transition hover:border-red-300 hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400"
+              >
+                {cancellingOrderId === selectedOrder?.id
+                  ? "Anulando..."
+                  : "Anular"}
+              </button>
+            </footer>
+          </aside>
+        </div>
+      )}
+    </main>
+  );
+}
+
+============================================================
+3. RUTAS / COMPONENTES DE COMPROBANTE
+============================================================
+
+Path                                                                                              LineNumber Line                                                                                                           
+----                                                                                              ---------- ----                                                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts                         166       p_receipt_transaction_item_id: null,                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts                      7 type ReceiptActionBody = {                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts                     27       "inventory.receipts.manage",                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts                    118         receipt: data,                                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts                    190       "inventory.receipts.manage",                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts                    200     const body = (await req.json()) as ReceiptActionBody;                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts                 7 type PostReceiptBody = {                                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts                17       "inventory.receipts.manage",                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts                27     const body = (await req.json()) as PostReceiptBody;                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             167           saleId: currentOrder.sale_id,                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             241           saleId: currentOrder.sale_id,                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             287         saleId: currentOrder.sale_id,                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             293         saleId: currentOrder.sale_id,                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             343         const saleId = Number(deliveredOrder.sale_id || saleRelation?.id);                                     
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             358         if (!Number.isInteger(saleId) || saleId <= 0) {                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             380               saleId,                                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             386                 saleId,                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             434                 const promotionIdempotencyKey = `pos-sale-promotion:${saleId}`;                                
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             451                       evidence_reference: `sale:${saleId}`,                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             454                         saleId,                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             471                       saleId,                                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             536                     saleId,                                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             812                       saleId,                                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts                             830                   saleId,                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      15 function getCreatedSaleId(result: unknown): number | null {                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      20       const saleId = getCreatedSaleId(item);                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      22       if (saleId) return saleId;                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      34   const directCandidates = [record.sale_id, record.saleId, record.id];                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      45     return getCreatedSaleId(record.sale);                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                      49     return getCreatedSaleId(record.result);                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     176     let candidateSaleIds: Set<number> | null = null;                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     204       candidateSaleIds = intersectCandidateIds(                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     205         candidateSaleIds,                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     214       const searchSaleIds = new Set<number>();                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     236         searchSaleIds.add(Number(sale.id));                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     256           searchSaleIds.add(Number(sale.id));                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     298           searchSaleIds.add(Number(sale.id));                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     320         const saleId = Number(order.sale_id);                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     322         if (Number.isFinite(saleId)) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     323           searchSaleIds.add(saleId);                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     327       candidateSaleIds = intersectCandidateIds(candidateSaleIds, [                                             
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     328         ...searchSaleIds,                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     337     if (candidateSaleIds !== null && candidateSaleIds.size === 0) {                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     419     if (candidateSaleIds !== null) {                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                     420       query = query.in("id", [...candidateSaleIds]);                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1308     const createdSaleId = getCreatedSaleId(data);                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1310     if (!createdSaleId) {                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1346       entityId: createdSaleId,                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1354         saleId: createdSaleId,                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1388         createdSaleId,                                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1397       sourceEntityId: createdSaleId,                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1398       saleId: createdSaleId,                                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1402         createdSaleId,                                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts                                    1440         saleId: createdSaleId,                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                             69     const saleId = Number(body.saleId);                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                             73     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                            127         p_sale_id: saleId,                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                            139           saleId,                                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                            195       .eq("id", saleId)                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                            202           saleId,                                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts                            512               saleId,                                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts                             36     const saleId = Number(searchParams.get("saleId"));                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts                             38     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts                             48     const document = await buildSaleDocument(saleId);                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              224     let candidateSaleIds: Set<number> | null = null;                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              229       if (candidateSaleIds === null) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              230         candidateSaleIds = nextIds;                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              234       candidateSaleIds = new Set(                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              235         [...candidateSaleIds].filter((id) => nextIds.has(id)),                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              267       const searchSaleIds = new Set<number>();                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              289         const saleId = Number(sale.id);                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              291         if (Number.isFinite(saleId)) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              292           searchSaleIds.add(saleId);                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              313           const saleId = Number(sale.id);                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              315           if (Number.isFinite(saleId)) {                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              316             searchSaleIds.add(saleId);                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              359           const saleId = Number(sale.id);                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              361           if (Number.isFinite(saleId)) {                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              362             searchSaleIds.add(saleId);                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              385         const saleId = Number(order.sale_id);                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              387         if (Number.isFinite(saleId)) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              388           searchSaleIds.add(saleId);                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              392       intersectCandidateIds([...searchSaleIds]);                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              420     if (candidateSaleIds !== null && candidateSaleIds.size === 0) {                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              477       if (candidateSaleIds !== null) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts                              478         query = query.in("id", [...candidateSaleIds]);                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts                                 45     const saleId = Number(params.id);                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts                                 47     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts                                121       .eq("id", saleId)                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx                                          890     async (saleId: number, expectedCashSessionId: number) => {                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx                                          896         const response = await fetch(`/api/operacion/sales/${saleId}`, {                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx                                          910         if (data.sale.id !== saleId) {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx                                         2327                     Comprobante de cierre                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx                                         2595                   Imprimir comprobante                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx                7 import CashClosingReceipt80mm, {                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx                8   type CashClosingReceiptDocument,                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx                9 } from "../../../../../../components/documents/CashClosingReceipt80mm";                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx               50   const [document, setDocument] = useState<CashClosingReceiptDocument | null>(                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx               90           data.message || "No se pudo cargar el comprobante de cierre.",                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              132       console.error("Error cargando comprobante de cierre:", error);                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              134       setMessage("Ocurrió un error al cargar el comprobante de cierre.");                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              171         window.print();                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              179     window.print();                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              221           .cash-closing-receipt {                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              260           Cargando comprobante...                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx              268           <CashClosingReceipt80mm document={document} />                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\imprimir\mensaje\page.tsx                               94         window.print();                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                          4   getInventoryReceipts,                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                          5   type InventoryReceiptListItem,                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                          6 } from "@/lib/inventory/receipts";                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         33 function getStatusLabel(status: InventoryReceiptListItem["status"]): string {                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         34   const labels: Record<InventoryReceiptListItem["status"], string> = {                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         43 function getStatusClasses(status: InventoryReceiptListItem["status"]): string {                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         44   const classes: Record<InventoryReceiptListItem["status"], string> = {                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         53 export default async function InventoryReceiptsPage() {                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         54   const receipts = await getInventoryReceipts();                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                         84       {receipts.length === 0 ? (                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        151                 {receipts.map((receipt) => (                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        152                   <tr key={receipt.id} className="hover:bg-neutral-50">                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        154                       #{receipt.id}                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        158                       {formatDate(receipt.transactionDate)}                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        162                       {receipt.supplierName ?? "Sin proveedor"}                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        168                           receipt.referenceType,                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        171                         {getInventoryReferenceTypeLabel(receipt.referenceType)}                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        176                       {receipt.referenceNumber ?? "—"}                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        180                       {receipt.itemCount}                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        184                       {receipt.totalUnits}                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        188                       {currencyFormatter.format(receipt.totalCost)}                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        194                           receipt.status,                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        197                         {getStatusLabel(receipt.status)}                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        203                         href={`/operacion/inventario/recepciones/${receipt.id}`}                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\page.tsx                        206                         {receipt.status === "DRAFT" ? "Continuar" : "Ver"}                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                    7   createInventoryReceipt,                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                    8   type CreateInventoryReceiptInput,                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                    9 } from "@/lib/inventory/createReceipt";                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                   22 const initialForm: CreateInventoryReceiptInput = {                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                   30 export default function NewInventoryReceiptPage() {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                   34   const [form, setForm] = useState<CreateInventoryReceiptInput>(initialForm);                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\nueva\page.tsx                   86       const transactionId = await createInventoryReceipt({                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx          7   getInventoryReceiptById,                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx          8   type InventoryReceiptDetail,                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx          9   type InventoryReceiptItem,                                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         10   type InventoryReceiptStatus,                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         11 } from "@/lib/inventory/receipt";                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         16 import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         17 import { postInventoryReceipt } from "@/lib/inventory/postReceipt";                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         18 import { deleteInventoryReceiptItem } from "@/lib/inventory/deleteReceiptItem";                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         19 import { cancelInventoryReceipt } from "@/lib/inventory/cancelReceipt";                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         25 type ReceiptItemForm = {                                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         33 const initialItemForm: ReceiptItemForm = {                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         64 function getStatusLabel(status: InventoryReceiptStatus): string {                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         65   const labels: Record<InventoryReceiptStatus, string> = {                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         74 function getStatusClasses(status: InventoryReceiptStatus): string {                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         75   const classes: Record<InventoryReceiptStatus, string> = {                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         94 export default function InventoryReceiptDetailPage() {                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx         99   const [receipt, setReceipt] = useState<InventoryReceiptDetail | null>(null);                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        109   const [editingItem, setEditingItem] = useState<InventoryReceiptItem | null>(                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        112   const [itemForm, setItemForm] = useState<ReceiptItemForm>(initialItemForm);                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        117   const [postingReceipt, setPostingReceipt] = useState(false);                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        122     useState<InventoryReceiptItem | null>(null);                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        129   const [cancellingReceipt, setCancellingReceipt] = useState(false);                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        131   const [cancelReceiptErrorMessage, setCancelReceiptErrorMessage] =                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        134   const loadReceipt = useCallback(async () => {                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        139     const receiptDetail = await getInventoryReceiptById(transactionId);                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        141     setReceipt(receiptDetail);                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        150         await loadReceipt();                                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        152         setReceipt(null);                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        164   }, [loadReceipt]);                                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        203     if (!receipt || receipt.status !== "DRAFT") {                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        223   async function openEditItemForm(item: InventoryReceiptItem) {                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        224     if (!receipt || receipt.status !== "DRAFT") {                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        264     if (!receipt || receipt.status !== "DRAFT") {                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        307       await saveInventoryReceiptItem({                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        308         transactionId: receipt.id,                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        315       await loadReceipt();                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        332     if (!receipt) {                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        336     if (receipt.status !== "DRAFT") {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        341     if (receipt.items.length === 0) {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        354     if (postingReceipt) {                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        362   async function handlePostReceipt() {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        363     if (!receipt) {                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        367     if (receipt.status !== "DRAFT") {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        372     if (receipt.items.length === 0) {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        378       setPostingReceipt(true);                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        382       await postInventoryReceipt(receipt.id);                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        383       await loadReceipt();                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        396       setPostingReceipt(false);                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        400   function openDeleteItemConfirmation(item: InventoryReceiptItem) {                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        401     if (!receipt || receipt.status !== "DRAFT") {                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        430       await deleteInventoryReceiptItem(itemPendingDeletion.id);                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        432       await loadReceipt();                                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        446   function openCancelReceiptConfirmation() {                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        447     if (!receipt) {                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        451     if (receipt.status !== "DRAFT") {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        452       setCancelReceiptErrorMessage(                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        458     setCancelReceiptErrorMessage("");                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        462   function closeCancelReceiptConfirmation() {                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        463     if (cancellingReceipt) {                                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        468     setCancelReceiptErrorMessage("");                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        471   async function handleCancelReceipt() {                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        472     if (!receipt) {                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        476     if (receipt.status !== "DRAFT") {                                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        477       setCancelReceiptErrorMessage(                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        484       setCancellingReceipt(true);                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        485       setCancelReceiptErrorMessage("");                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        487       await cancelInventoryReceipt(receipt.id);                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        492       setCancelReceiptErrorMessage(                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        498       setCancellingReceipt(false);                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        516   if (errorMessage || !receipt) {                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        542   const isDraft = receipt.status === "DRAFT";                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        558                 Recepción #{receipt.id}                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        563                   receipt.status,                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        566                 {getStatusLabel(receipt.status)}                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        587                 {receipt.supplierName ?? "Sin proveedor"}                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        596                 {formatDateTime(receipt.transactionDate)}                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        608                     receipt.referenceType,                                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        611                   {getInventoryReferenceTypeLabel(receipt.referenceType)}                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        621                 {receipt.referenceNumber || "Sin número"}                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        630                 {receipt.notes || "Sin observaciones"}                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        656                 {receipt.items.length === 1                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        658                   : `${receipt.items.length} productos registrados`}                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        677           {receipt.items.length === 0 ? (                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        711                   {receipt.items.map((item) => (                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        780                 {receipt.items.length}                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        789                 {formatQuantity(receipt.totalUnits)}                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        798                 {formatCurrency(receipt.totalCost)}                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        816                 onClick={openCancelReceiptConfirmation}                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        818                   cancellingReceipt ||                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        819                   postingReceipt ||                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        832                   postingReceipt ||                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        833                   cancellingReceipt ||                                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        834                   receipt.items.length === 0                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        837                   receipt.items.length === 0                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        859             aria-labelledby="receipt-item-form-title"                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        865                   id="receipt-item-form-title"                                                                 
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx        872                   Recepción #{receipt.id}                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1099             aria-labelledby="post-receipt-title"                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1104                 id="post-receipt-title"                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1113                   #{receipt.id}                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1137                   {receipt.items.length}                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1146                   {formatQuantity(receipt.totalUnits)}                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1155                   {formatCurrency(receipt.totalCost)}                                                          
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1170                 disabled={postingReceipt}                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1178                 onClick={() => void handlePostReceipt()}                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1179                 disabled={postingReceipt}                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1182                 {postingReceipt ? "Publicando..." : "Confirmar publicación"}                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1194             aria-labelledby="delete-receipt-item-title"                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1198               id="delete-receipt-item-title"                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1250             aria-labelledby="cancel-receipt-title"                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1254               id="cancel-receipt-title"                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1263                 #{receipt.id}                                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1285                   {receipt.items.length}                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1294                   {formatQuantity(receipt.totalUnits)}                                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1299             {cancelReceiptErrorMessage && (                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1301                 {cancelReceiptErrorMessage}                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1308                 onClick={closeCancelReceiptConfirmation}                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1309                 disabled={cancellingReceipt}                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1317                 onClick={() => void handleCancelReceipt()}                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1318                 disabled={cancellingReceipt}                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\inventario\recepciones\[transactionId]\page.tsx       1321                 {cancellingReceipt ? "Cancelando..." : "Eliminar borrador"}                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        575           saleId: selectedSale.id,                                                                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        745     saleId,                                                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        748     saleId: number;                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        749     documentType: "receipt" | "ticket";                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        753     const printId = `nook-print-${documentType}-${saleId}-${Date.now()}`;                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        757       documentType === "receipt"                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        758         ? "Impresión de comprobante Nook"                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        764       documentType === "receipt"                                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        765         ? `/operacion/ventas/imprimir/${saleId}`                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        766         : `/operacion/ventas/ticket/${saleId}`;                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                        802         Number(event.data?.saleId) === saleId &&                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                       1770                     saleId: selectedSale.id,                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                       1771                     documentType: "receipt",                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                       1776                 Comprobante                                                                                    
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx                                       1783                     saleId: selectedSale.id,                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                        7 import SaleReceipt80mm from "../../../../../components/documents/SaleReceipt80mm";                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       13   const saleId = Number(params.saleId);                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       26     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       33   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       51             saleId,                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       52             documentType: "receipt",                                                                           
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       64   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       72         `/api/operacion/sales/document?saleId=${saleId}`,                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       81         setMessage(data.message || "No se pudo cargar el comprobante.");                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       87       console.error("Error cargando comprobante:", error);                                                     
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                       89       setMessage("Ocurrió un error al cargar el comprobante.");                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      126         window.print();                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      130         "No se pudo iniciar la impresión automática del comprobante:",                                         
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      137     window.print();                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      179           .sale-receipt {                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      218           Cargando comprobante...                                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir\[saleId]\page.tsx                      226           <SaleReceipt80mm document={document} />                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                   8 import SaleReceipt80mm from "../../../../../components/documents/SaleReceipt80mm";                             
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  13   const saleId = Number(params.saleId);                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  25     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  32   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  50             saleId,                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  62   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                  70         `/api/operacion/sales/document?saleId=${saleId}`,                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                 135         window.print();                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                 143     window.print();                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                 192           .sale-receipt,                                                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                 236           Preparando comprobante y ticket...                                                                   
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\imprimir-pack\[saleId]\page.tsx                 245             <SaleReceipt80mm document={document} />                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                  819   function imprimirVentaEnSegundoPlano(saleId: number) {                                                       
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                  822     const printId = `nook-print-${saleId}-${Date.now()}`;                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                  828     iframe.src = `/operacion/ventas/ticket/${saleId}` + "?autoPrint=1";                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                  866         Number(event.data?.saleId) === saleId                                                                  
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                 1020       const createdSaleId = Number(data.saleId);                                                               
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                 1022       if (!Number.isInteger(createdSaleId) || createdSaleId <= 0) {                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx                                 1035       imprimirVentaEnSegundoPlano(createdSaleId);                                                              
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         12   const saleId = Number(params.saleId);                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         25     if (!Number.isInteger(saleId) || saleId <= 0) {                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         32   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         50             saleId,                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         63   }, [saleId]);                                                                                                
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                         71         `/api/operacion/sales/document?saleId=${saleId}`,                                                      
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                        125         window.print();                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\ticket\[saleId]\page.tsx                        136     window.print();                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                        5 export type CashClosingReceiptDocument = {                                                                     
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                       22   document: CashClosingReceiptDocument;                                                                        
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                       53 export default function CashClosingReceipt80mm({ document }: Props) {                                          
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                       59     <article className="cash-closing-receipt mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                       75           Comprobante de cierre de caja                                                                        
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx                      200           Comprobante interno de cierre y retiro de efectivo.                                                  
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx                              41 export default function SaleReceipt80mm({ document }: Props) {                                                 
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx                              43     <article className="sale-receipt mx-auto w-[72mm] bg-white px-[2mm] py-[3mm] font-sans text-black">        
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx                              58         <p className="text-[13px] font-black uppercase">Comprobante de venta</p>                               
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx                             215           Comprobante interno de venta. Conservalo para cualquier consulta.                                    
+C:\Users\gonza\Proyectos\fidelinook\lib\customer-events.ts                                                34   saleId?: number | null;                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\customer-events.ts                                               122   const saleId = normalizePositiveId(input.saleId, "La venta");                                                
+C:\Users\gonza\Proyectos\fidelinook\lib\customer-events.ts                                               144     p_sale_id: saleId,                                                                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\loyalty-movements.ts                                              23   saleId?: number | null;                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\loyalty-movements.ts                                             135     p_sale_id: normalizeOptionalPositiveId(input.saleId, "La venta"),                                          
+C:\Users\gonza\Proyectos\fidelinook\lib\loyalty-rules.ts                                                  37   saleId?: number | null;                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts                                                 14   | "inventory.receipts.manage"                                                                                
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts                                                 39   "inventory.receipts.manage",                                                                                 
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts                           103   saleIdInput: number,                                                                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts                           105   const saleId = normalizePositiveInteger(saleIdInput, "La venta");                                            
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts                           159     .eq("id", saleId)                                                                                          
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts                           270     saleId: sale.id,                                                                                           
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\types.ts                                           1 export type SaleDocumentKind = "sale_receipt" | "customer_order_ticket";                                       
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\types.ts                                          47   saleId: number;                                                                                              
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\cancelReceipt.ts                                         1 export async function cancelInventoryReceipt(                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\createReceipt.ts                                         1 export type CreateInventoryReceiptInput = {                                                                    
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\createReceipt.ts                                         9 export async function createInventoryReceipt(                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\createReceipt.ts                                        10   input: CreateInventoryReceiptInput,                                                                          
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\deleteReceiptItem.ts                                     1 export async function deleteInventoryReceiptItem(                                                              
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\postReceipt.ts                                           1 export async function postInventoryReceipt(                                                                    
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                               1 export type InventoryReceiptStatus = "DRAFT" | "POSTED" | "CANCELLED";                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                               3 export type InventoryReceiptItem = {                                                                           
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              16 export type InventoryReceiptDetail = {                                                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              19   status: InventoryReceiptStatus;                                                                              
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              28   items: InventoryReceiptItem[];                                                                               
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              59 type ReceiptItemRow = {                                                                                        
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              68 type ReceiptDetailRow = {                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              71   status: InventoryReceiptStatus;                                                                              
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              80   inventory_transaction_items: ReceiptItemRow[] | null;                                                        
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              83 type InventoryReceiptResponse = {                                                                              
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                              86   receipt?: ReceiptDetailRow;                                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             127 export async function getInventoryReceiptById(                                                                 
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             129 ): Promise<InventoryReceiptDetail> {                                                                           
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             142   const payload = (await response.json()) as InventoryReceiptResponse;                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             144   if (!response.ok || !payload.ok || !payload.receipt) {                                                       
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             148   const receipt = payload.receipt;                                                                             
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             150   const items: InventoryReceiptItem[] = (                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             151     receipt.inventory_transaction_items ?? []                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             176     .filter((item): item is InventoryReceiptItem => item !== null)                                             
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             188     id: receipt.id,                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             189     transactionDate: receipt.transaction_date,                                                                 
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             190     status: receipt.status,                                                                                    
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             191     supplierId: receipt.supplier_id,                                                                           
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             192     supplierName: getSupplierName(receipt.suppliers),                                                          
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             193     referenceType: receipt.reference_type,                                                                     
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             194     referenceNumber: receipt.reference_number,                                                                 
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             195     notes: receipt.notes,                                                                                      
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             196     postedAt: receipt.posted_at,                                                                               
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             197     createdAt: receipt.created_at,                                                                             
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipt.ts                                             198     updatedAt: receipt.updated_at,                                                                             
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receiptItems.ts                                          1 export type SaveInventoryReceiptItemInput = {                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receiptItems.ts                                          9 export async function saveInventoryReceiptItem(                                                                
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receiptItems.ts                                         10   input: SaveInventoryReceiptItemInput,                                                                        
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                              6 export type InventoryReceiptListItem = {                                                                       
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                             19 type ReceiptRow = {                                                                                            
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                             42 function getSupplierName(supplier: ReceiptRow["suppliers"]): string | null {                                   
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                             54 export async function getInventoryReceipts(): Promise<                                                         
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                             55   InventoryReceiptListItem[]                                                                                   
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            130   return ((data ?? []) as ReceiptRow[]).map((receipt) => {                                                     
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            131     const items = receipt.inventory_transaction_items ?? [];                                                   
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            145       id: receipt.id,                                                                                          
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            146       transactionDate: receipt.transaction_date,                                                               
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            147       status: receipt.status,                                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            148       referenceNumber: receipt.reference_number,                                                               
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            149       referenceType: receipt.reference_type,                                                                   
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            150       supplierName: getSupplierName(receipt.suppliers),                                                        
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts                                            154       createdAt: receipt.created_at,                                                                           
+C:\Users\gonza\Proyectos\fidelinook\lib\loyalty\customer-loyalty.mapper.ts                               306     saleId: normalizeOptionalPositiveInteger(                                                                  
+C:\Users\gonza\Proyectos\fidelinook\lib\loyalty\customer-loyalty.types.ts                                 29   saleId: number | null;                                                                                       
+
+
+
+
+============================================================
+4. GIT STATUS
+============================================================

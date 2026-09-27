@@ -119,96 +119,6 @@ function getItemFlavorIds(item: unknown): number[] {
     );
 }
 
-const OPERATIONAL_HISTORY_TIME_ZONE = "America/Santiago";
-const OPERATIONAL_HISTORY_DAYS_BACK = 14;
-
-function getOperationalHistoryStartIso(now = new Date()): string {
-  /*
-   * Regla funcional:
-   * - día calendario actual en Chile
-   * - más los 14 días calendario completos anteriores
-   * - total: ventana móvil de 15 días calendario
-   *
-   * Ejemplo:
-   * 27/09/2026 -> desde 13/09/2026 00:00 America/Santiago.
-   */
-
-  const dateParts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: OPERATIONAL_HISTORY_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-
-  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
-    dateParts.find((part) => part.type === type)?.value || "";
-
-  const year = Number(getPart("year"));
-  const month = Number(getPart("month"));
-  const day = Number(getPart("day"));
-
-  if (
-    !Number.isInteger(year) ||
-    !Number.isInteger(month) ||
-    !Number.isInteger(day)
-  ) {
-    throw new Error("No fue posible calcular la fecha operacional.");
-  }
-
-  /*
-   * Trabajamos primero como fecha calendario, no como instante,
-   * para retroceder exactamente 14 días independientemente
-   * de cambios de horario de verano/invierno.
-   */
-  const startCalendarDate = new Date(Date.UTC(year, month - 1, day));
-
-  startCalendarDate.setUTCDate(
-    startCalendarDate.getUTCDate() - OPERATIONAL_HISTORY_DAYS_BACK,
-  );
-
-  const targetYear = startCalendarDate.getUTCFullYear();
-  const targetMonth = startCalendarDate.getUTCMonth() + 1;
-  const targetDay = startCalendarDate.getUTCDate();
-
-  /*
-   * Determinamos el offset real de America/Santiago para la fecha
-   * inicial. No fijamos manualmente -03:00 o -04:00.
-   */
-  const offsetProbe = new Date(
-    Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0),
-  );
-
-  const offsetParts = new Intl.DateTimeFormat("en-US", {
-    timeZone: OPERATIONAL_HISTORY_TIME_ZONE,
-    timeZoneName: "longOffset",
-  }).formatToParts(offsetProbe);
-
-  const offsetLabel =
-    offsetParts.find((part) => part.type === "timeZoneName")?.value || "";
-
-  const offsetMatch = offsetLabel.match(/^GMT([+-])(\d{2}):(\d{2})$/);
-
-  if (!offsetMatch) {
-    throw new Error(
-      "No fue posible determinar el huso horario operacional.",
-    );
-  }
-
-  const sign = offsetMatch[1] === "+" ? 1 : -1;
-
-  const offsetMinutes =
-    sign * (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3]));
-
-  /*
-   * Convertimos las 00:00 de Chile de la fecha inicial
-   * al instante UTC correspondiente para consultar timestamptz.
-   */
-  const utcTimestamp =
-    Date.UTC(targetYear, targetMonth - 1, targetDay, 0, 0, 0) -
-    offsetMinutes * 60_000;
-
-  return new Date(utcTimestamp).toISOString();
-}
 export async function GET(req: Request) {
   const session = await getOperationSession();
   const authDurationMs = performance.now() - requestStartedAt;
@@ -241,37 +151,8 @@ export async function GET(req: Request) {
         ? Math.min(Math.floor(requestedPageSize), 100)
         : 50;
 
-    const requestedDateFrom = searchParams.get("dateFrom");
+    const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
-
-    /*
-     * El historial operacional nunca puede consultar antes del inicio
-     * de la ventana móvil de 15 días calendario.
-     *
-     * Si el usuario selecciona una fecha inicial más reciente,
-     * respetamos ese filtro.
-     */
-    const operationalHistoryStartIso = getOperationalHistoryStartIso();
-
-    let dateFrom = operationalHistoryStartIso;
-
-    if (requestedDateFrom) {
-      const parsedRequestedDateFrom = new Date(requestedDateFrom);
-
-      if (Number.isNaN(parsedRequestedDateFrom.getTime())) {
-        return NextResponse.json(
-          { ok: false, message: "Fecha inicial inválida." },
-          { status: 400 },
-        );
-      }
-
-      if (
-        parsedRequestedDateFrom.getTime() >
-        new Date(operationalHistoryStartIso).getTime()
-      ) {
-        dateFrom = parsedRequestedDateFrom.toISOString();
-      }
-    }
     const search = String(searchParams.get("search") || "").trim();
     const channel = String(searchParams.get("channel") || "").trim();
     const paymentMethod = String(
@@ -311,8 +192,7 @@ export async function GET(req: Request) {
       const { data: statusOrders, error: statusError } = await supabaseAdmin
         .from("orders")
         .select("sale_id")
-        .eq("status", orderStatus)
-        .gte("created_at", operationalHistoryStartIso);
+        .eq("status", orderStatus);
 
       if (statusError) {
         return NextResponse.json(
@@ -336,7 +216,6 @@ export async function GET(req: Request) {
       const { data: directSales, error: directSalesError } = await supabaseAdmin
         .from("sales")
         .select("id")
-        .gte("created_at", operationalHistoryStartIso)
         .or(
           [
             `sale_number.ilike.%${safeSearch}%`,
@@ -406,8 +285,7 @@ export async function GET(req: Request) {
           await supabaseAdmin
             .from("sales")
             .select("id")
-            .in("customer_id", customerIds)
-            .gte("created_at", operationalHistoryStartIso);
+            .in("customer_id", customerIds);
 
         if (customerSalesError) {
           return NextResponse.json(
@@ -424,7 +302,6 @@ export async function GET(req: Request) {
       const { data: matchingOrders, error: ordersError } = await supabaseAdmin
         .from("orders")
         .select("sale_id")
-        .gte("created_at", operationalHistoryStartIso)
         .or(
           [
             `display_order_code.ilike.%${safeSearch}%`,
