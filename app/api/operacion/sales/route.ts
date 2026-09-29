@@ -602,8 +602,33 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const requestStartedAt = performance.now();
 
-  const session = await getOperationSession();
-  const authDurationMs = performance.now() - requestStartedAt;
+  /*
+   * Auth y validación de caja son independientes.
+   *
+   * Las iniciamos en paralelo para evitar sumar ambas latencias
+   * secuencialmente antes de procesar la venta.
+   *
+   * No relajamos ninguna validación:
+   * - Auth sigue validándose mediante getOperationSession().
+   * - RBAC sigue aplicándose antes de procesar la venta.
+   * - La caja OPEN sigue consultándose directamente en BD.
+   * - El RPC sigue recibiendo la sesión de caja validada.
+   */
+  const authStartedAt = performance.now();
+
+  const sessionPromise = getOperationSession();
+
+  const cashValidationStartedAt = performance.now();
+
+  const activeCashSessionPromise = supabaseAdmin
+    .from("cash_register_sessions")
+    .select("id, status")
+    .eq("status", "OPEN")
+    .limit(1)
+    .maybeSingle();
+
+  const session = await sessionPromise;
+  const authDurationMs = performance.now() - authStartedAt;
 
   const authorization = authorizeOperationSession(session, "sales.operate");
 
@@ -622,15 +647,11 @@ export async function POST(req: Request) {
 
     const correlationId = createCorrelationId("sale-create");
 
-    const cashValidationStartedAt = performance.now();
-
     const { data: activeCashSession, error: activeCashSessionError } =
-      await supabaseAdmin
-        .from("cash_register_sessions")
-        .select("id, status")
-        .eq("status", "OPEN")
-        .limit(1)
-        .maybeSingle();
+      await activeCashSessionPromise;
+
+    const cashValidationDurationMs =
+      performance.now() - cashValidationStartedAt;
 
     if (activeCashSessionError) {
       console.error(
@@ -676,9 +697,6 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
-
-    const cashValidationDurationMs =
-      performance.now() - cashValidationStartedAt;
 
     const orderNotes = String(body.orderNotes || "").trim();
 
