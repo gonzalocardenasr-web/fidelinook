@@ -22,10 +22,10 @@ type ManualDiscountType = "percent" | "fixed";
 
 type ManualDiscountReason =
   | "courtesy"
-  | "complaint"
-  | "agreement"
-  | "exceptional_promotion"
-  | "service_error"
+  | "promotion"
+  | "platform_discount"
+  | "customer_compensation"
+  | "nooklovers"
   | "other";
 
 export default function NuevaVentaPage() {
@@ -674,9 +674,23 @@ export default function NuevaVentaPage() {
 
         continue;
       }
-      if (item.isGift && !item.giftReason?.trim()) {
-        return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+      if (item.isGift) {
+        const giftReason = item.giftReason?.trim() || "";
+
+        if (!giftReason) {
+          return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+        }
+
+        if (
+          giftReason === "Otro" ||
+          giftReason === "Otro:" ||
+          (giftReason.startsWith("Otro:") &&
+            !giftReason.slice("Otro:".length).trim())
+        ) {
+          return `Debes especificar el motivo del regalo para ${item.product.name}.`;
+        }
       }
+
       const isServedIceCream =
         item.product.category?.trim().toLowerCase() === "helados" &&
         item.product.operational_type?.trim().toLowerCase() === "servido";

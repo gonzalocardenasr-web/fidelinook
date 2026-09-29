@@ -171,18 +171,29 @@ function getManualDiscountTypeLabel(value?: string | null) {
 }
 
 function getManualDiscountReasonLabel(value?: string | null) {
-  const normalized = String(value || "").toLowerCase();
+  const normalized = value?.trim().toLowerCase();
 
+  if (!normalized) return "—";
+
+  // Catálogo vigente
   if (normalized === "courtesy") return "Cortesía comercial";
+  if (normalized === "promotion") return "Promoción";
+  if (normalized === "platform_discount") return "Descuento plataforma";
+  if (normalized === "customer_compensation") {
+    return "Compensación cliente";
+  }
+  if (normalized === "nooklovers") return "NookLovers";
+  if (normalized === "other") return "Otro";
+
+  // Catálogo histórico
   if (normalized === "complaint") return "Reclamo cliente";
   if (normalized === "agreement") return "Convenio";
   if (normalized === "exceptional_promotion") {
     return "Promoción excepcional";
   }
   if (normalized === "service_error") return "Error en atención";
-  if (normalized === "other") return "Otro";
 
-  return value || "—";
+  return value?.trim() || "—";
 }
 
 function getOrderStatusLabel(value?: string | null) {

@@ -830,10 +830,10 @@ export async function POST(req: Request) {
 
     const allowedManualDiscountReasons = [
       "courtesy",
-      "complaint",
-      "agreement",
-      "exceptional_promotion",
-      "service_error",
+      "promotion",
+      "platform_discount",
+      "customer_compensation",
+      "nooklovers",
       "other",
     ];
 
@@ -1080,6 +1080,24 @@ export async function POST(req: Request) {
             message:
               `La línea ${index + 1} está marcada como regalo ` +
               "pero no tiene motivo.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        isGift &&
+        (giftReason === "Otro" ||
+          giftReason === "Otro:" ||
+          (giftReason?.startsWith("Otro:") &&
+            !giftReason.slice("Otro:".length).trim()))
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `La línea ${index + 1} está marcada como regalo ` +
+              "y requiere especificar el motivo.",
           },
           { status: 400 },
         );

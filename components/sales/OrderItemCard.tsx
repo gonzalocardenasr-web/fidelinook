@@ -18,12 +18,15 @@ type Props = {
 };
 
 const giftReasons = [
-  "Atención comercial",
-  "Compensación cliente",
+  "Cortesía comercial",
   "Promoción",
-  "Error operacional",
+  "Compensación cliente",
+  "NookLovers",
   "Otro",
 ];
+
+const OTHER_GIFT_REASON = "Otro";
+const OTHER_GIFT_REASON_PREFIX = "Otro:";
 
 export default function OrderItemCard({
   item,
@@ -57,6 +60,26 @@ export default function OrderItemCard({
   const listLineTotal = (price + (item.extraUnitPrice || 0)) * item.quantity;
   const finalLineTotal = item.isGift ? 0 : listLineTotal;
 
+  const isOtherGiftReason =
+    item.giftReason === OTHER_GIFT_REASON ||
+    item.giftReason?.startsWith(OTHER_GIFT_REASON_PREFIX) === true;
+
+  const isPredefinedGiftReason = giftReasons.includes(item.giftReason ?? "");
+
+  const isReservedGiftReason =
+    Boolean(item.giftReason) && !isPredefinedGiftReason && !isOtherGiftReason;
+
+  const giftReasonSelectValue = isOtherGiftReason
+    ? OTHER_GIFT_REASON
+    : isPredefinedGiftReason
+      ? (item.giftReason ?? "")
+      : "";
+
+  const otherGiftReasonDetail =
+    item.giftReason?.startsWith(OTHER_GIFT_REASON_PREFIX) === true
+      ? item.giftReason.slice(OTHER_GIFT_REASON_PREFIX.length).trimStart()
+      : "";
+
   function getServiceFormatLabel() {
     if (!item.serviceFormat) return null;
 
@@ -82,6 +105,20 @@ export default function OrderItemCard({
     onUpdate(item.localId, {
       isGift: true,
       giftReason: "",
+    });
+  }
+
+  function handleGiftReasonChange(value: string) {
+    onUpdate(item.localId, {
+      giftReason: value || "",
+    });
+  }
+
+  function handleOtherGiftReasonChange(value: string) {
+    onUpdate(item.localId, {
+      giftReason: value.trim()
+        ? `${OTHER_GIFT_REASON_PREFIX} ${value}`
+        : OTHER_GIFT_REASON,
     });
   }
 
@@ -158,17 +195,15 @@ export default function OrderItemCard({
         )}
       </div>
 
-      {item.isGift && (
-        <div className="mt-1.5">
+      {item.isGift && !isReservedGiftReason && (
+        <div className="mt-1.5 space-y-1.5">
           <select
-            value={item.giftReason ?? ""}
-            onChange={(event) =>
-              onUpdate(item.localId, {
-                giftReason: event.target.value || "",
-              })
-            }
+            value={giftReasonSelectValue}
+            onChange={(event) => handleGiftReasonChange(event.target.value)}
             className={`h-7 w-full cursor-pointer rounded-lg border bg-white px-2 text-[10px] font-bold outline-none ${
-              item.giftReason ? "border-emerald-300" : "border-red-300"
+              item.giftReason && item.giftReason !== OTHER_GIFT_REASON
+                ? "border-emerald-300"
+                : "border-red-300"
             }`}
           >
             <option value="">Motivo del regalo</option>
@@ -179,6 +214,29 @@ export default function OrderItemCard({
               </option>
             ))}
           </select>
+
+          {isOtherGiftReason && (
+            <input
+              type="text"
+              value={otherGiftReasonDetail}
+              onChange={(event) =>
+                handleOtherGiftReasonChange(event.target.value)
+              }
+              placeholder="Especifica el motivo"
+              autoFocus
+              className={`h-7 w-full rounded-lg border bg-white px-2 text-[10px] font-semibold outline-none transition focus:ring-2 ${
+                otherGiftReasonDetail.trim()
+                  ? "border-emerald-300 focus:border-emerald-400 focus:ring-emerald-100"
+                  : "border-red-300 focus:border-red-400 focus:ring-red-100"
+              }`}
+            />
+          )}
+        </div>
+      )}
+
+      {item.isGift && isReservedGiftReason && (
+        <div className="mt-1.5 rounded-lg border border-emerald-300 bg-white px-2 py-1.5 text-[10px] font-bold text-emerald-800">
+          Motivo: {item.giftReason}
         </div>
       )}
 

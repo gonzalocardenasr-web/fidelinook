@@ -1,0 +1,2680 @@
+﻿============================================================
+RADIOGRAFIA — MOTIVOS REGALO + DESCUENTO POS
+============================================================
+
+=== 1. REFERENCIAS A REGALO / GIFT ===
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:109: is_gift,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:110: gift_reason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:959: * - no admite regalo;
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1017: if (itemRecord.is_gift === true) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1022: "Los ítems personalizados no pueden registrarse como regalo.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1047: is_gift: false,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1048: gift_reason: null,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1069: const isGift = itemRecord.is_gift === true;
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1071: const giftReason =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1072: typeof itemRecord.gift_reason === "string"
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1073: ? itemRecord.gift_reason.trim()
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1076: if (isGift && !giftReason) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1081: `La línea ${index + 1} está marcada como regalo ` +
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1093: is_gift: isGift,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1094: gift_reason: isGift ? giftReason : null,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:199: is_gift: boolean;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:200: gift_reason: string | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3665: {item.is_gift && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3667: Regalo
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3668: {item.gift_reason
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3669: ? `: ${item.gift_reason}`
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:426: !item.isGift &&
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:438: !item.isGift &&
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:468: if (item.isGift) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:469: acc.giftDiscountTotal += lineTotal;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:472: if (!item.isGift && potSkus.has(item.product.sku)) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:489: giftDiscountTotal: 0,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:527: pricing.giftDiscountTotal -
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:548: pricing.giftDiscountTotal +
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:677: if (item.isGift && !item.giftReason?.trim()) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:678: return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:777: isGift: Boolean(item.isGift),
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:778: giftReason: item.giftReason?.trim() || null,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:931: is_gift: false,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:932: gift_reason: null,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:940: is_gift: Boolean(item.isGift),
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:941: gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1214: giftDiscountTotal={pricing.giftDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\pos\CustomMessagePrintModal.tsx:157: placeholder={`Ejemplo:\n\nMuchas gracias por preferirnos nuevamente.\nEsperamos que disfrutes este pequeño regalo.`}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:37: giftDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:95: giftDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:921: giftDiscountTotal={giftDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:20: const giftReasons = [
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:58: const finalLineTotal = item.isGift ? 0 : listLineTotal;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:72: function toggleGift() {
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:73: if (item.isGift) {
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:75: isGift: false,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:76: giftReason: null,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:83: isGift: true,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:84: giftReason: "",
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:91: item.isGift
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:102: {item.isGift && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:104: Regalo
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:108: {item.isGift && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:116: item.isGift ? "text-emerald-700" : "text-violet-700"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:161: {item.isGift && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:164: value={item.giftReason ?? ""}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:167: giftReason: event.target.value || "",
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:171: item.giftReason ? "border-emerald-300" : "border-red-300"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:174: <option value="">Motivo del regalo</option>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:176: {giftReasons.map((reason) => (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:208: onClick={toggleGift}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:210: item.isGift
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:215: {item.isGift ? "Quitar regalo" : "Regalo"}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:6: giftDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:23: giftDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:60: {giftDiscountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:62: <span className="font-bold">Productos de regalo</span>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:65: -{formatCurrency(giftDiscountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\ProductConfigurator.tsx:243: isGift: editingItem?.isGift ?? false,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\ProductConfigurator.tsx:244: giftReason: editingItem?.giftReason ?? null,
+C:\Users\gonza\Proyectos\fidelinook\types\sales.ts:70: isGift: boolean;
+C:\Users\gonza\Proyectos\fidelinook\types\sales.ts:71: giftReason: string | null;
+
+=== 2. REFERENCIAS A DESCUENTO / DISCOUNT ===
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:29: discount_total?: number | null;
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:410: "Descuentos",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:453: discount_total,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:564: Number(sale.discount_total || 0),
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:73: discount_total,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:74: manual_discount_type,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:75: manual_discount_value,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:76: manual_discount_amount,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:77: manual_discount_reason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:78: manual_discount_notes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:107: discount_total,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:483: discount_total,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:484: manual_discount_type,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:485: manual_discount_value,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:486: manual_discount_amount,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:487: manual_discount_reason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:488: manual_discount_notes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:801: const rawManualDiscountType =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:802: typeof body.manualDiscountType === "string"
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:803: ? body.manualDiscountType.trim().toLowerCase()
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:806: const manualDiscountType =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:807: rawManualDiscountType === "" ? null : rawManualDiscountType;
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:809: const manualDiscountValue =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:810: body.manualDiscountValue === null ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:811: body.manualDiscountValue === undefined ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:812: body.manualDiscountValue === ""
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:814: : Number(body.manualDiscountValue);
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:816: const rawManualDiscountReason =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:817: typeof body.manualDiscountReason === "string"
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:818: ? body.manualDiscountReason.trim().toLowerCase()
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:821: const manualDiscountReason =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:822: rawManualDiscountReason === "" ? null : rawManualDiscountReason;
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:824: const manualDiscountNotes =
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:825: typeof body.manualDiscountNotes === "string"
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:826: ? body.manualDiscountNotes.trim() || null
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:829: const allowedManualDiscountTypes = ["percent", "fixed"];
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:831: const allowedManualDiscountReasons = [
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:840: if (manualDiscountType !== null) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:841: if (!allowedManualDiscountTypes.includes(manualDiscountType)) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:843: { ok: false, message: "Tipo de descuento manual inválido." },
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:849: manualDiscountValue === null ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:850: !Number.isInteger(manualDiscountValue) ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:851: manualDiscountValue <= 0
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:857: "El valor del descuento manual debe ser un número entero mayor que cero.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:863: if (manualDiscountType === "percent" && manualDiscountValue > 100) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:867: message: "El descuento porcentual no puede superar 100%.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:874: manualDiscountReason === null ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:875: !allowedManualDiscountReasons.includes(manualDiscountReason)
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:878: { ok: false, message: "Motivo de descuento manual inválido." },
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:883: if (manualDiscountReason === "other" && !manualDiscountNotes) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:887: message: "Debes especificar el motivo del descuento manual.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:893: manualDiscountValue !== null ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:894: manualDiscountReason !== null ||
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:895: manualDiscountNotes !== null
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:901: "No se pueden enviar datos de descuento manual sin indicar su tipo.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1374: p_manual_discount_type: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1375: p_manual_discount_value: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1376: p_manual_discount_reason: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1377: p_manual_discount_notes: manualDiscountNotes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1408: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1409: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1410: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1411: manualDiscountNotes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1478: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1479: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1480: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1481: manualDiscountNotes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1491: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1492: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1493: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1494: manualDiscountNotes,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1526: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1527: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:1528: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:197: discount_total: number;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:233: discount_total: number;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:234: manual_discount_type: "percent" | "fixed" | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:235: manual_discount_value: number | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:236: manual_discount_amount: number | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:237: manual_discount_reason: string | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:238: manual_discount_notes: string | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:466: function getManualDiscountTypeLabel(value?: string | null) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:473: function getManualDiscountReasonLabel(value?: string | null) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3698: {Number(selectedSaleDetail.manual_discount_amount || 0) >
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3703: Descuento manual
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3709: Number(selectedSaleDetail.manual_discount_amount),
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3721: {getManualDiscountTypeLabel(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3722: selectedSaleDetail.manual_discount_type,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3733: {getManualDiscountReasonLabel(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3734: selectedSaleDetail.manual_discount_reason,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3740: {selectedSaleDetail.manual_discount_notes && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3742: {selectedSaleDetail.manual_discount_notes}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3759: <span>Descuentos</span>
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:3762: -{formatCurrency(selectedSaleDetail.discount_total)}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:21: type ManualDiscountType = "percent" | "fixed";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:23: type ManualDiscountReason =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:61: const [manualDiscountEnabled, setManualDiscountEnabled] = useState(false);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:62: const [manualDiscountType, setManualDiscountType] =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:63: useState<ManualDiscountType>("percent");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:64: const [manualDiscountValue, setManualDiscountValue] = useState("");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:65: const [manualDiscountReason, setManualDiscountReason] = useState<
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:66: ManualDiscountReason | ""
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:68: const [manualDiscountNotes, setManualDiscountNotes] = useState("");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:443: const rewardDiscountTotal = rewardProductLine
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:469: acc.giftDiscountTotal += lineTotal;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:489: giftDiscountTotal: 0,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:493: const discountRate =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:508: const mysteryRewardDiscountTotal =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:517: const potDiscountBase =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:519: ? Math.max(0, pricing.potSubtotal - mysteryRewardDiscountTotal)
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:522: const potDiscountTotal = Math.round(potDiscountBase * discountRate);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:524: const totalBeforeManualDiscount = Math.max(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:527: pricing.giftDiscountTotal -
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:528: mysteryRewardDiscountTotal -
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:529: rewardDiscountTotal -
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:530: potDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:533: const parsedManualDiscountValue = Number(manualDiscountValue);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:535: const manualDiscountAmount = manualDiscountEnabled
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:536: ? manualDiscountType === "percent"
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:538: totalBeforeManualDiscount,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:540: (totalBeforeManualDiscount * parsedManualDiscountValue) / 100,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:543: : Math.min(totalBeforeManualDiscount, parsedManualDiscountValue)
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:546: const discountTotal =
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:547: potDiscountTotal +
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:548: pricing.giftDiscountTotal +
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:549: mysteryRewardDiscountTotal +
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:550: rewardDiscountTotal +
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:551: (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:553: const total = Math.max(0, pricing.subtotal - discountTotal);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:605: if (manualDiscountEnabled) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:607: manualDiscountValue.trim() === "" ||
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:608: !Number.isInteger(parsedManualDiscountValue) ||
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:609: parsedManualDiscountValue <= 0
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:611: return "Ingresa un valor válido para el descuento manual.";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:614: if (manualDiscountType === "percent" && parsedManualDiscountValue > 100) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:615: return "El descuento porcentual no puede superar 100%.";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:619: manualDiscountType === "fixed" &&
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:620: parsedManualDiscountValue > totalBeforeManualDiscount
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:622: return "El descuento manual no puede superar el total vigente.";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:625: if (!manualDiscountReason) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:626: return "Selecciona el motivo del descuento manual.";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:629: if (manualDiscountReason === "other" && !manualDiscountNotes.trim()) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:630: return "Especifica el motivo del descuento manual.";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:911: manualDiscountType: manualDiscountEnabled ? manualDiscountType : null,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:912: manualDiscountValue: manualDiscountEnabled
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:913: ? parsedManualDiscountValue
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:915: manualDiscountReason: manualDiscountEnabled
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:916: ? manualDiscountReason
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:918: manualDiscountNotes: manualDiscountEnabled
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:919: ? manualDiscountNotes.trim() || null
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1046: setManualDiscountEnabled(false);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1047: setManualDiscountType("percent");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1048: setManualDiscountValue("");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1049: setManualDiscountReason("");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1050: setManualDiscountNotes("");
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1212: discountRate={discountRate}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1213: potDiscountTotal={potDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1214: giftDiscountTotal={pricing.giftDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1215: mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1218: rewardDiscountTotal={rewardDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1219: discountTotal={discountTotal}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1222: manualDiscountEnabled={manualDiscountEnabled}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1223: manualDiscountType={manualDiscountType}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1224: manualDiscountValue={manualDiscountValue}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1225: manualDiscountReason={manualDiscountReason}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1226: manualDiscountNotes={manualDiscountNotes}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1227: manualDiscountAmount={manualDiscountAmount}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1228: totalBeforeManualDiscount={totalBeforeManualDiscount}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1234: onManualDiscountEnabledChange={setManualDiscountEnabled}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1235: onManualDiscountTypeChange={setManualDiscountType}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1236: onManualDiscountValueChange={setManualDiscountValue}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1237: onManualDiscountReasonChange={setManualDiscountReason}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\nueva\page.tsx:1238: onManualDiscountNotesChange={setManualDiscountNotes}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:55: discount_total: number;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:56: manual_discount_type?: "percent" | "fixed" | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:57: manual_discount_value?: number | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:58: manual_discount_amount?: number | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:59: manual_discount_reason?: string | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:60: manual_discount_notes?: string | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:164: function getManualDiscountTypeLabel(value?: string | null) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:173: function getManualDiscountReasonLabel(value?: string | null) {
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:656: const selectedManualDiscountAmount = Number(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:657: selectedSale?.manual_discount_amount || 0,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:660: const selectedAutomaticDiscountAmount = Math.max(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:662: Number(selectedSale?.discount_total || 0) - selectedManualDiscountAmount,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1540: {selectedManualDiscountAmount > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1544: Descuento manual
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1548: -{formatMoney(selectedManualDiscountAmount)}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1559: {getManualDiscountTypeLabel(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1560: selectedSale.manual_discount_type,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1571: {selectedSale.manual_discount_type === "percent"
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1573: selectedSale.manual_discount_value || 0,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1576: selectedSale.manual_discount_value || 0,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1587: {getManualDiscountReasonLabel(
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1588: selectedSale.manual_discount_reason,
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1593: {selectedSale.manual_discount_notes && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1600: {selectedSale.manual_discount_notes}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1617: {selectedAutomaticDiscountAmount > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1619: <span>Descuentos automáticos</span>
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1622: -{formatMoney(selectedAutomaticDiscountAmount)}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1627: {selectedManualDiscountAmount > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1629: <span className="font-bold">Descuento manual</span>
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1632: -{formatMoney(selectedManualDiscountAmount)}
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1637: {Number(selectedSale.discount_total || 0) === 0 && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:1639: <span>Descuentos</span>
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx:162: {document.discountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx:173: <span>Descuentos</span>
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx:176: -{formatMoney(document.discountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\documents\SaleReceipt80mm.tsx:184: document.discountTotal > 0 ? "mt-[2mm] border-t border-black" : ""
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:15: type ManualDiscountType = "percent" | "fixed";
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:17: type ManualDiscountReason =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:35: discountRate: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:36: potDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:37: giftDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:38: mysteryRewardDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:41: rewardDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:42: discountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:47: manualDiscountEnabled: boolean;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:48: manualDiscountType: ManualDiscountType;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:49: manualDiscountValue: string;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:50: manualDiscountReason: ManualDiscountReason | "";
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:51: manualDiscountNotes: string;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:52: manualDiscountAmount: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:53: totalBeforeManualDiscount: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:59: onManualDiscountEnabledChange: (value: boolean) => void;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:60: onManualDiscountTypeChange: (value: ManualDiscountType) => void;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:61: onManualDiscountValueChange: (value: string) => void;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:62: onManualDiscountReasonChange: (value: ManualDiscountReason | "") => void;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:63: onManualDiscountNotesChange: (value: string) => void;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:93: discountRate,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:94: potDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:95: giftDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:96: mysteryRewardDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:99: rewardDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:100: discountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:104: manualDiscountEnabled,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:105: manualDiscountType,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:106: manualDiscountValue,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:107: manualDiscountReason,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:108: manualDiscountNotes,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:109: manualDiscountAmount,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:110: totalBeforeManualDiscount,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:115: onManualDiscountEnabledChange,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:116: onManualDiscountTypeChange,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:117: onManualDiscountValueChange,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:118: onManualDiscountReasonChange,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:119: onManualDiscountNotesChange,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:197: const parsedManualDiscountValue =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:198: manualDiscountValue.trim() === "" ? 0 : Number(manualDiscountValue);
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:200: const manualDiscountValueInvalid =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:201: manualDiscountEnabled &&
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:202: (!Number.isInteger(parsedManualDiscountValue) ||
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:203: parsedManualDiscountValue <= 0 ||
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:204: (manualDiscountType === "percent" && parsedManualDiscountValue > 100) ||
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:205: (manualDiscountType === "fixed" &&
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:206: parsedManualDiscountValue > totalBeforeManualDiscount));
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:208: const manualDiscountReasonInvalid =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:209: manualDiscountEnabled && !manualDiscountReason;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:211: const manualDiscountNotesInvalid =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:212: manualDiscountEnabled &&
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:213: manualDiscountReason === "other" &&
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:214: !manualDiscountNotes.trim();
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:216: const manualDiscountInvalid =
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:217: manualDiscountValueInvalid ||
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:218: manualDiscountReasonInvalid ||
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:219: manualDiscountNotesInvalid;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:222: saving || cart.length === 0 || cashIsInsufficient || manualDiscountInvalid;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:228: function updateManualDiscountValue(value: string) {
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:229: onManualDiscountValueChange(value.replace(/\D/g, ""));
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:552: {/* DESCUENTOS */}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:557: Descuentos
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:562: manualDiscountEnabled && manualDiscountAmount > 0
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:567: {manualDiscountEnabled && manualDiscountAmount > 0
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:568: ? manualDiscountType === "percent"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:569: ? `${manualDiscountValue}% · -$${manualDiscountAmount.toLocaleString(
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:572: : `-$${manualDiscountAmount.toLocaleString("es-CL")}`
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:573: : "Sin descuento manual"}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:581: {!manualDiscountEnabled ? (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:584: onClick={() => onManualDiscountEnabledChange(true)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:587: Aplicar descuento
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:593: Descuento manual
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:599: onManualDiscountEnabledChange(false);
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:600: onManualDiscountValueChange("");
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:601: onManualDiscountReasonChange("");
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:602: onManualDiscountNotesChange("");
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:606: Quitar descuento
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:619: onClick={() => onManualDiscountTypeChange("percent")}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:621: manualDiscountType === "percent"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:631: onClick={() => onManualDiscountTypeChange("fixed")}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:633: manualDiscountType === "fixed"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:650: {manualDiscountType === "percent" ? "%" : "$"}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:654: value={manualDiscountValue}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:656: updateManualDiscountValue(event.target.value)
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:662: manualDiscountValueInvalid
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:677: value={manualDiscountReason}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:679: onManualDiscountReasonChange(
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:680: event.target.value as ManualDiscountReason | "",
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:684: manualDiscountReasonInvalid
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:701: {manualDiscountReason === "other" && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:708: value={manualDiscountNotes}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:710: onManualDiscountNotesChange(event.target.value)
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:714: manualDiscountNotesInvalid
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:722: {manualDiscountValueInvalid && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:724: {manualDiscountType === "percent"
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:726: : `Ingresa un monto entre $1 y $${totalBeforeManualDiscount.toLocaleString(
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:732: {manualDiscountReasonInvalid && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:734: Selecciona el motivo del descuento.
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:738: {manualDiscountNotesInvalid && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:919: discountRate={discountRate}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:920: potDiscountTotal={potDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:921: giftDiscountTotal={giftDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:922: mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:923: rewardDiscountTotal={rewardDiscountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:924: manualDiscountAmount={manualDiscountAmount}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:925: discountTotal={discountTotal}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:4: discountRate: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:5: potDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:6: giftDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:7: mysteryRewardDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:8: rewardDiscountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:9: manualDiscountAmount: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:10: discountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:21: discountRate,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:22: potDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:23: giftDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:24: mysteryRewardDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:25: rewardDiscountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:26: manualDiscountAmount,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:27: discountTotal,
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:30: const discountPercentage = Math.round(discountRate * 100);
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:34: {discountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:42: {potDiscountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:46: Descuento potes {discountPercentage}%
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:55: -{formatCurrency(potDiscountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:60: {giftDiscountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:65: -{formatCurrency(giftDiscountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:70: {mysteryRewardDiscountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:72: <span className="font-bold">Descuento premio misterioso</span>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:75: -{formatCurrency(mysteryRewardDiscountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:80: {rewardDiscountTotal > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:85: -{formatCurrency(rewardDiscountTotal)}
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:90: {manualDiscountAmount > 0 && (
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:92: <span className="font-bold">Descuento manual</span>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderTotals.tsx:95: -{formatCurrency(manualDiscountAmount)}
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts:118: discount_total,
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts:290: discountTotal: normalizeNonNegativeNumber(
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts:291: sale.discount_total,
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\build-sale-document.ts:292: "El descuento",
+C:\Users\gonza\Proyectos\fidelinook\lib\documents\sales\types.ts:62: discountTotal: number;
+C:\Users\gonza\Proyectos\fidelinook\types\sales-history.ts:46: discount_total: number;
+
+=== 3. REFERENCIAS A MOTIVOS ACTUALES ===
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:476: if (normalized === "courtesy") return "Cortesía comercial";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:477: if (normalized === "complaint") return "Reclamo cliente";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:478: if (normalized === "agreement") return "Convenio";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:480: return "Promoción excepcional";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\caja\page.tsx:482: if (normalized === "service_error") return "Error en atención";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:176: if (normalized === "courtesy") return "Cortesía comercial";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:177: if (normalized === "complaint") return "Reclamo cliente";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:178: if (normalized === "agreement") return "Convenio";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:180: return "Promoción excepcional";
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\ventas\page.tsx:182: if (normalized === "service_error") return "Error en atención";
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:690: <option value="courtesy">Cortesía comercial</option>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:691: <option value="complaint">Reclamo cliente</option>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:692: <option value="agreement">Convenio</option>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:694: Promoción excepcional
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderBuilder.tsx:696: <option value="service_error">Error en atención</option>
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:21: "Atención comercial",
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:22: "Compensación cliente",
+C:\Users\gonza\Proyectos\fidelinook\components\sales\OrderItemCard.tsx:24: "Error operacional",
+
+=== 4. ARCHIVOS POS CANDIDATOS COMPLETOS ===
+
+------------------------------------------------------------
+FILE: .\components\sales\OrderBuilder.tsx
+------------------------------------------------------------
+import {
+  ClienteSelectorReward,
+  ClienteSelectorValue,
+} from "../client/ClienteSelector";
+import {
+  CartItem,
+  OptionValue,
+  Product,
+  ProductCartItem,
+} from "../../types/sales";
+import OrderItemCard from "./OrderItemCard";
+import OrderTotals from "./OrderTotals";
+import { useRef, useState } from "react";
+
+type ManualDiscountType = "percent" | "fixed";
+
+type ManualDiscountReason =
+  | "courtesy"
+  | "complaint"
+  | "agreement"
+  | "exceptional_promotion"
+  | "service_error"
+  | "other";
+
+type Props = {
+  cart: CartItem[];
+  flavors: OptionValue[];
+  toppings: OptionValue[];
+  selectedCliente: ClienteSelectorValue | null;
+  paymentMethod: string;
+  channel: "local" | "shopify" | "uber_eats" | "rappi";
+  cashReceived: string;
+  subtotal: number;
+  potQuantity: number;
+  discountRate: number;
+  potDiscountTotal: number;
+  giftDiscountTotal: number;
+  mysteryRewardDiscountTotal: number;
+  eligibleRewards: ClienteSelectorReward[];
+  selectedRewardId: number | null;
+  rewardDiscountTotal: number;
+  discountTotal: number;
+  total: number;
+  saving: boolean;
+  orderNotes: string;
+  clienteSelectorResetKey: number;
+  manualDiscountEnabled: boolean;
+  manualDiscountType: ManualDiscountType;
+  manualDiscountValue: string;
+  manualDiscountReason: ManualDiscountReason | "";
+  manualDiscountNotes: string;
+  manualDiscountAmount: number;
+  totalBeforeManualDiscount: number;
+  getPrice: (product: Product) => number;
+  onClienteChange: (cliente: ClienteSelectorValue | null) => void;
+  onRewardChange: (rewardId: number | null) => void;
+  onPaymentMethodChange: (value: string) => void;
+  onCashReceivedChange: (value: string) => void;
+  onManualDiscountEnabledChange: (value: boolean) => void;
+  onManualDiscountTypeChange: (value: ManualDiscountType) => void;
+  onManualDiscountValueChange: (value: string) => void;
+  onManualDiscountReasonChange: (value: ManualDiscountReason | "") => void;
+  onManualDiscountNotesChange: (value: string) => void;
+  onRemoveItem: (localId: string) => void;
+  onDuplicateItem: (item: ProductCartItem) => void;
+  onReconfigureItem: (item: ProductCartItem) => void;
+  onUpdateItem: (localId: string, patch: Partial<CartItem>) => void;
+  onToggleFlavor: (item: ProductCartItem, flavorId: number) => void;
+  onToggleTopping: (item: ProductCartItem, toppingId: number) => void;
+  onRemoveFlavorSelection: (
+    item: ProductCartItem,
+    selectionIndex: number,
+  ) => void;
+  onOrderNotesChange: (value: string) => void;
+  onConfirm: () => void;
+  onAddCustomItem: (item: {
+    customName: string;
+    customUnitPrice: number;
+    quantity: number;
+    loyaltyEligible: boolean;
+  }) => void;
+};
+
+export default function OrderBuilder({
+  cart,
+  flavors,
+  toppings,
+  paymentMethod,
+  channel,
+  cashReceived,
+  subtotal,
+  potQuantity,
+  discountRate,
+  potDiscountTotal,
+  giftDiscountTotal,
+  mysteryRewardDiscountTotal,
+  eligibleRewards,
+  selectedRewardId,
+  rewardDiscountTotal,
+  discountTotal,
+  total,
+  saving,
+  orderNotes,
+  manualDiscountEnabled,
+  manualDiscountType,
+  manualDiscountValue,
+  manualDiscountReason,
+  manualDiscountNotes,
+  manualDiscountAmount,
+  totalBeforeManualDiscount,
+  getPrice,
+  onRewardChange,
+  onPaymentMethodChange,
+  onCashReceivedChange,
+  onManualDiscountEnabledChange,
+  onManualDiscountTypeChange,
+  onManualDiscountValueChange,
+  onManualDiscountReasonChange,
+  onManualDiscountNotesChange,
+  onRemoveItem,
+  onDuplicateItem,
+  onReconfigureItem,
+  onUpdateItem,
+  onToggleFlavor,
+  onToggleTopping,
+  onRemoveFlavorSelection,
+  onOrderNotesChange,
+  onConfirm,
+  onAddCustomItem,
+}: Props) {
+  const [customName, setCustomName] = useState("");
+  const [customUnitPrice, setCustomUnitPrice] = useState("");
+  const [customQuantity, setCustomQuantity] = useState("1");
+  const [customLoyaltyEligible, setCustomLoyaltyEligible] = useState(false);
+  const [customItemError, setCustomItemError] = useState("");
+
+  const customItemDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  function submitCustomItem() {
+    const normalizedName = customName.trim();
+    const parsedUnitPrice = Number(customUnitPrice);
+    const parsedQuantity = Number(customQuantity);
+
+    if (!normalizedName) {
+      setCustomItemError("Ingresa un nombre para el ítem.");
+      return;
+    }
+
+    if (!Number.isInteger(parsedUnitPrice) || parsedUnitPrice <= 0) {
+      setCustomItemError("Ingresa un precio entero mayor que cero.");
+      return;
+    }
+
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+      setCustomItemError("Ingresa una cantidad entera mayor que cero.");
+      return;
+    }
+
+    onAddCustomItem({
+      customName: normalizedName,
+      customUnitPrice: parsedUnitPrice,
+      quantity: parsedQuantity,
+      loyaltyEligible: customLoyaltyEligible,
+    });
+
+    setCustomName("");
+    setCustomUnitPrice("");
+    setCustomQuantity("1");
+    setCustomLoyaltyEligible(false);
+    setCustomItemError("");
+
+    if (customItemDetailsRef.current) {
+      customItemDetailsRef.current.open = false;
+    }
+  }
+
+  const parsedCashReceived =
+    cashReceived.trim() === "" ? 0 : Number(cashReceived);
+
+  const hasValidCashAmount =
+    Number.isFinite(parsedCashReceived) && parsedCashReceived >= 0;
+
+  const cashIsInsufficient =
+    paymentMethod === "efectivo" &&
+    total > 0 &&
+    (!cashReceived.trim() || !hasValidCashAmount || parsedCashReceived < total);
+
+  const cashChange =
+    paymentMethod === "efectivo" &&
+    hasValidCashAmount &&
+    parsedCashReceived >= total
+      ? parsedCashReceived - total
+      : 0;
+
+  const parsedManualDiscountValue =
+    manualDiscountValue.trim() === "" ? 0 : Number(manualDiscountValue);
+
+  const manualDiscountValueInvalid =
+    manualDiscountEnabled &&
+    (!Number.isInteger(parsedManualDiscountValue) ||
+      parsedManualDiscountValue <= 0 ||
+      (manualDiscountType === "percent" && parsedManualDiscountValue > 100) ||
+      (manualDiscountType === "fixed" &&
+        parsedManualDiscountValue > totalBeforeManualDiscount));
+
+  const manualDiscountReasonInvalid =
+    manualDiscountEnabled && !manualDiscountReason;
+
+  const manualDiscountNotesInvalid =
+    manualDiscountEnabled &&
+    manualDiscountReason === "other" &&
+    !manualDiscountNotes.trim();
+
+  const manualDiscountInvalid =
+    manualDiscountValueInvalid ||
+    manualDiscountReasonInvalid ||
+    manualDiscountNotesInvalid;
+
+  const confirmDisabled =
+    saving || cart.length === 0 || cashIsInsufficient || manualDiscountInvalid;
+
+  function updateCashReceived(value: string) {
+    onCashReceivedChange(value.replace(/\D/g, ""));
+  }
+
+  function updateManualDiscountValue(value: string) {
+    onManualDiscountValueChange(value.replace(/\D/g, ""));
+  }
+
+  function setQuickCashAmount(amount: number) {
+    onCashReceivedChange(String(amount));
+  }
+
+  return (
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
+        <div>
+          <h2 className="text-[12px] font-black uppercase tracking-wide text-neutral-500">
+            Pedido
+          </h2>
+          <p className="text-[10px] text-neutral-400">
+            {totalItems} producto{totalItems === 1 ? "" : "s"}
+          </p>
+        </div>
+
+        <p className="text-[13px] font-black text-violet-700">
+          ${total.toLocaleString("es-CL")}
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+        {cart.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-400">
+            Aún no hay líneas agregadas.
+          </div>
+        ) : (
+          cart.map((item) => {
+            if (item.itemType === "custom") {
+              const lineTotal = item.customUnitPrice * item.quantity;
+
+              return (
+                <div
+                  key={item.localId}
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2"
+                >
+                  <div className="flex items-baseline gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-black text-neutral-900">
+                        {item.customName}
+                      </p>
+
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                          Ítem personalizado
+                        </p>
+
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${
+                            item.loyaltyEligible
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-neutral-200 text-neutral-600"
+                          }`}
+                        >
+                          {item.loyaltyEligible
+                            ? "Aporta a fidelización"
+                            : "No aporta a fidelización"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right leading-tight">
+                      <p className="text-[12px] font-black text-violet-700">
+                        ${lineTotal.toLocaleString("es-CL")}
+                      </p>
+
+                      <p className="text-[9px] text-neutral-500">
+                        ${item.customUnitPrice.toLocaleString("es-CL")} c/u
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-neutral-500">
+                        Cantidad
+                      </span>
+
+                      <div className="flex items-center overflow-hidden rounded-md border border-neutral-200 bg-white">
+                        <button
+                          type="button"
+                          disabled={item.quantity <= 1}
+                          onClick={() =>
+                            onUpdateItem(item.localId, {
+                              quantity: Math.max(1, item.quantity - 1),
+                            })
+                          }
+                          className="flex h-7 w-7 cursor-pointer items-center justify-center border-r border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −
+                        </button>
+
+                        <span className="flex h-7 min-w-8 items-center justify-center px-1 text-[11px] font-black text-neutral-800">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateItem(item.localId, {
+                              quantity: item.quantity + 1,
+                            })
+                          }
+                          className="flex h-7 w-7 cursor-pointer items-center justify-center border-l border-neutral-200 text-[12px] font-black text-neutral-600 transition hover:bg-neutral-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onRemoveItem(item.localId)}
+                      className="cursor-pointer rounded-md px-1.5 py-1 text-[10px] font-bold text-red-600 transition hover:bg-red-50 active:scale-95"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <OrderItemCard
+                key={item.localId}
+                item={item}
+                flavors={flavors}
+                toppings={toppings}
+                price={getPrice(item.product)}
+                onRemove={onRemoveItem}
+                onDuplicate={onDuplicateItem}
+                onReconfigure={onReconfigureItem}
+                onUpdate={onUpdateItem}
+                onToggleFlavor={onToggleFlavor}
+                onToggleTopping={onToggleTopping}
+                onRemoveFlavorSelection={onRemoveFlavorSelection}
+              />
+            );
+          })
+        )}
+      </div>
+
+      <div className="mt-1.5 flex max-h-[68%] shrink-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <div className="min-h-0 overflow-y-auto p-2">
+          {/* ADICIONALES DEL PEDIDO */}
+          <details className="rounded-lg border border-neutral-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wide text-neutral-600">
+                  Adicionales del pedido
+                </p>
+
+                <p className="mt-0.5 text-[9px] text-neutral-400">
+                  {orderNotes.trim() ? "Nota agregada" : "Ítem especial o nota"}
+                </p>
+              </div>
+
+              <span className="text-[11px] font-black text-neutral-400">▾</span>
+            </summary>
+
+            <div className="space-y-2 border-t border-neutral-200 p-2">
+              <details
+                ref={customItemDetailsRef}
+                className="rounded-lg border border-amber-200 bg-amber-50"
+              >
+                <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-black text-amber-800">
+                  + Agregar ítem especial
+                </summary>
+
+                <div className="space-y-2 border-t border-amber-200 px-2.5 pb-2.5 pt-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Nombre
+                    </label>
+
+                    <input
+                      value={customName}
+                      onChange={(event) => {
+                        setCustomName(event.target.value);
+                        setCustomItemError("");
+                      }}
+                      placeholder="Ej: Despacho"
+                      maxLength={120}
+                      autoComplete="off"
+                      className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_82px] gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Precio unitario
+                      </label>
+
+                      <div className="relative mt-1">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
+                          $
+                        </span>
+
+                        <input
+                          value={customUnitPrice}
+                          onChange={(event) => {
+                            setCustomUnitPrice(
+                              event.target.value.replace(/\D/g, ""),
+                            );
+                            setCustomItemError("");
+                          }}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          className="w-full rounded-lg border border-neutral-200 bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Cantidad
+                      </label>
+
+                      <input
+                        value={customQuantity}
+                        onChange={(event) => {
+                          setCustomQuantity(
+                            event.target.value.replace(/\D/g, ""),
+                          );
+                          setCustomItemError("");
+                        }}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="1"
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-center text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Aporta a fidelización
+                    </label>
+
+                    <div className="mt-1 grid grid-cols-2 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomLoyaltyEligible(false);
+                          setCustomItemError("");
+                        }}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                          !customLoyaltyEligible
+                            ? "border-amber-500 bg-amber-100 text-amber-800"
+                            : "border-neutral-200 bg-white text-neutral-600"
+                        }`}
+                      >
+                        No
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomLoyaltyEligible(true);
+                          setCustomItemError("");
+                        }}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                          customLoyaltyEligible
+                            ? "border-emerald-500 bg-emerald-100 text-emerald-800"
+                            : "border-neutral-200 bg-white text-neutral-600"
+                        }`}
+                      >
+                        Sí
+                      </button>
+                    </div>
+
+                    <p className="mt-1 text-[9px] leading-tight text-neutral-500">
+                      Marca Sí solo si este cobro debe participar en el cálculo
+                      de sellos.
+                    </p>
+                  </div>
+
+                  {customItemError && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      {customItemError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitCustomItem}
+                    className="w-full cursor-pointer rounded-lg bg-amber-600 px-3 py-2 text-[11px] font-black text-white transition hover:bg-amber-700 active:scale-[0.99]"
+                  >
+                    Agregar al pedido
+                  </button>
+                </div>
+              </details>
+
+              <details className="rounded-lg border border-neutral-200 bg-neutral-50">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] font-bold text-neutral-600">
+                  <span>
+                    {orderNotes.trim() ? "Nota del pedido" : "+ Agregar nota"}
+                  </span>
+
+                  {orderNotes.trim() && (
+                    <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">
+                      Agregada
+                    </span>
+                  )}
+                </summary>
+
+                <div className="border-t border-neutral-200 px-2.5 pb-2.5 pt-2">
+                  <input
+                    value={orderNotes}
+                    onChange={(event) => onOrderNotesChange(event.target.value)}
+                    placeholder="Ej: cliente espera afuera"
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  />
+                </div>
+              </details>
+            </div>
+          </details>
+
+          {/* DESCUENTOS */}
+          <details className="mt-2 rounded-lg border border-neutral-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wide text-neutral-600">
+                  Descuentos
+                </p>
+
+                <p
+                  className={`mt-0.5 text-[10px] font-bold ${
+                    manualDiscountEnabled && manualDiscountAmount > 0
+                      ? "text-violet-700"
+                      : "text-neutral-400"
+                  }`}
+                >
+                  {manualDiscountEnabled && manualDiscountAmount > 0
+                    ? manualDiscountType === "percent"
+                      ? `${manualDiscountValue}% · -$${manualDiscountAmount.toLocaleString(
+                          "es-CL",
+                        )}`
+                      : `-$${manualDiscountAmount.toLocaleString("es-CL")}`
+                    : "Sin descuento manual"}
+                </p>
+              </div>
+
+              <span className="text-[11px] font-black text-neutral-400">▾</span>
+            </summary>
+
+            <div className="border-t border-neutral-200 p-2.5">
+              {!manualDiscountEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => onManualDiscountEnabledChange(true)}
+                  className="w-full cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.99]"
+                >
+                  Aplicar descuento
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
+                      Descuento manual
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onManualDiscountEnabledChange(false);
+                        onManualDiscountValueChange("");
+                        onManualDiscountReasonChange("");
+                        onManualDiscountNotesChange("");
+                      }}
+                      className="cursor-pointer rounded-md px-2 py-1 text-[10px] font-bold text-red-600 transition hover:bg-red-50"
+                    >
+                      Quitar descuento
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-[92px_1fr] gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Tipo
+                      </label>
+
+                      <div className="mt-1 grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onManualDiscountTypeChange("percent")}
+                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                            manualDiscountType === "percent"
+                              ? "border-violet-400 bg-violet-100 text-violet-700"
+                              : "border-neutral-200 bg-white text-neutral-600"
+                          }`}
+                        >
+                          %
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onManualDiscountTypeChange("fixed")}
+                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                            manualDiscountType === "fixed"
+                              ? "border-violet-400 bg-violet-100 text-violet-700"
+                              : "border-neutral-200 bg-white text-neutral-600"
+                          }`}
+                        >
+                          $
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Valor
+                      </label>
+
+                      <div className="relative mt-1">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
+                          {manualDiscountType === "percent" ? "%" : "$"}
+                        </span>
+
+                        <input
+                          value={manualDiscountValue}
+                          onChange={(event) =>
+                            updateManualDiscountValue(event.target.value)
+                          }
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          className={`w-full rounded-lg border bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:ring-2 ${
+                            manualDiscountValueInvalid
+                              ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                              : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Motivo
+                    </label>
+
+                    <select
+                      value={manualDiscountReason}
+                      onChange={(event) =>
+                        onManualDiscountReasonChange(
+                          event.target.value as ManualDiscountReason | "",
+                        )
+                      }
+                      className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
+                        manualDiscountReasonInvalid
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                          : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                      }`}
+                    >
+                      <option value="">Seleccionar motivo</option>
+                      <option value="courtesy">Cortesía comercial</option>
+                      <option value="complaint">Reclamo cliente</option>
+                      <option value="agreement">Convenio</option>
+                      <option value="exceptional_promotion">
+                        Promoción excepcional
+                      </option>
+                      <option value="service_error">Error en atención</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </div>
+
+                  {manualDiscountReason === "other" && (
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Especificar motivo
+                      </label>
+
+                      <input
+                        value={manualDiscountNotes}
+                        onChange={(event) =>
+                          onManualDiscountNotesChange(event.target.value)
+                        }
+                        placeholder="Describe el motivo"
+                        className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
+                          manualDiscountNotesInvalid
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                            : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                        }`}
+                      />
+                    </div>
+                  )}
+
+                  {manualDiscountValueInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      {manualDiscountType === "percent"
+                        ? "Ingresa un porcentaje entero entre 1 y 100."
+                        : `Ingresa un monto entre $1 y $${totalBeforeManualDiscount.toLocaleString(
+                            "es-CL",
+                          )}.`}
+                    </p>
+                  )}
+
+                  {manualDiscountReasonInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      Selecciona el motivo del descuento.
+                    </p>
+                  )}
+
+                  {manualDiscountNotesInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      Debes especificar el motivo.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* PAGO */}
+          <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+            <div className="flex items-center gap-2">
+              <label className="shrink-0 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                Pago
+              </label>
+
+              {channel === "local" ? (
+                <select
+                  value={paymentMethod}
+                  onChange={(event) =>
+                    onPaymentMethodChange(event.target.value)
+                  }
+                  className="min-w-0 flex-1 cursor-pointer rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+              ) : (
+                <div className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-bold text-neutral-700">
+                  Pago electrónico
+                </div>
+              )}
+            </div>
+
+            {paymentMethod === "efectivo" && (
+              <div className="mt-2 border-t border-neutral-200 pt-2">
+                <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wide text-neutral-500">
+                      Recibido
+                    </label>
+
+                    <div className="relative mt-1">
+                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[12px] font-bold text-neutral-500">
+                        $
+                      </span>
+
+                      <input
+                        value={cashReceived}
+                        onChange={(event) =>
+                          updateCashReceived(event.target.value)
+                        }
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="0"
+                        className={`w-full rounded-lg border bg-white py-1.5 pl-6 pr-2 text-[12px] font-black outline-none transition focus:ring-2 ${
+                          cashIsInsufficient && cashReceived.trim()
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                            : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pb-1 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                      Vuelto
+                    </p>
+                    <p
+                      className={`text-[13px] font-black ${
+                        cashChange > 0 ? "text-emerald-700" : "text-neutral-700"
+                      }`}
+                    >
+                      ${cashChange.toLocaleString("es-CL")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-1.5 flex gap-1">
+                  {[10000, 20000, 50000].map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setQuickCashAmount(amount)}
+                      className="flex-1 cursor-pointer rounded-md border border-neutral-200 bg-white px-1 py-1 text-[9px] font-black text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50"
+                    >
+                      ${(amount / 1000).toLocaleString("es-CL")} mil
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setQuickCashAmount(total)}
+                    className="flex-1 cursor-pointer rounded-md border border-violet-200 bg-violet-50 px-1 py-1 text-[9px] font-black text-violet-700 transition hover:bg-violet-100"
+                  >
+                    Exacto
+                  </button>
+                </div>
+
+                {cashIsInsufficient && cashReceived.trim() && (
+                  <p className="mt-1.5 text-[10px] font-bold text-red-600">
+                    El monto recibido debe ser al menos $
+                    {total.toLocaleString("es-CL")}.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* PREMIO */}
+          {eligibleRewards.length > 0 && (
+            <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-black text-emerald-800">
+                    Premio disponible
+                  </p>
+
+                  <p className="text-[9px] text-emerald-700">
+                    Puedes aplicar un premio vigente a esta venta.
+                  </p>
+                </div>
+
+                {selectedRewardId !== null && (
+                  <button
+                    type="button"
+                    onClick={() => onRewardChange(null)}
+                    className="cursor-pointer rounded-md px-2 py-1 text-[10px] font-bold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    No canjear
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 space-y-1">
+                {eligibleRewards.map((reward) => {
+                  const selected = reward.id === selectedRewardId;
+
+                  return (
+                    <button
+                      key={reward.id}
+                      type="button"
+                      onClick={() =>
+                        onRewardChange(selected ? null : reward.id)
+                      }
+                      className={`w-full cursor-pointer rounded-lg border px-2.5 py-2 text-left transition ${
+                        selected
+                          ? "border-emerald-500 bg-emerald-100"
+                          : "border-emerald-200 bg-white hover:bg-emerald-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-neutral-800">
+                          {reward.name}
+                        </span>
+
+                        <span className="text-[9px] font-black uppercase tracking-wide text-emerald-700">
+                          {selected ? "Seleccionado" : "Canjear"}
+                        </span>
+                      </div>
+
+                      {reward.description && (
+                        <p className="mt-0.5 text-[9px] text-neutral-500">
+                          {reward.description}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RESUMEN */}
+        <div className="shrink-0 border-t border-neutral-200 bg-white p-2">
+          <OrderTotals
+            subtotal={subtotal}
+            potQuantity={potQuantity}
+            discountRate={discountRate}
+            potDiscountTotal={potDiscountTotal}
+            giftDiscountTotal={giftDiscountTotal}
+            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+            rewardDiscountTotal={rewardDiscountTotal}
+            manualDiscountAmount={manualDiscountAmount}
+            discountTotal={discountTotal}
+            total={total}
+          />
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+            className="mt-1.5 w-full cursor-pointer rounded-lg bg-violet-600 px-3 py-2.5 text-[12px] font-black uppercase tracking-wide text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "Confirmando..." : "Confirmar venta"}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+------------------------------------------------------------
+FILE: .\app\operacion\ventas\nueva\page.tsx
+------------------------------------------------------------
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ClienteSelectorValue } from "../../../../components/client/ClienteSelector";
+import ProductGrid from "../../../../components/sales/ProductGrid";
+import OrderBuilder from "../../../../components/sales/OrderBuilder";
+import {
+  CartItem,
+  CoffeeOption,
+  CustomCartItem,
+  OptionGroup,
+  Product,
+  ProductCartItem,
+} from "../../../../types/sales";
+import POSLayout from "../../../../components/pos/POSLayout";
+import POSContextPanel from "../../../../components/pos/POSContextPanel";
+import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
+import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
+import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
+
+type ManualDiscountType = "percent" | "fixed";
+
+type ManualDiscountReason =
+  | "courtesy"
+  | "complaint"
+  | "agreement"
+  | "exceptional_promotion"
+  | "service_error"
+  | "other";
+
+export default function NuevaVentaPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("tarjeta");
+  const [cashReceived, setCashReceived] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
+  const [editingItem, setEditingItem] = useState<ProductCartItem | null>(null);
+
+  const [channel, setChannel] = useState<SalesChannel>("local");
+  const [externalOrderId, setExternalOrderId] = useState("");
+
+  const [selectedCliente, setSelectedCliente] =
+    useState<ClienteSelectorValue | null>(null);
+
+  const [selectedRewardId, setSelectedRewardId] = useState<number | null>(null);
+
+  const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
+    null,
+  );
+
+  const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
+
+  const [promotionalStamps, setPromotionalStamps] = useState(0);
+
+  const [manualDiscountEnabled, setManualDiscountEnabled] = useState(false);
+  const [manualDiscountType, setManualDiscountType] =
+    useState<ManualDiscountType>("percent");
+  const [manualDiscountValue, setManualDiscountValue] = useState("");
+  const [manualDiscountReason, setManualDiscountReason] = useState<
+    ManualDiscountReason | ""
+  >("");
+  const [manualDiscountNotes, setManualDiscountNotes] = useState("");
+
+  const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
+
+  const [readyPotFlavorIds, setReadyPotFlavorIds] = useState<number[]>([]);
+
+  const [availableBrownieVarietyIds, setAvailableBrownieVarietyIds] = useState<
+    number[]
+  >([]);
+
+  const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =
+    useState<number[]>([]);
+
+  const [availableCoffeeTypeIds, setAvailableCoffeeTypeIds] = useState<
+    number[]
+  >([]);
+
+  const [coffeeOptionPrices, setCoffeeOptionPrices] = useState<
+    {
+      optionValueId: number;
+      channel: string;
+      price: number;
+      inventoryQuantity: number;
+      stockQuantity: number;
+      isAvailable: boolean;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    if (!selectedCliente) {
+      setPromotionalStamps(0);
+    }
+  }, [selectedCliente]);
+
+  useEffect(() => {
+    cargarCatalogo();
+  }, []);
+
+  useEffect(() => {
+    setCashReceived("");
+
+    if (channel === "local") {
+      setPaymentMethod("tarjeta");
+    } else {
+      setPaymentMethod("pago_electronico");
+    }
+  }, [channel]);
+
+  async function cargarCatalogo() {
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/operacion/catalogo");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo cargar catálogo.");
+        return;
+      }
+
+      setProducts(data.products || []);
+      setOptionGroups(data.optionGroups || []);
+      setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
+      setReadyPotFlavorIds(data.readyPotFlavorIds || []);
+      setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);
+      setAvailableMineralWaterTypeIds(data.availableMineralWaterTypeIds || []);
+      setAvailableCoffeeTypeIds(data.availableCoffeeTypeIds || []);
+      setCoffeeOptionPrices(data.coffeeOptionPrices || []);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error cargando catálogo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase();
+
+    return products
+      .filter((product) => {
+        if (!isProductSellable(product)) {
+          return false;
+        }
+
+        if (!search) {
+          return true;
+        }
+
+        const name = product.name?.toLowerCase() || "";
+        const sku = product.sku?.toLowerCase() || "";
+        const category = product.category?.toLowerCase() || "";
+        const operationalType = product.operational_type?.toLowerCase() || "";
+        const subcategory = product.subcategory?.toLowerCase() || "";
+
+        return (
+          name.includes(search) ||
+          sku.includes(search) ||
+          category.includes(search) ||
+          operationalType.includes(search) ||
+          subcategory.includes(search)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [products, productSearch, channel, coffeeOptionPrices]);
+
+  const flavors = useMemo(() => {
+    return (
+      optionGroups.find((group) => group.code === "flavor")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active)
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups]);
+
+  const openBatchFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(openBatchFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
+  }, [flavors, openBatchFlavorIds]);
+
+  const readyPotFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(readyPotFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
+  }, [flavors, readyPotFlavorIds]);
+
+  const brownieVarieties = useMemo(() => {
+    const availableIds = new Set(availableBrownieVarietyIds);
+
+    return (
+      optionGroups.find((group) => group.code === "brownie_variety")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableBrownieVarietyIds]);
+
+  const mineralWaterTypes = useMemo(() => {
+    const availableIds = new Set(availableMineralWaterTypeIds);
+
+    return (
+      optionGroups.find((group) => group.code === "mineral_water_type")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableMineralWaterTypeIds]);
+
+  const coffeeTypes = useMemo<CoffeeOption[]>(() => {
+    const availableIds = new Set(availableCoffeeTypeIds);
+
+    const priceByOptionValueId = new Map(
+      coffeeOptionPrices
+        .filter((option) => option.channel === channel)
+        .map((option) => [Number(option.optionValueId), option]),
+    );
+
+    return (
+      optionGroups.find((group) => group.code === "coffee_type")
+        ?.catalog_option_values || []
+    )
+      .filter(
+        (option) =>
+          option.is_active &&
+          availableIds.has(option.id) &&
+          priceByOptionValueId.has(option.id),
+      )
+      .map((option) => {
+        const priceData = priceByOptionValueId.get(option.id);
+
+        return {
+          ...option,
+          price: Number(priceData?.price ?? 0),
+          inventoryQuantity: Number(priceData?.inventoryQuantity ?? 1),
+          stockQuantity: Number(priceData?.stockQuantity ?? 0),
+          isAvailable: Boolean(priceData?.isAvailable),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices, channel]);
+
+  const toppings = useMemo(() => {
+    return (
+      optionGroups.find((group) => group.code === "topping")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active)
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups]);
+
+  function getChannelPrice(product: Product): number | null {
+    const price = product.product_prices?.find(
+      (item) =>
+        item.channel === channel &&
+        item.price_list === "general" &&
+        item.is_active,
+    );
+
+    return price ? Number(price.price) : null;
+  }
+
+  function isProductEnabledForChannel(product: Product): boolean {
+    return Boolean(
+      product.product_channels?.some(
+        (item) => item.channel_code === channel && item.is_enabled,
+      ),
+    );
+  }
+
+  function isProductSellable(product: Product): boolean {
+    if (!isProductEnabledForChannel(product)) {
+      return false;
+    }
+
+    if (product.sku === "CAFE") {
+      return coffeeOptionPrices.some(
+        (option) => option.channel === channel && option.isAvailable,
+      );
+    }
+
+    return getChannelPrice(product) !== null;
+  }
+
+  function getPrice(product: Product): number {
+    return getChannelPrice(product) ?? 0;
+  }
+
+  function getItemExtraUnitPrice(item: ProductCartItem): number | null {
+    if (item.product.sku !== "CAFE") {
+      return item.extraUnitPrice || 0;
+    }
+
+    if (!item.coffeeTypeId) {
+      return null;
+    }
+
+    const coffeePrice = coffeeOptionPrices.find(
+      (option) =>
+        option.optionValueId === item.coffeeTypeId &&
+        option.channel === channel &&
+        option.isAvailable,
+    );
+
+    return coffeePrice ? Number(coffeePrice.price) : null;
+  }
+
+  function addProduct(product: Product) {
+    setEditingItem(null);
+    setConfiguringProduct(product);
+  }
+
+  function addCustomItem(input: {
+    customName: string;
+    customUnitPrice: number;
+    quantity: number;
+    loyaltyEligible: boolean;
+  }) {
+    const customItem: CustomCartItem = {
+      itemType: "custom",
+      localId: `custom-${Date.now()}-${Math.random()}`,
+      customName: input.customName.trim(),
+      customUnitPrice: input.customUnitPrice,
+      quantity: input.quantity,
+      loyaltyEligible: input.loyaltyEligible,
+      notes: "",
+    };
+
+    setCart((current) => [...current, customItem]);
+  }
+
+  function removeItem(localId: string) {
+    setCart((current) => current.filter((item) => item.localId !== localId));
+  }
+
+  function updateItem(localId: string, patch: Partial<CartItem>) {
+    setCart((current) =>
+      current.map((item) => {
+        if (item.localId !== localId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          ...patch,
+        } as CartItem;
+      }),
+    );
+  }
+
+  function toggleFlavor(item: ProductCartItem, flavorId: number) {
+    const maxFlavors = item.product.max_flavors || 0;
+    const currentSelections = item.flavorSelections || [];
+
+    if (maxFlavors <= 0) return;
+
+    if (currentSelections.length >= maxFlavors) {
+      updateItem(item.localId, {
+        flavorSelections: currentSelections.slice(0, -1),
+      });
+      return;
+    }
+
+    updateItem(item.localId, {
+      flavorSelections: [...currentSelections, flavorId],
+    });
+  }
+
+  function removeFlavorSelection(
+    item: ProductCartItem,
+    selectionIndex: number,
+  ) {
+    updateItem(item.localId, {
+      flavorSelections: item.flavorSelections.filter(
+        (_flavorId, index) => index !== selectionIndex,
+      ),
+    });
+  }
+
+  function toggleTopping(item: ProductCartItem, toppingId: number) {
+    const exists = item.toppingIds.includes(toppingId);
+
+    if (exists) {
+      updateItem(item.localId, {
+        toppingIds: item.toppingIds.filter((id) => id !== toppingId),
+      });
+      return;
+    }
+
+    if (item.toppingIds.length >= item.product.max_toppings) return;
+
+    updateItem(item.localId, {
+      toppingIds: [...item.toppingIds, toppingId],
+    });
+  }
+
+  const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
+
+  const now = Date.now();
+
+  const eligibleRewards = (
+    selectedCliente?.loyalty?.activeRewards ?? []
+  ).filter((reward) => {
+    if (
+      reward.status !== "active" ||
+      !reward.rewardProductId ||
+      reward.customerId !== selectedCliente?.id
+    ) {
+      return false;
+    }
+
+    if (reward.expiresAt && new Date(reward.expiresAt).getTime() < now) {
+      return false;
+    }
+
+    return cart.some(
+      (item) =>
+        item.itemType === "product" &&
+        !item.isGift &&
+        item.product.id === reward.rewardProductId,
+    );
+  });
+
+  const selectedReward =
+    eligibleRewards.find((reward) => reward.id === selectedRewardId) ?? null;
+
+  const rewardProductLine = selectedReward
+    ? cart.find(
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
+          !item.isGift &&
+          item.product.id === selectedReward.rewardProductId,
+      )
+    : undefined;
+
+  const rewardDiscountTotal = rewardProductLine
+    ? (getChannelPrice(rewardProductLine.product) ?? 0) +
+      (getItemExtraUnitPrice(rewardProductLine) ?? 0)
+    : 0;
+
+  const pricing = cart.reduce(
+    (acc, item) => {
+      if (item.itemType === "custom") {
+        acc.subtotal += item.customUnitPrice * item.quantity;
+        return acc;
+      }
+
+      const channelPrice = getChannelPrice(item.product);
+      const extraUnitPrice = getItemExtraUnitPrice(item);
+
+      const requiresBasePrice = item.product.sku !== "CAFE";
+      const hasValidBasePrice = !requiresBasePrice || channelPrice !== null;
+      const hasValidExtraPrice = extraUnitPrice !== null;
+
+      const unitPrice = (channelPrice ?? 0) + (extraUnitPrice ?? 0);
+      const lineTotal =
+        hasValidBasePrice && hasValidExtraPrice ? unitPrice * item.quantity : 0;
+
+      acc.subtotal += lineTotal;
+
+      if (item.isGift) {
+        acc.giftDiscountTotal += lineTotal;
+      }
+
+      if (!item.isGift && potSkus.has(item.product.sku)) {
+        acc.potQuantity += item.quantity;
+
+        const rewardAmountForLine =
+          selectedReward && item.product.id === selectedReward.rewardProductId
+            ? unitPrice
+            : 0;
+
+        acc.potSubtotal += Math.max(0, lineTotal - rewardAmountForLine);
+      }
+
+      return acc;
+    },
+    {
+      subtotal: 0,
+      potQuantity: 0,
+      potSubtotal: 0,
+      giftDiscountTotal: 0,
+    },
+  );
+
+  const discountRate =
+    channel === "local"
+      ? pricing.potQuantity >= 6
+        ? 0.15
+        : pricing.potQuantity >= 4
+          ? 0.1
+          : 0
+      : channel === "shopify"
+        ? pricing.potQuantity >= 9
+          ? 0.15
+          : pricing.potQuantity >= 4 && pricing.potQuantity !== 6
+            ? 0.1
+            : 0
+        : 0;
+
+  const mysteryRewardDiscountTotal =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? products.find((product) => product.sku === "POT-16-LISTO")
+        ? (getChannelPrice(
+            products.find((product) => product.sku === "POT-16-LISTO")!,
+          ) ?? 0)
+        : 0
+      : 0;
+
+  const potDiscountBase =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? Math.max(0, pricing.potSubtotal - mysteryRewardDiscountTotal)
+      : pricing.potSubtotal;
+
+  const potDiscountTotal = Math.round(potDiscountBase * discountRate);
+
+  const totalBeforeManualDiscount = Math.max(
+    0,
+    pricing.subtotal -
+      pricing.giftDiscountTotal -
+      mysteryRewardDiscountTotal -
+      rewardDiscountTotal -
+      potDiscountTotal,
+  );
+
+  const parsedManualDiscountValue = Number(manualDiscountValue);
+
+  const manualDiscountAmount = manualDiscountEnabled
+    ? manualDiscountType === "percent"
+      ? Math.min(
+          totalBeforeManualDiscount,
+          Math.round(
+            (totalBeforeManualDiscount * parsedManualDiscountValue) / 100,
+          ),
+        )
+      : Math.min(totalBeforeManualDiscount, parsedManualDiscountValue)
+    : 0;
+
+  const discountTotal =
+    potDiscountTotal +
+    pricing.giftDiscountTotal +
+    mysteryRewardDiscountTotal +
+    rewardDiscountTotal +
+    (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
+
+  const total = Math.max(0, pricing.subtotal - discountTotal);
+
+  function handleClienteChange(cliente: ClienteSelectorValue | null) {
+    setSelectedCliente(cliente);
+    setSelectedRewardId(null);
+  }
+
+  function handleRewardChange(rewardId: number | null) {
+    setSelectedRewardId(rewardId);
+  }
+
+  function handlePaymentMethodChange(value: string) {
+    setPaymentMethod(value);
+    setCashReceived("");
+  }
+
+  function validarVenta() {
+    if (cart.length === 0) {
+      return "Agrega al menos una línea a la venta.";
+    }
+
+    if (channel === "shopify" && pricing.potQuantity === 6) {
+      return "Un pedido Shopify de 6 potes no es válido: desde 6 potes pagados, Shopify incorpora un séptimo pote como Premio Misterioso.";
+    }
+
+    const unavailableItem = cart.find(
+      (item) => item.itemType === "product" && !isProductSellable(item.product),
+    );
+
+    if (unavailableItem?.itemType === "product") {
+      return `${unavailableItem.product.name} no está disponible para el canal seleccionado o no tiene una configuración comercial válida.`;
+    }
+
+    const unavailableCoffeeItem = cart.find(
+      (item): item is ProductCartItem =>
+        item.itemType === "product" &&
+        item.product.sku === "CAFE" &&
+        getItemExtraUnitPrice(item) === null,
+    );
+
+    if (unavailableCoffeeItem) {
+      return "El tipo de café seleccionado no tiene un precio disponible para el canal actual.";
+    }
+
+    if (selectedRewardId !== null && !selectedReward) {
+      return "El premio seleccionado ya no está disponible para esta venta.";
+    }
+
+    if (channel !== "local" && !externalOrderId.trim()) {
+      return "Ingresa el número externo del pedido digital.";
+    }
+
+    if (manualDiscountEnabled) {
+      if (
+        manualDiscountValue.trim() === "" ||
+        !Number.isInteger(parsedManualDiscountValue) ||
+        parsedManualDiscountValue <= 0
+      ) {
+        return "Ingresa un valor válido para el descuento manual.";
+      }
+
+      if (manualDiscountType === "percent" && parsedManualDiscountValue > 100) {
+        return "El descuento porcentual no puede superar 100%.";
+      }
+
+      if (
+        manualDiscountType === "fixed" &&
+        parsedManualDiscountValue > totalBeforeManualDiscount
+      ) {
+        return "El descuento manual no puede superar el total vigente.";
+      }
+
+      if (!manualDiscountReason) {
+        return "Selecciona el motivo del descuento manual.";
+      }
+
+      if (manualDiscountReason === "other" && !manualDiscountNotes.trim()) {
+        return "Especifica el motivo del descuento manual.";
+      }
+    }
+
+    if (paymentMethod === "efectivo") {
+      const receivedAmount = Number(cashReceived);
+
+      if (
+        cashReceived.trim() === "" ||
+        !Number.isFinite(receivedAmount) ||
+        receivedAmount < total
+      ) {
+        return "El monto recibido es inferior al total.";
+      }
+    }
+
+    if (
+      !Number.isInteger(promotionalStamps) ||
+      promotionalStamps < 0 ||
+      promotionalStamps > 5
+    ) {
+      return "La cantidad de sellos promocionales no es válida.";
+    }
+
+    if (promotionalStamps > 0 && !selectedCliente) {
+      return "Selecciona un cliente para asignar sellos promocionales.";
+    }
+
+    for (const item of cart) {
+      if (item.itemType === "custom") {
+        if (!item.customName.trim()) {
+          return "El ítem personalizado debe tener un nombre.";
+        }
+
+        if (
+          !Number.isInteger(item.customUnitPrice) ||
+          item.customUnitPrice <= 0
+        ) {
+          return `El precio de ${item.customName} no es válido.`;
+        }
+
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          return `La cantidad de ${item.customName} no es válida.`;
+        }
+
+        continue;
+      }
+      if (item.isGift && !item.giftReason?.trim()) {
+        return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+      }
+      const isServedIceCream =
+        item.product.category?.trim().toLowerCase() === "helados" &&
+        item.product.operational_type?.trim().toLowerCase() === "servido";
+
+      /*
+       * Los helados servidos no requieren sabor en caja.
+       * Los potes armados y demás productos configurables sí.
+       */
+      const requiresBrownieVariety =
+        item.product.sku === "BROWNIE" || item.product.sku === "BROWNIE-HELADO";
+
+      if (
+        requiresBrownieVariety &&
+        (!Number.isInteger(item.brownieVarietyId) ||
+          Number(item.brownieVarietyId) <= 0)
+      ) {
+        return `Debes seleccionar una variedad para ${item.product.name}.`;
+      }
+
+      if (
+        !isServedIceCream &&
+        item.product.has_flavors &&
+        item.product.sku !== "POT-16-ARMADO" &&
+        item.flavorSelections.length === 0
+      ) {
+        return `Debes seleccionar sabor para ${item.product.name}.`;
+      }
+
+      if (
+        !isServedIceCream &&
+        item.product.has_flavors &&
+        item.flavorSelections.length > item.product.max_flavors
+      ) {
+        return `${item.product.name} supera el máximo de sabores.`;
+      }
+
+      if (
+        item.product.allows_toppings &&
+        item.toppingIds.length > item.product.max_toppings
+      ) {
+        return `${item.product.name} supera el máximo de toppings.`;
+      }
+
+      const requiresMineralWaterType =
+        item.product.sku === "AGUA-MINERAL-500CC";
+
+      if (
+        requiresMineralWaterType &&
+        (!Number.isInteger(item.mineralWaterTypeId) ||
+          Number(item.mineralWaterTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo para ${item.product.name}.`;
+      }
+
+      const requiresCoffeeType = item.product.sku === "CAFE";
+
+      if (
+        requiresCoffeeType &&
+        (!Number.isInteger(item.coffeeTypeId) || Number(item.coffeeTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo de café para ${item.product.name}.`;
+      }
+    }
+
+    return null;
+  }
+
+  function getCartItemSignature(item: Omit<ProductCartItem, "localId">) {
+    return JSON.stringify({
+      productId: item.product.id,
+
+      flavorSelections: [...(item.flavorSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+
+      toppingIds: [...(item.toppingIds || [])].sort((a, b) => a - b),
+
+      brownieVarietyId: item.brownieVarietyId ?? null,
+
+      serviceFormat: item.serviceFormat || null,
+
+      includesCookie: Boolean(item.includesCookie),
+
+      chocolateDip: Boolean(item.chocolateDip),
+
+      extraToppingSelections: [...(item.extraToppingSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+
+      notes: item.notes?.trim() || "",
+
+      extraUnitPrice: item.extraUnitPrice || 0,
+
+      mineralWaterTypeId: item.mineralWaterTypeId ?? null,
+
+      coffeeTypeId: item.coffeeTypeId ?? null,
+
+      isGift: Boolean(item.isGift),
+      giftReason: item.giftReason?.trim() || null,
+    });
+  }
+
+  function addConfiguredProduct(item: Omit<ProductCartItem, "localId">) {
+    const newSignature = getCartItemSignature(item);
+
+    setCart((current) => {
+      const existingIndex = current.findIndex((cartItem) => {
+        if (cartItem.itemType !== "product") {
+          return false;
+        }
+
+        return getCartItemSignature(cartItem) === newSignature;
+      });
+
+      if (existingIndex === -1) {
+        const newProductItem: ProductCartItem = {
+          ...item,
+          localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
+        };
+
+        return [...current, newProductItem];
+      }
+
+      return current.map((cartItem, index) => {
+        if (index !== existingIndex || cartItem.itemType !== "product") {
+          return cartItem;
+        }
+
+        return {
+          ...cartItem,
+          quantity: cartItem.quantity + item.quantity,
+        };
+      });
+    });
+
+    setEditingItem(null);
+    setConfiguringProduct(null);
+  }
+
+  function imprimirVentaEnSegundoPlano(saleId: number) {
+    const iframe = window.document.createElement("iframe");
+
+    const printId = `nook-print-${saleId}-${Date.now()}`;
+
+    iframe.id = printId;
+    iframe.title = "Impresión Nook";
+    iframe.setAttribute("aria-hidden", "true");
+
+    iframe.src = `/operacion/ventas/ticket/${saleId}` + "?autoPrint=1";
+
+    /*
+     * No usamos display:none porque algunos navegadores no
+     * imprimen el contenido de elementos completamente ocultos.
+     */
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "80mm",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
+    });
+
+    let cleaned = false;
+
+    function cleanup() {
+      if (cleaned) return;
+
+      cleaned = true;
+
+      window.clearTimeout(cleanupTimeout);
+
+      window.removeEventListener("message", handlePrintMessage);
+
+      iframe.remove();
+    }
+
+    function handlePrintMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "NOOK_PRINT_COMPLETED" &&
+        Number(event.data?.saleId) === saleId
+      ) {
+        /*
+         * Damos un margen breve después del diálogo para evitar
+         * retirar el iframe antes de que el driver finalice.
+         */
+        window.setTimeout(cleanup, 500);
+      }
+    }
+
+    window.addEventListener("message", handlePrintMessage);
+
+    /*
+     * Contingencia: si el navegador no emite afterprint,
+     * el iframe se elimina igualmente después de un minuto.
+     */
+    const cleanupTimeout = window.setTimeout(cleanup, 60000);
+
+    window.document.body.appendChild(iframe);
+  }
+
+  async function confirmarVenta() {
+    if (saving) {
+      return;
+    }
+    const error = validarVenta();
+
+    if (error) {
+      setMessage(error);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage("");
+
+      const payload = {
+        channel,
+        externalOrderId: channel === "local" ? null : externalOrderId.trim(),
+        paymentMethod,
+        orderNotes: orderNotes.trim() || null,
+        customerId: selectedCliente?.id ?? null,
+        rewardId: selectedReward?.id ?? null,
+        promotionalStamps,
+        promotionReason: promotionalStamps > 0 ? "Promoción RRSS" : null,
+        manualDiscountType: manualDiscountEnabled ? manualDiscountType : null,
+        manualDiscountValue: manualDiscountEnabled
+          ? parsedManualDiscountValue
+          : null,
+        manualDiscountReason: manualDiscountEnabled
+          ? manualDiscountReason
+          : null,
+        manualDiscountNotes: manualDiscountEnabled
+          ? manualDiscountNotes.trim() || null
+          : null,
+        items: cart.map((item) => {
+          if (item.itemType === "custom") {
+            return {
+              item_type: "CUSTOM",
+              custom_name: item.customName.trim(),
+              unit_price: item.customUnitPrice,
+              quantity: item.quantity,
+              loyalty_eligible: item.loyaltyEligible,
+              notes: item.notes.trim() || null,
+              options: [],
+              is_gift: false,
+              gift_reason: null,
+            };
+          }
+
+          return {
+            item_type: "PRODUCT",
+            product_id: item.product.id,
+            quantity: item.quantity,
+            is_gift: Boolean(item.isGift),
+            gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
+            extra_unit_price: item.extraUnitPrice || 0,
+            notes: [
+              item.serviceFormat
+                ? `Formato: ${
+                    item.serviceFormat === "ambos"
+                      ? "vaso + barquillo"
+                      : item.serviceFormat
+                  }`
+                : null,
+              item.includesCookie ? "Con galleta" : null,
+              ...(item.extraLabels || []),
+              item.notes?.trim() || null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            options: [
+              ...item.flavorSelections.map((id) => ({
+                option_group_code: "flavor",
+                option_value_id: id,
+                quantity: 1,
+              })),
+
+              ...(item.brownieVarietyId
+                ? [
+                    {
+                      option_group_code: "brownie_variety",
+                      option_value_id: item.brownieVarietyId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...(item.mineralWaterTypeId
+                ? [
+                    {
+                      option_group_code: "mineral_water_type",
+                      option_value_id: item.mineralWaterTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...(item.coffeeTypeId
+                ? [
+                    {
+                      option_group_code: "coffee_type",
+                      option_value_id: item.coffeeTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...item.toppingIds.map((id) => ({
+                option_group_code: "topping",
+                option_value_id: id,
+                quantity: 1,
+              })),
+            ],
+          };
+        }),
+      };
+
+      const res = await fetch("/api/operacion/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo crear la venta.");
+
+        return;
+      }
+
+      const createdSaleId = Number(data.saleId);
+
+      if (!Number.isInteger(createdSaleId) || createdSaleId <= 0) {
+        setMessage(
+          "La venta fue creada, pero no se pudo identificar para imprimir.",
+        );
+
+        return;
+      }
+
+      const displayOrderCode =
+        data.result?.display_order_code ||
+        data.result?.order?.display_order_code ||
+        `Pedido creado`;
+
+      imprimirVentaEnSegundoPlano(createdSaleId);
+
+      setCart([]);
+      setOrderNotes("");
+      setSelectedCliente(null);
+      setSelectedRewardId(null);
+      setCashReceived("");
+      setChannel("local");
+      setExternalOrderId("");
+      setClienteSelectorResetKey((current) => current + 1);
+      setPromotionalStamps(0);
+      setManualDiscountEnabled(false);
+      setManualDiscountType("percent");
+      setManualDiscountValue("");
+      setManualDiscountReason("");
+      setManualDiscountNotes("");
+
+      const warnings = Array.isArray(data.warnings)
+        ? data.warnings.filter(
+            (warning: unknown) => typeof warning === "string" && warning.trim(),
+          )
+        : [];
+
+      setMessage(
+        warnings.length > 0
+          ? `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              `Preparando impresión. Advertencia: ${warnings.join(" ")}`
+          : `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              "Preparando impresión.",
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage("Error inesperado al confirmar venta.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function duplicateItem(item: ProductCartItem) {
+    setCart((current) =>
+      current.map((cartItem) =>
+        cartItem.localId === item.localId
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem,
+      ),
+    );
+  }
+
+  function reconfigureItem(item: ProductCartItem) {
+    setEditingItem(item);
+    setConfiguringProduct(item.product);
+  }
+
+  function updateConfiguredProduct(
+    localId: string,
+    updatedItem: Omit<ProductCartItem, "localId">,
+  ) {
+    const updatedSignature = getCartItemSignature(updatedItem);
+
+    setCart((current) => {
+      const itemBeingEdited = current.find((item) => item.localId === localId);
+
+      if (!itemBeingEdited || itemBeingEdited.itemType !== "product") {
+        return current;
+      }
+
+      const matchingItem = current.find(
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
+          item.localId !== localId &&
+          getCartItemSignature(item) === updatedSignature,
+      );
+
+      if (!matchingItem) {
+        return current.map((item) => {
+          if (item.localId !== localId) {
+            return item;
+          }
+
+          const updatedProductItem: ProductCartItem = {
+            ...updatedItem,
+            localId,
+          };
+
+          return updatedProductItem;
+        });
+      }
+
+      return current
+        .filter((item) => item.localId !== localId)
+        .map((item) => {
+          if (
+            item.itemType !== "product" ||
+            item.localId !== matchingItem.localId
+          ) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: item.quantity + updatedItem.quantity,
+          };
+        });
+    });
+
+    setEditingItem(null);
+    setConfiguringProduct(null);
+  }
+
+  return (
+    <>
+      <POSLayout
+        title={channel === "local" ? "Venta local" : "Pedido digital"}
+        subtitle={
+          channel === "local"
+            ? "POS Operacional Nook"
+            : "Ingreso manual multicanal"
+        }
+        center={
+          <div
+            className={
+              configuringProduct
+                ? "grid h-full min-h-0 min-w-0 grid-cols-[minmax(240px,0.9fr)_minmax(300px,1.1fr)] gap-2 overflow-hidden"
+                : "grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-hidden"
+            }
+          >
+            <ProductGrid
+              products={filteredProducts}
+              loading={loading}
+              getPrice={getPrice}
+              onAdd={addProduct}
+              search={productSearch}
+              onSearchChange={setProductSearch}
+              compact={Boolean(configuringProduct)}
+            />
+
+            {configuringProduct && (
+              <ProductConfigurator
+                key={`${configuringProduct.id}-${editingItem?.localId ?? "new"}`}
+                product={configuringProduct}
+                editingItem={editingItem}
+                flavors={
+                  configuringProduct?.sku === "POT-16-ARMADO" ||
+                  configuringProduct?.sku === "BROWNIE-HELADO"
+                    ? openBatchFlavors
+                    : configuringProduct?.sku === "POT-16-LISTO"
+                      ? readyPotFlavors
+                      : flavors
+                }
+                brownieVarieties={brownieVarieties}
+                mineralWaterTypes={mineralWaterTypes}
+                coffeeTypes={coffeeTypes}
+                getPrice={getPrice}
+                onCancel={() => {
+                  setConfiguringProduct(null);
+                  setEditingItem(null);
+                }}
+                onAddConfigured={addConfiguredProduct}
+                onUpdateConfigured={updateConfiguredProduct}
+              />
+            )}
+          </div>
+        }
+        right={
+          <OrderBuilder
+            cart={cart}
+            flavors={flavors}
+            toppings={toppings}
+            selectedCliente={selectedCliente}
+            paymentMethod={paymentMethod}
+            channel={channel}
+            cashReceived={cashReceived}
+            orderNotes={orderNotes}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            subtotal={pricing.subtotal}
+            potQuantity={pricing.potQuantity}
+            discountRate={discountRate}
+            potDiscountTotal={potDiscountTotal}
+            giftDiscountTotal={pricing.giftDiscountTotal}
+            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+            eligibleRewards={eligibleRewards}
+            selectedRewardId={selectedReward?.id ?? null}
+            rewardDiscountTotal={rewardDiscountTotal}
+            discountTotal={discountTotal}
+            total={total}
+            saving={saving}
+            manualDiscountEnabled={manualDiscountEnabled}
+            manualDiscountType={manualDiscountType}
+            manualDiscountValue={manualDiscountValue}
+            manualDiscountReason={manualDiscountReason}
+            manualDiscountNotes={manualDiscountNotes}
+            manualDiscountAmount={manualDiscountAmount}
+            totalBeforeManualDiscount={totalBeforeManualDiscount}
+            getPrice={getPrice}
+            onClienteChange={handleClienteChange}
+            onRewardChange={handleRewardChange}
+            onPaymentMethodChange={handlePaymentMethodChange}
+            onCashReceivedChange={setCashReceived}
+            onManualDiscountEnabledChange={setManualDiscountEnabled}
+            onManualDiscountTypeChange={setManualDiscountType}
+            onManualDiscountValueChange={setManualDiscountValue}
+            onManualDiscountReasonChange={setManualDiscountReason}
+            onManualDiscountNotesChange={setManualDiscountNotes}
+            onOrderNotesChange={setOrderNotes}
+            onAddCustomItem={addCustomItem}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
+            onToggleFlavor={toggleFlavor}
+            onToggleTopping={toggleTopping}
+            onRemoveFlavorSelection={removeFlavorSelection}
+            onConfirm={confirmarVenta}
+            onDuplicateItem={duplicateItem}
+            onReconfigureItem={reconfigureItem}
+          />
+        }
+        context={
+          <POSContextPanel
+            selectedCliente={selectedCliente}
+            cart={cart}
+            total={total}
+            message={message}
+            onClienteChange={handleClienteChange}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            channel={channel}
+            externalOrderId={externalOrderId}
+            onChannelChange={setChannel}
+            onExternalOrderIdChange={setExternalOrderId}
+            onOpenCustomMessage={() => setCustomMessageModalOpen(true)}
+            promotionalStamps={promotionalStamps}
+            onPromotionalStampsChange={setPromotionalStamps}
+          />
+        }
+      />
+
+      <CustomMessagePrintModal
+        open={customMessageModalOpen}
+        onClose={() => setCustomMessageModalOpen(false)}
+      />
+    </>
+  );
+}
+
+=== 5. GIT STATUS ===
+?? radiografia_motivos_pos_temp.txt

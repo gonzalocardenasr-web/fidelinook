@@ -16,10 +16,10 @@ type ManualDiscountType = "percent" | "fixed";
 
 type ManualDiscountReason =
   | "courtesy"
-  | "complaint"
-  | "agreement"
-  | "exceptional_promotion"
-  | "service_error"
+  | "promotion"
+  | "platform_discount"
+  | "customer_compensation"
+  | "nooklovers"
   | "other";
 
 type Props = {
@@ -688,12 +688,14 @@ export default function OrderBuilder({
                     >
                       <option value="">Seleccionar motivo</option>
                       <option value="courtesy">Cortesía comercial</option>
-                      <option value="complaint">Reclamo cliente</option>
-                      <option value="agreement">Convenio</option>
-                      <option value="exceptional_promotion">
-                        Promoción excepcional
+                      <option value="promotion">Promoción</option>
+                      <option value="platform_discount">
+                        Descuento plataforma
                       </option>
-                      <option value="service_error">Error en atención</option>
+                      <option value="customer_compensation">
+                        Compensación cliente
+                      </option>
+                      <option value="nooklovers">NookLovers</option>
                       <option value="other">Otro</option>
                     </select>
                   </div>
