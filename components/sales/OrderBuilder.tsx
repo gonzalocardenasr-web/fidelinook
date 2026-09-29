@@ -373,247 +373,482 @@ export default function OrderBuilder({
 
       <div className="mt-1.5 flex max-h-[68%] shrink-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="min-h-0 overflow-y-auto p-2">
-          <details
-            ref={customItemDetailsRef}
-            className="mb-2 rounded-lg border border-amber-200 bg-amber-50"
-          >
-            <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-black text-amber-800">
-              + Agregar ítem personalizado
-            </summary>
-
-            <div className="space-y-2 border-t border-amber-200 px-2.5 pb-2.5 pt-2">
+          {/* ADICIONALES DEL PEDIDO */}
+          <details className="rounded-lg border border-neutral-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  Nombre
-                </label>
+                <p className="text-[11px] font-black uppercase tracking-wide text-neutral-600">
+                  Adicionales del pedido
+                </p>
 
-                <input
-                  value={customName}
-                  onChange={(event) => {
-                    setCustomName(event.target.value);
-                    setCustomItemError("");
-                  }}
-                  placeholder="Ej: Despacho"
-                  maxLength={120}
-                  autoComplete="off"
-                  className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                />
+                <p className="mt-0.5 text-[9px] text-neutral-400">
+                  {orderNotes.trim() ? "Nota agregada" : "Ítem especial o nota"}
+                </p>
               </div>
 
-              <div className="grid grid-cols-[1fr_82px] gap-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                    Precio unitario
-                  </label>
+              <span className="text-[11px] font-black text-neutral-400">▾</span>
+            </summary>
 
-                  <div className="relative mt-1">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
-                      $
-                    </span>
+            <div className="space-y-2 border-t border-neutral-200 p-2">
+              <details
+                ref={customItemDetailsRef}
+                className="rounded-lg border border-amber-200 bg-amber-50"
+              >
+                <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-black text-amber-800">
+                  + Agregar ítem especial
+                </summary>
+
+                <div className="space-y-2 border-t border-amber-200 px-2.5 pb-2.5 pt-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Nombre
+                    </label>
 
                     <input
-                      value={customUnitPrice}
+                      value={customName}
                       onChange={(event) => {
-                        setCustomUnitPrice(
-                          event.target.value.replace(/\D/g, ""),
-                        );
+                        setCustomName(event.target.value);
                         setCustomItemError("");
                       }}
-                      inputMode="numeric"
+                      placeholder="Ej: Despacho"
+                      maxLength={120}
                       autoComplete="off"
-                      placeholder="0"
-                      className="w-full rounded-lg border border-neutral-200 bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                      className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_82px] gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Precio unitario
+                      </label>
+
+                      <div className="relative mt-1">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
+                          $
+                        </span>
+
+                        <input
+                          value={customUnitPrice}
+                          onChange={(event) => {
+                            setCustomUnitPrice(
+                              event.target.value.replace(/\D/g, ""),
+                            );
+                            setCustomItemError("");
+                          }}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          className="w-full rounded-lg border border-neutral-200 bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Cantidad
+                      </label>
+
+                      <input
+                        value={customQuantity}
+                        onChange={(event) => {
+                          setCustomQuantity(
+                            event.target.value.replace(/\D/g, ""),
+                          );
+                          setCustomItemError("");
+                        }}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="1"
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-center text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Aporta a fidelización
+                    </label>
+
+                    <div className="mt-1 grid grid-cols-2 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomLoyaltyEligible(false);
+                          setCustomItemError("");
+                        }}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                          !customLoyaltyEligible
+                            ? "border-amber-500 bg-amber-100 text-amber-800"
+                            : "border-neutral-200 bg-white text-neutral-600"
+                        }`}
+                      >
+                        No
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomLoyaltyEligible(true);
+                          setCustomItemError("");
+                        }}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                          customLoyaltyEligible
+                            ? "border-emerald-500 bg-emerald-100 text-emerald-800"
+                            : "border-neutral-200 bg-white text-neutral-600"
+                        }`}
+                      >
+                        Sí
+                      </button>
+                    </div>
+
+                    <p className="mt-1 text-[9px] leading-tight text-neutral-500">
+                      Marca Sí solo si este cobro debe participar en el cálculo
+                      de sellos.
+                    </p>
+                  </div>
+
+                  {customItemError && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      {customItemError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitCustomItem}
+                    className="w-full cursor-pointer rounded-lg bg-amber-600 px-3 py-2 text-[11px] font-black text-white transition hover:bg-amber-700 active:scale-[0.99]"
+                  >
+                    Agregar al pedido
+                  </button>
+                </div>
+              </details>
+
+              <details className="rounded-lg border border-neutral-200 bg-neutral-50">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] font-bold text-neutral-600">
+                  <span>
+                    {orderNotes.trim() ? "Nota del pedido" : "+ Agregar nota"}
+                  </span>
+
+                  {orderNotes.trim() && (
+                    <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">
+                      Agregada
+                    </span>
+                  )}
+                </summary>
+
+                <div className="border-t border-neutral-200 px-2.5 pb-2.5 pt-2">
+                  <input
+                    value={orderNotes}
+                    onChange={(event) => onOrderNotesChange(event.target.value)}
+                    placeholder="Ej: cliente espera afuera"
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  />
+                </div>
+              </details>
+            </div>
+          </details>
+
+          {/* DESCUENTOS */}
+          <details className="mt-2 rounded-lg border border-neutral-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wide text-neutral-600">
+                  Descuentos
+                </p>
+
+                <p
+                  className={`mt-0.5 text-[10px] font-bold ${
+                    manualDiscountEnabled && manualDiscountAmount > 0
+                      ? "text-violet-700"
+                      : "text-neutral-400"
+                  }`}
+                >
+                  {manualDiscountEnabled && manualDiscountAmount > 0
+                    ? manualDiscountType === "percent"
+                      ? `${manualDiscountValue}% · -$${manualDiscountAmount.toLocaleString(
+                          "es-CL",
+                        )}`
+                      : `-$${manualDiscountAmount.toLocaleString("es-CL")}`
+                    : "Sin descuento manual"}
+                </p>
+              </div>
+
+              <span className="text-[11px] font-black text-neutral-400">▾</span>
+            </summary>
+
+            <div className="border-t border-neutral-200 p-2.5">
+              {!manualDiscountEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => onManualDiscountEnabledChange(true)}
+                  className="w-full cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.99]"
+                >
+                  Aplicar descuento
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
+                      Descuento manual
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onManualDiscountEnabledChange(false);
+                        onManualDiscountValueChange("");
+                        onManualDiscountReasonChange("");
+                        onManualDiscountNotesChange("");
+                      }}
+                      className="cursor-pointer rounded-md px-2 py-1 text-[10px] font-bold text-red-600 transition hover:bg-red-50"
+                    >
+                      Quitar descuento
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-[92px_1fr] gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Tipo
+                      </label>
+
+                      <div className="mt-1 grid grid-cols-2 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onManualDiscountTypeChange("percent")}
+                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                            manualDiscountType === "percent"
+                              ? "border-violet-400 bg-violet-100 text-violet-700"
+                              : "border-neutral-200 bg-white text-neutral-600"
+                          }`}
+                        >
+                          %
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onManualDiscountTypeChange("fixed")}
+                          className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
+                            manualDiscountType === "fixed"
+                              ? "border-violet-400 bg-violet-100 text-violet-700"
+                              : "border-neutral-200 bg-white text-neutral-600"
+                          }`}
+                        >
+                          $
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Valor
+                      </label>
+
+                      <div className="relative mt-1">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
+                          {manualDiscountType === "percent" ? "%" : "$"}
+                        </span>
+
+                        <input
+                          value={manualDiscountValue}
+                          onChange={(event) =>
+                            updateManualDiscountValue(event.target.value)
+                          }
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          className={`w-full rounded-lg border bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:ring-2 ${
+                            manualDiscountValueInvalid
+                              ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                              : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      Motivo
+                    </label>
+
+                    <select
+                      value={manualDiscountReason}
+                      onChange={(event) =>
+                        onManualDiscountReasonChange(
+                          event.target.value as ManualDiscountReason | "",
+                        )
+                      }
+                      className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
+                        manualDiscountReasonInvalid
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                          : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                      }`}
+                    >
+                      <option value="">Seleccionar motivo</option>
+                      <option value="courtesy">Cortesía comercial</option>
+                      <option value="complaint">Reclamo cliente</option>
+                      <option value="agreement">Convenio</option>
+                      <option value="exceptional_promotion">
+                        Promoción excepcional
+                      </option>
+                      <option value="service_error">Error en atención</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </div>
+
+                  {manualDiscountReason === "other" && (
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Especificar motivo
+                      </label>
+
+                      <input
+                        value={manualDiscountNotes}
+                        onChange={(event) =>
+                          onManualDiscountNotesChange(event.target.value)
+                        }
+                        placeholder="Describe el motivo"
+                        className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
+                          manualDiscountNotesInvalid
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                            : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                        }`}
+                      />
+                    </div>
+                  )}
+
+                  {manualDiscountValueInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      {manualDiscountType === "percent"
+                        ? "Ingresa un porcentaje entero entre 1 y 100."
+                        : `Ingresa un monto entre $1 y $${totalBeforeManualDiscount.toLocaleString(
+                            "es-CL",
+                          )}.`}
+                    </p>
+                  )}
+
+                  {manualDiscountReasonInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      Selecciona el motivo del descuento.
+                    </p>
+                  )}
+
+                  {manualDiscountNotesInvalid && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      Debes especificar el motivo.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* PAGO */}
+          <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+            <div className="flex items-center gap-2">
+              <label className="shrink-0 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                Pago
+              </label>
+
+              {channel === "local" ? (
+                <select
+                  value={paymentMethod}
+                  onChange={(event) =>
+                    onPaymentMethodChange(event.target.value)
+                  }
+                  className="min-w-0 flex-1 cursor-pointer rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-bold outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+              ) : (
+                <div className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] font-bold text-neutral-700">
+                  Pago electrónico
+                </div>
+              )}
+            </div>
+
+            {paymentMethod === "efectivo" && (
+              <div className="mt-2 border-t border-neutral-200 pt-2">
+                <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wide text-neutral-500">
+                      Recibido
+                    </label>
+
+                    <div className="relative mt-1">
+                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[12px] font-bold text-neutral-500">
+                        $
+                      </span>
+
+                      <input
+                        value={cashReceived}
+                        onChange={(event) =>
+                          updateCashReceived(event.target.value)
+                        }
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="0"
+                        className={`w-full rounded-lg border bg-white py-1.5 pl-6 pr-2 text-[12px] font-black outline-none transition focus:ring-2 ${
+                          cashIsInsufficient && cashReceived.trim()
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                            : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pb-1 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-neutral-400">
+                      Vuelto
+                    </p>
+                    <p
+                      className={`text-[13px] font-black ${
+                        cashChange > 0 ? "text-emerald-700" : "text-neutral-700"
+                      }`}
+                    >
+                      ${cashChange.toLocaleString("es-CL")}
+                    </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                    Cantidad
-                  </label>
-
-                  <input
-                    value={customQuantity}
-                    onChange={(event) => {
-                      setCustomQuantity(event.target.value.replace(/\D/g, ""));
-                      setCustomItemError("");
-                    }}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="1"
-                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-center text-[12px] font-black outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  Aporta a fidelización
-                </label>
-
-                <div className="mt-1 grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomLoyaltyEligible(false);
-                      setCustomItemError("");
-                    }}
-                    className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
-                      !customLoyaltyEligible
-                        ? "border-amber-500 bg-amber-100 text-amber-800"
-                        : "border-neutral-200 bg-white text-neutral-600"
-                    }`}
-                  >
-                    No
-                  </button>
+                <div className="mt-1.5 flex gap-1">
+                  {[10000, 20000, 50000].map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setQuickCashAmount(amount)}
+                      className="flex-1 cursor-pointer rounded-md border border-neutral-200 bg-white px-1 py-1 text-[9px] font-black text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50"
+                    >
+                      ${(amount / 1000).toLocaleString("es-CL")} mil
+                    </button>
+                  ))}
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setCustomLoyaltyEligible(true);
-                      setCustomItemError("");
-                    }}
-                    className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
-                      customLoyaltyEligible
-                        ? "border-emerald-500 bg-emerald-100 text-emerald-800"
-                        : "border-neutral-200 bg-white text-neutral-600"
-                    }`}
+                    onClick={() => setQuickCashAmount(total)}
+                    className="flex-1 cursor-pointer rounded-md border border-violet-200 bg-violet-50 px-1 py-1 text-[9px] font-black text-violet-700 transition hover:bg-violet-100"
                   >
-                    Sí
+                    Exacto
                   </button>
                 </div>
 
-                <p className="mt-1 text-[9px] leading-tight text-neutral-500">
-                  Marca Sí solo si este cobro debe participar en el cálculo de
-                  sellos.
-                </p>
-              </div>
-
-              {customItemError && (
-                <p className="text-[11px] font-bold text-red-600">
-                  {customItemError}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={submitCustomItem}
-                className="w-full cursor-pointer rounded-lg bg-amber-600 px-3 py-2 text-[11px] font-black text-white transition hover:bg-amber-700 active:scale-[0.99]"
-              >
-                Agregar al pedido
-              </button>
-            </div>
-          </details>
-
-          <details
-            open={Boolean(orderNotes.trim())}
-            className="rounded-lg border border-neutral-200 bg-neutral-50"
-          >
-            <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] font-bold text-neutral-600">
-              {orderNotes.trim() ? "Nota agregada" : "+ Agregar nota"}
-            </summary>
-
-            <div className="border-t border-neutral-200 px-2.5 pb-2.5 pt-2">
-              <input
-                value={orderNotes}
-                onChange={(event) => onOrderNotesChange(event.target.value)}
-                placeholder="Ej: cliente espera afuera"
-                className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-              />
-            </div>
-          </details>
-
-          <div className="mt-2">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-              Medio de pago
-            </label>
-
-            {channel === "local" ? (
-              <select
-                value={paymentMethod}
-                onChange={(event) => onPaymentMethodChange(event.target.value)}
-                className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] outline-none transition hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-              >
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta">Tarjeta</option>
-                <option value="transferencia">Transferencia</option>
-              </select>
-            ) : (
-              <div className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[12px] font-bold text-neutral-700">
-                Pago electrónico
+                {cashIsInsufficient && cashReceived.trim() && (
+                  <p className="mt-1.5 text-[10px] font-bold text-red-600">
+                    El monto recibido debe ser al menos $
+                    {total.toLocaleString("es-CL")}.
+                  </p>
+                )}
               </div>
             )}
           </div>
 
-          {paymentMethod === "efectivo" && (
-            <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                Monto recibido
-              </label>
-
-              <div className="relative mt-1">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
-                  $
-                </span>
-                <input
-                  value={cashReceived}
-                  onChange={(event) => updateCashReceived(event.target.value)}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="0"
-                  className={`w-full rounded-lg border bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:ring-2 ${
-                    cashIsInsufficient && cashReceived.trim()
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                      : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                  }`}
-                />
-              </div>
-
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {[10000, 20000, 50000].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => setQuickCashAmount(amount)}
-                    className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-1 py-1.5 text-[10px] font-black text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
-                  >
-                    ${(amount / 1000).toLocaleString("es-CL")} mil
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => setQuickCashAmount(total)}
-                  className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-1 py-1.5 text-[10px] font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 active:scale-[0.98]"
-                >
-                  Exacto
-                </button>
-              </div>
-
-              {cashIsInsufficient && (
-                <p className="mt-2 text-[11px] font-bold text-red-600">
-                  Ingresa un monto recibido igual o superior a $
-                  {total.toLocaleString("es-CL")}.
-                </p>
-              )}
-
-              <div className="mt-2 flex items-center justify-between border-t border-neutral-200 pt-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                  Vuelto
-                </span>
-                <span
-                  className={`text-[13px] font-black ${
-                    cashChange > 0 ? "text-emerald-700" : "text-neutral-700"
-                  }`}
-                >
-                  ${cashChange.toLocaleString("es-CL")}
-                </span>
-              </div>
-            </div>
-          )}
-
+          {/* PREMIO */}
           {eligibleRewards.length > 0 && (
-            <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+            <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-[11px] font-black text-emerald-800">
@@ -674,175 +909,9 @@ export default function OrderBuilder({
               </div>
             </div>
           )}
-
-          <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
-            <label className="flex cursor-pointer items-center justify-between gap-3">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                Descuento manual
-              </span>
-
-              <input
-                type="checkbox"
-                checked={manualDiscountEnabled}
-                onChange={(event) =>
-                  onManualDiscountEnabledChange(event.target.checked)
-                }
-                className="h-5 w-5 cursor-pointer accent-violet-600"
-              />
-            </label>
-
-            {manualDiscountEnabled && (
-              <div className="mt-2 space-y-2 border-t border-neutral-200 pt-2">
-                <div className="grid grid-cols-[92px_1fr] gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                      Tipo
-                    </label>
-
-                    <div className="mt-1 grid grid-cols-2 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onManualDiscountTypeChange("percent")}
-                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
-                          manualDiscountType === "percent"
-                            ? "border-violet-400 bg-violet-100 text-violet-700"
-                            : "border-neutral-200 bg-white text-neutral-600"
-                        }`}
-                      >
-                        %
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onManualDiscountTypeChange("fixed")}
-                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-black transition ${
-                          manualDiscountType === "fixed"
-                            ? "border-violet-400 bg-violet-100 text-violet-700"
-                            : "border-neutral-200 bg-white text-neutral-600"
-                        }`}
-                      >
-                        $
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                      Valor
-                    </label>
-
-                    <div className="relative mt-1">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-neutral-500">
-                        {manualDiscountType === "percent" ? "%" : "$"}
-                      </span>
-
-                      <input
-                        value={manualDiscountValue}
-                        onChange={(event) =>
-                          updateManualDiscountValue(event.target.value)
-                        }
-                        inputMode="numeric"
-                        autoComplete="off"
-                        placeholder="0"
-                        className={`w-full rounded-lg border bg-white py-1.5 pl-7 pr-2.5 text-[12px] font-black outline-none transition focus:ring-2 ${
-                          manualDiscountValueInvalid
-                            ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                            : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                    Motivo
-                  </label>
-
-                  <select
-                    value={manualDiscountReason}
-                    onChange={(event) =>
-                      onManualDiscountReasonChange(
-                        event.target.value as ManualDiscountReason | "",
-                      )
-                    }
-                    className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
-                      manualDiscountReasonInvalid
-                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                        : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                    }`}
-                  >
-                    <option value="">Seleccionar motivo</option>
-                    <option value="courtesy">Cortesía comercial</option>
-                    <option value="complaint">Reclamo cliente</option>
-                    <option value="agreement">Convenio</option>
-                    <option value="exceptional_promotion">
-                      Promoción excepcional
-                    </option>
-                    <option value="service_error">Error en atención</option>
-                    <option value="other">Otro</option>
-                  </select>
-                </div>
-
-                {manualDiscountReason === "other" && (
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                      Especificar motivo
-                    </label>
-
-                    <input
-                      value={manualDiscountNotes}
-                      onChange={(event) =>
-                        onManualDiscountNotesChange(event.target.value)
-                      }
-                      placeholder="Describe el motivo"
-                      className={`mt-1 w-full rounded-lg border bg-white px-2.5 py-1.5 text-[12px] outline-none transition focus:ring-2 ${
-                        manualDiscountNotesInvalid
-                          ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                          : "border-neutral-200 focus:border-violet-400 focus:ring-violet-100"
-                      }`}
-                    />
-                  </div>
-                )}
-
-                {manualDiscountValueInvalid && (
-                  <p className="text-[11px] font-bold text-red-600">
-                    {manualDiscountType === "percent"
-                      ? "Ingresa un porcentaje entero entre 1 y 100."
-                      : `Ingresa un monto entre $1 y $${totalBeforeManualDiscount.toLocaleString(
-                          "es-CL",
-                        )}.`}
-                  </p>
-                )}
-
-                {manualDiscountReasonInvalid && (
-                  <p className="text-[11px] font-bold text-red-600">
-                    Selecciona el motivo del descuento.
-                  </p>
-                )}
-
-                {manualDiscountNotesInvalid && (
-                  <p className="text-[11px] font-bold text-red-600">
-                    Debes especificar el motivo.
-                  </p>
-                )}
-
-                {!manualDiscountInvalid && manualDiscountAmount > 0 && (
-                  <div className="flex items-center justify-between rounded-lg bg-violet-100 px-3 py-2">
-                    <span className="text-xs font-bold text-violet-700">
-                      Descuento
-                    </span>
-
-                    <span className="text-sm font-black text-violet-700">
-                      -${manualDiscountAmount.toLocaleString("es-CL")}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
+        {/* RESUMEN */}
         <div className="shrink-0 border-t border-neutral-200 bg-white p-2">
           <OrderTotals
             subtotal={subtotal}
@@ -861,7 +930,7 @@ export default function OrderBuilder({
             type="button"
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className="mt-1.5 w-full cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-1.5 w-full cursor-pointer rounded-lg bg-violet-600 px-3 py-2.5 text-[12px] font-black uppercase tracking-wide text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Confirmando..." : "Confirmar venta"}
           </button>

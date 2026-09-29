@@ -32,7 +32,7 @@ export default function NuevaVentaPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState("tarjeta");
   const [cashReceived, setCashReceived] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,7 +107,7 @@ export default function NuevaVentaPage() {
     setCashReceived("");
 
     if (channel === "local") {
-      setPaymentMethod("efectivo");
+      setPaymentMethod("tarjeta");
     } else {
       setPaymentMethod("pago_electronico");
     }
