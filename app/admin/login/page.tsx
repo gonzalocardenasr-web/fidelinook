@@ -5,6 +5,7 @@ import { useState } from "react";
 export default function AdminLoginPage() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
@@ -92,13 +93,28 @@ export default function AdminLoginPage() {
                 <label className="mb-2 block text-sm font-medium text-[#444]">
                   Contraseña
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Ingresa tu contraseña"
-                  className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
-                />
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Ingresa tu contraseña"
+                    autoComplete="current-password"
+                    className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 pr-20 text-base text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-4 my-auto h-fit text-sm font-semibold text-[#7A57F6] hover:opacity-80"
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
+                  >
+                    {showPassword ? "Ocultar" : "Ver"}
+                  </button>
+                </div>
               </div>
 
               <button
@@ -115,7 +131,8 @@ export default function AdminLoginPage() {
                 Acceso protegido
               </p>
               <p className="mt-3 text-sm leading-6 text-[#555]">
-                Esta pantalla será usada para ingresar al panel local de Fideli-NooK.
+                Esta pantalla será usada para ingresar al panel local de
+                Fideli-NooK.
               </p>
             </div>
           </div>
