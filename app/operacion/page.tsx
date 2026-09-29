@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -164,8 +164,18 @@ export default function OperacionPage() {
         method: "GET",
       });
 
-      if (!res.ok) {
+      if (res.status === 401) {
         setRol(null);
+        return;
+      }
+
+      if (!res.ok) {
+        console.error(
+          "No se pudo validar temporalmente la sesión operacional:",
+          {
+            status: res.status,
+          },
+        );
         return;
       }
 
@@ -173,7 +183,6 @@ export default function OperacionPage() {
       setRol(data.role || null);
     } catch (error) {
       console.error("Error cargando sesión:", error);
-      setRol(null);
     } finally {
       setCargandoRol(false);
     }

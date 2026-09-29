@@ -31,6 +31,13 @@ export type OperationSession =
 
 const OP_ACCESS_COOKIE = "nook_op_access_token";
 
+export class OperationAuthUnavailableError extends Error {
+  constructor(message = "Operational authentication temporarily unavailable") {
+    super(message);
+    this.name = "OperationAuthUnavailableError";
+  }
+}
+
 function emptyOperationSession(): OperationSession {
   return {
     ok: false,
@@ -62,19 +69,25 @@ export async function getOperationalUserByAuthUserId(
     .maybeSingle();
 
   if (error) {
-    console.error(
-      "Error resolving operational user from Supabase Auth:",
-      error,
-    );
+    console.error("AUTH_OPERATIONAL_USER_LOOKUP_ERROR", {
+      code: error.code,
+    });
+
+    throw new OperationAuthUnavailableError();
+  }
+
+  if (!data) {
+    console.warn("AUTH_OPERATIONAL_USER_NOT_FOUND");
     return null;
   }
 
-  if (
-    !data ||
-    !data.is_active ||
-    !data.auth_user_id ||
-    !isOperationRole(data.role)
-  ) {
+  if (!data.is_active) {
+    console.warn("AUTH_OPERATIONAL_USER_INACTIVE");
+    return null;
+  }
+
+  if (!data.auth_user_id || !isOperationRole(data.role)) {
+    console.warn("AUTH_OPERATIONAL_USER_INVALID");
     return null;
   }
 
@@ -91,19 +104,28 @@ async function resolveSupabaseAuthUserId(): Promise<string | null> {
   const accessToken = cookieStore.get(OP_ACCESS_COOKIE)?.value;
 
   if (!accessToken) {
+    console.warn("AUTH_ACCESS_COOKIE_MISSING");
     return null;
   }
 
-  const {
-    data: { user },
-    error,
-  } = await supabaseAdmin.auth.getUser(accessToken);
+  const { data, error } = await supabaseAdmin.auth.getClaims(accessToken);
 
-  if (error || !user) {
+  if (error) {
+    console.warn("AUTH_CLAIMS_REJECTED", {
+      status: error.status,
+      code: error.code,
+    });
     return null;
   }
 
-  return user.id;
+  const authUserId = data?.claims?.sub;
+
+  if (!authUserId || typeof authUserId !== "string") {
+    console.warn("AUTH_CLAIMS_SUB_MISSING");
+    return null;
+  }
+
+  return authUserId;
 }
 
 async function getSupabaseOperationSession(): Promise<OperationSession> {

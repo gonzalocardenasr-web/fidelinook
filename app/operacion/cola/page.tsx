@@ -6,43 +6,6 @@ import OrderQueue from "../../../components/operations/OrderQueue";
 import { QueueOrder, OrderStatus } from "../../../types/operations";
 import { supabase } from "../../../lib/supabase";
 
-let refreshInFlight: Promise<boolean> | null = null;
-
-async function refreshOperationalSession(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = fetch("/api/session/refresh", {
-      method: "POST",
-      cache: "no-store",
-    })
-      .then((response) => response.ok)
-      .catch(() => false)
-      .finally(() => {
-        refreshInFlight = null;
-      });
-  }
-
-  return refreshInFlight;
-}
-
-async function fetchWithSessionRecovery(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  const response = await fetch(input, init);
-
-  if (response.status !== 401) {
-    return response;
-  }
-
-  const refreshed = await refreshOperationalSession();
-
-  if (!refreshed) {
-    return response;
-  }
-
-  return fetch(input, init);
-}
-
 export default function ColaPreparacionPage() {
   const [orders, setOrders] = useState<QueueOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +15,7 @@ export default function ColaPreparacionPage() {
 
   const cargarPedidos = useCallback(async () => {
     try {
-      const res = await fetchWithSessionRecovery("/api/operacion/orders", {
+      const res = await fetch("/api/operacion/orders", {
         cache: "no-store",
       });
 
@@ -126,16 +89,13 @@ export default function ColaPreparacionPage() {
     try {
       setMessage("");
 
-      const res = await fetchWithSessionRecovery(
-        "/api/operacion/orders/status",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ orderId, newStatus }),
+      const res = await fetch("/api/operacion/orders/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ orderId, newStatus }),
+      });
 
       const data = await res.json();
 
