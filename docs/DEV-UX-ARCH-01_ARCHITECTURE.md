@@ -58,6 +58,7 @@ Fideli-Nook mantiene su lógica de tarjeta/token y no debe confundirse con ident
 8. Preservar lógica funcional estable mientras se moderniza arquitectura y UX.
 9. No reabrir Auth/session sin evidencia concreta mientras INC-PERF-01.7 permanezca en observación.
 10. Retirar legacy de forma controlada una vez reemplazado y sin consumidores legítimos.
+11. Las superficies dentro de PlatformShell no deben repetir un page header cuando el shell ya entrega contexto suficiente de sección y módulo. Las acciones o indicadores necesarios deben integrarse en la primera superficie funcional. Los modos especializados sin topbar, como Preparation Station Mode, pueden divergir de esta regla.
 
 ---
 
@@ -195,9 +196,11 @@ Debe integrarse a PlatformShell preservando:
 
 La integración arquitectónica no debe reconstruir innecesariamente su backend.
 
-Siguiente DEV:
+Estado:
 
-`DEV-UX-ARCH-01.3B.3 — Integrar Historial`
+`DEV-UX-ARCH-01.3B.3 — COMPLETADO`
+
+Historial opera dentro de PlatformShell como superficie operacional, preservando su ventana móvil de 15 días, filtros, paginación, detalle y acciones existentes.
 
 ---
 
@@ -244,8 +247,8 @@ No exponer `service_role` al browser ni abrir Analytics directamente a `authenti
 - 01.3B.1 — Identidad/autorización de Preparación — COMPLETADO.
 - TECH-TS-01 — Baseline TypeScript — COMPLETADO.
 - 01.3B.2 — Platform Mode + Preparation Station Mode — COMPLETADO.
-- 01.3B.3 — Historial — SIGUIENTE.
-- 01.4 — Gestión/Admin — PENDIENTE.
+- 01.3B.3 — Historial — COMPLETADO.
+- 01.4 — Gestión/Admin — SIGUIENTE.
 - 01.5 — Retiro del launcher legacy — PENDIENTE.
 - 01.6 — Separaciones contextuales — PENDIENTE.
 - 01.7 — Preparación touch/tablet final — PENDIENTE.
@@ -280,6 +283,21 @@ PENDIENTE.
 Evolución futura de superficies Fideli-Nook / cliente público.
 
 PENDIENTE.
+
+### UXARCH-OPEN-005
+
+Exportación histórica de ventas.
+
+PENDIENTE.
+
+Definición vigente:
+
+- Historial operacional mantiene una ventana móvil máxima de 15 días.
+- No ampliar esa ventana para resolver necesidades administrativas.
+- La exportación histórica debe ubicarse en Gestión y requerir `sales.export`.
+- Debe permitir seleccionar un rango temporal mayor sin previsualizar el dataset completo en pantalla.
+- Reutilizar la capacidad de exportación server-side existente y preservar procesamiento paginado/batch.
+- Antes de habilitar rangos extensos, definir límites operacionales razonables.
 
 ---
 

@@ -1448,4 +1448,33 @@ No reconstruir la lógica de Historial ni reabrir optimizaciones ya cerradas sin
 
 Después de Historial continúa la implementación incremental definida en DEV-UX-ARCH-01.
 
+### Cierre DEV-UX-ARCH-01.3B.3 — Historial
+
+**Estado: COMPLETADO**
+
+Historial fue integrado y validado dentro de Plataforma Nook.
+
+Cambios:
+
+- eliminado header interno redundante;
+- eliminado regreso legacy a `/operacion`;
+- filtros pasan a ser la primera superficie funcional;
+- `Actualizar` integrado a la barra de controles;
+- fechas `Desde/Hasta` compactadas;
+- lógica funcional, detalle, paginación y backend preservados;
+- ventana operacional máxima de 15 días preservada;
+- RBAC verificado en listado, detalle y acciones relacionadas;
+- TypeScript: 0 errores;
+- build productivo: exitoso;
+- deploy: exitoso;
+- QA funcional y visual: aprobado.
+
+Se adopta como regla de arquitectura evitar page headers redundantes cuando PlatformShell ya entrega contexto suficiente.
+
+Se registra `UXARCH-OPEN-005` para resolver posteriormente la exportación histórica de ventas desde Gestión, sin ampliar ni sobrecargar Historial operacional.
+
+### Siguiente desarrollo
+
+`DEV-UX-ARCH-01.4 — Integrar Gestión/Admin`
+
 ---
