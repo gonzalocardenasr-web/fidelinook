@@ -20,6 +20,10 @@ export type OperationPermission =
   | "analytics.view"
   | "users.manage";
 
+const PREPARATION_PERMISSIONS: readonly OperationPermission[] = [
+  "orders.operate",
+];
+
 const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
   "sales.operate",
   "orders.operate",
@@ -55,6 +59,7 @@ export const ROLE_PERMISSIONS: Readonly<
   cashier: CASHIER_PERMISSIONS,
   admin: ADMIN_PERMISSIONS,
   superadmin: SUPERADMIN_PERMISSIONS,
+  preparation: PREPARATION_PERMISSIONS,
 };
 
 export function hasOperationPermission(

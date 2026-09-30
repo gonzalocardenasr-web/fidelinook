@@ -40,7 +40,7 @@ async function trySupabaseOperationalLogin(
         id: string;
         authUserId: string;
         displayName: string;
-        role: "cashier" | "admin" | "superadmin";
+        role: "cashier" | "admin" | "superadmin" | "preparation";
       };
       accessToken: string;
       refreshToken: string;

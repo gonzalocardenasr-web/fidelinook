@@ -40,7 +40,12 @@ const SECTION_ORDER: PlatformNavigationSection[] = [
 ];
 
 function isOperationRole(value: unknown): value is OperationRole {
-  return value === "cashier" || value === "admin" || value === "superadmin";
+  return (
+    value === "cashier" ||
+    value === "admin" ||
+    value === "superadmin" ||
+    value === "preparation"
+  );
 }
 
 function isActiveRoute(pathname: string, href: string): boolean {

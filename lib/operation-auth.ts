@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-export type OperationRole = "cashier" | "admin" | "superadmin";
+export type OperationRole = "cashier" | "admin" | "superadmin" | "preparation";
 
 export type OperationUser = {
   id: string;
@@ -50,7 +50,12 @@ function emptyOperationSession(): OperationSession {
 }
 
 function isOperationRole(value: unknown): value is OperationRole {
-  return value === "cashier" || value === "admin" || value === "superadmin";
+  return (
+    value === "cashier" ||
+    value === "admin" ||
+    value === "superadmin" ||
+    value === "preparation"
+  );
 }
 
 export async function getOperationalUserByAuthUserId(

@@ -4,7 +4,7 @@ import { getOperationSession } from "@/lib/operation-auth";
 import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
 
 async function requireUserManager() {
   const session = await getOperationSession();
@@ -104,10 +104,7 @@ export async function PATCH(
     );
   }
 
-  if (
-    target.role === "superadmin" &&
-    (role !== "superadmin" || !isActive)
-  ) {
+  if (target.role === "superadmin" && (role !== "superadmin" || !isActive)) {
     const { count, error: countError } = await supabaseAdmin
       .from("operational_users")
       .select("id", { count: "exact", head: true })

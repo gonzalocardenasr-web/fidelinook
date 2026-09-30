@@ -3,10 +3,26 @@ import { NextResponse } from "next/server";
 import { enqueueEmail } from "../../../lib/email/emailQueue";
 import { dispatchQueuedEmailById } from "../../../lib/email/emailDispatcher";
 import { getOperationSession } from "../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 async function validateOperationalUser() {
   const session = await getOperationSession();
+
+  const authorization = authorizeOperationSession(session, "loyalty.operate");
+
+  if (!authorization.ok) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          ok: false,
+          message: authorization.message,
+        },
+        { status: authorization.status },
+      ),
+    };
+  }
 
   if (!session.ok || !session.userId) {
     return {

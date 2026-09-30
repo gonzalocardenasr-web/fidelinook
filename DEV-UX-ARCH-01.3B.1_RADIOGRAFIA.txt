@@ -1,0 +1,2780 @@
+﻿===== DEV-UX-ARCH-01.3B.1 — RADIOGRAFÍA PREPARACIÓN / RBAC =====
+
+
+============================================================
+FILE: lib\rbac.ts
+============================================================
+
+[NO EXISTE EN ESTA RUTA]
+
+
+============================================================
+FILE: lib\operation-auth.ts
+============================================================
+
+import { cookies } from "next/headers";
+
+import { supabaseAdmin } from "@/lib/supabase-admin";
+
+export type OperationRole = "cashier" | "admin" | "superadmin";
+
+export type OperationUser = {
+  id: string;
+  authUserId: string;
+  displayName: string;
+  role: OperationRole;
+};
+
+export type OperationSession =
+  | {
+      ok: true;
+      role: OperationRole;
+      userId: string;
+      authUserId: string | null;
+      displayName: string | null;
+      source: "supabase";
+    }
+  | {
+      ok: false;
+      role: null;
+      userId: null;
+      authUserId: null;
+      displayName: null;
+      source: null;
+    };
+
+const OP_ACCESS_COOKIE = "nook_op_access_token";
+
+export class OperationAuthUnavailableError extends Error {
+  constructor(message = "Operational authentication temporarily unavailable") {
+    super(message);
+    this.name = "OperationAuthUnavailableError";
+  }
+}
+
+function emptyOperationSession(): OperationSession {
+  return {
+    ok: false,
+    role: null,
+    userId: null,
+    authUserId: null,
+    displayName: null,
+    source: null,
+  };
+}
+
+function isOperationRole(value: unknown): value is OperationRole {
+  return value === "cashier" || value === "admin" || value === "superadmin";
+}
+
+export async function getOperationalUserByAuthUserId(
+  authUserId: string,
+): Promise<OperationUser | null> {
+  const normalizedAuthUserId = String(authUserId || "").trim();
+
+  if (!normalizedAuthUserId) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("operational_users")
+    .select("id, auth_user_id, display_name, role, is_active")
+    .eq("auth_user_id", normalizedAuthUserId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("AUTH_OPERATIONAL_USER_LOOKUP_ERROR", {
+      code: error.code,
+    });
+
+    throw new OperationAuthUnavailableError();
+  }
+
+  if (!data) {
+    console.warn("AUTH_OPERATIONAL_USER_NOT_FOUND");
+    return null;
+  }
+
+  if (!data.is_active) {
+    console.warn("AUTH_OPERATIONAL_USER_INACTIVE");
+    return null;
+  }
+
+  if (!data.auth_user_id || !isOperationRole(data.role)) {
+    console.warn("AUTH_OPERATIONAL_USER_INVALID");
+    return null;
+  }
+
+  return {
+    id: data.id,
+    authUserId: data.auth_user_id,
+    displayName: data.display_name,
+    role: data.role,
+  };
+}
+
+async function resolveSupabaseAuthUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(OP_ACCESS_COOKIE)?.value;
+
+  if (!accessToken) {
+    console.warn("AUTH_ACCESS_COOKIE_MISSING");
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin.auth.getClaims(accessToken);
+
+  if (error) {
+    console.warn("AUTH_CLAIMS_REJECTED", {
+      status: error.status,
+      code: error.code,
+    });
+    return null;
+  }
+
+  const authUserId = data?.claims?.sub;
+
+  if (!authUserId || typeof authUserId !== "string") {
+    console.warn("AUTH_CLAIMS_SUB_MISSING");
+    return null;
+  }
+
+  return authUserId;
+}
+
+async function getSupabaseOperationSession(): Promise<OperationSession> {
+  const authUserId = await resolveSupabaseAuthUserId();
+
+  if (!authUserId) {
+    return emptyOperationSession();
+  }
+
+  const operationalUser = await getOperationalUserByAuthUserId(authUserId);
+
+  if (!operationalUser) {
+    return emptyOperationSession();
+  }
+
+  return {
+    ok: true,
+    role: operationalUser.role,
+    userId: operationalUser.id,
+    authUserId: operationalUser.authUserId,
+    displayName: operationalUser.displayName,
+    source: "supabase",
+  };
+}
+
+export async function getOperationSession(): Promise<OperationSession> {
+  return getSupabaseOperationSession();
+}
+
+
+============================================================
+FILE: lib\platform-navigation.ts
+============================================================
+
+import type { OperationRole } from "@/lib/operation-auth";
+import {
+  hasOperationPermission,
+  type OperationPermission,
+} from "@/lib/operation-rbac";
+
+export type PlatformNavigationSection =
+  | "operation"
+  | "management"
+  | "administration";
+
+export type PlatformNavigationItem = {
+  id: string;
+  label: string;
+  shortLabel: string;
+  href: string;
+  section: PlatformNavigationSection;
+  permission: OperationPermission;
+  icon:
+    | "pos"
+    | "preparation"
+    | "history"
+    | "inventory"
+    | "cash"
+    | "analytics"
+    | "customers"
+    | "catalog"
+    | "campaigns"
+    | "subscriptions"
+    | "users";
+};
+
+export const PLATFORM_SECTION_LABELS: Record<
+  PlatformNavigationSection,
+  string
+> = {
+  operation: "OperaciÃ³n",
+  management: "GestiÃ³n",
+  administration: "AdministraciÃ³n",
+};
+
+const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
+  {
+    id: "pos",
+    label: "POS",
+    shortLabel: "POS",
+    href: "/operacion/ventas/nueva",
+    section: "operation",
+    permission: "sales.operate",
+    icon: "pos",
+  },
+  {
+    id: "preparation",
+    label: "PreparaciÃ³n",
+    shortLabel: "Prep.",
+    href: "/operacion/cola",
+    section: "operation",
+    permission: "orders.operate",
+    icon: "preparation",
+  },
+  {
+    id: "history",
+    label: "Historial",
+    shortLabel: "Hist.",
+    href: "/operacion/ventas",
+    section: "operation",
+    permission: "sales.operate",
+    icon: "history",
+  },
+  {
+    id: "inventory-operation",
+    label: "Inventario",
+    shortLabel: "Inv.",
+    href: "/operacion/inventario",
+    section: "operation",
+    permission: "inventory.stock.read",
+    icon: "inventory",
+  },
+  {
+    id: "cash",
+    label: "Caja",
+    shortLabel: "Caja",
+    href: "/operacion/caja",
+    section: "operation",
+    permission: "cash.operate",
+    icon: "cash",
+  },
+
+  {
+    id: "analytics",
+    label: "Analytics",
+    shortLabel: "Analyt.",
+    href: "/dashboard",
+    section: "management",
+    permission: "analytics.view",
+    icon: "analytics",
+  },
+  {
+    id: "customers",
+    label: "Clientes",
+    shortLabel: "Clientes",
+    href: "/clientes",
+    section: "management",
+    permission: "analytics.view",
+    icon: "customers",
+  },
+  {
+    id: "catalog",
+    label: "CatÃ¡logo",
+    shortLabel: "CatÃ¡logo",
+    href: "/operacion/catalogo",
+    section: "management",
+    permission: "catalog.manage",
+    icon: "catalog",
+  },
+  {
+    id: "inventory-management",
+    label: "Inventario",
+    shortLabel: "Inv.",
+    href: "/operacion/inventario/recepciones",
+    section: "management",
+    permission: "inventory.receipts.manage",
+    icon: "inventory",
+  },
+  {
+    id: "campaigns",
+    label: "CampaÃ±as",
+    shortLabel: "Camp.",
+    href: "/campanas",
+    section: "management",
+    permission: "campaigns.manage",
+    icon: "campaigns",
+  },
+  {
+    id: "subscriptions",
+    label: "Suscripciones",
+    shortLabel: "Suscrip.",
+    href: "/suscripciones",
+    section: "management",
+    permission: "subscriptions.manage",
+    icon: "subscriptions",
+  },
+
+  {
+    id: "users",
+    label: "Usuarios",
+    shortLabel: "Usuarios",
+    href: "/admin/usuarios",
+    section: "administration",
+    permission: "users.manage",
+    icon: "users",
+  },
+];
+
+export function getPlatformNavigation(
+  role: OperationRole,
+): PlatformNavigationItem[] {
+  return PLATFORM_NAVIGATION.filter((item) =>
+    hasOperationPermission(role, item.permission),
+  );
+}
+
+export function getRoleLabel(role: OperationRole): string {
+  switch (role) {
+    case "cashier":
+      return "Cajero";
+    case "admin":
+      return "Administrador";
+    case "superadmin":
+      return "Superadministrador";
+  }
+}
+
+
+============================================================
+FILE: components\platform\PlatformShell.tsx
+============================================================
+
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  type ReactNode,
+  type SVGProps,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import type { OperationRole } from "@/lib/operation-auth";
+import {
+  getPlatformNavigation,
+  getRoleLabel,
+  PLATFORM_SECTION_LABELS,
+  type PlatformNavigationItem,
+  type PlatformNavigationSection,
+} from "@/lib/platform-navigation";
+
+type SessionPayload = {
+  role?: OperationRole | null;
+  displayName?: string | null;
+};
+
+type ShellSession = {
+  role: OperationRole;
+  displayName: string | null;
+};
+
+type PlatformShellProps = {
+  children: ReactNode;
+};
+
+const SECTION_ORDER: PlatformNavigationSection[] = [
+  "operation",
+  "management",
+  "administration",
+];
+
+function isOperationRole(value: unknown): value is OperationRole {
+  return value === "cashier" || value === "admin" || value === "superadmin";
+}
+
+function isActiveRoute(pathname: string, href: string): boolean {
+  if (href === "/operacion/ventas") {
+    return (
+      pathname === "/operacion/ventas" ||
+      (pathname.startsWith("/operacion/ventas/") &&
+        !pathname.startsWith("/operacion/ventas/nueva") &&
+        !pathname.includes("/imprimir") &&
+        !pathname.includes("/ticket"))
+    );
+  }
+
+  if (href === "/operacion/inventario") {
+    return (
+      pathname === "/operacion/inventario" ||
+      pathname.startsWith("/operacion/inventario/stock") ||
+      pathname.startsWith("/operacion/inventario/bachas") ||
+      pathname.startsWith("/operacion/inventario/movimientos") ||
+      pathname.startsWith("/operacion/inventario/ajustes")
+    );
+  }
+
+  if (href === "/operacion/inventario/recepciones") {
+    return pathname.startsWith("/operacion/inventario/recepciones");
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getBreadcrumbs(pathname: string): string[] {
+  if (pathname === "/operacion") {
+    return ["OperaciÃ³n"];
+  }
+
+  if (pathname.startsWith("/operacion/ventas/nueva")) {
+    return ["OperaciÃ³n", "POS"];
+  }
+
+  if (pathname.startsWith("/operacion/cola")) {
+    return ["OperaciÃ³n", "PreparaciÃ³n"];
+  }
+
+  if (pathname.startsWith("/operacion/ventas")) {
+    return ["OperaciÃ³n", "Historial"];
+  }
+
+  if (pathname.startsWith("/operacion/caja")) {
+    return ["OperaciÃ³n", "Caja"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario/recepciones")) {
+    return ["GestiÃ³n", "Inventario", "Recepciones"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario/stock")) {
+    return ["OperaciÃ³n", "Inventario", "Stock"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario/bachas")) {
+    return ["OperaciÃ³n", "Inventario", "Bachas"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario/movimientos")) {
+    return ["OperaciÃ³n", "Inventario", "Movimientos"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario/ajustes")) {
+    return ["OperaciÃ³n", "Inventario", "Ajustes"];
+  }
+
+  if (pathname.startsWith("/operacion/inventario")) {
+    return ["OperaciÃ³n", "Inventario"];
+  }
+
+  if (pathname.startsWith("/operacion/catalogo")) {
+    return ["GestiÃ³n", "CatÃ¡logo"];
+  }
+
+  if (pathname.startsWith("/dashboard")) {
+    return ["GestiÃ³n", "Analytics"];
+  }
+
+  if (pathname.startsWith("/clientes")) {
+    return ["GestiÃ³n", "Clientes"];
+  }
+
+  if (pathname.startsWith("/campanas/")) {
+    return ["GestiÃ³n", "CampaÃ±as", "Detalle"];
+  }
+
+  if (pathname.startsWith("/campanas")) {
+    return ["GestiÃ³n", "CampaÃ±as"];
+  }
+
+  if (pathname.startsWith("/suscripciones")) {
+    return ["GestiÃ³n", "Suscripciones"];
+  }
+
+  if (pathname.startsWith("/admin/usuarios")) {
+    return ["AdministraciÃ³n", "Usuarios"];
+  }
+
+  return ["Plataforma Nook"];
+}
+
+function Icon({
+  name,
+  ...props
+}: SVGProps<SVGSVGElement> & {
+  name: PlatformNavigationItem["icon"] | "logout" | "user";
+}) {
+  const common = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+    ...props,
+  };
+
+  switch (name) {
+    case "pos":
+      return (
+        <svg {...common}>
+          <path d="M4 5h16v14H4z" />
+          <path d="M8 9h8M8 13h3M15 13h1M8 17h8" />
+        </svg>
+      );
+
+    case "preparation":
+      return (
+        <svg {...common}>
+          <path d="M7 4h10l2 4v11H5V8l2-4Z" />
+          <path d="M5 8h14M9 12h6M9 16h4" />
+        </svg>
+      );
+
+    case "history":
+      return (
+        <svg {...common}>
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+          <path d="M3 4v4h4M12 7v5l3 2" />
+        </svg>
+      );
+
+    case "inventory":
+      return (
+        <svg {...common}>
+          <path d="m4 7 8-4 8 4-8 4-8-4Z" />
+          <path d="m4 7 8 4 8-4M4 7v10l8 4 8-4V7M12 11v10" />
+        </svg>
+      );
+
+    case "cash":
+      return (
+        <svg {...common}>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M7 10h.01M17 14h.01" />
+          <circle cx="12" cy="12" r="2.5" />
+        </svg>
+      );
+
+    case "analytics":
+      return (
+        <svg {...common}>
+          <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+        </svg>
+      );
+
+    case "customers":
+      return (
+        <svg {...common}>
+          <circle cx="9" cy="8" r="3" />
+          <path d="M3 19c.6-3.3 2.6-5 6-5s5.4 1.7 6 5" />
+          <path d="M16 6.5a2.5 2.5 0 0 1 0 5M17 14c2.3.4 3.6 2 4 5" />
+        </svg>
+      );
+
+    case "catalog":
+      return (
+        <svg {...common}>
+          <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+        </svg>
+      );
+
+    case "campaigns":
+      return (
+        <svg {...common}>
+          <path d="M4 13V9l11-4v12L4 13Z" />
+          <path d="M15 9h3a2 2 0 0 1 0 4h-3M6 14l1 5h4l-2-5" />
+        </svg>
+      );
+
+    case "subscriptions":
+      return (
+        <svg {...common}>
+          <path d="M5 4h14v16H5z" />
+          <path d="M8 8h8M8 12h8M8 16h5" />
+        </svg>
+      );
+
+    case "users":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="8" r="3" />
+          <path d="M5 20c.7-4 3-6 7-6s6.3 2 7 6" />
+        </svg>
+      );
+
+    case "logout":
+      return (
+        <svg {...common}>
+          <path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9" />
+        </svg>
+      );
+
+    case "user":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="8" r="3" />
+          <path d="M6 20c.7-4 2.7-6 6-6s5.3 2 6 6" />
+        </svg>
+      );
+  }
+}
+
+export default function PlatformShell({ children }: PlatformShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [session, setSession] = useState<ShellSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/session", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (cancelled) return;
+
+        if (response.status === 401) {
+          router.replace("/admin/login");
+          return;
+        }
+
+        if (!response.ok) {
+          console.error("PLATFORM_SHELL_SESSION_UNAVAILABLE", {
+            status: response.status,
+          });
+
+          setSessionUnavailable(true);
+          return;
+        }
+
+        const data = (await response.json()) as SessionPayload;
+
+        if (!isOperationRole(data.role)) {
+          router.replace("/admin/login");
+          return;
+        }
+
+        setSession({
+          role: data.role,
+          displayName: data.displayName ?? null,
+        });
+        setSessionUnavailable(false);
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error("PLATFORM_SHELL_SESSION_ERROR", error);
+        setSessionUnavailable(true);
+      } finally {
+        if (!cancelled) {
+          setSessionLoading(false);
+        }
+      }
+    }
+
+    void loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  const navigation = useMemo(
+    () => (session ? getPlatformNavigation(session.role) : []),
+    [session],
+  );
+
+  const breadcrumbs = useMemo(() => getBreadcrumbs(pathname), [pathname]);
+
+  const initials = useMemo(() => {
+    const name = session?.displayName?.trim();
+
+    if (!name) return "N";
+
+    const parts = name.split(/\s+/).filter(Boolean);
+
+    return parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
+  }, [session?.displayName]);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    try {
+      setLoggingOut(true);
+
+      const response = await fetch("/api/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        console.error("PLATFORM_SHELL_LOGOUT_FAILED", {
+          status: response.status,
+        });
+      }
+    } catch (error) {
+      console.error("PLATFORM_SHELL_LOGOUT_ERROR", error);
+    } finally {
+      window.location.href = "/admin/login";
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-50 text-neutral-950">
+      <aside
+        className="
+          group fixed inset-y-0 left-0 z-50
+          w-16 overflow-hidden border-r border-neutral-200 bg-white
+          shadow-[2px_0_12px_rgba(0,0,0,0.04)]
+          transition-[width,box-shadow] duration-200 ease-out
+          hover:w-60 hover:shadow-[8px_0_28px_rgba(0,0,0,0.12)]
+        "
+      >
+        <div className="flex h-14 items-center border-b border-neutral-200 px-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4C00F7] text-sm font-bold text-white">
+            N
+          </div>
+
+          <div className="ml-3 min-w-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <p className="whitespace-nowrap text-sm font-semibold text-neutral-950">
+              Plataforma Nook
+            </p>
+            <p className="whitespace-nowrap text-xs text-neutral-500">
+              OperaciÃ³n y gestiÃ³n
+            </p>
+          </div>
+        </div>
+
+        <nav className="h-[calc(100vh-3.5rem)] overflow-y-auto overflow-x-hidden py-3">
+          {SECTION_ORDER.map((section) => {
+            const items = navigation.filter((item) => item.section === section);
+
+            if (items.length === 0) return null;
+
+            return (
+              <div key={section} className="mb-4">
+                <div className="mb-1 h-6 px-4">
+                  <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                    {PLATFORM_SECTION_LABELS[section]}
+                  </p>
+                </div>
+
+                <div className="space-y-1 px-2">
+                  {items.map((item) => {
+                    const active = isActiveRoute(pathname, item.href);
+
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        title={item.label}
+                        className={[
+                          "flex h-11 items-center rounded-xl transition",
+                          active
+                            ? "bg-violet-50 text-[#4C00F7]"
+                            : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950",
+                        ].join(" ")}
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                          <Icon name={item.icon} className="h-5 w-5" />
+                        </span>
+
+                        <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                          {item.label}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <div className="min-h-screen pl-16">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-neutral-200 bg-white/95 px-4 backdrop-blur md:px-5">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
+              {breadcrumbs.map((breadcrumb, index) => (
+                <div
+                  key={`${breadcrumb}-${index}`}
+                  className="flex min-w-0 items-center gap-2"
+                >
+                  {index > 0 && <span className="text-neutral-300">/</span>}
+
+                  <span
+                    className={
+                      index === breadcrumbs.length - 1
+                        ? "truncate font-semibold text-neutral-900"
+                        : "truncate text-neutral-500"
+                    }
+                  >
+                    {breadcrumb}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {sessionUnavailable && (
+              <p className="mt-0.5 text-[11px] text-amber-700">
+                No fue posible actualizar temporalmente la informaciÃ³n de
+                sesiÃ³n.
+              </p>
+            )}
+          </div>
+
+          <div className="relative ml-4 flex shrink-0 items-center gap-3">
+            {sessionLoading ? (
+              <div className="h-8 w-32 animate-pulse rounded-lg bg-neutral-100" />
+            ) : session ? (
+              <>
+                <div className="hidden text-right sm:block">
+                  <p className="max-w-44 truncate text-sm font-medium text-neutral-900">
+                    {session.displayName || "Usuario Nook"}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    {getRoleLabel(session.role)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((current) => !current)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4C00F7] text-xs font-semibold text-white transition hover:bg-[#3F00CC]"
+                  aria-label="Abrir menÃº de usuario"
+                  aria-expanded={userMenuOpen}
+                >
+                  {initials}
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-12 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl">
+                    <div className="border-b border-neutral-100 px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[#4C00F7]">
+                          <Icon name="user" className="h-5 w-5" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-neutral-950">
+                            {session.displayName || "Usuario Nook"}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            {getRoleLabel(session.role)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleLogout()}
+                        disabled={loggingOut}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Icon name="logout" className="h-5 w-5" />
+                        {loggingOut ? "Cerrando sesiÃ³n..." : "Cerrar sesiÃ³n"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="min-h-[calc(100vh-3.5rem)]">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+
+============================================================
+FILE: app\operacion\layout.tsx
+============================================================
+
+import type { Metadata } from "next";
+
+import PlatformShell from "@/components/platform/PlatformShell";
+
+export const metadata: Metadata = {
+  title: "Operación",
+};
+
+export default function Layout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return <PlatformShell>{children}</PlatformShell>;
+}
+
+
+============================================================
+FILE: app\operacion\cola\page.tsx
+============================================================
+
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import OrderQueue from "../../../components/operations/OrderQueue";
+import { QueueOrder, OrderStatus } from "../../../types/operations";
+import { supabase } from "../../../lib/supabase";
+
+export default function ColaPreparacionPage() {
+  const [orders, setOrders] = useState<QueueOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const realtimeRefreshTimeoutRef = useRef<number | null>(null);
+
+  const cargarPedidos = useCallback(async () => {
+    try {
+      const res = await fetch("/api/operacion/orders", {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo cargar la cola.");
+        return;
+      }
+
+      setOrders(data.orders || []);
+      setMessage("");
+    } catch (error) {
+      console.error(error);
+      setMessage("Error cargando cola.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarPedidos();
+
+    const scheduleRealtimeRefresh = () => {
+      if (realtimeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        realtimeRefreshTimeoutRef.current = null;
+        void cargarPedidos();
+      }, 300);
+    };
+
+    const channel = supabase
+      .channel("nook-preparation-orders")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          scheduleRealtimeRefresh();
+        },
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Preparation queue Realtime status:", status);
+        }
+      });
+
+    const fallbackInterval = window.setInterval(() => {
+      void cargarPedidos();
+    }, 120000);
+
+    return () => {
+      window.clearInterval(fallbackInterval);
+
+      if (realtimeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+
+      void supabase.removeChannel(channel);
+    };
+  }, [cargarPedidos]);
+
+  async function cambiarEstado(orderId: number, newStatus: OrderStatus) {
+    try {
+      setMessage("");
+
+      const res = await fetch("/api/operacion/orders/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId, newStatus }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo actualizar pedido.");
+        return;
+      }
+
+      await cargarPedidos();
+    } catch (error) {
+      console.error(error);
+      setMessage("Error actualizando pedido.");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F6F3FF] p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+          <Link
+            href="/operacion"
+            className="inline-flex rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition duration-200 hover:bg-white/25 active:scale-[0.98]"
+          >
+            â† Volver a operaciÃ³n
+          </Link>
+
+          <h1 className="mt-3 text-3xl font-bold">Cola de preparaciÃ³n</h1>
+
+          <p className="text-sm opacity-90">
+            Pedidos no entregados, agrupados por estado operativo.
+          </p>
+        </div>
+
+        {message && (
+          <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-sm text-neutral-700">
+            {message}
+          </div>
+        )}
+
+        <OrderQueue
+          orders={orders}
+          loading={loading}
+          onChangeStatus={cambiarEstado}
+        />
+      </div>
+    </main>
+  );
+}
+
+
+============================================================
+FILE: components\operations\OrderQueue.tsx
+============================================================
+
+import { useState } from "react";
+import { QueueOrder, OrderStatus } from "../../types/operations";
+import OrderQueueCard from "./OrderQueueCard";
+
+type Props = {
+  orders: QueueOrder[];
+  loading: boolean;
+  onChangeStatus: (
+    orderId: number,
+    status: OrderStatus,
+  ) => Promise<void> | void;
+};
+
+const columns: { title: string; status: OrderStatus }[] = [
+  { title: "Pendientes", status: "pending" },
+  { title: "Preparando", status: "preparing" },
+  { title: "Listos", status: "ready" },
+];
+
+function getNextStatus(status: OrderStatus): OrderStatus | null {
+  if (status === "pending") return "preparing";
+  if (status === "preparing") return "ready";
+  if (status === "ready") return "delivered";
+
+  return null;
+}
+
+export default function OrderQueue({ orders, loading, onChangeStatus }: Props) {
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+
+  async function advanceOrder(order: QueueOrder) {
+    const nextStatus = getNextStatus(order.status);
+
+    if (!nextStatus) return;
+
+    try {
+      setUpdatingOrderId(order.id);
+      await onChangeStatus(order.id, nextStatus);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  async function cancelOrder(order: QueueOrder) {
+    try {
+      setUpdatingOrderId(order.id);
+      await onChangeStatus(order.id, "cancelled");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  if (loading) {
+    return <p className="text-sm text-neutral-600">Cargando pedidos...</p>;
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="rounded-2xl bg-white p-6 text-neutral-600 shadow-sm">
+        No hay pedidos pendientes.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid h-[calc(100vh-220px)] gap-4 lg:grid-cols-3">
+      {columns.map((column) => {
+        const filtered = orders.filter(
+          (order) => order.status === column.status,
+        );
+
+        return (
+          <section
+            key={column.status}
+            className="flex min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white/70 p-3 shadow-sm"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-wide text-neutral-800">
+                {column.title}
+              </h2>
+
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-neutral-500 shadow-sm">
+                {filtered.length}
+              </span>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+              {filtered.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-neutral-200 bg-white/60 p-4 text-center text-sm text-neutral-400">
+                  Sin pedidos
+                </div>
+              ) : (
+                filtered.map((order) => (
+                  <OrderQueueCard
+                    key={order.id}
+                    order={order}
+                    onAdvance={advanceOrder}
+                    onCancel={cancelOrder}
+                    updating={updatingOrderId === order.id}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+
+============================================================
+FILE: components\operations\OrderQueueCard.tsx
+============================================================
+
+import { QueueOrder } from "../../types/operations";
+import OrderElapsedTime from "./OrderElapsedTime";
+
+type Props = {
+  order: QueueOrder;
+  onAdvance: (order: QueueOrder) => void;
+  onCancel: (order: QueueOrder) => void;
+  updating: boolean;
+};
+
+type ChannelStyle = {
+  label: string;
+  bandClassName: string;
+};
+
+type StructuredNotes = {
+  format: string | null;
+  cookie: boolean;
+  additional: string[];
+  freeNotes: string[];
+};
+
+function getChannelStyle(channel?: string | null): ChannelStyle {
+  const normalized = String(channel || "local")
+    .trim()
+    .toLowerCase()
+    .replaceAll("-", "_");
+
+  if (normalized === "shopify") {
+    return {
+      label: "Shopify",
+      bandClassName: "bg-blue-100 text-blue-900",
+    };
+  }
+
+  if (
+    normalized === "uber" ||
+    normalized === "uber_eats" ||
+    normalized === "ubereats"
+  ) {
+    return {
+      label: "Uber Eats",
+      bandClassName: "bg-green-100 text-green-900",
+    };
+  }
+
+  if (normalized === "rappi") {
+    return {
+      label: "Rappi",
+      bandClassName: "bg-orange-100 text-orange-900",
+    };
+  }
+
+  if (
+    normalized === "pedidosya" ||
+    normalized === "pedidos_ya" ||
+    normalized === "pedidos ya"
+  ) {
+    return {
+      label: "PedidosYa",
+      bandClassName: "bg-red-100 text-red-900",
+    };
+  }
+
+  return {
+    label: "Local",
+    bandClassName: "bg-violet-100 text-violet-900",
+  };
+}
+
+function getStatusLabel(status: string) {
+  if (status === "pending") return "Pendiente";
+  if (status === "preparing") return "En preparaciÃ³n";
+  if (status === "ready") return "Listo";
+  if (status === "delivered") return "Entregado";
+  if (status === "cancelled") return "Cancelado";
+
+  return status;
+}
+
+function getStatusClassName(status: string) {
+  if (status === "pending") {
+    return "bg-amber-100 text-amber-800";
+  }
+
+  if (status === "preparing") {
+    return "bg-blue-100 text-blue-800";
+  }
+
+  if (status === "ready") {
+    return "bg-emerald-100 text-emerald-800";
+  }
+
+  if (status === "cancelled") {
+    return "bg-red-100 text-red-800";
+  }
+
+  return "bg-neutral-100 text-neutral-700";
+}
+
+function getAdvanceLabel(status: string) {
+  if (status === "pending") return "Preparar";
+  if (status === "preparing") return "Listo";
+  if (status === "ready") return "Entregar";
+
+  return "Avanzar";
+}
+
+function formatRepeatedNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+    .join(" + ");
+}
+
+function formatCompactNames(names: string[]) {
+  const counts = names.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([name, count]) => (count > 1 ? `${count}x ${name}` : name))
+    .join(", ");
+}
+
+function parseStructuredNotes(notes?: string | null): StructuredNotes {
+  const result: StructuredNotes = {
+    format: null,
+    cookie: false,
+    additional: [],
+    freeNotes: [],
+  };
+
+  if (!notes) return result;
+
+  const parts = notes
+    .split(" Â· ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (const part of parts) {
+    const normalized = part.toLowerCase();
+
+    if (normalized.startsWith("formato:")) {
+      result.format = part.replace(/^formato:\s*/i, "");
+      continue;
+    }
+
+    if (normalized === "con galleta") {
+      result.cookie = true;
+      continue;
+    }
+
+    if (
+      normalized.startsWith("baÃ±o chocolate") ||
+      normalized.startsWith("topping")
+    ) {
+      result.additional.push(part);
+      continue;
+    }
+
+    result.freeNotes.push(part);
+  }
+
+  return result;
+}
+
+export default function OrderQueueCard({
+  order,
+  onAdvance,
+  onCancel,
+  updating,
+}: Props) {
+  const channel = getChannelStyle(order.sales?.channel);
+  const items = order.sales?.sale_items || [];
+
+  const groupedItems = items.reduce<
+    Array<{
+      key: string;
+      quantity: number;
+      productName: string;
+      items: typeof items;
+    }>
+  >((groups, item) => {
+    const sku = String(item.product_sku || "")
+      .trim()
+      .toUpperCase();
+
+    const isPot = sku === "POT-16-LISTO" || sku === "POT-16-ARMADO";
+
+    /*
+     * Por ahora solo agrupamos potes.
+     * Los demÃ¡s productos mantienen una lÃ­nea independiente
+     * para no mezclar configuraciones incompatibles.
+     */
+    if (!isPot) {
+      groups.push({
+        key: `item-${item.id}`,
+        quantity: item.quantity,
+        productName: item.product_name,
+        items: [item],
+      });
+
+      return groups;
+    }
+
+    const options = Array.isArray(item.sale_item_options)
+      ? item.sale_item_options
+      : [];
+
+    /*
+     * Los sabores no forman parte de la firma porque queremos
+     * consolidarlos visualmente dentro del mismo grupo.
+     */
+    const nonFlavorOptions = options
+      .filter(
+        (option) =>
+          option.option_group_code !== "flavor" &&
+          option.option_group_code !== "sabor",
+      )
+      .map((option) => ({
+        group: option.option_group_code,
+        value: option.option_value_id,
+        quantity: option.quantity,
+      }))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+    const groupKey = JSON.stringify({
+      sku,
+      notes: item.notes || null,
+      nonFlavorOptions,
+    });
+
+    const existingGroup = groups.find((group) => group.key === groupKey);
+
+    if (existingGroup) {
+      existingGroup.quantity += item.quantity;
+      existingGroup.items.push(item);
+    } else {
+      groups.push({
+        key: groupKey,
+        quantity: item.quantity,
+        productName: item.product_name,
+        items: [item],
+      });
+    }
+
+    return groups;
+  }, []);
+
+  return (
+    <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition duration-150 hover:border-violet-200 hover:shadow-md">
+      <div
+        className={`flex items-center justify-between gap-2 px-3 py-1.5 ${channel.bandClassName}`}
+      >
+        <span className="text-[11px] font-black uppercase tracking-wide">
+          {channel.label}
+        </span>
+
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getStatusClassName(
+            order.status,
+          )}`}
+        >
+          {getStatusLabel(order.status)}
+        </span>
+      </div>
+
+      <div className="p-2.5">
+        <header className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-lg font-black leading-none text-neutral-900">
+              {order.display_order_code}
+            </p>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-neutral-500">
+              <OrderElapsedTime createdAt={order.created_at} />
+
+              <span>Â·</span>
+
+              <span className="truncate">
+                {order.sales?.clientes?.nombre || "Mostrador"}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {order.notes && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-800">
+            {order.notes}
+          </p>
+        )}
+
+        <div className="mt-2 divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-neutral-50">
+          {groupedItems.map((group) => {
+            const firstItem = group.items[0];
+
+            const flavorNames = group.items.flatMap((item) => {
+              const options = Array.isArray(item.sale_item_options)
+                ? item.sale_item_options
+                : [];
+
+              return options
+                .filter(
+                  (option) =>
+                    option.option_group_code === "flavor" ||
+                    option.option_group_code === "sabor",
+                )
+                .flatMap((option) => {
+                  const optionQuantity = Math.max(
+                    1,
+                    Number(option.quantity || 1),
+                  );
+
+                  const totalOptionQuantity =
+                    optionQuantity * Math.max(1, item.quantity);
+
+                  return Array.from(
+                    { length: totalOptionQuantity },
+                    () => option.option_value_name,
+                  );
+                })
+                .filter(Boolean);
+            });
+
+            const regularToppingNames = group.items.flatMap((item) => {
+              const options = Array.isArray(item.sale_item_options)
+                ? item.sale_item_options
+                : [];
+
+              return options
+                .filter(
+                  (option) =>
+                    option.option_group_code === "topping" ||
+                    option.option_group_code === "toppings",
+                )
+                .map((option) => option.option_value_name)
+                .filter(Boolean);
+            });
+
+            const structuredNotes = parseStructuredNotes(firstItem.notes);
+
+            return (
+              <div key={group.key} className="px-2.5 py-2">
+                <p className="text-[12px] font-black leading-tight text-neutral-900">
+                  {group.quantity}x {group.productName}
+                </p>
+
+                <div className="mt-1 space-y-0.5 text-[11px] leading-snug text-neutral-600">
+                  {flavorNames.length > 0 && (
+                    <p className="font-semibold text-neutral-700">
+                      ({formatCompactNames(flavorNames)})
+                    </p>
+                  )}
+
+                  {regularToppingNames.length > 0 && (
+                    <p>
+                      <span className="font-bold">Toppings:</span>{" "}
+                      {formatRepeatedNames(regularToppingNames)}
+                    </p>
+                  )}
+
+                  {structuredNotes.format && (
+                    <p>
+                      <span className="font-bold">Formato:</span>{" "}
+                      {structuredNotes.format}
+                      {structuredNotes.cookie ? " Â· Con galleta" : ""}
+                    </p>
+                  )}
+
+                  {!structuredNotes.format && structuredNotes.cookie && (
+                    <p>
+                      <span className="font-bold">Formato:</span> Con galleta
+                    </p>
+                  )}
+
+                  {structuredNotes.additional.length > 0 && (
+                    <p>
+                      <span className="font-bold">Adicionales:</span>{" "}
+                      {structuredNotes.additional.join(" + ")}
+                    </p>
+                  )}
+                </div>
+
+                {structuredNotes.freeNotes.length > 0 && (
+                  <p className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold leading-snug text-amber-800">
+                    {structuredNotes.freeNotes.join(" Â· ")}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <footer className="mt-2 grid grid-cols-[1fr_auto] gap-2">
+          {["pending", "preparing", "ready"].includes(order.status) && (
+            <button
+              type="button"
+              onClick={() => onAdvance(order)}
+              disabled={updating}
+              className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {updating ? "Actualizando..." : getAdvanceLabel(order.status)}
+            </button>
+          )}
+
+          {!["delivered", "cancelled"].includes(order.status) && (
+            <button
+              type="button"
+              onClick={() => onCancel(order)}
+              disabled={updating}
+              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          )}
+        </footer>
+      </div>
+    </article>
+  );
+}
+
+
+============================================================
+FILE: components\operations\OrderStatusBadge.tsx
+============================================================
+
+import { OrderStatus } from "../../types/operations";
+
+const labels: Record<OrderStatus, string> = {
+  pending: "Pendiente",
+  preparing: "En preparaciÃ³n",
+  ready: "Listo",
+  delivered: "Entregado",
+  cancelled: "Cancelado",
+};
+
+const styles: Record<OrderStatus, string> = {
+  pending: "bg-amber-100 text-amber-800",
+  preparing: "bg-blue-100 text-blue-800",
+  ready: "bg-green-100 text-green-800",
+  delivered: "bg-neutral-100 text-neutral-700",
+  cancelled: "bg-red-100 text-red-700",
+};
+
+export default function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-bold ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+}
+
+
+============================================================
+FILE: app\api\operacion\orders\route.ts
+============================================================
+
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
+export async function GET() {
+  const session = await getOperationSession();
+
+  const authorization = authorizeOperationSession(session, "orders.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select(
+      `
+      id,
+      sale_id,
+      business_date,
+      daily_order_number,
+      display_order_code,
+      status,
+      preparation_started_at,
+      ready_at,
+      delivered_at,
+      cancelled_at,
+      created_at,
+      notes,
+      sales (
+        id,
+        customer_id,
+        total,
+        payment_method,
+        channel,
+        clientes (
+          id,
+          nombre,
+          correo,
+          telefono
+        ),
+        sale_items (
+          id,
+          product_sku,
+          product_name,
+          quantity,
+          notes,
+          sale_item_options (
+            id,
+            option_group_code,
+            option_value_name,
+            quantity
+          )
+        )
+      )
+    `,
+    )
+    .not("status", "in", "(delivered,cancelled)")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, message: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    orders: data || [],
+  });
+}
+
+
+============================================================
+FILE: app\api\operacion\orders\status\route.ts
+============================================================
+
+import { NextResponse } from "next/server";
+
+import { supabaseAdmin } from "../../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../../lib/operation-auth";
+
+import {
+  buildCustomerEventIdempotencyKey,
+  recordCustomerEvent,
+} from "../../../../../lib/customer-events";
+
+import {
+  getBusinessDateInTimezone,
+  rebuildDailyLoyaltyProjection,
+} from "../../../../../lib/daily-loyalty";
+
+import { applyDailyLoyaltyCredit } from "../../../../../lib/daily-loyalty-application";
+import { convertLoyaltyStampsToRewards } from "../../../../../lib/loyalty-rewards";
+
+import { enqueueEmail } from "../../../../../lib/email/emailQueue";
+import { dispatchQueuedEmailById } from "../../../../../lib/email/emailDispatcher";
+
+import {
+  createCorrelationId,
+  recordAuditLogSafely,
+} from "../../../../../lib/audit-logs";
+
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
+const allowedStatuses = [
+  "pending",
+  "preparing",
+  "ready",
+  "delivered",
+  "cancelled",
+] as const;
+
+type AllowedStatus = (typeof allowedStatuses)[number];
+
+function isAllowedStatus(value: string): value is AllowedStatus {
+  return allowedStatuses.includes(value as AllowedStatus);
+}
+
+export async function POST(req: Request) {
+  const session = await getOperationSession();
+
+  const authorization = authorizeOperationSession(session, "orders.operate");
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  try {
+    const body = await req.json();
+
+    const warnings: string[] = [];
+
+    const orderId = Number(body.orderId);
+
+    const newStatus = String(body.newStatus || "")
+      .trim()
+      .toLowerCase();
+
+    const normalizedNotes = String(body.notes || "").trim();
+    const notes = normalizedNotes || null;
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "orderId invÃ¡lido.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!isAllowedStatus(newStatus)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Estado invÃ¡lido.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const correlationId = createCorrelationId("order-status");
+
+    /*
+     * 1. Cargar el estado previo.
+     */
+    const { data: currentOrder, error: currentOrderError } = await supabaseAdmin
+      .from("orders")
+      .select(
+        `
+          id,
+          sale_id,
+          status,
+          display_order_code
+        `,
+      )
+      .eq("id", orderId)
+      .single();
+
+    if (currentOrderError) {
+      console.error(
+        "Error cargando pedido antes de cambiar estado:",
+        currentOrderError,
+      );
+
+      const notFound = currentOrderError.code === "PGRST116";
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: notFound
+            ? "No se encontrÃ³ el pedido indicado."
+            : "No se pudo cargar el estado actual del pedido.",
+        },
+        {
+          status: notFound ? 404 : 500,
+        },
+      );
+    }
+
+    if (!currentOrder) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No se encontrÃ³ el pedido indicado.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const currentStatus = String(currentOrder.status || "")
+      .trim()
+      .toLowerCase();
+
+    /*
+     * 2. Proteger contra doble clic o reintento.
+     *
+     * Esta validaciÃ³n debe ocurrir ANTES del RPC.
+     */
+    if (currentStatus === newStatus) {
+      await recordAuditLogSafely({
+        module: "operations",
+        action: "order.status_change_ignored",
+
+        entityType: "order",
+        entityId: orderId,
+
+        actorRole: session.role,
+        actorIdentifier: null,
+
+        result: "warning",
+
+        reason: "El pedido ya se encontraba en el estado solicitado.",
+
+        previousState: {
+          status: currentOrder.status,
+          saleId: currentOrder.sale_id,
+          displayOrderCode: currentOrder.display_order_code,
+        },
+
+        newState: {
+          requestedStatus: newStatus,
+        },
+
+        metadata: {
+          notes,
+        },
+
+        correlationId,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        result: null,
+        warnings: ["El pedido ya se encontraba en ese estado."],
+        message: "El pedido ya se encontraba en ese estado.",
+      });
+    }
+
+    /*
+     * 3. Ejecutar cambio transaccional.
+     */
+    const rpcName =
+      newStatus === "cancelled"
+        ? "cancel_order_and_sale"
+        : "update_order_status";
+
+    const rpcPayload =
+      newStatus === "cancelled"
+        ? {
+            p_order_id: orderId,
+            p_actor_role: session.role,
+            p_notes: notes,
+          }
+        : {
+            p_order_id: orderId,
+            p_new_status: newStatus,
+            p_actor_role: session.role,
+            p_notes: notes,
+          };
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      rpcName,
+      rpcPayload,
+    );
+
+    /*
+     * Si el RPC falla, el cambio operacional no ocurriÃ³.
+     * En este caso sÃ­ corresponde responder ok: false.
+     */
+    if (rpcError) {
+      await recordAuditLogSafely({
+        module: "operations",
+
+        action:
+          newStatus === "cancelled"
+            ? "order.cancel_failed"
+            : "order.status_change_failed",
+
+        entityType: "order",
+        entityId: orderId,
+
+        actorRole: session.role,
+        actorIdentifier: null,
+
+        result: "failure",
+        reason: rpcError.message,
+
+        previousState: {
+          status: currentOrder.status,
+          saleId: currentOrder.sale_id,
+          displayOrderCode: currentOrder.display_order_code,
+        },
+
+        newState: {
+          requestedStatus: newStatus,
+        },
+
+        metadata: {
+          notes,
+          rpcName,
+        },
+
+        correlationId,
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: rpcError.message,
+        },
+        { status: 400 },
+      );
+    }
+
+    /*
+     * Desde este punto, el cambio ya ocurriÃ³.
+     * Cualquier problema posterior debe convertirse en warning.
+     */
+    await recordAuditLogSafely({
+      module: "operations",
+
+      action:
+        newStatus === "cancelled" ? "order.cancelled" : "order.status_changed",
+
+      entityType: "order",
+      entityId: orderId,
+
+      actorRole: session.role,
+      actorIdentifier: null,
+
+      result: "success",
+      reason: notes,
+
+      previousState: {
+        status: currentOrder.status,
+        saleId: currentOrder.sale_id,
+        displayOrderCode: currentOrder.display_order_code,
+      },
+
+      newState: {
+        status: newStatus,
+        saleId: currentOrder.sale_id,
+        displayOrderCode: currentOrder.display_order_code,
+      },
+
+      metadata: {
+        rpcName,
+      },
+
+      correlationId,
+    });
+
+    /*
+     * 4. Procesamiento posterior exclusivo de entregas.
+     */
+    if (newStatus === "delivered") {
+      const { data: deliveredOrder, error: deliveredOrderError } =
+        await supabaseAdmin
+          .from("orders")
+          .select(
+            `
+            id,
+            sale_id,
+            delivered_at,
+            sales (
+              id,
+              customer_id,
+              channel,
+              external_order_id,
+              promotional_stamps,
+              promotion_reason
+            )
+          `,
+          )
+          .eq("id", orderId)
+          .single();
+
+      if (deliveredOrderError || !deliveredOrder) {
+        console.error(
+          "Pedido entregado, pero no se pudo recargar:",
+          deliveredOrderError,
+        );
+
+        warnings.push(
+          "El pedido fue entregado, pero su procesamiento posterior quedÃ³ pendiente de revisiÃ³n.",
+        );
+      } else {
+        const saleRelation = Array.isArray(deliveredOrder.sales)
+          ? deliveredOrder.sales[0] || null
+          : deliveredOrder.sales || null;
+
+        const saleId = Number(deliveredOrder.sale_id || saleRelation?.id);
+
+        const customerId =
+          saleRelation?.customer_id === null ||
+          saleRelation?.customer_id === undefined
+            ? null
+            : Number(saleRelation.customer_id);
+
+        const promotionalStamps = Number(saleRelation?.promotional_stamps ?? 0);
+
+        const promotionReason =
+          typeof saleRelation?.promotion_reason === "string"
+            ? saleRelation.promotion_reason.trim() || null
+            : null;
+
+        if (!Number.isInteger(saleId) || saleId <= 0) {
+          console.error("Pedido entregado sin sale_id vÃ¡lido:", deliveredOrder);
+
+          warnings.push(
+            "El pedido fue entregado, pero no se pudo identificar su venta para completar la trazabilidad.",
+          );
+        } else {
+          const deliveredAt =
+            deliveredOrder.delivered_at || new Date().toISOString();
+
+          /*
+           * 4.1 Registrar evento transversal.
+           */
+          try {
+            await recordCustomerEvent({
+              customerId,
+              eventType: "sale.delivered",
+
+              sourceModule: "operations",
+              sourceEntityType: "order",
+              sourceEntityId: orderId,
+
+              saleId,
+              actorRole: session.role,
+              occurredAt: deliveredAt,
+
+              idempotencyKey: buildCustomerEventIdempotencyKey([
+                "sale-delivered",
+                saleId,
+              ]),
+
+              metadata: {
+                orderId,
+                channel: saleRelation?.channel || null,
+                externalOrderId: saleRelation?.external_order_id || null,
+                notes,
+              },
+            });
+          } catch (eventError) {
+            console.error(
+              "Pedido entregado, pero fallÃ³ sale.delivered:",
+              eventError,
+            );
+
+            warnings.push(
+              "El pedido fue entregado, pero su evento de trazabilidad quedÃ³ pendiente de revisiÃ³n.",
+            );
+          }
+
+          /*
+           * 4.2 Procesar fidelizaciÃ³n Ãºnicamente
+           * cuando existe cliente identificado.
+           */
+          if (
+            customerId !== null &&
+            Number.isInteger(customerId) &&
+            customerId > 0
+          ) {
+            try {
+              const businessDate = getBusinessDateInTimezone({
+                value: deliveredAt,
+                timezone: "America/Santiago",
+              });
+
+              let projection = await rebuildDailyLoyaltyProjection({
+                customerId,
+                businessDate,
+                policyCode: "LOYALTY_POLICY_V1",
+                policyVersion: 1,
+                recalculationReason: "sale.delivered",
+              });
+
+              if (
+                Number.isInteger(promotionalStamps) &&
+                promotionalStamps > 0
+              ) {
+                const promotionIdempotencyKey = `pos-sale-promotion:${saleId}`;
+
+                const { error: promotionError } = await supabaseAdmin
+                  .from("customer_daily_loyalty_promotions")
+                  .upsert(
+                    {
+                      daily_loyalty_id: projection.dailyLoyaltyId,
+                      customer_id: customerId,
+                      business_date: businessDate,
+                      loyalty_rule_id: null,
+                      promotion_code: "POS_RRSS",
+                      effect_type: "fixed_stamp_bonus",
+                      multiplier: null,
+                      fixed_stamp_bonus: promotionalStamps,
+                      applied_stamp_bonus: promotionalStamps,
+                      actor_role: session.role,
+                      actor_identifier: null,
+                      evidence_reference: `sale:${saleId}`,
+                      idempotency_key: promotionIdempotencyKey,
+                      metadata: {
+                        saleId,
+                        orderId,
+                        reason: promotionReason,
+                        source: "pos",
+                      },
+                    },
+                    {
+                      onConflict: "idempotency_key",
+                      ignoreDuplicates: true,
+                    },
+                  );
+
+                if (promotionError) {
+                  console.error(
+                    "Venta entregada, pero no se pudo registrar la promociÃ³n:",
+                    {
+                      orderId,
+                      saleId,
+                      customerId,
+                      promotionalStamps,
+                      error: promotionError,
+                    },
+                  );
+
+                  warnings.push(
+                    "El pedido fue entregado, pero los sellos promocionales quedaron pendientes de revisiÃ³n.",
+                  );
+                } else {
+                  /*
+                   * La primera proyecciÃ³n se creÃ³ antes de registrar la promociÃ³n.
+                   * La reconstruimos para incorporar el bono fijo.
+                   */
+                  projection = await rebuildDailyLoyaltyProjection({
+                    customerId,
+                    businessDate,
+                    policyCode: "LOYALTY_POLICY_V1",
+                    policyVersion: 1,
+                    recalculationReason: "sale.promotion_registered",
+                  });
+                }
+              }
+
+              let loyaltyApplication:
+                | Awaited<ReturnType<typeof applyDailyLoyaltyCredit>>
+                | undefined;
+
+              /*
+               * 4.2.1 Acreditar diferencia positiva.
+               */
+              if (projection.pendingStampDelta > 0) {
+                loyaltyApplication = await applyDailyLoyaltyCredit({
+                  dailyLoyaltyId: projection.dailyLoyaltyId,
+                  actorRole: session.role,
+                  reason: "AcreditaciÃ³n automÃ¡tica por venta entregada.",
+                });
+
+                if (!loyaltyApplication.applied) {
+                  warnings.push(
+                    "La venta fue entregada, pero los sellos no pudieron acreditarse automÃ¡ticamente.",
+                  );
+                }
+              }
+
+              /*
+               * 4.2.2 Convertir sellos en premios.
+               */
+              let conversion:
+                | Awaited<ReturnType<typeof convertLoyaltyStampsToRewards>>
+                | undefined;
+
+              try {
+                conversion = await convertLoyaltyStampsToRewards({
+                  customerId,
+                  actorRole: session.role,
+                  reason:
+                    "ConversiÃ³n automÃ¡tica posterior a una venta entregada.",
+                });
+              } catch (conversionError) {
+                console.error(
+                  "Los sellos fueron procesados, pero fallÃ³ la conversiÃ³n en premios:",
+                  {
+                    orderId,
+                    saleId,
+                    customerId,
+                    businessDate,
+                    error: conversionError,
+                  },
+                );
+
+                warnings.push(
+                  "Los sellos fueron procesados, pero la generaciÃ³n del premio quedÃ³ pendiente de revisiÃ³n.",
+                );
+              }
+
+              /*
+               * 4.2.3 Notificar premios emitidos.
+               *
+               * El correo nunca invalida el premio.
+               */
+              if (
+                conversion?.converted &&
+                conversion.rewardsIssued > 0 &&
+                conversion.rewardIds.length > 0
+              ) {
+                try {
+                  const { data: customer, error: customerError } =
+                    await supabaseAdmin
+                      .from("clientes")
+                      .select(
+                        `
+                        id,
+                        nombre,
+                        correo,
+                        public_token
+                      `,
+                      )
+                      .eq("id", customerId)
+                      .single();
+
+                  if (customerError || !customer) {
+                    console.error(
+                      "Premio generado, pero no se pudo cargar el cliente para notificar:",
+                      customerError,
+                    );
+
+                    warnings.push(
+                      "El premio fue generado correctamente, pero no se pudo preparar su correo.",
+                    );
+                  } else {
+                    const { data: issuedRewards, error: rewardsError } =
+                      await supabaseAdmin
+                        .from("customer_rewards")
+                        .select(
+                          `
+                          id,
+                          name,
+                          expires_at
+                        `,
+                        )
+                        .in("id", conversion.rewardIds)
+                        .order("id", {
+                          ascending: true,
+                        });
+
+                    if (rewardsError) {
+                      console.error(
+                        "Premios generados, pero no se pudieron cargar para notificar:",
+                        rewardsError,
+                      );
+
+                      warnings.push(
+                        "Los premios fueron generados, pero no se pudo preparar su notificaciÃ³n.",
+                      );
+                    } else {
+                      const emailResults = await Promise.allSettled(
+                        (issuedRewards || []).map(async (reward) => {
+                          const queuedEmail = await enqueueEmail({
+                            recipientEmail: customer.correo,
+                            emailType: "PRIZE_GENERATED",
+                            priority: 1,
+                            idempotencyKey: `prize-generated:${reward.id}`,
+                            payload: {
+                              nombre: customer.nombre,
+                              premioNombre:
+                                reward.name || "Helado simple gratis",
+                              vencimiento: reward.expires_at ?? null,
+                              publicToken: customer.public_token,
+                            },
+                            customerId,
+                            sourceType: "prize_generated",
+                            sourceReference: String(reward.id),
+                            maxAttempts: 5,
+                          });
+
+                          await dispatchQueuedEmailById(queuedEmail.id);
+
+                          return reward.id;
+                        }),
+                      );
+
+                      const failedEmails = emailResults.filter(
+                        (result) => result.status === "rejected",
+                      );
+
+                      if (failedEmails.length > 0) {
+                        console.error(
+                          "Uno o mÃƒÂ¡s correos de premio no pudieron registrarse o despacharse:",
+                          failedEmails,
+                        );
+
+                        warnings.push(
+                          conversion.rewardsIssued === 1
+                            ? "El premio fue generado, pero su correo no pudo procesarse."
+                            : "Los premios fueron generados, pero uno o mÃƒÂ¡s correos no pudieron procesarse.",
+                        );
+                      }
+                    }
+                  }
+                } catch (emailPreparationError) {
+                  console.error(
+                    "Error inesperado notificando premios:",
+                    emailPreparationError,
+                  );
+
+                  warnings.push(
+                    "El premio fue generado, pero ocurriÃ³ un problema al enviar su correo.",
+                  );
+                }
+              }
+
+              /*
+               * 4.2.4 Notificar avance de sellos cuando no se emitiÃ³ premio.
+               *
+               * Reglas:
+               * - Debe existir una acreditaciÃ³n nueva.
+               * - La diferencia aplicada debe ser positiva.
+               * - No debe haberse generado un premio en esta operaciÃ³n.
+               * - Un error de correo nunca revierte la venta ni los sellos.
+               */
+              const rewardWasIssued =
+                Boolean(conversion?.converted) &&
+                Number(conversion?.rewardsIssued ?? 0) > 0;
+
+              const loyaltyMovementId = Number(
+                loyaltyApplication?.movementId ?? 0,
+              );
+
+              const shouldSendStampEmail =
+                Boolean(loyaltyApplication?.applied) &&
+                Boolean(loyaltyApplication?.movementCreated) &&
+                Number.isInteger(loyaltyMovementId) &&
+                loyaltyMovementId > 0 &&
+                Number(loyaltyApplication?.appliedDelta ?? 0) > 0 &&
+                !rewardWasIssued;
+
+              if (shouldSendStampEmail) {
+                try {
+                  const [
+                    { data: customer, error: customerError },
+                    { data: loyaltyAccount, error: loyaltyAccountError },
+                    { data: rewardRule, error: rewardRuleError },
+                  ] = await Promise.all([
+                    supabaseAdmin
+                      .from("clientes")
+                      .select(
+                        `
+          id,
+          nombre,
+          correo,
+          public_token
+        `,
+                      )
+                      .eq("id", customerId)
+                      .single(),
+
+                    supabaseAdmin
+                      .from("loyalty_accounts")
+                      .select("current_stamp_balance")
+                      .eq("customer_id", customerId)
+                      .single(),
+
+                    supabaseAdmin
+                      .from("loyalty_rules")
+                      .select("conditions")
+                      .eq("code", "LOYALTY_REWARD_THRESHOLD")
+                      .eq("version", 1)
+                      .eq("configuration_version", "LOYALTY_POLICY_V1")
+                      .limit(1)
+                      .maybeSingle(),
+                  ]);
+
+                  if (customerError || !customer) {
+                    console.error(
+                      "Sellos acreditados, pero no se pudo cargar el cliente para notificar:",
+                      customerError,
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero no se pudo preparar su correo.",
+                    );
+                  } else if (loyaltyAccountError || !loyaltyAccount) {
+                    console.error(
+                      "Sellos acreditados, pero no se pudo obtener el saldo actualizado:",
+                      loyaltyAccountError,
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero no se pudo obtener el saldo para su correo.",
+                    );
+                  } else if (
+                    !customer.correo ||
+                    !customer.nombre ||
+                    !customer.public_token
+                  ) {
+                    console.error(
+                      "Sellos acreditados, pero el cliente no tiene datos completos para notificar:",
+                      {
+                        customerId,
+                        hasEmail: Boolean(customer.correo),
+                        hasName: Boolean(customer.nombre),
+                        hasPublicToken: Boolean(customer.public_token),
+                      },
+                    );
+
+                    warnings.push(
+                      "Los sellos fueron acreditados, pero el cliente no tiene datos completos para recibir el correo.",
+                    );
+                  } else {
+                    if (rewardRuleError) {
+                      console.error(
+                        "No se pudo cargar la meta de fidelizaciÃ³n; se utilizarÃ¡ 7:",
+                        rewardRuleError,
+                      );
+                    }
+
+                    const ruleConditions =
+                      rewardRule?.conditions &&
+                      typeof rewardRule.conditions === "object"
+                        ? (rewardRule.conditions as Record<string, unknown>)
+                        : {};
+
+                    const configuredGoal = Number(
+                      ruleConditions.stampsRequired,
+                    );
+
+                    const metaSellos =
+                      Number.isInteger(configuredGoal) && configuredGoal > 0
+                        ? configuredGoal
+                        : 7;
+
+                    const sellosActuales = Number(
+                      loyaltyAccount.current_stamp_balance ?? 0,
+                    );
+
+                    const queuedEmail = await enqueueEmail({
+                      recipientEmail: customer.correo,
+                      emailType: "STAMP_EARNED",
+                      priority: 1,
+                      idempotencyKey: `stamp-earned:${loyaltyMovementId}`,
+                      payload: {
+                        nombre: customer.nombre,
+                        sellosActuales,
+                        metaSellos,
+                        publicToken: customer.public_token,
+                      },
+                      customerId,
+                      sourceType: "stamp_earned",
+                      sourceReference: String(loyaltyMovementId),
+                      maxAttempts: 5,
+                    });
+
+                    await dispatchQueuedEmailById(queuedEmail.id);
+                  }
+                } catch (stampEmailError) {
+                  console.error(
+                    "Sellos acreditados, pero fallÃ³ el correo de avance:",
+                    {
+                      orderId,
+                      saleId,
+                      customerId,
+                      movementId: loyaltyApplication?.movementId ?? null,
+                      appliedDelta: loyaltyApplication?.appliedDelta ?? null,
+                      error: stampEmailError,
+                    },
+                  );
+
+                  warnings.push(
+                    "Los sellos fueron acreditados correctamente, pero su correo no pudo enviarse.",
+                  );
+                }
+              }
+            } catch (projectionError) {
+              console.error(
+                "Venta entregada, pero fallÃ³ la proyecciÃ³n diaria:",
+                {
+                  orderId,
+                  saleId,
+                  customerId,
+                  deliveredAt,
+                  error: projectionError,
+                },
+              );
+
+              warnings.push(
+                "La venta fue entregada, pero la proyecciÃ³n de fidelizaciÃ³n quedÃ³ pendiente de revisiÃ³n.",
+              );
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      result: rpcResult,
+      warnings,
+
+      message:
+        warnings.length > 0
+          ? "Estado actualizado con advertencias."
+          : "Estado actualizado correctamente.",
+    });
+  } catch (error) {
+    console.error("Error actualizando pedido:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Error inesperado al actualizar pedido.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+============================================================
+FILE: app\api\session\route.ts
+============================================================
+
+import { NextResponse } from "next/server";
+
+import {
+  getOperationSession,
+  OperationAuthUnavailableError,
+} from "@/lib/operation-auth";
+
+export async function GET() {
+  try {
+    const session = await getOperationSession();
+
+    if (!session.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No autenticado.",
+        },
+        { status: 401 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      role: session.role,
+      userId: session.userId,
+      authUserId: session.authUserId,
+      displayName: session.displayName,
+      authSource: session.source,
+    });
+  } catch (error) {
+    if (error instanceof OperationAuthUnavailableError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "No se pudo validar la sesiÃ³n temporalmente.",
+        },
+        { status: 503 },
+      );
+    }
+
+    console.error("Unexpected operational session error:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "No se pudo validar la sesiÃ³n.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+===== REFERENCIAS A operational_users / roles / capabilities =====
+
+C:\Users\gonza\Proyectos\fidelinook\app\activar-acceso\page.tsx:357: Pide a un superadministrador que reenvíe tu invitación desde Gestión de Usuarios.
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:6: type Role = "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:33: cashier: "Cashier",
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:35: superadmin: "Superadmin",
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:63: const [role, setRole] = useState<Role>("cashier");
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:113: setRole("cashier");
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:276: Superadmin
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:399: <option value="cashier">Cashier</option>
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:401: <option value="superadmin">Superadmin</option>
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:509: <option value="cashier">Cashier</option>
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:511: <option value="superadmin">Superadmin</option>
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\cancelar\route.ts:51: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts:65: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\expirar\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\expirar\route.ts:83: if (operationalUser.role !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:48: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:164: creado_por: creadoPor || "superadmin",
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts:48: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:8: const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:38: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:131: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:187: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:210: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:257: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:265: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:7: const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:42: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:87: if (isSelf && role !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:91: message: "No puedes quitarte a ti mismo el rol superadmin.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:108: target.role === "superadmin" &&
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:109: (role !== "superadmin" || !isActive)
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:112: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:114: .eq("role", "superadmin")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:118: console.error("Error counting superadmins:", countError);
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:121: { ok: false, message: "No se pudo validar la regla de superadmin." },
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:131: "Debe existir al menos un superadmin activo en la plataforma.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:139: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\invite\route.ts:25: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\campanas\route.ts:48: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\overview\route.ts:121: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\login\route.ts:43: role: "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\route.ts:46: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\[id]\route.ts:51: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts:42: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\route.ts:9: const authorization = authorizeOperationSession(session, "orders.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts:46: const authorization = authorizeOperationSession(session, "orders.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-prize\route.ts:21: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-reward-redeemed\route.ts:21: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-stamp\route.ts:21: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\route.ts:45: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\activate-assigned\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\active-by-client\route.ts:34: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\consumptions-by-client\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:147: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:246: created_by_admin: "superadmin",
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:152: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:251: created_by_admin: "superadmin",
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:62: operationalUser.role !== "superadmin"
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:45: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:92: if (operationalUser.role !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:96: message: "Solo el superadmin puede eliminar suscripciones.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:45: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:92: if (operationalUser.role !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:96: message: "Solo el superadmin puede eliminar claims.",
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\redeem-code\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\register-consumption\route.ts:57: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:50: if (rol !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:51: setError("Solo el superadmin puede crear campañas.");
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:90: creadoPor: "superadmin",
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:129: if (rol !== "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:148: Solo el superadmin puede acceder a esta sección.
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\page.tsx:170: Superadmin
+C:\Users\gonza\Proyectos\fidelinook\app\campanas\[id]\page.tsx:186: Superadmin
+C:\Users\gonza\Proyectos\fidelinook\app\clientes\page.tsx:40: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\page.tsx:63: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\page.tsx:614: {rol === "superadmin" && (
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\clientes\search\route.ts:33: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\components\AdminClienteDetalle.tsx:27: rol: "admin" | "superadmin" | null;
+C:\Users\gonza\Proyectos\fidelinook\app\operacion\components\AdminClienteDetalle.tsx:260: {mostrarAccionesAdministrativas && rol === "superadmin" && (
+C:\Users\gonza\Proyectos\fidelinook\app\suscripciones\page.tsx:508: {rol === "superadmin" && (
+C:\Users\gonza\Proyectos\fidelinook\app\suscripciones\page.tsx:561: {rol === "superadmin" && (
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-auth.ts:5: export type OperationRole = "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-auth.ts:53: return value === "cashier" || value === "admin" || value === "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-auth.ts:66: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:6: | "orders.operate"
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:23: const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:25: "orders.operate",
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:36: ...CASHIER_PERMISSIONS,
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:46: const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:55: cashier: CASHIER_PERMISSIONS,
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-rbac.ts:57: superadmin: SUPERADMIN_PERMISSIONS,
+C:\Users\gonza\Proyectos\fidelinook\lib\platform-navigation.ts:58: permission: "orders.operate",
+C:\Users\gonza\Proyectos\fidelinook\lib\platform-navigation.ts:165: case "cashier":
+C:\Users\gonza\Proyectos\fidelinook\lib\platform-navigation.ts:169: case "superadmin":
+C:\Users\gonza\Proyectos\fidelinook\lib\platform-navigation.ts:170: return "Superadministrador";
+C:\Users\gonza\Proyectos\fidelinook\lib\inventory\receipts.ts:71: .from("operational_users")
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx:38: if (role === "superadmin") {
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx:39: return "Superadmin";
+C:\Users\gonza\Proyectos\fidelinook\components\documents\CashClosingReceipt80mm.tsx:46: if (role === "cashier") {
+C:\Users\gonza\Proyectos\fidelinook\components\inventory\InventoryMovementHistory.tsx:60: * Un rol como admin/superadmin se muestra completo.
+C:\Users\gonza\Proyectos\fidelinook\components\platform\PlatformShell.tsx:43: return value === "cashier" || value === "admin" || value === "superadmin";

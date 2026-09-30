@@ -1,0 +1,386 @@
+﻿===== OPERATION RBAC =====
+import type { OperationRole, OperationSession } from "@/lib/operation-auth";
+
+export type OperationPermission =
+  | "sales.operate"
+  | "sales.export"
+  | "orders.operate"
+  | "customers.operate"
+  | "loyalty.operate"
+  | "cash.operate"
+  | "catalog.read"
+  | "catalog.manage"
+  | "inventory.stock.read"
+  | "inventory.movements.operate"
+  | "inventory.receipts.manage"
+  | "inventory.config.manage"
+  | "campaigns.manage"
+  | "subscriptions.operate"
+  | "subscriptions.manage"
+  | "subscriptions.delete"
+  | "analytics.view"
+  | "users.manage";
+
+const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+  "sales.operate",
+  "orders.operate",
+  "customers.operate",
+  "loyalty.operate",
+  "cash.operate",
+  "catalog.read",
+  "inventory.stock.read",
+  "inventory.movements.operate",
+  "subscriptions.operate",
+];
+
+const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
+  ...CASHIER_PERMISSIONS,
+  "sales.export",
+  "catalog.manage",
+  "inventory.receipts.manage",
+  "inventory.config.manage",
+  "campaigns.manage",
+  "subscriptions.manage",
+  "analytics.view",
+];
+
+const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+  ...ADMIN_PERMISSIONS,
+  "subscriptions.delete",
+  "users.manage",
+];
+
+export const ROLE_PERMISSIONS: Readonly<
+  Record<OperationRole, readonly OperationPermission[]>
+> = {
+  cashier: CASHIER_PERMISSIONS,
+  admin: ADMIN_PERMISSIONS,
+  superadmin: SUPERADMIN_PERMISSIONS,
+};
+
+export function hasOperationPermission(
+  role: OperationRole,
+  permission: OperationPermission,
+): boolean {
+  return ROLE_PERMISSIONS[role].includes(permission);
+}
+
+export type OperationAuthorizationResult =
+  | {
+      ok: true;
+      session: Extract<OperationSession, { ok: true }>;
+    }
+  | {
+      ok: false;
+      status: 401 | 403;
+      code: "UNAUTHENTICATED" | "FORBIDDEN";
+      message: string;
+    };
+
+export function authorizeOperationSession(
+  session: OperationSession,
+  permission: OperationPermission,
+): OperationAuthorizationResult {
+  if (!session.ok) {
+    return {
+      ok: false,
+      status: 401,
+      code: "UNAUTHENTICATED",
+      message: "No autenticado.",
+    };
+  }
+
+  if (!hasOperationPermission(session.role, permission)) {
+    return {
+      ok: false,
+      status: 403,
+      code: "FORBIDDEN",
+      message: "No tienes permisos para realizar esta acciÃ³n.",
+    };
+  }
+
+  return {
+    ok: true,
+    session,
+  };
+}
+
+
+===== GET OPERATION SESSION USAGES =====
+
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\cancelar\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\cancelar\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\cancelar\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\cancelar\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts:24: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts:26: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\expirar\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\expirar\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\expirar\route.ts:106: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:11: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:12: const authorization = authorizeOperationSession(session, "users.manage");
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:10: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:11: const authorization = authorizeOperationSession(session, "users.manage");
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\invite\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\invite\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\invite\route.ts:12: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\invite\route.ts:13: const authorization = authorizeOperationSession(session, "users.manage");
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\route.ts:3: import { getOperationSession } from "../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:51: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:53: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:210: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:212: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:263: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\options\route.ts:265: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\channels\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\channels\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\channels\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\channels\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-consumption\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-consumption\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-consumption\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-consumption\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-mappings\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-mappings\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-mappings\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-mappings\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-variants\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-variants\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-variants\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\inventory-variants\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:89: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:91: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:169: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\manage\route.ts:171: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\option-prices\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\option-prices\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\option-prices\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\option-prices\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\prices\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\prices\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\prices\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\prices\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\status\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\status\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\status\route.ts:30: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\status\route.ts:32: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\structural-option\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\structural-option\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\structural-option\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\catalogo\products\structural-option\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\clientes\search\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\clientes\search\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\clientes\search\route.ts:17: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\clientes\search\route.ts:19: const authorization = authorizeOperationSession(session, "customers.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\campanas\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\campanas\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\campanas\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\campanas\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\overview\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\overview\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\overview\route.ts:81: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\dashboard\overview\route.ts:83: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:4: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:49: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:50: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:130: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\route.ts:131: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\route.ts:4: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\route.ts:45: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\route.ts:46: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\preview\route.ts:4: import { getOperationSession } from "../../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\preview\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\preview\route.ts:53: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierre\preview\route.ts:54: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\route.ts:4: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\route.ts:52: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\route.ts:53: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\[id]\route.ts:4: import { getOperationSession } from "../../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\[id]\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\[id]\route.ts:205: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\cierres\[id]\route.ts:206: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:4: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:68: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:69: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:204: const operationSession = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\caja\movimientos\route.ts:205: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\route.ts:9: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\route.ts:11: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\[id]\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\[id]\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\[id]\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\campanas\[id]\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\catalogo\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\catalogo\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\catalogo\route.ts:40: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\catalogo\route.ts:42: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\clientes\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\clientes\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\clientes\route.ts:9: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\clientes\route.ts:11: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\customers\[customerId]\loyalty\route.ts:4: import { getOperationSession } from "../../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\customers\[customerId]\loyalty\route.ts:6: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\customers\[customerId]\loyalty\route.ts:15: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\customers\[customerId]\loyalty\route.ts:17: const authorization = authorizeOperationSession(session, "loyalty.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:7: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:9: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:80: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:82: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:112: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\ajustes\route.ts:114: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:6: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:104: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:106: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:139: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\bachas\route.ts:141: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\movimientos\route.ts:7: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\movimientos\route.ts:9: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\movimientos\route.ts:165: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\movimientos\route.ts:167: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:23: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:25: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:186: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\route.ts:188: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts:3: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts:5: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts:13: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\recepciones\post\route.ts:15: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\stock\route.ts:4: import { getOperationSession } from "@/lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\stock\route.ts:6: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\stock\route.ts:39: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\inventario\stock\route.ts:41: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\route.ts:9: const authorization = authorizeOperationSession(session, "orders.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts:4: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts:27: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts:44: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\orders\status\route.ts:46: const authorization = authorizeOperationSession(session, "orders.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:13: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:211: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:213: const authorization = authorizeOperationSession(session, "sales.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:612: * - Auth sigue validándose mediante getOperationSession().
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:619: const sessionPromise = getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts:633: const authorization = authorizeOperationSession(session, "sales.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts:4: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts:7: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts:50: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\customer\route.ts:52: const authorization = authorizeOperationSession(session, "customers.operate");
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts:2: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\document\route.ts:18: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:187: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\export\route.ts:195: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:3: import { getOperationSession } from "../../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:14: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\[id]\route.ts:27: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\summary\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\summary\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\summary\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\summary\route.ts:15: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-prize\route.ts:5: import { getOperationSession } from "../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-prize\route.ts:9: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-reward-redeemed\route.ts:5: import { getOperationSession } from "../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-reward-redeemed\route.ts:9: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-stamp\route.ts:5: import { getOperationSession } from "../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\send-stamp\route.ts:9: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\session\route.ts:4: getOperationSession,
+C:\Users\gonza\Proyectos\fidelinook\app\api\session\route.ts:10: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\route.ts:2: import { getOperationSession } from "../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\activate-assigned\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\activate-assigned\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\activate-assigned\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\activate-assigned\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\active-by-client\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\active-by-client\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\active-by-client\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\active-by-client\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\consumptions-by-client\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\consumptions-by-client\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\consumptions-by-client\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\consumptions-by-client\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:110: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-assigned\route.ts:112: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:115: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-code\route.ts:117: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\create-template\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:8: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\delete-claim\route.ts:10: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\redeem-code\route.ts:2: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\redeem-code\route.ts:3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\redeem-code\route.ts:7: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\redeem-code\route.ts:9: const authorization = authorizeOperationSession(
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\register-consumption\route.ts:3: import { getOperationSession } from "../../../../lib/operation-auth";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\register-consumption\route.ts:4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\register-consumption\route.ts:29: const session = await getOperationSession();
+C:\Users\gonza\Proyectos\fidelinook\app\api\subscriptions\register-consumption\route.ts:31: const authorization = authorizeOperationSession(
+
+
+===== ROLE DEFINITIONS / CONSTRAINTS / MIGRATIONS =====
+
+C:\Users\gonza\Proyectos\fidelinook\app\admin\usuarios\UsersManagementClient.tsx:6: type Role = "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:8: const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\route.ts:111: if (!displayName || !email || !VALID_ROLES.has(role)) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:7: const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\users\[id]\route.ts:78: if (!displayName || !VALID_ROLES.has(role)) {
+C:\Users\gonza\Proyectos\fidelinook\app\api\login\route.ts:43: role: "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\components\platform\PlatformShell.tsx:43: return value === "cashier" || value === "admin" || value === "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\database\migrations\20260905_09_operational_users_foundation.sql:51: grant all on table public.operational_users to service_role;
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-auth.ts:5: export type OperationRole = "cashier" | "admin" | "superadmin";
+C:\Users\gonza\Proyectos\fidelinook\lib\operation-auth.ts:53: return value === "cashier" || value === "admin" || value === "superadmin";

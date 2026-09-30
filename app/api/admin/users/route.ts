@@ -5,7 +5,7 @@ import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { sendOperatorInvitation } from "@/lib/operator-invitation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const VALID_ROLES = new Set(["cashier", "admin", "superadmin"]);
+const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
 
 async function requireUserManager() {
   const session = await getOperationSession();
@@ -118,13 +118,11 @@ export async function POST(request: Request) {
       );
     }
 
-    let existingOperationalUser:
-      | {
-          id: string;
-          auth_user_id: string | null;
-          role: string;
-        }
-      | null = null;
+    let existingOperationalUser: {
+      id: string;
+      auth_user_id: string | null;
+      role: string;
+    } | null = null;
 
     if (operationalUserId) {
       const { data, error } = await supabaseAdmin

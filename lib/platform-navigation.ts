@@ -163,10 +163,12 @@ export function getPlatformNavigation(
 export function getRoleLabel(role: OperationRole): string {
   switch (role) {
     case "cashier":
-      return "Cajero";
+      return "Cajer@";
     case "admin":
-      return "Administrador";
+      return "Admin";
     case "superadmin":
-      return "Superadministrador";
+      return "Superadmin";
+    case "preparation":
+      return "Preparación";
   }
 }

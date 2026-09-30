@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
-type Role = "cashier" | "admin" | "superadmin";
+type Role = "cashier" | "admin" | "superadmin" | "preparation";
 
 type OperationalUser = {
   id: string;
@@ -33,6 +33,7 @@ const ROLE_LABELS: Record<Role, string> = {
   cashier: "Cashier",
   admin: "Administrador",
   superadmin: "Superadmin",
+  preparation: "Preparación",
 };
 
 function formatDate(value: string | null) {
@@ -396,9 +397,10 @@ export default function UsersManagementClient({
                 onChange={(event) => setRole(event.target.value as Role)}
                 className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-3 text-[#222]"
               >
-                <option value="cashier">Cashier</option>
-                <option value="admin">Administrador</option>
+                <option value="cashier">Cajer@</option>
+                <option value="admin">Admin</option>
                 <option value="superadmin">Superadmin</option>
+                <option value="preparation">Preparación</option>
               </select>
             </div>
 
@@ -506,9 +508,10 @@ export default function UsersManagementClient({
                           }
                           className="rounded-xl border border-[#DDD1E7] bg-white px-3 py-2 text-sm text-[#222] disabled:bg-[#F5F5F5]"
                         >
-                          <option value="cashier">Cashier</option>
-                          <option value="admin">Administrador</option>
+                          <option value="cashier">Cajer@</option>
+                          <option value="admin">Admin</option>
                           <option value="superadmin">Superadmin</option>
+                          <option value="preparation">Preparación</option>
                         </select>
 
                         <button

@@ -1264,3 +1264,108 @@ git add .
 git commit -m "<ID DEV>: <descripción breve>"
 git push
 ```
+
+---
+
+---
+
+## 25. Corte de continuidad — DEV-UX-ARCH-01 — 30-09-2026
+
+### Estado actual
+
+DEV-UX-ARCH-01 se encuentra EN CURSO.
+
+Estado:
+
+- DEV-UX-ARCH-01.1 — Definir arquitectura objetivo y reglas UX — COMPLETADO.
+- DEV-UX-ARCH-01.2 — Construir carcasa base de Plataforma Nook — COMPLETADO.
+- DEV-UX-ARCH-01.3A — Integrar POS — COMPLETADO.
+- DEV-UX-ARCH-01.3B — Integrar Preparación + Historial — SIGUIENTE.
+
+### POS como baseline visual
+
+El POS fue integrado al PlatformShell y normalizado visualmente.
+
+Las decisiones visuales validadas se consolidan en:
+
+`docs/POS_UI_VOCABULARY_V1.md`
+
+POS UI Vocabulary v1 pasa a ser el baseline visual para superficies internas de Plataforma Nook.
+
+Principios relevantes:
+
+- optimización para notebook ~14" en superficies internas estándar;
+- alta densidad operacional sin sacrificar legibilidad;
+- preferencia por horizontalidad cuando evita altura innecesaria;
+- jerarquía tipográfica semántica consistente;
+- eliminación de información redundante;
+- acciones secundarias frecuentes mediante iconografía cuando mejora densidad;
+- superficies blancas independientes sobre workspace suave;
+- controles y spacing consistentes.
+
+Las superficies especializadas pueden divergir cuando exista una razón funcional o ergonómica explícita.
+
+### Preparación — dos modos de presentación
+
+Se cierra conceptualmente que Preparación tendrá dos contextos de uso.
+
+#### Platform Mode
+
+Para cashier/admin/superadmin u otro usuario operacional autorizado que accede a Preparación desde Plataforma Nook:
+
+- mantiene PlatformShell;
+- mantiene navegación correspondiente a sus capabilities;
+- breadcrumb conceptual `Operación › Preparación`;
+- Preparación funciona como una superficie operacional más de Plataforma Nook.
+
+#### Preparation Station Mode
+
+Para tablets dedicadas a preparación:
+
+- identidad operacional restringida;
+- ingreso directo a Preparación;
+- sin sidebar;
+- sin navegación global;
+- sin accesos a otros módulos;
+- máximo aprovechamiento del viewport;
+- futura optimización touch-first para tablet ~8–9";
+- autorización server-side obligatoria.
+
+La restricción NO debe implementarse mediante nombre, email o ID hardcodeado de una cuenta.
+
+La identidad de estación tampoco debe depender únicamente de ocultamiento frontend.
+
+### UXARCH-OPEN-001 — actualización
+
+Sigue abierta la implementación técnica de identidad/autorización de estación.
+
+Debe resolverse antes de implementar Preparation Station Mode.
+
+Opciones a evaluar sobre el RBAC vigente:
+
+- nuevo rol `preparation`;
+- capability específica;
+- identidad/tipo de estación;
+- combinación mínima de las anteriores.
+
+La decisión debe preservar DEV-AUTH-01 y evitar reabrir innecesariamente la arquitectura de Auth.
+
+INC-PERF-01.7 continúa en observación operacional; evitar cambios innecesarios en ciclo de sesión/refresh.
+
+### Siguiente paso
+
+`DEV-UX-ARCH-01.3B.1 — Resolver identidad y autorización de estación de Preparación`
+
+Antes de modificar la Cola, realizar radiografía dirigida únicamente de:
+
+- definición vigente de roles;
+- matriz de capabilities;
+- `operational_users`;
+- resolución server-side de sesión/capabilities;
+- guards de `/operacion/cola`;
+- APIs utilizadas por Cola;
+- PlatformShell/layout que actualmente envuelve `/operacion/cola`.
+
+No realizar una nueva radiografía general del proyecto.
+
+---
