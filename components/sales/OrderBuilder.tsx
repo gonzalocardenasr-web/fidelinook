@@ -245,7 +245,7 @@ export default function OrderBuilder({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3">
         {cart.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-400">
             Aún no hay líneas agregadas.
@@ -376,7 +376,7 @@ export default function OrderBuilder({
                   Adicionales del pedido
                 </p>
 
-                <p className="mt-0.5 text-[9px] text-neutral-400">
+                <p className="mt-0.5 text-[10px] font-normal leading-tight text-neutral-500">
                   {orderNotes.trim() ? "Nota agregada" : "Ítem especial o nota"}
                 </p>
               </div>
@@ -553,10 +553,10 @@ export default function OrderBuilder({
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[10px] font-bold ${
+                  className={`mt-0.5 text-[10px] normal leading-tight ${
                     manualDiscountEnabled && manualDiscountAmount > 0
                       ? "text-violet-700"
-                      : "text-neutral-400"
+                      : "text-neutral-500"
                   }`}
                 >
                   {manualDiscountEnabled && manualDiscountAmount > 0
