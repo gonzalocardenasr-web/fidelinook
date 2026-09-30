@@ -1,0 +1,3761 @@
+
+
+============================================================
+FILE: app/api/dashboard/overview/route.ts
+============================================================
+
+    1: import { NextResponse } from "next/server";
+    2: import { getOperationSession } from "../../../../lib/operation-auth";
+    3: import { authorizeOperationSession } from "@/lib/operation-rbac";
+    4: import { supabaseAdmin } from "../../../../lib/supabase-admin";
+    5: 
+    6: 
+    7: type ClienteRow = {
+    8:   id: number;
+    9:   nombre: string;
+   10:   email_verificado: boolean | null;
+   11:   tarjeta_activa: boolean | null;
+   12:   premios: any;
+   13:   created_At?: string | null;
+   14: };
+   15: 
+   16: type SubscriptionRow = {
+   17:   id: number;
+   18:   cliente_id: number;
+   19:   template_id: number;
+   20:   status: string;
+   21:   start_date: string | null;
+   22:   end_date: string | null;
+   23:   activated_at: string | null;
+   24:   created_at: string | null;
+   25:   next_cycle_date: string | null;
+   26:   clientes?: {
+   27:     nombre: string;
+   28:   } | null;
+   29:   subscription_templates?: {
+   30:     name: string;
+   31:   } | null;
+   32: };
+   33: 
+   34: type ConsumptionRow = {
+   35:   id: number;
+   36:   cliente_id: number;
+   37:   subscription_id: number;
+   38:   cycle_number: number;
+   39:   potes: number;
+   40:   toppings: number;
+   41:   barquillos: number;
+   42:   galletas: number;
+   43:   created_at: string;
+   44:   clientes?: {
+   45:     nombre: string;
+   46:   } | null;
+   47:   subscriptions?: {
+   48:     subscription_templates?: {
+   49:       name: string;
+   50:     } | null;
+   51:   } | null;
+   52: };
+   53: 
+   54: function getMonthKey(dateStr?: string | null) {
+   55:   if (!dateStr) return null;
+   56:   const d = new Date(dateStr);
+   57:   if (Number.isNaN(d.getTime())) return null;
+   58: 
+   59:   const year = d.getFullYear();
+   60:   const month = String(d.getMonth() + 1).padStart(2, "0");
+   61:   return `${year}-${month}`;
+   62: }
+   63: 
+   64: function getDayKey(dateStr?: string | null) {
+   65:   if (!dateStr) return null;
+   66:   const d = new Date(dateStr);
+   67:   if (Number.isNaN(d.getTime())) return null;
+   68: 
+   69:   const year = d.getFullYear();
+   70:   const month = String(d.getMonth() + 1).padStart(2, "0");
+   71:   const day = String(d.getDate()).padStart(2, "0");
+   72:   return `${year}-${month}-${day}`;
+   73: }
+   74: 
+   75: function countPremios(premios: any, estado: "activo" | "usado") {
+   76:   if (!Array.isArray(premios)) return 0;
+   77:   return premios.filter((p) => p?.estado === estado).length;
+   78: }
+   79: 
+   80: async function validateOperationalUser() {
+   81:   const session = await getOperationSession();
+   82: 
+   83:   const authorization = authorizeOperationSession(
+   84:     session,
+   85:     "analytics.view",
+   86:   );
+   87: 
+   88:   if (!authorization.ok) {
+   89:     return {
+   90:       error: NextResponse.json(
+   91:         { ok: false, message: authorization.message },
+   92:         { status: authorization.status },
+   93:       ),
+   94:     };
+   95:   }
+   96: 
+   97:   if (!session.ok) {
+   98:     return {
+   99:       error: NextResponse.json(
+  100:         { ok: false, message: "Tu sesion no se encuentra activa." },
+  101:         { status: 401 }
+  102:       ),
+  103:     };
+  104:   }
+  105: 
+  106:   if (!session.userId) {
+  107:     return {
+  108:       error: NextResponse.json(
+  109:         {
+  110:           ok: false,
+  111:           message:
+  112:             "Tu sesion debe renovarse para identificar al usuario. Cierra sesion e inicia sesion nuevamente.",
+  113:         },
+  114:         { status: 401 }
+  115:       ),
+  116:     };
+  117:   }
+  118: 
+  119:   const { data: operationalUser, error: operationalUserError } =
+  120:     await supabaseAdmin
+  121:       .from("operational_users")
+  122:       .select("id, role, is_active")
+  123:       .eq("id", session.userId)
+  124:       .maybeSingle();
+  125: 
+  126:   if (operationalUserError) {
+  127:     console.error(
+  128:       "Error validando usuario operacional en dashboard overview:",
+  129:       operationalUserError
+  130:     );
+  131: 
+  132:     return {
+  133:       error: NextResponse.json(
+  134:         {
+  135:           ok: false,
+  136:           message: "No fue posible validar al usuario operacional.",
+  137:         },
+  138:         { status: 500 }
+  139:       ),
+  140:     };
+  141:   }
+  142: 
+  143:   if (!operationalUser || !operationalUser.is_active) {
+  144:     return {
+  145:       error: NextResponse.json(
+  146:         {
+  147:           ok: false,
+  148:           message: "El usuario operacional no se encuentra activo.",
+  149:         },
+  150:         { status: 403 }
+  151:       ),
+  152:     };
+  153:   }
+  154: 
+  155:   if (operationalUser.role !== session.role) {
+  156:     return {
+  157:       error: NextResponse.json(
+  158:         {
+  159:           ok: false,
+  160:           message: "La sesion operacional no es valida.",
+  161:         },
+  162:         { status: 403 }
+  163:       ),
+  164:     };
+  165:   }
+  166: 
+  167:   return { error: null };
+  168: }
+  169: 
+  170: export async function GET() {
+  171:   const validation = await validateOperationalUser();
+  172: 
+  173:   if (validation.error) {
+  174:     return validation.error;
+  175:   }
+  176:   try {
+  177:     const today = new Date();
+  178:     const plus7 = new Date();
+  179:     plus7.setDate(today.getDate() + 7);
+  180: 
+  181:     const plus30 = new Date();
+  182:     plus30.setDate(today.getDate() + 30);
+  183: 
+  184:     const [
+  185:       clientesRes,
+  186:       subscriptionsRes,
+  187:       consumptionsRes,
+  188:       activeSubscriptionsRes,
+  189:     ] = await Promise.all([
+  190:       supabaseAdmin
+  191:         .from("clientes")
+  192:         .select("id, nombre, email_verificado, tarjeta_activa, premios, created_At"),
+  193:       supabaseAdmin
+  194:         .from("subscriptions")
+  195:         .select(`
+  196:           id,
+  197:           cliente_id,
+  198:           template_id,
+  199:           status,
+  200:           start_date,
+  201:           end_date,
+  202:           activated_at,
+  203:           created_at,
+  204:           next_cycle_date
+  205:         `),
+  206:       supabaseAdmin
+  207:         .from("subscription_consumptions")
+  208:         .select(`
+  209:           id,
+  210:           cliente_id,
+  211:           subscription_id,
+  212:           cycle_number,
+  213:           potes,
+  214:           toppings,
+  215:           barquillos,
+  216:           galletas,
+  217:           created_at,
+  218:           clientes ( nombre ),
+  219:           subscriptions (
+  220:             subscription_templates ( name )
+  221:           )
+  222:         `)
+  223:         .order("created_at", { ascending: false })
+  224:         .limit(100),
+  225:       supabaseAdmin
+  226:         .from("subscriptions")
+  227:         .select(`
+  228:           id,
+  229:           cliente_id,
+  230:           template_id,
+  231:           status,
+  232:           start_date,
+  233:           end_date,
+  234:           activated_at,
+  235:           created_at,
+  236:           next_cycle_date,
+  237:           clientes ( nombre ),
+  238:           subscription_templates ( name )
+  239:         `)
+  240:         .eq("status", "active")
+  241:         .order("start_date", { ascending: false }),
+  242:     ]);
+  243: 
+  244:     if (clientesRes.error) {
+  245:       return NextResponse.json(
+  246:         { message: "Error cargando clientes para dashboard." },
+  247:         { status: 500 }
+  248:       );
+  249:     }
+  250: 
+  251:     if (subscriptionsRes.error) {
+  252:       return NextResponse.json(
+  253:         { message: "Error cargando suscripciones para dashboard." },
+  254:         { status: 500 }
+  255:       );
+  256:     }
+  257: 
+  258:     if (consumptionsRes.error) {
+  259:       return NextResponse.json(
+  260:         { message: "Error cargando consumos para dashboard." },
+  261:         { status: 500 }
+  262:       );
+  263:     }
+  264: 
+  265:     if (activeSubscriptionsRes.error) {
+  266:       return NextResponse.json(
+  267:         { message: "Error cargando suscripciones activas para dashboard." },
+  268:         { status: 500 }
+  269:       );
+  270:     }
+  271: 
+  272:     const clientes = (clientesRes.data || []) as ClienteRow[];
+  273:     const subscriptions = (subscriptionsRes.data || []) as SubscriptionRow[];
+  274:     const consumptions = (consumptionsRes.data || []) as ConsumptionRow[];
+  275:     const activeSubscriptions =
+  276:       (activeSubscriptionsRes.data || []) as SubscriptionRow[];
+  277: 
+  278:     const clientesTotales = clientes.length;
+  279:     const clientesConTarjetaActiva = clientes.filter(
+  280:       (c) => c.tarjeta_activa
+  281:     ).length;
+  282:     const clientesConEmailVerificado = clientes.filter(
+  283:       (c) => c.email_verificado
+  284:     ).length;
+  285: 
+  286:     const premiosActivos = clientes.reduce(
+  287:       (acc, c) => acc + countPremios(c.premios, "activo"),
+  288:       0
+  289:     );
+  290:     const premiosUsados = clientes.reduce(
+  291:       (acc, c) => acc + countPremios(c.premios, "usado"),
+  292:       0
+  293:     );
+  294: 
+  295:     const suscripcionesActivas = activeSubscriptions.length;
+  296:     const clientesConSuscripcionActiva = new Set(
+  297:       activeSubscriptions.map((s) => s.cliente_id)
+  298:     ).size;
+  299: 
+  300:     const clientesConMasDeUnaSuscripcionActiva = Object.values(
+  301:       activeSubscriptions.reduce<Record<string, number>>((acc, s) => {
+  302:         const key = String(s.cliente_id);
+  303:         acc[key] = (acc[key] || 0) + 1;
+  304:         return acc;
+  305:       }, {})
+  306:     ).filter((count) => count > 1).length;
+  307: 
+  308:     const suscripcionesPorVencer7Dias = activeSubscriptions.filter((s) => {
+  309:       if (!s.end_date) return false;
+  310:       const end = new Date(s.end_date);
+  311:       return end >= today && end <= plus7;
+  312:     }).length;
+  313: 
+  314:     const suscripcionesPorVencer30Dias = activeSubscriptions.filter((s) => {
+  315:       if (!s.end_date) return false;
+  316:       const end = new Date(s.end_date);
+  317:       return end >= today && end <= plus30;
+  318:     }).length;
+  319: 
+  320:     const consumosDelMes = consumptions.filter((c) => {
+  321:       const d = new Date(c.created_at);
+  322:       return (
+  323:         d.getFullYear() === today.getFullYear() &&
+  324:         d.getMonth() === today.getMonth()
+  325:       );
+  326:     }).length;
+  327: 
+  328:     const clientesPorMesMap = clientes.reduce<Record<string, number>>(
+  329:       (acc, c) => {
+  330:         const key = getMonthKey(c.created_At);
+  331:         if (!key) return acc;
+  332:         acc[key] = (acc[key] || 0) + 1;
+  333:         return acc;
+  334:       },
+  335:       {}
+  336:     );
+  337: 
+  338:     const clientesPorMes = Object.entries(clientesPorMesMap)
+  339:       .sort(([a], [b]) => a.localeCompare(b))
+  340:       .map(([mes, total], index, arr) => {
+  341:         const acumulado =
+  342:           total +
+  343:           arr
+  344:             .slice(0, index)
+  345:             .reduce((sum, [, prevTotal]) => sum + Number(prevTotal), 0);
+  346: 
+  347:         return {
+  348:           mes,
+  349:           nuevosUsuarios: total,
+  350:           acumulado,
+  351:         };
+  352:       });
+  353: 
+  354:     const suscripcionesPorMesMap = subscriptions.reduce<Record<string, number>>(
+  355:       (acc, s) => {
+  356:         const key = getMonthKey(s.activated_at || s.start_date || s.created_at);
+  357:         if (!key) return acc;
+  358:         acc[key] = (acc[key] || 0) + 1;
+  359:         return acc;
+  360:       },
+  361:       {}
+  362:     );
+  363: 
+  364:     const suscripcionesPorMes = Object.entries(suscripcionesPorMesMap)
+  365:       .sort(([a], [b]) => a.localeCompare(b))
+  366:       .map(([mes, total]) => ({
+  367:         mes,
+  368:         nuevasSuscripciones: total,
+  369:       }));
+  370: 
+  371:     const consumosPorDiaMap = consumptions.reduce<
+  372:       Record<
+  373:         string,
+  374:         {
+  375:           fecha: string;
+  376:           movimientos: number;
+  377:           potes: number;
+  378:           toppings: number;
+  379:           barquillos: number;
+  380:           galletas: number;
+  381:         }
+  382:       >
+  383:     >((acc, c) => {
+  384:       const key = getDayKey(c.created_at);
+  385:       if (!key) return acc;
+  386: 
+  387:       if (!acc[key]) {
+  388:         acc[key] = {
+  389:           fecha: key,
+  390:           movimientos: 0,
+  391:           potes: 0,
+  392:           toppings: 0,
+  393:           barquillos: 0,
+  394:           galletas: 0,
+  395:         };
+  396:       }
+  397: 
+  398:       acc[key].movimientos += 1;
+  399:       acc[key].potes += c.potes || 0;
+  400:       acc[key].toppings += c.toppings || 0;
+  401:       acc[key].barquillos += c.barquillos || 0;
+  402:       acc[key].galletas += c.galletas || 0;
+  403: 
+  404:       return acc;
+  405:     }, {});
+  406: 
+  407:     const consumosPorDia = Object.values(consumosPorDiaMap)
+  408:       .sort((a, b) => a.fecha.localeCompare(b.fecha))
+  409:       .slice(-30);
+  410: 
+  411:     const tablaSuscripcionesActivas = activeSubscriptions.map((s) => {
+  412:       const endDate = s.end_date ? new Date(s.end_date) : null;
+  413:       const diasParaVencer = endDate
+  414:         ? Math.ceil(
+  415:             (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  416:           )
+  417:         : null;
+  418: 
+  419:       return {
+  420:         id: s.id,
+  421:         cliente: s.clientes?.nombre || "-",
+  422:         suscripcion: s.subscription_templates?.name || "-",
+  423:         inicio: s.start_date,
+  424:         fin: s.end_date,
+  425:         estado: s.status,
+  426:         proximoCiclo: s.next_cycle_date,
+  427:         diasParaVencer,
+  428:       };
+  429:     });
+  430: 
+  431:     const tablaConsumoReciente = consumptions.map((c) => ({
+  432:       id: c.id,
+  433:       fecha: c.created_at,
+  434:       cliente: c.clientes?.nombre || "-",
+  435:       suscripcion: c.subscriptions?.subscription_templates?.name || "-",
+  436:       ciclo: c.cycle_number,
+  437:       potes: c.potes,
+  438:       toppings: c.toppings,
+  439:       barquillos: c.barquillos,
+  440:       galletas: c.galletas,
+  441:     }));
+  442: 
+  443:     return NextResponse.json({
+  444:       ok: true,
+  445:       kpis: {
+  446:         clientesTotales,
+  447:         clientesConTarjetaActiva,
+  448:         clientesConEmailVerificado,
+  449:         premiosActivos,
+  450:         premiosUsados,
+  451:         suscripcionesActivas,
+  452:         clientesConSuscripcionActiva,
+  453:         clientesConMasDeUnaSuscripcionActiva,
+  454:         suscripcionesPorVencer7Dias,
+  455:         suscripcionesPorVencer30Dias,
+  456:         consumosDelMes,
+  457:       },
+  458:       clientesPorMes,
+  459:       suscripcionesPorMes,
+  460:       consumosPorDia,
+  461:       tablaSuscripcionesActivas,
+  462:       tablaConsumoReciente,
+  463:     });
+  464:   } catch (error) {
+  465:     console.error("[dashboard/overview]", error);
+  466: 
+  467:     return NextResponse.json(
+  468:       { message: "Ocurri√≥ un error inesperado al cargar el dashboard." },
+  469:       { status: 500 }
+  470:     );
+  471:   }
+  472: }
+
+
+============================================================
+FILE: app/api/operacion/sales/export/route.ts
+============================================================
+
+    1: import { NextResponse } from "next/server";
+    2: import { supabaseAdmin } from "../../../../../lib/supabase-admin";
+    3: import { getOperationSession } from "../../../../../lib/operation-auth";
+    4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+    5: 
+    6: type ExportOrder = {
+    7:   display_order_code?: string | null;
+    8:   status?: string | null;
+    9:   notes?: string | null;
+   10: };
+   11: 
+   12: type ExportCustomer = {
+   13:   nombre?: string | null;
+   14:   telefono?: string | null;
+   15:   correo?: string | null;
+   16: };
+   17: 
+   18: type ExportSaleItem = {
+   19:   product_name?: string | null;
+   20:   quantity?: number | null;
+   21: };
+   22: 
+   23: type ExportSale = {
+   24:   id: number;
+   25:   sale_number?: string | null;
+   26:   channel?: string | null;
+   27:   external_order_id?: string | null;
+   28:   subtotal?: number | null;
+   29:   discount_total?: number | null;
+   30:   total?: number | null;
+   31:   payment_status?: string | null;
+   32:   payment_method?: string | null;
+   33:   actor_role?: string | null;
+   34:   confirmed_at?: string | null;
+   35:   created_at: string;
+   36:   clientes?: ExportCustomer | null;
+   37:   orders?: ExportOrder[] | null;
+   38:   sale_items?: ExportSaleItem[] | null;
+   39: };
+   40: 
+   41: function sanitizeSearch(value: string) {
+   42:   return value.replace(/[,%()]/g, " ").trim();
+   43: }
+   44: 
+   45: function getChannelLabel(channel?: string | null) {
+   46:   const normalized = String(channel || "local").toLowerCase();
+   47: 
+   48:   if (normalized === "shopify") return "Shopify";
+   49: 
+   50:   if (
+   51:     normalized === "uber" ||
+   52:     normalized === "uber_eats" ||
+   53:     normalized === "ubereats"
+   54:   ) {
+   55:     return "Uber Eats";
+   56:   }
+   57: 
+   58:   if (normalized === "rappi") return "Rappi";
+   59: 
+   60:   if (
+   61:     normalized === "pedidosya" ||
+   62:     normalized === "pedidos_ya" ||
+   63:     normalized === "pedidos ya"
+   64:   ) {
+   65:     return "PedidosYa";
+   66:   }
+   67: 
+   68:   return "Local";
+   69: }
+   70: 
+   71: function getPaymentMethodLabel(value?: string | null) {
+   72:   const normalized = String(value || "").toLowerCase();
+   73: 
+   74:   if (normalized === "efectivo") return "Efectivo";
+   75:   if (normalized === "tarjeta") return "Tarjeta";
+   76:   if (normalized === "transferencia") return "Transferencia";
+   77:   if (normalized === "pago_electronico") return "Pago electr√≥nico";
+   78: 
+   79:   // Valores hist√≥ricos: se mantienen para ventas anteriores.
+   80:   if (normalized === "debito") return "D√©bito";
+   81:   if (normalized === "credito") return "Cr√©dito";
+   82:   if (normalized === "manual") return "Plataforma";
+   83: 
+   84:   return value || "";
+   85: }
+   86: 
+   87: function getPaymentStatusLabel(value?: string | null) {
+   88:   const normalized = String(value || "").toLowerCase();
+   89: 
+   90:   if (normalized === "paid") return "Pagado";
+   91:   if (normalized === "pending") return "Pendiente";
+   92:   if (normalized === "refunded") return "Reembolsado";
+   93:   if (normalized === "cancelled") return "Cancelado";
+   94: 
+   95:   return value || "";
+   96: }
+   97: 
+   98: function getOrderStatusLabel(value?: string | null) {
+   99:   const normalized = String(value || "").toLowerCase();
+  100: 
+  101:   if (normalized === "pending") return "Pendiente";
+  102:   if (normalized === "preparing") return "Preparando";
+  103:   if (normalized === "ready") return "Listo";
+  104:   if (normalized === "delivered") return "Entregado";
+  105:   if (normalized === "cancelled") return "Cancelado";
+  106: 
+  107:   return value || "";
+  108: }
+  109: 
+  110: function formatDateTime(value?: string | null) {
+  111:   if (!value) return "";
+  112: 
+  113:   return new Intl.DateTimeFormat("es-CL", {
+  114:     day: "2-digit",
+  115:     month: "2-digit",
+  116:     year: "numeric",
+  117:     hour: "2-digit",
+  118:     minute: "2-digit",
+  119:     second: "2-digit",
+  120:     hour12: false,
+  121:     timeZone: "America/Santiago",
+  122:   }).format(new Date(value));
+  123: }
+  124: 
+  125: function formatProducts(items?: ExportSaleItem[] | null) {
+  126:   if (!Array.isArray(items) || items.length === 0) {
+  127:     return "";
+  128:   }
+  129: 
+  130:   return items
+  131:     .map((item) => {
+  132:       const quantity = Math.max(1, Number(item.quantity || 1));
+  133:       const productName = String(item.product_name || "Producto");
+  134: 
+  135:       return `${quantity}x ${productName}`;
+  136:     })
+  137:     .join(" | ");
+  138: }
+  139: 
+  140: function getTotalItems(items?: ExportSaleItem[] | null) {
+  141:   if (!Array.isArray(items)) return 0;
+  142: 
+  143:   return items.reduce(
+  144:     (total, item) => total + Math.max(1, Number(item.quantity || 1)),
+  145:     0,
+  146:   );
+  147: }
+  148: 
+  149: /*
+  150:  * Utilizamos punto y coma como separador porque suele abrirse
+  151:  * correctamente en Excel con configuraci√≥n regional chilena.
+  152:  */
+  153: function escapeCsvValue(value: unknown) {
+  154:   const text = String(value ?? "")
+  155:     .replace(/\r\n/g, " ")
+  156:     .replace(/\n/g, " ")
+  157:     .replace(/\r/g, " ");
+  158: 
+  159:   if (text.includes(";") || text.includes('"') || text.includes("\n")) {
+  160:     return `"${text.replace(/"/g, '""')}"`;
+  161:   }
+  162: 
+  163:   return text;
+  164: }
+  165: 
+  166: function buildCsvRow(values: unknown[]) {
+  167:   return values.map(escapeCsvValue).join(";");
+  168: }
+  169: 
+  170: function buildFileName(dateFrom?: string | null, dateTo?: string | null) {
+  171:   const today = new Intl.DateTimeFormat("en-CA", {
+  172:     timeZone: "America/Santiago",
+  173:   }).format(new Date());
+  174: 
+  175:   if (dateFrom || dateTo) {
+  176:     const fromLabel = dateFrom ? dateFrom.slice(0, 10) : "inicio";
+  177: 
+  178:     const toLabel = dateTo ? dateTo.slice(0, 10) : today;
+  179: 
+  180:     return `ventas-nook-${fromLabel}-${toLabel}.csv`;
+  181:   }
+  182: 
+  183:   return `ventas-nook-${today}.csv`;
+  184: }
+  185: 
+  186: export async function GET(req: Request) {
+  187:   const session = await getOperationSession();
+  188: 
+  189:   if (!session.ok) {
+  190:     return NextResponse.json(
+  191:       { ok: false, message: "No autenticado." },
+  192:       { status: 401 },
+  193:     );
+  194:   }
+  195:   const authorization = authorizeOperationSession(
+  196:     session,
+  197:     "sales.export",
+  198:   );
+  199: 
+  200:   if (!authorization.ok) {
+  201:     return NextResponse.json(
+  202:       {
+  203:         ok: false,
+  204:         code: authorization.code,
+  205:         message: authorization.message,
+  206:       },
+  207:       { status: authorization.status },
+  208:     );
+  209:   }
+  210: 
+  211:   try {
+  212:     const { searchParams } = new URL(req.url);
+  213: 
+  214:     const dateFrom = searchParams.get("dateFrom");
+  215:     const dateTo = searchParams.get("dateTo");
+  216:     const search = String(searchParams.get("search") || "").trim();
+  217:     const channel = String(searchParams.get("channel") || "").trim();
+  218:     const paymentMethod = String(
+  219:       searchParams.get("paymentMethod") || "",
+  220:     ).trim();
+  221:     const orderStatus = String(searchParams.get("orderStatus") || "").trim();
+  222:     const customerType = String(searchParams.get("customerType") || "").trim();
+  223: 
+  224:     let candidateSaleIds: Set<number> | null = null;
+  225: 
+  226:     function intersectCandidateIds(ids: number[]) {
+  227:       const nextIds = new Set(ids);
+  228: 
+  229:       if (candidateSaleIds === null) {
+  230:         candidateSaleIds = nextIds;
+  231:         return;
+  232:       }
+  233: 
+  234:       candidateSaleIds = new Set(
+  235:         [...candidateSaleIds].filter((id) => nextIds.has(id)),
+  236:       );
+  237:     }
+  238: 
+  239:     /*
+  240:      * Filtro por estado de pedido.
+  241:      */
+  242:     if (orderStatus) {
+  243:       const { data: statusOrders, error: statusError } = await supabaseAdmin
+  244:         .from("orders")
+  245:         .select("sale_id")
+  246:         .eq("status", orderStatus);
+  247: 
+  248:       if (statusError) {
+  249:         return NextResponse.json(
+  250:           { ok: false, message: statusError.message },
+  251:           { status: 500 },
+  252:         );
+  253:       }
+  254: 
+  255:       intersectCandidateIds(
+  256:         (statusOrders || [])
+  257:           .map((order) => Number(order.sale_id))
+  258:           .filter((id) => Number.isFinite(id)),
+  259:       );
+  260:     }
+  261: 
+  262:     /*
+  263:      * B√∫squeda general sobre ventas, clientes y pedidos.
+  264:      */
+  265:     if (search) {
+  266:       const safeSearch = sanitizeSearch(search);
+  267:       const searchSaleIds = new Set<number>();
+  268: 
+  269:       const { data: directSales, error: directSalesError } = await supabaseAdmin
+  270:         .from("sales")
+  271:         .select("id")
+  272:         .or(
+  273:           [
+  274:             `sale_number.ilike.%${safeSearch}%`,
+  275:             `external_order_id.ilike.%${safeSearch}%`,
+  276:             `channel.ilike.%${safeSearch}%`,
+  277:             `payment_method.ilike.%${safeSearch}%`,
+  278:           ].join(","),
+  279:         );
+  280: 
+  281:       if (directSalesError) {
+  282:         return NextResponse.json(
+  283:           { ok: false, message: directSalesError.message },
+  284:           { status: 500 },
+  285:         );
+  286:       }
+  287: 
+  288:       for (const sale of directSales || []) {
+  289:         const saleId = Number(sale.id);
+  290: 
+  291:         if (Number.isFinite(saleId)) {
+  292:           searchSaleIds.add(saleId);
+  293:         }
+  294:       }
+  295: 
+  296:       const numericSearch = Number(search);
+  297: 
+  298:       if (Number.isInteger(numericSearch) && numericSearch > 0) {
+  299:         const { data: numericSales, error: numericSalesError } =
+  300:           await supabaseAdmin
+  301:             .from("sales")
+  302:             .select("id")
+  303:             .eq("id", numericSearch);
+  304: 
+  305:         if (numericSalesError) {
+  306:           return NextResponse.json(
+  307:             { ok: false, message: numericSalesError.message },
+  308:             { status: 500 },
+  309:           );
+  310:         }
+  311: 
+  312:         for (const sale of numericSales || []) {
+  313:           const saleId = Number(sale.id);
+  314: 
+  315:           if (Number.isFinite(saleId)) {
+  316:             searchSaleIds.add(saleId);
+  317:           }
+  318:         }
+  319:       }
+  320: 
+  321:       const { data: matchingCustomers, error: customersError } =
+  322:         await supabaseAdmin
+  323:           .from("clientes")
+  324:           .select("id")
+  325:           .or(
+  326:             [
+  327:               `nombre.ilike.%${safeSearch}%`,
+  328:               `correo.ilike.%${safeSearch}%`,
+  329:               `telefono.ilike.%${safeSearch}%`,
+  330:             ].join(","),
+  331:           );
+  332: 
+  333:       if (customersError) {
+  334:         return NextResponse.json(
+  335:           { ok: false, message: customersError.message },
+  336:           { status: 500 },
+  337:         );
+  338:       }
+  339: 
+  340:       const customerIds = (matchingCustomers || [])
+  341:         .map((customer) => Number(customer.id))
+  342:         .filter((id) => Number.isFinite(id));
+  343: 
+  344:       if (customerIds.length > 0) {
+  345:         const { data: customerSales, error: customerSalesError } =
+  346:           await supabaseAdmin
+  347:             .from("sales")
+  348:             .select("id")
+  349:             .in("customer_id", customerIds);
+  350: 
+  351:         if (customerSalesError) {
+  352:           return NextResponse.json(
+  353:             { ok: false, message: customerSalesError.message },
+  354:             { status: 500 },
+  355:           );
+  356:         }
+  357: 
+  358:         for (const sale of customerSales || []) {
+  359:           const saleId = Number(sale.id);
+  360: 
+  361:           if (Number.isFinite(saleId)) {
+  362:             searchSaleIds.add(saleId);
+  363:           }
+  364:         }
+  365:       }
+  366: 
+  367:       const { data: matchingOrders, error: ordersError } = await supabaseAdmin
+  368:         .from("orders")
+  369:         .select("sale_id")
+  370:         .or(
+  371:           [
+  372:             `display_order_code.ilike.%${safeSearch}%`,
+  373:             `status.ilike.%${safeSearch}%`,
+  374:           ].join(","),
+  375:         );
+  376: 
+  377:       if (ordersError) {
+  378:         return NextResponse.json(
+  379:           { ok: false, message: ordersError.message },
+  380:           { status: 500 },
+  381:         );
+  382:       }
+  383: 
+  384:       for (const order of matchingOrders || []) {
+  385:         const saleId = Number(order.sale_id);
+  386: 
+  387:         if (Number.isFinite(saleId)) {
+  388:           searchSaleIds.add(saleId);
+  389:         }
+  390:       }
+  391: 
+  392:       intersectCandidateIds([...searchSaleIds]);
+  393:     }
+  394: 
+  395:     const headers = [
+  396:       "ID venta",
+  397:       "C√≥digo pedido",
+  398:       "Fecha y hora",
+  399:       "Canal",
+  400:       "Referencia externa",
+  401:       "Cliente",
+  402:       "Tel√©fono",
+  403:       "Correo",
+  404:       "Cantidad √≠tems",
+  405:       "Productos",
+  406:       "Medio de pago",
+  407:       "Estado de pago",
+  408:       "Estado del pedido",
+  409:       "Subtotal",
+  410:       "Descuentos",
+  411:       "Total",
+  412:       "Nota del pedido",
+  413:       "Operador",
+  414:     ];
+  415: 
+  416:     /*
+  417:      * Si no existen coincidencias, generamos igualmente un CSV
+  418:      * v√°lido con sus encabezados.
+  419:      */
+  420:     if (candidateSaleIds !== null && candidateSaleIds.size === 0) {
+  421:       const emptyCsv = `\uFEFF${buildCsvRow(headers)}\r\n`;
+  422: 
+  423:       return new Response(emptyCsv, {
+  424:         status: 200,
+  425:         headers: {
+  426:           "Content-Type": "text/csv; charset=utf-8",
+  427:           "Content-Disposition": `attachment; filename="${buildFileName(
+  428:             dateFrom,
+  429:             dateTo,
+  430:           )}"`,
+  431:           "Cache-Control": "no-store",
+  432:         },
+  433:       });
+  434:     }
+  435: 
+  436:     const allSales: ExportSale[] = [];
+  437:     const batchSize = 1000;
+  438:     let batchStart = 0;
+  439: 
+  440:     /*
+  441:      * Supabase limita la cantidad de registros por respuesta.
+  442:      * Recorremos internamente el resultado en bloques de 1.000
+  443:      * para exportar todo el universo filtrado.
+  444:      */
+  445:     while (true) {
+  446:       let query = supabaseAdmin.from("sales").select(
+  447:         `
+  448:           id,
+  449:           sale_number,
+  450:           channel,
+  451:           external_order_id,
+  452:           subtotal,
+  453:           discount_total,
+  454:           total,
+  455:           payment_status,
+  456:           payment_method,
+  457:           actor_role,
+  458:           confirmed_at,
+  459:           created_at,
+  460:           clientes (
+  461:             nombre,
+  462:             telefono,
+  463:             correo
+  464:           ),
+  465:           orders (
+  466:             display_order_code,
+  467:             status,
+  468:             notes
+  469:           ),
+  470:           sale_items (
+  471:             product_name,
+  472:             quantity
+  473:           )
+  474:         `,
+  475:       );
+  476: 
+  477:       if (candidateSaleIds !== null) {
+  478:         query = query.in("id", [...candidateSaleIds]);
+  479:       }
+  480: 
+  481:       if (channel) {
+  482:         query = query.eq("channel", channel);
+  483:       }
+  484: 
+  485:       if (paymentMethod) {
+  486:         query = query.eq("payment_method", paymentMethod);
+  487:       }
+  488: 
+  489:       if (customerType === "identified") {
+  490:         query = query.not("customer_id", "is", null);
+  491:       }
+  492: 
+  493:       if (customerType === "counter") {
+  494:         query = query.is("customer_id", null);
+  495:       }
+  496: 
+  497:       if (dateFrom) {
+  498:         const parsedDateFrom = new Date(dateFrom);
+  499: 
+  500:         if (Number.isNaN(parsedDateFrom.getTime())) {
+  501:           return NextResponse.json(
+  502:             { ok: false, message: "Fecha inicial inv√°lida." },
+  503:             { status: 400 },
+  504:           );
+  505:         }
+  506: 
+  507:         query = query.gte("created_at", parsedDateFrom.toISOString());
+  508:       }
+  509: 
+  510:       if (dateTo) {
+  511:         const parsedDateTo = new Date(dateTo);
+  512: 
+  513:         if (Number.isNaN(parsedDateTo.getTime())) {
+  514:           return NextResponse.json(
+  515:             { ok: false, message: "Fecha final inv√°lida." },
+  516:             { status: 400 },
+  517:           );
+  518:         }
+  519: 
+  520:         query = query.lt("created_at", parsedDateTo.toISOString());
+  521:       }
+  522: 
+  523:       const { data, error } = await query
+  524:         .order("created_at", { ascending: false })
+  525:         .range(batchStart, batchStart + batchSize - 1);
+  526: 
+  527:       if (error) {
+  528:         return NextResponse.json(
+  529:           { ok: false, message: error.message },
+  530:           { status: 500 },
+  531:         );
+  532:       }
+  533: 
+  534:       const batch = (data || []) as ExportSale[];
+  535: 
+  536:       allSales.push(...batch);
+  537: 
+  538:       if (batch.length < batchSize) {
+  539:         break;
+  540:       }
+  541: 
+  542:       batchStart += batchSize;
+  543:     }
+  544: 
+  545:     const rows = allSales.map((sale) => {
+  546:       const order = sale.orders?.[0] || null;
+  547:       const customer = sale.clientes || null;
+  548: 
+  549:       return [
+  550:         sale.id,
+  551:         order?.display_order_code || sale.sale_number || `Venta #${sale.id}`,
+  552:         formatDateTime(sale.confirmed_at || sale.created_at),
+  553:         getChannelLabel(sale.channel),
+  554:         sale.external_order_id || "",
+  555:         customer?.nombre || "Mostrador",
+  556:         customer?.telefono || "",
+  557:         customer?.correo || "",
+  558:         getTotalItems(sale.sale_items),
+  559:         formatProducts(sale.sale_items),
+  560:         getPaymentMethodLabel(sale.payment_method),
+  561:         getPaymentStatusLabel(sale.payment_status),
+  562:         getOrderStatusLabel(order?.status),
+  563:         Number(sale.subtotal || 0),
+  564:         Number(sale.discount_total || 0),
+  565:         Number(sale.total || 0),
+  566:         order?.notes || "",
+  567:         sale.actor_role || "",
+  568:       ];
+  569:     });
+  570: 
+  571:     const csv = [buildCsvRow(headers), ...rows.map(buildCsvRow)].join("\r\n");
+  572: 
+  573:     /*
+  574:      * BOM UTF-8 para conservar tildes, e√±es y s√≠mbolos
+  575:      * al abrir el archivo en Excel.
+  576:      */
+  577:     const csvWithBom = `\uFEFF${csv}\r\n`;
+  578: 
+  579:     return new Response(csvWithBom, {
+  580:       status: 200,
+  581:       headers: {
+  582:         "Content-Type": "text/csv; charset=utf-8",
+  583:         "Content-Disposition": `attachment; filename="${buildFileName(
+  584:           dateFrom,
+  585:           dateTo,
+  586:         )}"`,
+  587:         "Cache-Control": "no-store",
+  588:       },
+  589:     });
+  590:   } catch (error) {
+  591:     console.error("Error exportando historial de ventas:", error);
+  592: 
+  593:     return NextResponse.json(
+  594:       {
+  595:         ok: false,
+  596:         message: "Error inesperado al exportar las ventas.",
+  597:       },
+  598:       { status: 500 },
+  599:     );
+  600:   }
+  601: }
+
+
+============================================================
+FILE: app/api/subscriptions/register-consumption/route.ts
+============================================================
+
+    1: import { NextResponse } from "next/server";
+    2: import { supabaseAdmin } from "../../../../lib/supabase-admin";
+    3: import { getOperationSession } from "../../../../lib/operation-auth";
+    4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+    5: import { getSubscriptionCycle } from "../../../../lib/subscriptionCycle";
+    6: import {
+    7:   buildCustomerEventIdempotencyKey,
+    8:   recordCustomerEvent,
+    9: } from "../../../../lib/customer-events";
+   10: 
+   11: type ConsumptionAmounts = {
+   12:   potes: number;
+   13:   toppings: number;
+   14:   barquillos: number;
+   15:   galletas: number;
+   16: };
+   17: 
+   18: function normalizePositiveInteger(value: unknown) {
+   19:   const parsed = Number(value);
+   20: 
+   21:   if (!Number.isInteger(parsed) || parsed < 0) {
+   22:     return null;
+   23:   }
+   24: 
+   25:   return parsed;
+   26: }
+   27: 
+   28: async function validateOperationalUser() {
+   29:   const session = await getOperationSession();
+   30: 
+   31:     const authorization = authorizeOperationSession(
+   32:       session,
+   33:       "subscriptions.operate",
+   34:     );
+   35: 
+   36:     if (!authorization.ok) {
+   37:       return {
+   38:         error: NextResponse.json(
+   39:           { ok: false, message: authorization.message },
+   40:           { status: authorization.status },
+   41:         ),
+   42:         role: null,
+   43:       };
+   44:     }
+   45: 
+   46:   if (!session.ok || !session.userId) {
+   47:     return {
+   48:       error: NextResponse.json(
+   49:         { ok: false, message: "No autenticado." },
+   50:         { status: 401 },
+   51:       ),
+   52:       role: null,
+   53:     };
+   54:   }
+   55: 
+   56:   const { data: operationalUser, error } = await supabaseAdmin
+   57:     .from("operational_users")
+   58:     .select("id, role, is_active")
+   59:     .eq("id", session.userId)
+   60:     .maybeSingle();
+   61: 
+   62:   if (error) {
+   63:     return {
+   64:       error: NextResponse.json(
+   65:         {
+   66:           ok: false,
+   67:           message: "No fue posible validar al usuario operacional.",
+   68:         },
+   69:         { status: 500 },
+   70:       ),
+   71:       role: null,
+   72:     };
+   73:   }
+   74: 
+   75:   if (
+   76:     !operationalUser ||
+   77:     !operationalUser.is_active ||
+   78:     operationalUser.role !== session.role
+   79:   ) {
+   80:     return {
+   81:       error: NextResponse.json(
+   82:         { ok: false, message: "Usuario operacional no autorizado." },
+   83:         { status: 403 },
+   84:       ),
+   85:       role: null,
+   86:     };
+   87:   }
+   88: 
+   89:   return {
+   90:     error: null,
+   91:     role: operationalUser.role,
+   92:   };
+   93: }
+   94: 
+   95: export async function POST(req: Request) {
+   96:   const validation = await validateOperationalUser();
+   97: 
+   98:   if (validation.error) {
+   99:     return validation.error;
+  100:   }
+  101: 
+  102:   try {
+  103:     const body = await req.json();
+  104: 
+  105:     const subscriptionId = Number(body.subscriptionId);
+  106:     const clienteId = Number(body.clienteId);
+  107: 
+  108:     const amounts: ConsumptionAmounts = {
+  109:       potes: normalizePositiveInteger(body.potes) ?? -1,
+  110:       toppings: normalizePositiveInteger(body.toppings) ?? -1,
+  111:       barquillos: normalizePositiveInteger(body.barquillos) ?? -1,
+  112:       galletas: normalizePositiveInteger(body.galletas) ?? -1,
+  113:     };
+  114: 
+  115:     if (
+  116:       !Number.isInteger(subscriptionId) ||
+  117:       subscriptionId <= 0 ||
+  118:       !Number.isInteger(clienteId) ||
+  119:       clienteId <= 0
+  120:     ) {
+  121:       return NextResponse.json(
+  122:         { ok: false, message: "Faltan datos obligatorios v√°lidos." },
+  123:         { status: 400 },
+  124:       );
+  125:     }
+  126: 
+  127:     if (Object.values(amounts).some((value) => value < 0)) {
+  128:       return NextResponse.json(
+  129:         {
+  130:           ok: false,
+  131:           message:
+  132:             "Las cantidades deben ser n√∫meros enteros iguales o mayores que cero.",
+  133:         },
+  134:         { status: 400 },
+  135:       );
+  136:     }
+  137: 
+  138:     const totalRequested =
+  139:       amounts.potes + amounts.toppings + amounts.barquillos + amounts.galletas;
+  140: 
+  141:     if (totalRequested === 0) {
+  142:       return NextResponse.json(
+  143:         {
+  144:           ok: false,
+  145:           message: "Debes registrar al menos un producto consumido.",
+  146:         },
+  147:         { status: 400 },
+  148:       );
+  149:     }
+  150: 
+  151:     const { data: subscription, error: subError } = await supabaseAdmin
+  152:       .from("subscriptions")
+  153:       .select(
+  154:         `
+  155:         id,
+  156:         cliente_id,
+  157:         template_id,
+  158:         status,
+  159:         start_date
+  160:       `,
+  161:       )
+  162:       .eq("id", subscriptionId)
+  163:       .eq("cliente_id", clienteId)
+  164:       .single();
+  165: 
+  166:     if (subError || !subscription) {
+  167:       return NextResponse.json(
+  168:         { ok: false, message: "Suscripci√≥n no encontrada." },
+  169:         { status: 404 },
+  170:       );
+  171:     }
+  172: 
+  173:     if (subscription.status !== "active") {
+  174:       return NextResponse.json(
+  175:         { ok: false, message: "La suscripci√≥n no est√° activa." },
+  176:         { status: 400 },
+  177:       );
+  178:     }
+  179: 
+  180:     const { data: template, error: templateError } = await supabaseAdmin
+  181:       .from("subscription_templates")
+  182:       .select(
+  183:         `
+  184:         id,
+  185:         name,
+  186:         pots_per_month,
+  187:         toppings_per_month,
+  188:         wafer_packs_per_month,
+  189:         cookie_packs_per_month
+  190:       `,
+  191:       )
+  192:       .eq("id", subscription.template_id)
+  193:       .single();
+  194: 
+  195:     if (templateError || !template) {
+  196:       return NextResponse.json(
+  197:         {
+  198:           ok: false,
+  199:           message: "No encontramos la configuraci√≥n de la suscripci√≥n.",
+  200:         },
+  201:         { status: 404 },
+  202:       );
+  203:     }
+  204: 
+  205:     if (amounts.potes > 0 && template.pots_per_month === 0) {
+  206:       return NextResponse.json(
+  207:         { ok: false, message: "Esta suscripci√≥n no incluye potes." },
+  208:         { status: 400 },
+  209:       );
+  210:     }
+  211: 
+  212:     if (amounts.toppings > 0 && template.toppings_per_month === 0) {
+  213:       return NextResponse.json(
+  214:         { ok: false, message: "Esta suscripci√≥n no incluye toppings." },
+  215:         { status: 400 },
+  216:       );
+  217:     }
+  218: 
+  219:     if (amounts.barquillos > 0 && template.wafer_packs_per_month === 0) {
+  220:       return NextResponse.json(
+  221:         {
+  222:           ok: false,
+  223:           message: "Esta suscripci√≥n no incluye barquillos.",
+  224:         },
+  225:         { status: 400 },
+  226:       );
+  227:     }
+  228: 
+  229:     if (amounts.galletas > 0 && template.cookie_packs_per_month === 0) {
+  230:       return NextResponse.json(
+  231:         {
+  232:           ok: false,
+  233:           message: "Esta suscripci√≥n no incluye galletas.",
+  234:         },
+  235:         { status: 400 },
+  236:       );
+  237:     }
+  238: 
+  239:     const { cycleNumber, cycleStartDate, cycleEndDate } = getSubscriptionCycle(
+  240:       subscription.start_date,
+  241:     );
+  242: 
+  243:     const { data: consumptions, error: consError } = await supabaseAdmin
+  244:       .from("subscription_consumptions")
+  245:       .select("potes, toppings, barquillos, galletas")
+  246:       .eq("subscription_id", subscriptionId)
+  247:       .eq("cycle_number", cycleNumber);
+  248: 
+  249:     if (consError) {
+  250:       return NextResponse.json(
+  251:         {
+  252:           ok: false,
+  253:           message: "Error al obtener los consumos actuales.",
+  254:         },
+  255:         { status: 500 },
+  256:       );
+  257:     }
+  258: 
+  259:     const totalConsumido = (consumptions || []).reduce<ConsumptionAmounts>(
+  260:       (acc, consumption) => ({
+  261:         potes: acc.potes + Number(consumption.potes || 0),
+  262:         toppings: acc.toppings + Number(consumption.toppings || 0),
+  263:         barquillos: acc.barquillos + Number(consumption.barquillos || 0),
+  264:         galletas: acc.galletas + Number(consumption.galletas || 0),
+  265:       }),
+  266:       {
+  267:         potes: 0,
+  268:         toppings: 0,
+  269:         barquillos: 0,
+  270:         galletas: 0,
+  271:       },
+  272:     );
+  273: 
+  274:     if (
+  275:       amounts.potes >
+  276:       Number(template.pots_per_month || 0) - totalConsumido.potes
+  277:     ) {
+  278:       return NextResponse.json(
+  279:         {
+  280:           ok: false,
+  281:           message: "No tienes suficientes potes disponibles.",
+  282:         },
+  283:         { status: 400 },
+  284:       );
+  285:     }
+  286: 
+  287:     if (
+  288:       amounts.toppings >
+  289:       Number(template.toppings_per_month || 0) - totalConsumido.toppings
+  290:     ) {
+  291:       return NextResponse.json(
+  292:         {
+  293:           ok: false,
+  294:           message: "No tienes suficientes toppings disponibles.",
+  295:         },
+  296:         { status: 400 },
+  297:       );
+  298:     }
+  299: 
+  300:     if (
+  301:       amounts.barquillos >
+  302:       Number(template.wafer_packs_per_month || 0) - totalConsumido.barquillos
+  303:     ) {
+  304:       return NextResponse.json(
+  305:         {
+  306:           ok: false,
+  307:           message: "No tienes suficientes barquillos disponibles.",
+  308:         },
+  309:         { status: 400 },
+  310:       );
+  311:     }
+  312: 
+  313:     if (
+  314:       amounts.galletas >
+  315:       Number(template.cookie_packs_per_month || 0) - totalConsumido.galletas
+  316:     ) {
+  317:       return NextResponse.json(
+  318:         {
+  319:           ok: false,
+  320:           message: "No tienes suficientes galletas disponibles.",
+  321:         },
+  322:         { status: 400 },
+  323:       );
+  324:     }
+  325: 
+  326:     const { data: consumption, error: insertError } = await supabaseAdmin
+  327:       .from("subscription_consumptions")
+  328:       .insert({
+  329:         subscription_id: subscriptionId,
+  330:         cliente_id: clienteId,
+  331:         cycle_number: cycleNumber,
+  332:         cycle_start_date: cycleStartDate,
+  333:         cycle_end_date: cycleEndDate,
+  334:         potes: amounts.potes,
+  335:         toppings: amounts.toppings,
+  336:         barquillos: amounts.barquillos,
+  337:         galletas: amounts.galletas,
+  338:       })
+  339:       .select("id, created_at")
+  340:       .single();
+  341: 
+  342:     if (insertError || !consumption) {
+  343:       return NextResponse.json(
+  344:         {
+  345:           ok: false,
+  346:           message: "Error al registrar el consumo.",
+  347:         },
+  348:         { status: 500 },
+  349:       );
+  350:     }
+  351: 
+  352:     try {
+  353:       await recordCustomerEvent({
+  354:         customerId: clienteId,
+  355:         eventType: "subscription.consumed",
+  356:         sourceModule: "subscriptions",
+  357:         sourceEntityType: "subscription_consumption",
+  358:         sourceEntityId: consumption.id,
+  359:         actorRole: validation.role,
+  360:         occurredAt: consumption.created_at || new Date(),
+  361:         idempotencyKey: buildCustomerEventIdempotencyKey([
+  362:           "subscription-consumed",
+  363:           consumption.id,
+  364:         ]),
+  365:         metadata: {
+  366:           subscriptionId,
+  367:           subscriptionTemplateId: template.id,
+  368:           subscriptionName: template.name || null,
+  369:           cycleNumber,
+  370:           cycleStartDate,
+  371:           cycleEndDate,
+  372:           potes: amounts.potes,
+  373:           toppings: amounts.toppings,
+  374:           barquillos: amounts.barquillos,
+  375:           galletas: amounts.galletas,
+  376:         },
+  377:       });
+  378:     } catch (eventError) {
+  379:       console.error(
+  380:         "Consumo registrado, pero fall√≥ el registro del evento:",
+  381:         eventError,
+  382:       );
+  383: 
+  384:       /*
+  385:        * Revertimos el consumo reci√©n creado para evitar que el usuario
+  386:        * reciba un error y luego repita una operaci√≥n que s√≠ qued√≥ guardada.
+  387:        */
+  388:       const { error: rollbackError } = await supabaseAdmin
+  389:         .from("subscription_consumptions")
+  390:         .delete()
+  391:         .eq("id", consumption.id);
+  392: 
+  393:       if (rollbackError) {
+  394:         console.error(
+  395:           "No se pudo revertir el consumo despu√©s del error de evento:",
+  396:           rollbackError,
+  397:         );
+  398: 
+  399:         return NextResponse.json(
+  400:           {
+  401:             ok: false,
+  402:             message:
+  403:               "El consumo fue registrado, pero ocurri√≥ un problema de trazabilidad. No repitas la operaci√≥n y contacta al administrador.",
+  404:           },
+  405:           { status: 500 },
+  406:         );
+  407:       }
+  408: 
+  409:       return NextResponse.json(
+  410:         {
+  411:           ok: false,
+  412:           message:
+  413:             "No se pudo registrar el evento del consumo. La operaci√≥n fue revertida.",
+  414:         },
+  415:         { status: 500 },
+  416:       );
+  417:     }
+  418: 
+  419:     return NextResponse.json({
+  420:       ok: true,
+  421:       consumptionId: consumption.id,
+  422:       message: "Consumo registrado correctamente.",
+  423:     });
+  424:   } catch (error) {
+  425:     console.error("[register-consumption]", error);
+  426: 
+  427:     return NextResponse.json(
+  428:       {
+  429:         ok: false,
+  430:         message: "Error inesperado al registrar el consumo.",
+  431:       },
+  432:       { status: 500 },
+  433:     );
+  434:   }
+  435: }
+
+
+============================================================
+FILE: app/clientes/page.tsx
+============================================================
+
+    1: "use client";
+    2: 
+    3: import Link from "next/link";
+    4: import { useEffect, useMemo, useState } from "react";
+    5: import AdminRegistroCard from "../operacion/components/AdminRegistroCard";
+    6: import AdminClienteDetalle from "../operacion/components/AdminClienteDetalle";
+    7: 
+    8: type Premio = {
+    9:   id: number;
+   10:   nombre: string;
+   11:   estado: "activo" | "usado";
+   12:   vencimiento?: string;
+   13: };
+   14: 
+   15: type Cliente = {
+   16:   id: number;
+   17:   nombre: string;
+   18:   correo: string;
+   19:   telefono: string;
+   20:   sellos?: number;
+   21:   premios?: Premio[] | number | null;
+   22:   public_token: string;
+   23:   tarjeta_activa?: boolean;
+   24:   email_verificado?: boolean;
+   25:   fecha_ultimo_sello?: string | null;
+   26:   fecha_ultimo_canje?: string | null;
+   27: };
+   28: 
+   29: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+   30: 
+   31: export default function ClientesPage() {
+   32:   const [clientes, setClientes] = useState<Cliente[]>([]);
+   33:   const [clienteSeleccionadoId, setClienteSeleccionadoId] =
+   34:     useState<string>("");
+   35:   const [busqueda, setBusqueda] = useState("");
+   36:   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+   37:   const [mensaje, setMensaje] = useState("");
+   38:   const [cargando, setCargando] = useState(true);
+   39:   const [procesandoCanje, setProcesandoCanje] = useState(false);
+   40:   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+   41:   const [cargandoRol, setCargandoRol] = useState(true);
+   42:   const [mostrarRegistro, setMostrarRegistro] = useState(true);
+   43: 
+   44:   useEffect(() => {
+   45:     cargarDatos();
+   46:     cargarSesion();
+   47:   }, []);
+   48: 
+   49:   const cargarSesion = async () => {
+   50:     try {
+   51:       setCargandoRol(true);
+   52: 
+   53:       const res = await fetch("/api/session", {
+   54:         method: "GET",
+   55:       });
+   56: 
+   57:       if (!res.ok) {
+   58:         setRol(null);
+   59:         return;
+   60:       }
+   61: 
+   62:       const data = await res.json();
+   63:       setRol(data.role || null);
+   64:     } catch (error) {
+   65:       console.error("Error cargando sesi√≥n:", error);
+   66:       setRol(null);
+   67:     } finally {
+   68:       setCargandoRol(false);
+   69:     }
+   70:   };
+   71: 
+   72:   const cargarDatos = async (mantenerSeleccion = true) => {
+   73:     try {
+   74:       setCargando(true);
+   75: 
+   76:       const res = await fetch("/api/operacion/clientes", {
+   77:         method: "GET",
+   78:         cache: "no-store",
+   79:       });
+   80: 
+   81:       const data = await res.json();
+   82: 
+   83:       if (!res.ok || !data.ok) {
+   84:         console.error("Error cargando clientes:", data);
+   85:         setMensaje(
+   86:           data.message || "Error cargando clientes desde el servidor.",
+   87:         );
+   88:         setClientes([]);
+   89:         return;
+   90:       }
+   91: 
+   92:       const listaClientes = (data.clientes || []) as Cliente[];
+   93:       setClientes(listaClientes);
+   94: 
+   95:       if (listaClientes.length === 0) {
+   96:         setClienteSeleccionadoId("");
+   97:         localStorage.removeItem("clientesClienteSeleccionadoId");
+   98:         return;
+   99:       }
+  100: 
+  101:       const seleccionadoGuardado = localStorage.getItem(
+  102:         "clientesClienteSeleccionadoId",
+  103:       );
+  104: 
+  105:       if (mantenerSeleccion && seleccionadoGuardado) {
+  106:         const existeSeleccionado = listaClientes.some(
+  107:           (c) => String(c.id) === String(seleccionadoGuardado),
+  108:         );
+  109: 
+  110:         if (existeSeleccionado) {
+  111:           setClienteSeleccionadoId(String(seleccionadoGuardado));
+  112:           return;
+  113:         }
+  114:       }
+  115: 
+  116:       const primerId = String(listaClientes[0].id);
+  117:       setClienteSeleccionadoId(primerId);
+  118:       localStorage.setItem("clientesClienteSeleccionadoId", primerId);
+  119:     } catch (err) {
+  120:       console.error("Error inesperado cargando clientes:", err);
+  121:       setMensaje("Ocurri√≥ un error inesperado al cargar clientes.");
+  122:       setClientes([]);
+  123:     } finally {
+  124:       setCargando(false);
+  125:     }
+  126:   };
+  127: 
+  128:   const clientesFiltrados = useMemo(() => {
+  129:     let resultado = [...clientes];
+  130: 
+  131:     if (letraActiva !== "TODOS") {
+  132:       resultado = resultado.filter((cliente) => {
+  133:         const nombre = (cliente.nombre || "").trim().toLowerCase();
+  134:         return nombre.startsWith(letraActiva.toLowerCase());
+  135:       });
+  136:     }
+  137: 
+  138:     const texto = busqueda.trim().toLowerCase();
+  139:     if (!texto) return resultado;
+  140: 
+  141:     return resultado.filter((cliente) => {
+  142:       const nombre = (cliente.nombre || "").toLowerCase();
+  143:       const telefono = (cliente.telefono || "").toLowerCase();
+  144:       const correo = (cliente.correo || "").toLowerCase();
+  145: 
+  146:       return (
+  147:         nombre.includes(texto) ||
+  148:         telefono.includes(texto) ||
+  149:         correo.includes(texto)
+  150:       );
+  151:     });
+  152:   }, [clientes, busqueda, letraActiva]);
+  153: 
+  154:   const cambiarCliente = (id: string) => {
+  155:     setClienteSeleccionadoId(id);
+  156:     localStorage.setItem("clientesClienteSeleccionadoId", id);
+  157:     setMensaje("Cliente seleccionado correctamente.");
+  158:   };
+  159: 
+  160:   const seleccionarLetra = (letra: string) => {
+  161:     setLetraActiva(letra);
+  162:     setMensaje("");
+  163: 
+  164:     const listaFiltrada =
+  165:       letra === "TODOS"
+  166:         ? clientes
+  167:         : clientes.filter((cliente) =>
+  168:             (cliente.nombre || "")
+  169:               .trim()
+  170:               .toLowerCase()
+  171:               .startsWith(letra.toLowerCase()),
+  172:           );
+  173: 
+  174:     if (listaFiltrada.length > 0) {
+  175:       const primerId = String(listaFiltrada[0].id);
+  176:       setClienteSeleccionadoId(primerId);
+  177:       localStorage.setItem("clientesClienteSeleccionadoId", primerId);
+  178:     }
+  179:   };
+  180: 
+  181:   const cliente =
+  182:     clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
+  183:     null;
+  184: 
+  185:   const premiosArray = Array.isArray(cliente?.premios) ? cliente.premios : [];
+  186:   const premiosActivos = premiosArray.filter(
+  187:     (premio: Premio) => premio.estado === "activo",
+  188:   );
+  189: 
+  190:   const exportarClientesCSV = () => {
+  191:     try {
+  192:       if (!clientes.length) {
+  193:         setMensaje("No hay clientes para exportar.");
+  194:         return;
+  195:       }
+  196: 
+  197:       const formatearFecha = (fecha?: string | null) => {
+  198:         if (!fecha) return "";
+  199:         const date = new Date(fecha);
+  200:         if (Number.isNaN(date.getTime())) return "";
+  201:         return date.toLocaleString("es-CL", {
+  202:           dateStyle: "short",
+  203:           timeStyle: "short",
+  204:         });
+  205:       };
+  206: 
+  207:       const escaparCSV = (
+  208:         valor: string | number | boolean | null | undefined,
+  209:       ) => {
+  210:         const texto = String(valor ?? "").replace(/"/g, '""');
+  211:         return `"${texto}"`;
+  212:       };
+  213: 
+  214:       const headers = [
+  215:         "ID",
+  216:         "Nombre",
+  217:         "Correo",
+  218:         "Tel√©fono",
+  219:         "Sellos actuales",
+  220:         "Premios activos",
+  221:         "Premios usados",
+  222:         "√öltimo sello",
+  223:         "√öltimo canje",
+  224:         "Tarjeta activa",
+  225:         "Correo verificado",
+  226:         "Public token",
+  227:       ];
+  228: 
+  229:       const rows = clientes.map((cliente) => {
+  230:         const premios = Array.isArray(cliente.premios) ? cliente.premios : [];
+  231:         const premiosActivosCount = premios.filter(
+  232:           (premio) => premio.estado === "activo",
+  233:         ).length;
+  234:         const premiosUsadosCount = premios.filter(
+  235:           (premio) => premio.estado === "usado",
+  236:         ).length;
+  237: 
+  238:         return [
+  239:           cliente.id,
+  240:           cliente.nombre,
+  241:           cliente.correo,
+  242:           cliente.telefono,
+  243:           cliente.sellos ?? 0,
+  244:           premiosActivosCount,
+  245:           premiosUsadosCount,
+  246:           formatearFecha(cliente.fecha_ultimo_sello),
+  247:           formatearFecha(cliente.fecha_ultimo_canje),
+  248:           cliente.tarjeta_activa ? "S√≠" : "No",
+  249:           cliente.email_verificado ? "S√≠" : "No",
+  250:           cliente.public_token,
+  251:         ]
+  252:           .map(escaparCSV)
+  253:           .join(",");
+  254:       });
+  255: 
+  256:       const csvContent = [headers.map(escaparCSV).join(","), ...rows].join(
+  257:         "\n",
+  258:       );
+  259: 
+  260:       const blob = new Blob([csvContent], {
+  261:         type: "text/csv;charset=utf-8;",
+  262:       });
+  263: 
+  264:       const url = URL.createObjectURL(blob);
+  265:       const link = document.createElement("a");
+  266:       const fecha = new Date().toISOString().slice(0, 10);
+  267: 
+  268:       link.href = url;
+  269:       link.setAttribute("download", `clientes-fidelinook-${fecha}.csv`);
+  270:       document.body.appendChild(link);
+  271:       link.click();
+  272:       document.body.removeChild(link);
+  273:       URL.revokeObjectURL(url);
+  274: 
+  275:       setMensaje("Clientes exportados correctamente.");
+  276:     } catch (error) {
+  277:       console.error("Error exportando CSV:", error);
+  278:       setMensaje("Ocurri√≥ un error al exportar los clientes.");
+  279:     }
+  280:   };
+  281: 
+  282:   const cerrarSesion = async () => {
+  283:     try {
+  284:       await fetch("/api/logout", {
+  285:         method: "POST",
+  286:       });
+  287:       window.location.href = "/admin/login";
+  288:     } catch (error) {
+  289:       console.error("Error al cerrar sesi√≥n:", error);
+  290:       setMensaje("No se pudo cerrar sesi√≥n.");
+  291:     }
+  292:   };
+  293: 
+  294:   return (
+  295:     <main className="min-h-screen bg-[#F6F3FF] p-6">
+  296:       <div className="mx-auto max-w-5xl space-y-6">
+  297:         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+  298:           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+  299:             <div>
+  300:               <Link
+  301:                 href="/"
+  302:                 className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+  303:               >
+  304:                 ‚Üê Volver al inicio
+  305:               </Link>
+  306: 
+  307:               <h1 className="mt-3 text-2xl font-bold">Clientes</h1>
+  308: 
+  309:               <p className="text-sm opacity-90">
+  310:                 Registro y gesti√≥n administrativa de clientes del programa
+  311:               </p>
+  312: 
+  313:               <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+  314:                 {cargandoRol
+  315:                   ? "Cargando rol..."
+  316:                   : `Rol: ${rol ?? "sin sesi√≥n"}`}
+  317:               </p>
+  318:             </div>
+  319: 
+  320:             <div>
+  321:               <button
+  322:                 onClick={cerrarSesion}
+  323:                 className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+  324:               >
+  325:                 Cerrar sesi√≥n
+  326:               </button>
+  327:             </div>
+  328:           </div>
+  329:         </div>
+  330: 
+  331:         <AdminRegistroCard
+  332:           mostrarRegistro={mostrarRegistro}
+  333:           setMostrarRegistro={setMostrarRegistro}
+  334:           setMensaje={setMensaje}
+  335:         />
+  336: 
+  337:         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+  338:           <div className="border-b border-neutral-200 p-4">
+  339:             <span className="text-lg font-semibold text-violet-800">
+  340:               Gesti√≥n de clientes
+  341:             </span>
+  342:           </div>
+  343: 
+  344:           <div className="p-4 pt-4">
+  345:             {cargando ? (
+  346:               <div className="mt-2">
+  347:                 <p className="text-neutral-600">Cargando clientes...</p>
+  348:               </div>
+  349:             ) : clientes.length === 0 ? (
+  350:               <div className="mt-2">
+  351:                 <p className="text-neutral-600">
+  352:                   No hay clientes registrados todav√≠a.
+  353:                 </p>
+  354: 
+  355:                 {mensaje && (
+  356:                   <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
+  357:                     {mensaje}
+  358:                   </div>
+  359:                 )}
+  360:               </div>
+  361:             ) : (
+  362:               <>
+  363:                 <div className="mt-2 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+  364:                   <div className="grid gap-4">
+  365:                     <div>
+  366:                       <label className="mb-2 block text-sm font-semibold text-violet-700">
+  367:                         Buscar cliente
+  368:                       </label>
+  369:                       <input
+  370:                         type="text"
+  371:                         value={busqueda}
+  372:                         onChange={(e) => setBusqueda(e.target.value)}
+  373:                         placeholder="Nombre, tel√©fono o correo"
+  374:                         className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+  375:                       />
+  376:                     </div>
+  377: 
+  378:                     <div>
+  379:                       <div className="mb-2 flex items-center justify-between gap-3">
+  380:                         <p className="text-sm font-semibold text-violet-700">
+  381:                           Filtrar por letra
+  382:                         </p>
+  383:                         <p className="text-xs text-neutral-500">
+  384:                           {clientesFiltrados.length} resultado
+  385:                           {clientesFiltrados.length === 1 ? "" : "s"}
+  386:                         </p>
+  387:                       </div>
+  388: 
+  389:                       <div className="flex flex-wrap gap-2">
+  390:                         <button
+  391:                           type="button"
+  392:                           onClick={() => seleccionarLetra("TODOS")}
+  393:                           className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium transition ${
+  394:                             letraActiva === "TODOS"
+  395:                               ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+  396:                               : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+  397:                           }`}
+  398:                         >
+  399:                           Todos
+  400:                         </button>
+  401: 
+  402:                         {LETRAS.map((letra) => (
+  403:                           <button
+  404:                             key={letra}
+  405:                             type="button"
+  406:                             onClick={() => seleccionarLetra(letra)}
+  407:                             className={`cursor-pointer min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
+  408:                               letraActiva === letra
+  409:                                 ? "border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+  410:                                 : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+  411:                             }`}
+  412:                           >
+  413:                             {letra}
+  414:                           </button>
+  415:                         ))}
+  416:                       </div>
+  417:                     </div>
+  418: 
+  419:                     <div>
+  420:                       <label className="mb-2 block text-sm font-semibold text-violet-700">
+  421:                         Seleccionar cliente
+  422:                       </label>
+  423: 
+  424:                       <select
+  425:                         value={clienteSeleccionadoId}
+  426:                         onChange={(e) => cambiarCliente(e.target.value)}
+  427:                         className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+  428:                       >
+  429:                         {clientesFiltrados.length === 0 ? (
+  430:                           <option value="">No hay resultados</option>
+  431:                         ) : (
+  432:                           clientesFiltrados.map((c) => (
+  433:                             <option key={c.id} value={c.id}>
+  434:                               {c.nombre} ¬∑ {c.telefono} ¬∑ {c.correo}
+  435:                             </option>
+  436:                           ))
+  437:                         )}
+  438:                       </select>
+  439:                     </div>
+  440:                   </div>
+  441:                 </div>
+  442: 
+  443:                 <p className="mt-3 text-sm text-neutral-500">
+  444:                   Resultados encontrados: {clientesFiltrados.length}
+  445:                 </p>
+  446: 
+  447:                 <AdminClienteDetalle
+  448:                   cliente={cliente}
+  449:                   premiosActivos={premiosActivos}
+  450:                   mensaje={mensaje}
+  451:                   setMensaje={setMensaje}
+  452:                   procesandoCanje={procesandoCanje}
+  453:                   rol={rol}
+  454:                   exportarCSV={exportarClientesCSV}
+  455:                   mostrarAccionesAdministrativas={true}
+  456:                 />
+  457:               </>
+  458:             )}
+  459:           </div>
+  460:         </div>
+  461:       </div>
+  462:     </main>
+  463:   );
+  464: }
+
+
+============================================================
+FILE: app/operacion/page.tsx
+============================================================
+
+    1: "use client";
+    2: 
+    3: import Link from "next/link";
+    4: import { useEffect, useMemo, useState } from "react";
+    5: import AdminClienteDetalle from "./components/AdminClienteDetalle";
+    6: import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
+    7: import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
+    8: import UltimosMovimientos from "./components/UltimosMovimientos";
+    9: import OperationSummary from "../../components/operations/OperationSummary";
+   10: import type {
+   11:   CustomerLoyaltySummary,
+   12:   CustomerRewardSummary,
+   13: } from "../../lib/loyalty/customer-loyalty.types";
+   14: 
+   15: type Cliente = {
+   16:   id: number;
+   17:   nombre: string;
+   18:   correo: string;
+   19:   telefono: string;
+   20:   public_token: string;
+   21:   tarjeta_activa?: boolean;
+   22:   email_verificado?: boolean;
+   23:   created_At?: string | null;
+   24:   fecha_activacion?: string | null;
+   25: };
+   26: 
+   27: type Campana = {
+   28:   id: number;
+   29:   nombre_interno: string;
+   30:   premio_nombre: string;
+   31:   duracion_horas: number;
+   32:   fecha_lanzamiento: string;
+   33:   recurrencia: string;
+   34:   estado:
+   35:     | "borrador"
+   36:     | "programada"
+   37:     | "lanzando"
+   38:     | "lanzada"
+   39:     | "fallida"
+   40:     | "cancelada";
+   41:   total_objetivo?: number | null;
+   42:   total_enviados?: number | null;
+   43:   created_at?: string | null;
+   44: };
+   45: 
+   46: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+   47: const META_SELLOS = 7;
+   48: 
+   49: export default function OperacionPage() {
+   50:   const [clientes, setClientes] = useState<Cliente[]>([]);
+   51:   const [clienteSeleccionadoId, setClienteSeleccionadoId] =
+   52:     useState<string>("");
+   53:   const [busqueda, setBusqueda] = useState("");
+   54:   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+   55:   const [mensaje, setMensaje] = useState("");
+   56:   const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+   57:     "info",
+   58:   );
+   59:   const [cargando, setCargando] = useState(true);
+   60:   const [customerLoyalty, setCustomerLoyalty] =
+   61:     useState<CustomerLoyaltySummary | null>(null);
+   62:   const [cargandoFidelizacion, setCargandoFidelizacion] = useState(false);
+   63:   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+   64:   const [cargandoRol, setCargandoRol] = useState(true);
+   65:   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+   66:   const [subscriptionSeleccionada, setSubscriptionSeleccionada] =
+   67:     useState<any>(null);
+   68:   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
+   69:   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+   70:   const [campanas, setCampanas] = useState<Campana[]>([]);
+   71:   const [cargandoCampanas, setCargandoCampanas] = useState(false);
+   72:   const [procesandoCampanaId, setProcesandoCampanaId] = useState<number | null>(
+   73:     null,
+   74:   );
+   75: 
+   76:   useEffect(() => {
+   77:     cargarSesion();
+   78:     cargarDatos();
+   79:     cargarCampanas();
+   80:   }, []);
+   81: 
+   82:   useEffect(() => {
+   83:     if (!clienteSeleccionadoId) {
+   84:       setSubscriptions([]);
+   85:       setSubscriptionSeleccionada(null);
+   86:       setMensajeSuscripcion("");
+   87:       setCustomerLoyalty(null);
+   88:       return;
+   89:     }
+   90: 
+   91:     const customerId = Number(clienteSeleccionadoId);
+   92: 
+   93:     void cargarSuscripcionActiva(customerId);
+   94:     void cargarFidelizacionCliente(customerId);
+   95:   }, [clienteSeleccionadoId]);
+   96: 
+   97:   async function cargarSuscripcionActiva(clienteId: number) {
+   98:     try {
+   99:       setCargandoSuscripcion(true);
+  100:       setMensajeSuscripcion("");
+  101: 
+  102:       const res = await fetch(
+  103:         `/api/subscriptions/active-by-client?clienteId=${clienteId}`,
+  104:       );
+  105: 
+  106:       const data = await res.json();
+  107: 
+  108:       if (!res.ok) {
+  109:         setSubscriptions([]);
+  110:         setSubscriptionSeleccionada(null);
+  111:         return;
+  112:       }
+  113: 
+  114:       setSubscriptions(data.subscriptions || []);
+  115: 
+  116:       if (data.subscriptions?.length > 0) {
+  117:         setSubscriptionSeleccionada(data.subscriptions[0]);
+  118:       } else {
+  119:         setSubscriptionSeleccionada(null);
+  120:       }
+  121:     } catch (error) {
+  122:       console.error(error);
+  123:     } finally {
+  124:       setCargandoSuscripcion(false);
+  125:     }
+  126:   }
+  127: 
+  128:   async function cargarFidelizacionCliente(clienteId: number) {
+  129:     try {
+  130:       setCargandoFidelizacion(true);
+  131:       setCustomerLoyalty(null);
+  132: 
+  133:       const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+  134:         method: "GET",
+  135:         cache: "no-store",
+  136:       });
+  137: 
+  138:       const data = await res.json();
+  139: 
+  140:       if (!res.ok) {
+  141:         setTipoMensaje("error");
+  142:         setMensaje(
+  143:           data.message || "No se pudo cargar la fidelizaciÛn del cliente.",
+  144:         );
+  145:         return;
+  146:       }
+  147: 
+  148:       setCustomerLoyalty(data.loyalty as CustomerLoyaltySummary);
+  149:     } catch (error) {
+  150:       console.error("Error cargando fidelizaciÛn del cliente:", error);
+  151: 
+  152:       setTipoMensaje("error");
+  153:       setMensaje("OcurriÛ un error al cargar la fidelizaciÛn del cliente.");
+  154:     } finally {
+  155:       setCargandoFidelizacion(false);
+  156:     }
+  157:   }
+  158: 
+  159:   const cargarSesion = async () => {
+  160:     try {
+  161:       setCargandoRol(true);
+  162: 
+  163:       const res = await fetch("/api/session", {
+  164:         method: "GET",
+  165:       });
+  166: 
+  167:       if (res.status === 401) {
+  168:         setRol(null);
+  169:         return;
+  170:       }
+  171: 
+  172:       if (!res.ok) {
+  173:         console.error(
+  174:           "No se pudo validar temporalmente la sesiÛn operacional:",
+  175:           {
+  176:             status: res.status,
+  177:           },
+  178:         );
+  179:         return;
+  180:       }
+  181: 
+  182:       const data = await res.json();
+  183:       setRol(data.role || null);
+  184:     } catch (error) {
+  185:       console.error("Error cargando sesiÛn:", error);
+  186:     } finally {
+  187:       setCargandoRol(false);
+  188:     }
+  189:   };
+  190: 
+  191:   const cargarDatos = async (mantenerSeleccion = true) => {
+  192:     try {
+  193:       setCargando(true);
+  194: 
+  195:       const res = await fetch("/api/operacion/clientes", {
+  196:         method: "GET",
+  197:         cache: "no-store",
+  198:       });
+  199: 
+  200:       const data = await res.json();
+  201: 
+  202:       if (!res.ok || !data.ok) {
+  203:         console.error("Error cargando clientes:", data);
+  204:         setMensaje(data.message || "Error cargando clientes.");
+  205:         setClientes([]);
+  206:         return;
+  207:       }
+  208: 
+  209:       const listaClientes = (data.clientes || []) as Cliente[];
+  210:       setClientes(listaClientes);
+  211: 
+  212:       if (listaClientes.length === 0) {
+  213:         setClienteSeleccionadoId("");
+  214:         localStorage.removeItem("operacionClienteSeleccionadoId");
+  215:         return;
+  216:       }
+  217: 
+  218:       const seleccionadoGuardado = localStorage.getItem(
+  219:         "operacionClienteSeleccionadoId",
+  220:       );
+  221: 
+  222:       if (mantenerSeleccion && seleccionadoGuardado) {
+  223:         const existeSeleccionado = listaClientes.some(
+  224:           (c) => String(c.id) === String(seleccionadoGuardado),
+  225:         );
+  226: 
+  227:         if (existeSeleccionado) {
+  228:           setClienteSeleccionadoId(String(seleccionadoGuardado));
+  229:           return;
+  230:         }
+  231:       }
+  232: 
+  233:       const primerId = String(listaClientes[0].id);
+  234:       setClienteSeleccionadoId(primerId);
+  235:       localStorage.setItem("operacionClienteSeleccionadoId", primerId);
+  236:     } catch (err) {
+  237:       console.error("Error inesperado cargando clientes:", err);
+  238:       setMensaje("OcurriÛ un error inesperado al cargar clientes.");
+  239:       setClientes([]);
+  240:     } finally {
+  241:       setCargando(false);
+  242:     }
+  243:   };
+  244: 
+  245:   const cargarCampanas = async () => {
+  246:     try {
+  247:       setCargandoCampanas(true);
+  248: 
+  249:       const res = await fetch("/api/operacion/campanas", {
+  250:         method: "GET",
+  251:         cache: "no-store",
+  252:       });
+  253: 
+  254:       const data = await res.json();
+  255: 
+  256:       if (!res.ok || !data.ok) {
+  257:         console.error("Error cargando campaÒas:", data);
+  258:         return;
+  259:       }
+  260: 
+  261:       setCampanas((data.campanas || []) as Campana[]);
+  262:     } catch (error) {
+  263:       console.error("Error inesperado cargando campaÒas:", error);
+  264:     } finally {
+  265:       setCargandoCampanas(false);
+  266:     }
+  267:   };
+  268: 
+  269:   const programarLanzamientoCampana = async (campanaId: number) => {
+  270:     try {
+  271:       setProcesandoCampanaId(campanaId);
+  272:       setMensaje("");
+  273:       setTipoMensaje("info");
+  274: 
+  275:       const res = await fetch("/api/admin/campanas/programar-lanzamiento", {
+  276:         method: "POST",
+  277:         headers: {
+  278:           "Content-Type": "application/json",
+  279:         },
+  280:         body: JSON.stringify({ campanaId }),
+  281:       });
+  282: 
+  283:       const data = await res.json();
+  284: 
+  285:       if (!res.ok) {
+  286:         setTipoMensaje("error");
+  287:         setMensaje(data.message || "No se pudo programar la campaÒa.");
+  288:         return;
+  289:       }
+  290: 
+  291:       setTipoMensaje("success");
+  292:       setMensaje(data.message || "CampaÒa programada correctamente.");
+  293: 
+  294:       await cargarCampanas();
+  295:     } catch (error) {
+  296:       console.error("Error programando campaÒa:", error);
+  297:       setTipoMensaje("error");
+  298:       setMensaje("OcurriÛ un error al programar la campaÒa.");
+  299:     } finally {
+  300:       setProcesandoCampanaId(null);
+  301:     }
+  302:   };
+  303: 
+  304:   const cancelarCampana = async (campanaId: number) => {
+  305:     const confirmar = window.confirm(
+  306:       "øSeguro que quieres cancelar esta campaÒa?",
+  307:     );
+  308: 
+  309:     if (!confirmar) return;
+  310: 
+  311:     try {
+  312:       setProcesandoCampanaId(campanaId);
+  313:       setMensaje("");
+  314:       setTipoMensaje("info");
+  315: 
+  316:       const res = await fetch("/api/admin/campanas/cancelar", {
+  317:         method: "POST",
+  318:         headers: {
+  319:           "Content-Type": "application/json",
+  320:         },
+  321:         body: JSON.stringify({ campanaId }),
+  322:       });
+  323: 
+  324:       const data = await res.json();
+  325: 
+  326:       if (!res.ok) {
+  327:         setTipoMensaje("error");
+  328:         setMensaje(data.message || "No se pudo cancelar la campaÒa.");
+  329:         return;
+  330:       }
+  331: 
+  332:       setTipoMensaje("success");
+  333:       setMensaje(data.message || "CampaÒa cancelada correctamente.");
+  334: 
+  335:       await cargarCampanas();
+  336:     } catch (error) {
+  337:       console.error("Error cancelando campaÒa:", error);
+  338:       setTipoMensaje("error");
+  339:       setMensaje("OcurriÛ un error al cancelar la campaÒa.");
+  340:     } finally {
+  341:       setProcesandoCampanaId(null);
+  342:     }
+  343:   };
+  344: 
+  345:   const ejecutarCampanaAhora = async (campanaId: number) => {
+  346:     const confirmar = window.confirm(
+  347:       "øSeguro que quieres ejecutar esta campaÒa ahora? Se asignar· el premio a los clientes objetivo.",
+  348:     );
+  349: 
+  350:     if (!confirmar) return;
+  351: 
+  352:     try {
+  353:       setProcesandoCampanaId(campanaId);
+  354:       setMensaje("");
+  355:       setTipoMensaje("info");
+  356: 
+  357:       const res = await fetch("/api/admin/campanas/ejecutar", {
+  358:         method: "POST",
+  359:         headers: {
+  360:           "Content-Type": "application/json",
+  361:         },
+  362:         body: JSON.stringify({ campanaId }),
+  363:       });
+  364: 
+  365:       const data = await res.json();
+  366: 
+  367:       if (!res.ok) {
+  368:         setTipoMensaje("error");
+  369:         setMensaje(data.message || "No se pudo ejecutar la campaÒa.");
+  370:         return;
+  371:       }
+  372: 
+  373:       setTipoMensaje("success");
+  374:       setMensaje(data.message || "CampaÒa ejecutada correctamente.");
+  375: 
+  376:       await cargarCampanas();
+  377:       await cargarDatos(true);
+  378:     } catch (error) {
+  379:       console.error("Error ejecutando campaÒa:", error);
+  380:       setTipoMensaje("error");
+  381:       setMensaje("OcurriÛ un error al ejecutar la campaÒa.");
+  382:     } finally {
+  383:       setProcesandoCampanaId(null);
+  384:     }
+  385:   };
+  386: 
+  387:   const ejecutarCampanaPrueba = async (campanaId: number) => {
+  388:     const correo = window.prompt(
+  389:       "Ingresa el correo del cliente de prueba que recibir· el premio:",
+  390:     );
+  391: 
+  392:     if (!correo) return;
+  393: 
+  394:     try {
+  395:       setProcesandoCampanaId(campanaId);
+  396:       setMensaje("");
+  397:       setTipoMensaje("info");
+  398: 
+  399:       const res = await fetch("/api/admin/campanas/ejecutar", {
+  400:         method: "POST",
+  401:         headers: {
+  402:           "Content-Type": "application/json",
+  403:         },
+  404:         body: JSON.stringify({
+  405:           campanaId,
+  406:           clienteCorreoPrueba: correo.trim().toLowerCase(),
+  407:         }),
+  408:       });
+  409: 
+  410:       const data = await res.json();
+  411: 
+  412:       if (!res.ok) {
+  413:         setTipoMensaje("error");
+  414:         setMensaje(data.message || "No se pudo ejecutar la prueba.");
+  415:         return;
+  416:       }
+  417: 
+  418:       setTipoMensaje("success");
+  419:       setMensaje("Prueba ejecutada correctamente para el cliente indicado.");
+  420: 
+  421:       await cargarCampanas();
+  422:       await cargarDatos(true);
+  423:     } catch (error) {
+  424:       console.error("Error ejecutando prueba de campaÒa:", error);
+  425:       setTipoMensaje("error");
+  426:       setMensaje("OcurriÛ un error al ejecutar la prueba.");
+  427:     } finally {
+  428:       setProcesandoCampanaId(null);
+  429:     }
+  430:   };
+  431: 
+  432:   const clientesFiltrados = useMemo(() => {
+  433:     let resultado = [...clientes];
+  434: 
+  435:     if (letraActiva !== "TODOS") {
+  436:       resultado = resultado.filter((cliente) => {
+  437:         const nombre = (cliente.nombre || "").trim().toLowerCase();
+  438:         return nombre.startsWith(letraActiva.toLowerCase());
+  439:       });
+  440:     }
+  441: 
+  442:     const texto = busqueda.trim().toLowerCase();
+  443:     if (!texto) return resultado;
+  444: 
+  445:     return resultado.filter((cliente) => {
+  446:       const nombre = (cliente.nombre || "").toLowerCase();
+  447:       const telefono = (cliente.telefono || "").toLowerCase();
+  448:       const correo = (cliente.correo || "").toLowerCase();
+  449: 
+  450:       return (
+  451:         nombre.includes(texto) ||
+  452:         telefono.includes(texto) ||
+  453:         correo.includes(texto)
+  454:       );
+  455:     });
+  456:   }, [clientes, busqueda, letraActiva]);
+  457: 
+  458:   const cambiarCliente = (id: string) => {
+  459:     setClienteSeleccionadoId(id);
+  460:     localStorage.setItem("operacionClienteSeleccionadoId", id);
+  461:     setMensaje("Cliente seleccionado correctamente.");
+  462:   };
+  463: 
+  464:   const seleccionarLetra = (letra: string) => {
+  465:     setLetraActiva(letra);
+  466:     setMensaje("");
+  467:     setTipoMensaje("info");
+  468: 
+  469:     const listaFiltrada =
+  470:       letra === "TODOS"
+  471:         ? clientes
+  472:         : clientes.filter((cliente) =>
+  473:             (cliente.nombre || "")
+  474:               .trim()
+  475:               .toLowerCase()
+  476:               .startsWith(letra.toLowerCase()),
+  477:           );
+  478: 
+  479:     if (listaFiltrada.length > 0) {
+  480:       const primerId = String(listaFiltrada[0].id);
+  481:       setClienteSeleccionadoId(primerId);
+  482:       localStorage.setItem("operacionClienteSeleccionadoId", primerId);
+  483:     }
+  484:   };
+  485: 
+  486:   const cliente =
+  487:     clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
+  488:     null;
+  489: 
+  490:   const premiosActivos = customerLoyalty?.activeRewards ?? [];
+  491: 
+  492:   const cerrarSesion = async () => {
+  493:     try {
+  494:       await fetch("/api/logout", {
+  495:         method: "POST",
+  496:       });
+  497:       window.location.href = "/admin/login";
+  498:     } catch (error) {
+  499:       console.error("Error al cerrar sesiÛn:", error);
+  500:       setTipoMensaje("error");
+  501:       setMensaje("No se pudo cerrar sesiÛn.");
+  502:     }
+  503:   };
+  504: 
+  505:   return (
+  506:     <main className="min-h-screen bg-[#F6F3FF] p-6">
+  507:       <div className="mx-auto max-w-5xl space-y-6">
+  508:         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+  509:           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+  510:             <div>
+  511:               <Link
+  512:                 href="/"
+  513:                 className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+  514:               >
+  515:                 ? Volver al inicio
+  516:               </Link>
+  517: 
+  518:               <h1 className="mt-3 text-2xl font-bold">OperaciÛn</h1>
+  519: 
+  520:               <p className="text-sm opacity-90">
+  521:                 GestiÛn operativa de clientes, fidelizaciÛn y suscripciones
+  522:               </p>
+  523: 
+  524:               <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
+  525:                 {cargandoRol
+  526:                   ? "Cargando rol..."
+  527:                   : `ROL: ${rol ?? "sin sesiÛn"}`}
+  528:               </p>
+  529:             </div>
+  530: 
+  531:             <button
+  532:               onClick={cerrarSesion}
+  533:               className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
+  534:             >
+  535:               Cerrar sesiÛn
+  536:             </button>
+  537:           </div>
+  538:         </div>
+  539: 
+  540:         <OperationSummary />
+  541: 
+  542:         <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+  543:           <Link
+  544:             href="/operacion/ventas/nueva"
+  545:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+  546:           >
+  547:             <p className="text-lg font-bold text-neutral-900">Nueva Venta</p>
+  548: 
+  549:             <p className="mt-2 text-sm text-neutral-500">
+  550:               Crear una venta local y generar un pedido.
+  551:             </p>
+  552:           </Link>
+  553: 
+  554:           <Link
+  555:             href="/operacion/cola"
+  556:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+  557:           >
+  558:             <p className="text-lg font-bold text-neutral-900">
+  559:               Cola de PreparaciÛn
+  560:             </p>
+  561: 
+  562:             <p className="mt-2 text-sm text-neutral-500">
+  563:               Gestionar pedidos pendientes de entrega.
+  564:             </p>
+  565:           </Link>
+  566: 
+  567:           <Link
+  568:             href="/operacion/ventas"
+  569:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+  570:           >
+  571:             <p className="text-lg font-bold text-neutral-900">Historial</p>
+  572: 
+  573:             <p className="mt-2 text-sm text-neutral-500">
+  574:               Revisar ventas y pedidos recientes.
+  575:             </p>
+  576:           </Link>
+  577: 
+  578:           <Link
+  579:             href="/operacion/catalogo"
+  580:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md active:scale-[0.98]"
+  581:           >
+  582:             <p className="text-lg font-bold text-neutral-900">Cat·logo</p>
+  583: 
+  584:             <p className="mt-2 text-sm text-neutral-500">
+  585:               Productos, precios y opciones activas.
+  586:             </p>
+  587:           </Link>
+  588: 
+  589:           <Link
+  590:             href="/operacion/inventario"
+  591:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+  592:           >
+  593:             <p className="text-lg font-bold text-neutral-900">Inventario</p>
+  594: 
+  595:             <p className="mt-2 text-sm text-neutral-500">
+  596:               Recepciones, stock y movimientos de productos.
+  597:             </p>
+  598:           </Link>
+  599: 
+  600:           <Link
+  601:             href="/operacion/caja"
+  602:             className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
+  603:           >
+  604:             <p className="text-lg font-bold text-neutral-900">Caja</p>
+  605: 
+  606:             <p className="mt-2 text-sm text-neutral-500">
+  607:               Abrir caja y consultar su estado actual.
+  608:             </p>
+  609:           </Link>
+  610:         </section>
+  611: 
+  612:         <UltimosMovimientosCard clientes={clientes} />
+  613: 
+  614:         {rol === "superadmin" && (
+  615:           <section className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+  616:             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+  617:               <div>
+  618:                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#7A57F6]">
+  619:                   CampaÒas
+  620:                 </p>
+  621:                 <h2 className="mt-1 text-xl font-bold text-[#222]">
+  622:                   GestiÛn de campaÒas
+  623:                 </h2>
+  624:                 <p className="mt-1 text-sm text-[#666]">
+  625:                   Revisa, lanza o cancela campaÒas antes de publicarlas.
+  626:                 </p>
+  627:               </div>
+  628: 
+  629:               <button
+  630:                 onClick={async () => {
+  631:                   const confirmar = confirm("øExpirar premios vencidos?");
+  632:                   if (!confirmar) return;
+  633: 
+  634:                   const res = await fetch("/api/admin/campanas/expirar", {
+  635:                     method: "POST",
+  636:                   });
+  637: 
+  638:                   const data = await res.json();
+  639: 
+  640:                   if (!res.ok || !data.ok) {
+  641:                     alert(
+  642:                       data.message || "No fue posible expirar los premios.",
+  643:                     );
+  644:                     return;
+  645:                   }
+  646: 
+  647:                   alert(`Premios expirados: ${data.totalExpirados}`);
+  648: 
+  649:                   await cargarDatos(true);
+  650:                 }}
+  651:                 className="cursor-pointer mb-4 rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
+  652:               >
+  653:                 Expirar premios
+  654:               </button>
+  655: 
+  656:               <a
+  657:                 href="/campanas"
+  658:                 className="inline-flex rounded-2xl border border-[#D9C8FF] bg-white px-5 py-3 text-sm font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+  659:               >
+  660:                 Crear campaÒa
+  661:               </a>
+  662:             </div>
+  663: 
+  664:             {cargandoCampanas ? (
+  665:               <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+  666:                 Cargando campaÒas...
+  667:               </div>
+  668:             ) : campanas.length === 0 ? (
+  669:               <div className="rounded-2xl border border-[#E7C8F2] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+  670:                 No hay campaÒas creadas.
+  671:               </div>
+  672:             ) : (
+  673:               <div className="overflow-x-auto">
+  674:                 <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+  675:                   <thead>
+  676:                     <tr className="text-xs uppercase tracking-[0.18em] text-[#777]">
+  677:                       <th className="px-3 py-2">CampaÒa</th>
+  678:                       <th className="px-3 py-2">Premio</th>
+  679:                       <th className="px-3 py-2">Estado</th>
+  680:                       <th className="px-3 py-2">Lanzamiento</th>
+  681:                       <th className="px-3 py-2">Vigencia</th>
+  682:                       <th className="px-3 py-2">Alcance</th>
+  683:                       <th className="px-3 py-2 text-right">Acciones</th>
+  684:                     </tr>
+  685:                   </thead>
+  686: 
+  687:                   <tbody>
+  688:                     {campanas.map((campana) => {
+  689:                       const puedeLanzar =
+  690:                         campana.estado === "borrador" ||
+  691:                         campana.estado === "fallida";
+  692: 
+  693:                       const puedeCancelar =
+  694:                         campana.estado === "borrador" ||
+  695:                         campana.estado === "programada" ||
+  696:                         campana.estado === "fallida";
+  697: 
+  698:                       return (
+  699:                         <tr key={campana.id}>
+  700:                           <td className="rounded-l-2xl bg-[#FCF8FF] px-3 py-3">
+  701:                             <p className="font-semibold text-[#222]">
+  702:                               {campana.nombre_interno}
+  703:                             </p>
+  704:                             <p className="mt-1 text-xs text-[#777]">
+  705:                               #{campana.id}
+  706:                             </p>
+  707:                           </td>
+  708: 
+  709:                           <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+  710:                             {campana.premio_nombre}
+  711:                           </td>
+  712: 
+  713:                           <td className="bg-[#FCF8FF] px-3 py-3">
+  714:                             <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#4c00f7]">
+  715:                               {campana.estado}
+  716:                             </span>
+  717:                           </td>
+  718: 
+  719:                           <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+  720:                             {new Date(campana.fecha_lanzamiento).toLocaleString(
+  721:                               "es-CL",
+  722:                               {
+  723:                                 timeZone: "America/Santiago",
+  724:                                 day: "2-digit",
+  725:                                 month: "2-digit",
+  726:                                 year: "numeric",
+  727:                                 hour: "2-digit",
+  728:                                 minute: "2-digit",
+  729:                               },
+  730:                             )}
+  731:                           </td>
+  732: 
+  733:                           <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+  734:                             {campana.duracion_horas} h
+  735:                           </td>
+  736: 
+  737:                           <td className="bg-[#FCF8FF] px-3 py-3 text-[#555]">
+  738:                             {campana.total_enviados || 0}/
+  739:                             {campana.total_objetivo || 0}
+  740:                           </td>
+  741: 
+  742:                           <td className="rounded-r-2xl bg-[#FCF8FF] px-3 py-3">
+  743:                             <div className="flex justify-end gap-2">
+  744:                               <a
+  745:                                 href={`/campanas/${campana.id}`}
+  746:                                 className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+  747:                               >
+  748:                                 Ver
+  749:                               </a>
+  750: 
+  751:                               {puedeLanzar && (
+  752:                                 <button
+  753:                                   type="button"
+  754:                                   onClick={() =>
+  755:                                     programarLanzamientoCampana(campana.id)
+  756:                                   }
+  757:                                   disabled={procesandoCampanaId === campana.id}
+  758:                                   className="rounded-xl bg-[#4c00f7] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+  759:                                 >
+  760:                                   {procesandoCampanaId === campana.id
+  761:                                     ? "Procesando..."
+  762:                                     : "Lanzar"}
+  763:                                 </button>
+  764:                               )}
+  765: 
+  766:                               {campana.estado === "programada" && (
+  767:                                 <button
+  768:                                   type="button"
+  769:                                   onClick={() =>
+  770:                                     ejecutarCampanaAhora(campana.id)
+  771:                                   }
+  772:                                   disabled={procesandoCampanaId === campana.id}
+  773:                                   className="rounded-xl bg-black px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+  774:                                 >
+  775:                                   {procesandoCampanaId === campana.id
+  776:                                     ? "Ejecutando..."
+  777:                                     : "Ejecutar ahora"}
+  778:                                 </button>
+  779:                               )}
+  780: 
+  781:                               {["borrador", "programada", "fallida"].includes(
+  782:                                 campana.estado,
+  783:                               ) && (
+  784:                                 <button
+  785:                                   type="button"
+  786:                                   onClick={() =>
+  787:                                     ejecutarCampanaPrueba(campana.id)
+  788:                                   }
+  789:                                   disabled={procesandoCampanaId === campana.id}
+  790:                                   className="rounded-xl border border-[#D9C8FF] bg-white px-3 py-2 text-xs font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF] disabled:opacity-60"
+  791:                                 >
+  792:                                   Probar
+  793:                                 </button>
+  794:                               )}
+  795: 
+  796:                               {puedeCancelar && (
+  797:                                 <button
+  798:                                   type="button"
+  799:                                   onClick={() => cancelarCampana(campana.id)}
+  800:                                   disabled={procesandoCampanaId === campana.id}
+  801:                                   className="rounded-xl border border-[#E7C9D1] bg-white px-3 py-2 text-xs font-semibold text-[#8A3550] transition hover:bg-[#FFF1F4] disabled:opacity-60"
+  802:                                 >
+  803:                                   Cancelar
+  804:                                 </button>
+  805:                               )}
+  806:                             </div>
+  807:                           </td>
+  808:                         </tr>
+  809:                       );
+  810:                     })}
+  811:                   </tbody>
+  812:                 </table>
+  813:               </div>
+  814:             )}
+  815:           </section>
+  816:         )}
+  817: 
+  818:         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+  819:           <div className="border-b border-neutral-200 p-4">
+  820:             <span className="text-lg font-semibold text-violet-800">
+  821:               AtenciÛn en local
+  822:             </span>
+  823:           </div>
+  824: 
+  825:           <div className="p-4 pt-4">
+  826:             {cargando ? (
+  827:               <div className="mt-2">
+  828:                 <p className="text-neutral-600">Cargando clientes...</p>
+  829:               </div>
+  830:             ) : clientes.length === 0 ? (
+  831:               <div className="mt-2">
+  832:                 <p className="text-neutral-600">
+  833:                   No hay clientes registrados todavÌa.
+  834:                 </p>
+  835: 
+  836:                 {mensaje && (
+  837:                   <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
+  838:                     {mensaje}
+  839:                   </div>
+  840:                 )}
+  841:               </div>
+  842:             ) : (
+  843:               <>
+  844:                 <div className="mt-2 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+  845:                   <div className="grid gap-4">
+  846:                     <div>
+  847:                       <label className="mb-2 block text-sm font-semibold text-violet-700">
+  848:                         Buscar cliente
+  849:                       </label>
+  850:                       <input
+  851:                         type="text"
+  852:                         value={busqueda}
+  853:                         onChange={(e) => setBusqueda(e.target.value)}
+  854:                         placeholder="Nombre, telÈfono o correo"
+  855:                         className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+  856:                       />
+  857:                     </div>
+  858: 
+  859:                     <div>
+  860:                       <div className="mb-2 flex items-center justify-between gap-3">
+  861:                         <p className="text-sm font-semibold text-violet-700">
+  862:                           Filtrar por letra
+  863:                         </p>
+  864:                         <p className="text-xs text-neutral-500">
+  865:                           {clientesFiltrados.length} resultado
+  866:                           {clientesFiltrados.length === 1 ? "" : "s"}
+  867:                         </p>
+  868:                       </div>
+  869: 
+  870:                       <div className="flex flex-wrap gap-2">
+  871:                         <button
+  872:                           type="button"
+  873:                           onClick={() => seleccionarLetra("TODOS")}
+  874:                           className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+  875:                             letraActiva === "TODOS"
+  876:                               ? "cursor-pointer border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+  877:                               : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+  878:                           }`}
+  879:                         >
+  880:                           Todos
+  881:                         </button>
+  882: 
+  883:                         {LETRAS.map((letra) => (
+  884:                           <button
+  885:                             key={letra}
+  886:                             type="button"
+  887:                             onClick={() => seleccionarLetra(letra)}
+  888:                             className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
+  889:                               letraActiva === letra
+  890:                                 ? "cursor-pointer border-transparent bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+  891:                                 : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+  892:                             }`}
+  893:                           >
+  894:                             {letra}
+  895:                           </button>
+  896:                         ))}
+  897:                       </div>
+  898:                     </div>
+  899: 
+  900:                     <div>
+  901:                       <label className="mb-2 block text-sm font-semibold text-violet-700">
+  902:                         Seleccionar cliente
+  903:                       </label>
+  904: 
+  905:                       <select
+  906:                         value={clienteSeleccionadoId}
+  907:                         onChange={(e) => cambiarCliente(e.target.value)}
+  908:                         className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+  909:                       >
+  910:                         {clientesFiltrados.length === 0 ? (
+  911:                           <option value="">No hay resultados</option>
+  912:                         ) : (
+  913:                           clientesFiltrados.map((c) => (
+  914:                             <option key={c.id} value={c.id}>
+  915:                               {c.nombre} ∑ {c.telefono} ∑ {c.correo}
+  916:                             </option>
+  917:                           ))
+  918:                         )}
+  919:                       </select>
+  920:                     </div>
+  921:                   </div>
+  922:                 </div>
+  923: 
+  924:                 <p className="mt-3 text-sm text-neutral-500">
+  925:                   Resultados encontrados: {clientesFiltrados.length}
+  926:                 </p>
+  927: 
+  928:                 <AdminClienteDetalle
+  929:                   cliente={cliente}
+  930:                   loyalty={customerLoyalty}
+  931:                   premiosActivos={premiosActivos}
+  932:                   cargandoFidelizacion={cargandoFidelizacion}
+  933:                   mensaje={mensaje}
+  934:                   tipoMensaje={tipoMensaje}
+  935:                   setMensaje={setMensaje}
+  936:                   reiniciando={false}
+  937:                   rol={rol}
+  938:                   eliminarClienteSeleccionado={undefined}
+  939:                   reiniciarDatos={undefined}
+  940:                   exportarCSV={undefined}
+  941:                   mostrarAccionesAdministrativas={false}
+  942:                 />
+  943: 
+  944:                 {subscriptions.length > 0 && (
+  945:                   <OperacionSuscripcionActiva
+  946:                     clienteId={cliente.id}
+  947:                     subscriptions={subscriptions}
+  948:                     subscriptionSeleccionada={subscriptionSeleccionada}
+  949:                     cargando={cargandoSuscripcion}
+  950:                     onRefresh={() => cargarSuscripcionActiva(cliente.id)}
+  951:                     onMensaje={setMensajeSuscripcion}
+  952:                     onSelectSubscription={setSubscriptionSeleccionada}
+  953:                   />
+  954:                 )}
+  955: 
+  956:                 {subscriptions.length > 0 && (
+  957:                   <UltimosMovimientos clienteId={cliente.id} />
+  958:                 )}
+  959: 
+  960:                 {mensajeSuscripcion && (
+  961:                   <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+  962:                     {mensajeSuscripcion}
+  963:                   </div>
+  964:                 )}
+  965:               </>
+  966:             )}
+  967:           </div>
+  968:         </div>
+  969:       </div>
+  970:     </main>
+  971:   );
+  972: }
+
+
+============================================================
+FILE: components/operations/OrderQueueCard.tsx
+============================================================
+
+    1: import { QueueOrder } from "../../types/operations";
+    2: import OrderElapsedTime from "./OrderElapsedTime";
+    3: 
+    4: type Props = {
+    5:   order: QueueOrder;
+    6:   onAdvance: (order: QueueOrder) => void;
+    7:   onCancel: (order: QueueOrder) => void;
+    8:   updating: boolean;
+    9: };
+   10: 
+   11: type ChannelStyle = {
+   12:   label: string;
+   13:   bandClassName: string;
+   14: };
+   15: 
+   16: type StructuredNotes = {
+   17:   format: string | null;
+   18:   cookie: boolean;
+   19:   additional: string[];
+   20:   freeNotes: string[];
+   21: };
+   22: 
+   23: function getChannelStyle(channel?: string | null): ChannelStyle {
+   24:   const normalized = String(channel || "local")
+   25:     .trim()
+   26:     .toLowerCase()
+   27:     .replaceAll("-", "_");
+   28: 
+   29:   if (normalized === "shopify") {
+   30:     return {
+   31:       label: "Shopify",
+   32:       bandClassName: "bg-blue-100 text-blue-900",
+   33:     };
+   34:   }
+   35: 
+   36:   if (
+   37:     normalized === "uber" ||
+   38:     normalized === "uber_eats" ||
+   39:     normalized === "ubereats"
+   40:   ) {
+   41:     return {
+   42:       label: "Uber Eats",
+   43:       bandClassName: "bg-green-100 text-green-900",
+   44:     };
+   45:   }
+   46: 
+   47:   if (normalized === "rappi") {
+   48:     return {
+   49:       label: "Rappi",
+   50:       bandClassName: "bg-orange-100 text-orange-900",
+   51:     };
+   52:   }
+   53: 
+   54:   if (
+   55:     normalized === "pedidosya" ||
+   56:     normalized === "pedidos_ya" ||
+   57:     normalized === "pedidos ya"
+   58:   ) {
+   59:     return {
+   60:       label: "PedidosYa",
+   61:       bandClassName: "bg-red-100 text-red-900",
+   62:     };
+   63:   }
+   64: 
+   65:   return {
+   66:     label: "Local",
+   67:     bandClassName: "bg-violet-100 text-violet-900",
+   68:   };
+   69: }
+   70: 
+   71: function getStatusLabel(status: string) {
+   72:   if (status === "pending") return "Pendiente";
+   73:   if (status === "preparing") return "En preparaci√≥n";
+   74:   if (status === "ready") return "Listo";
+   75:   if (status === "delivered") return "Entregado";
+   76:   if (status === "cancelled") return "Cancelado";
+   77: 
+   78:   return status;
+   79: }
+   80: 
+   81: function getStatusClassName(status: string) {
+   82:   if (status === "pending") {
+   83:     return "bg-amber-100 text-amber-800";
+   84:   }
+   85: 
+   86:   if (status === "preparing") {
+   87:     return "bg-blue-100 text-blue-800";
+   88:   }
+   89: 
+   90:   if (status === "ready") {
+   91:     return "bg-emerald-100 text-emerald-800";
+   92:   }
+   93: 
+   94:   if (status === "cancelled") {
+   95:     return "bg-red-100 text-red-800";
+   96:   }
+   97: 
+   98:   return "bg-neutral-100 text-neutral-700";
+   99: }
+  100: 
+  101: function getAdvanceLabel(status: string) {
+  102:   if (status === "pending") return "Preparar";
+  103:   if (status === "preparing") return "Listo";
+  104:   if (status === "ready") return "Entregar";
+  105: 
+  106:   return "Avanzar";
+  107: }
+  108: 
+  109: function formatRepeatedNames(names: string[]) {
+  110:   const counts = names.reduce<Record<string, number>>((acc, name) => {
+  111:     acc[name] = (acc[name] || 0) + 1;
+  112:     return acc;
+  113:   }, {});
+  114: 
+  115:   return Object.entries(counts)
+  116:     .map(([name, count]) => (count > 1 ? `${name} x${count}` : name))
+  117:     .join(" + ");
+  118: }
+  119: 
+  120: function formatCompactNames(names: string[]) {
+  121:   const counts = names.reduce<Record<string, number>>((acc, name) => {
+  122:     acc[name] = (acc[name] || 0) + 1;
+  123:     return acc;
+  124:   }, {});
+  125: 
+  126:   return Object.entries(counts)
+  127:     .map(([name, count]) => (count > 1 ? `${count}x ${name}` : name))
+  128:     .join(", ");
+  129: }
+  130: 
+  131: function parseStructuredNotes(notes?: string | null): StructuredNotes {
+  132:   const result: StructuredNotes = {
+  133:     format: null,
+  134:     cookie: false,
+  135:     additional: [],
+  136:     freeNotes: [],
+  137:   };
+  138: 
+  139:   if (!notes) return result;
+  140: 
+  141:   const parts = notes
+  142:     .split(" ¬∑ ")
+  143:     .map((part) => part.trim())
+  144:     .filter(Boolean);
+  145: 
+  146:   for (const part of parts) {
+  147:     const normalized = part.toLowerCase();
+  148: 
+  149:     if (normalized.startsWith("formato:")) {
+  150:       result.format = part.replace(/^formato:\s*/i, "");
+  151:       continue;
+  152:     }
+  153: 
+  154:     if (normalized === "con galleta") {
+  155:       result.cookie = true;
+  156:       continue;
+  157:     }
+  158: 
+  159:     if (
+  160:       normalized.startsWith("ba√±o chocolate") ||
+  161:       normalized.startsWith("topping")
+  162:     ) {
+  163:       result.additional.push(part);
+  164:       continue;
+  165:     }
+  166: 
+  167:     result.freeNotes.push(part);
+  168:   }
+  169: 
+  170:   return result;
+  171: }
+  172: 
+  173: export default function OrderQueueCard({
+  174:   order,
+  175:   onAdvance,
+  176:   onCancel,
+  177:   updating,
+  178: }: Props) {
+  179:   const channel = getChannelStyle(order.sales?.channel);
+  180:   const items = order.sales?.sale_items || [];
+  181: 
+  182:   const groupedItems = items.reduce<
+  183:     Array<{
+  184:       key: string;
+  185:       quantity: number;
+  186:       productName: string;
+  187:       items: typeof items;
+  188:     }>
+  189:   >((groups, item) => {
+  190:     const sku = String(item.product_sku || "")
+  191:       .trim()
+  192:       .toUpperCase();
+  193: 
+  194:     const isPot = sku === "POT-16-LISTO" || sku === "POT-16-ARMADO";
+  195: 
+  196:     /*
+  197:      * Por ahora solo agrupamos potes.
+  198:      * Los dem√°s productos mantienen una l√≠nea independiente
+  199:      * para no mezclar configuraciones incompatibles.
+  200:      */
+  201:     if (!isPot) {
+  202:       groups.push({
+  203:         key: `item-${item.id}`,
+  204:         quantity: item.quantity,
+  205:         productName: item.product_name,
+  206:         items: [item],
+  207:       });
+  208: 
+  209:       return groups;
+  210:     }
+  211: 
+  212:     const options = Array.isArray(item.sale_item_options)
+  213:       ? item.sale_item_options
+  214:       : [];
+  215: 
+  216:     /*
+  217:      * Los sabores no forman parte de la firma porque queremos
+  218:      * consolidarlos visualmente dentro del mismo grupo.
+  219:      */
+  220:     const nonFlavorOptions = options
+  221:       .filter(
+  222:         (option) =>
+  223:           option.option_group_code !== "flavor" &&
+  224:           option.option_group_code !== "sabor",
+  225:       )
+  226:       .map((option) => ({
+  227:         group: option.option_group_code,
+  228:         value: option.option_value_id,
+  229:         quantity: option.quantity,
+  230:       }))
+  231:       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  232: 
+  233:     const groupKey = JSON.stringify({
+  234:       sku,
+  235:       notes: item.notes || null,
+  236:       nonFlavorOptions,
+  237:     });
+  238: 
+  239:     const existingGroup = groups.find((group) => group.key === groupKey);
+  240: 
+  241:     if (existingGroup) {
+  242:       existingGroup.quantity += item.quantity;
+  243:       existingGroup.items.push(item);
+  244:     } else {
+  245:       groups.push({
+  246:         key: groupKey,
+  247:         quantity: item.quantity,
+  248:         productName: item.product_name,
+  249:         items: [item],
+  250:       });
+  251:     }
+  252: 
+  253:     return groups;
+  254:   }, []);
+  255: 
+  256:   return (
+  257:     <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition duration-150 hover:border-violet-200 hover:shadow-md">
+  258:       <div
+  259:         className={`flex items-center justify-between gap-2 px-3 py-1.5 ${channel.bandClassName}`}
+  260:       >
+  261:         <span className="text-[11px] font-black uppercase tracking-wide">
+  262:           {channel.label}
+  263:         </span>
+  264: 
+  265:         <span
+  266:           className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getStatusClassName(
+  267:             order.status,
+  268:           )}`}
+  269:         >
+  270:           {getStatusLabel(order.status)}
+  271:         </span>
+  272:       </div>
+  273: 
+  274:       <div className="p-2.5">
+  275:         <header className="flex items-start justify-between gap-2">
+  276:           <div className="min-w-0">
+  277:             <p className="text-lg font-black leading-none text-neutral-900">
+  278:               {order.display_order_code}
+  279:             </p>
+  280: 
+  281:             <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-neutral-500">
+  282:               <OrderElapsedTime createdAt={order.created_at} />
+  283: 
+  284:               <span>¬∑</span>
+  285: 
+  286:               <span className="truncate">
+  287:                 {order.sales?.clientes?.nombre || "Mostrador"}
+  288:               </span>
+  289:             </div>
+  290:           </div>
+  291:         </header>
+  292: 
+  293:         {order.notes && (
+  294:           <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-800">
+  295:             {order.notes}
+  296:           </p>
+  297:         )}
+  298: 
+  299:         <div className="mt-2 divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-neutral-50">
+  300:           {groupedItems.map((group) => {
+  301:             const firstItem = group.items[0];
+  302: 
+  303:             const flavorNames = group.items.flatMap((item) => {
+  304:               const options = Array.isArray(item.sale_item_options)
+  305:                 ? item.sale_item_options
+  306:                 : [];
+  307: 
+  308:               return options
+  309:                 .filter(
+  310:                   (option) =>
+  311:                     option.option_group_code === "flavor" ||
+  312:                     option.option_group_code === "sabor",
+  313:                 )
+  314:                 .flatMap((option) => {
+  315:                   const optionQuantity = Math.max(
+  316:                     1,
+  317:                     Number(option.quantity || 1),
+  318:                   );
+  319: 
+  320:                   const totalOptionQuantity =
+  321:                     optionQuantity * Math.max(1, item.quantity);
+  322: 
+  323:                   return Array.from(
+  324:                     { length: totalOptionQuantity },
+  325:                     () => option.option_value_name,
+  326:                   );
+  327:                 })
+  328:                 .filter(Boolean);
+  329:             });
+  330: 
+  331:             const regularToppingNames = group.items.flatMap((item) => {
+  332:               const options = Array.isArray(item.sale_item_options)
+  333:                 ? item.sale_item_options
+  334:                 : [];
+  335: 
+  336:               return options
+  337:                 .filter(
+  338:                   (option) =>
+  339:                     option.option_group_code === "topping" ||
+  340:                     option.option_group_code === "toppings",
+  341:                 )
+  342:                 .map((option) => option.option_value_name)
+  343:                 .filter(Boolean);
+  344:             });
+  345: 
+  346:             const structuredNotes = parseStructuredNotes(firstItem.notes);
+  347: 
+  348:             return (
+  349:               <div key={group.key} className="px-2.5 py-2">
+  350:                 <p className="text-[12px] font-black leading-tight text-neutral-900">
+  351:                   {group.quantity}x {group.productName}
+  352:                 </p>
+  353: 
+  354:                 <div className="mt-1 space-y-0.5 text-[11px] leading-snug text-neutral-600">
+  355:                   {flavorNames.length > 0 && (
+  356:                     <p className="font-semibold text-neutral-700">
+  357:                       ({formatCompactNames(flavorNames)})
+  358:                     </p>
+  359:                   )}
+  360: 
+  361:                   {regularToppingNames.length > 0 && (
+  362:                     <p>
+  363:                       <span className="font-bold">Toppings:</span>{" "}
+  364:                       {formatRepeatedNames(regularToppingNames)}
+  365:                     </p>
+  366:                   )}
+  367: 
+  368:                   {structuredNotes.format && (
+  369:                     <p>
+  370:                       <span className="font-bold">Formato:</span>{" "}
+  371:                       {structuredNotes.format}
+  372:                       {structuredNotes.cookie ? " ¬∑ Con galleta" : ""}
+  373:                     </p>
+  374:                   )}
+  375: 
+  376:                   {!structuredNotes.format && structuredNotes.cookie && (
+  377:                     <p>
+  378:                       <span className="font-bold">Formato:</span> Con galleta
+  379:                     </p>
+  380:                   )}
+  381: 
+  382:                   {structuredNotes.additional.length > 0 && (
+  383:                     <p>
+  384:                       <span className="font-bold">Adicionales:</span>{" "}
+  385:                       {structuredNotes.additional.join(" + ")}
+  386:                     </p>
+  387:                   )}
+  388:                 </div>
+  389: 
+  390:                 {structuredNotes.freeNotes.length > 0 && (
+  391:                   <p className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold leading-snug text-amber-800">
+  392:                     {structuredNotes.freeNotes.join(" ¬∑ ")}
+  393:                   </p>
+  394:                 )}
+  395:               </div>
+  396:             );
+  397:           })}
+  398:         </div>
+  399: 
+  400:         <footer className="mt-2 grid grid-cols-[1fr_auto] gap-2">
+  401:           {["pending", "preparing", "ready"].includes(order.status) && (
+  402:             <button
+  403:               type="button"
+  404:               onClick={() => onAdvance(order)}
+  405:               disabled={updating}
+  406:               className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+  407:             >
+  408:               {updating ? "Actualizando..." : getAdvanceLabel(order.status)}
+  409:             </button>
+  410:           )}
+  411: 
+  412:           {!["delivered", "cancelled"].includes(order.status) && (
+  413:             <button
+  414:               type="button"
+  415:               onClick={() => onCancel(order)}
+  416:               disabled={updating}
+  417:               className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+  418:             >
+  419:               Cancelar
+  420:             </button>
+  421:           )}
+  422:         </footer>
+  423:       </div>
+  424:     </article>
+  425:   );
+  426: }
+
+
+============================================================
+FILE: types/operations.ts
+============================================================
+
+    1: export type OrderStatus =
+    2:   | "pending"
+    3:   | "preparing"
+    4:   | "ready"
+    5:   | "delivered"
+    6:   | "cancelled";
+    7: 
+    8: export type QueueOrder = {
+    9:   id: number;
+   10:   display_order_code: string;
+   11:   status: OrderStatus;
+   12:   created_at: string;
+   13:   notes?: string | null;
+   14:   sales?: {
+   15:     channel?: string | null;
+   16:     total: number;
+   17:     payment_method: string;
+   18:     clientes?: {
+   19:       nombre?: string;
+   20:     } | null;
+   21:     sale_items?: {
+   22:       id: number;
+   23:       product_name: string;
+   24:       quantity: number;
+   25:       notes?: string | null;
+   26:       sale_item_options?: {
+   27:         id?: number;
+   28:         option_group_code: string;
+   29:         option_value_name: string;
+   30:         quantity: number;
+   31:       }[];
+   32:     }[];
+   33:   };
+   34: };
+
+
+============================================================
+FILE: app/operacion/components/AdminClienteDetalle.tsx
+============================================================
+
+    1: import QRCode from "react-qr-code";
+    2: 
+    3: import type {
+    4:   CustomerLoyaltySummary,
+    5:   CustomerRewardSummary,
+    6: } from "../../../lib/loyalty/customer-loyalty.types";
+    7: 
+    8: type Cliente = {
+    9:   id: number;
+   10:   nombre: string;
+   11:   correo: string;
+   12:   telefono: string;
+   13:   public_token: string;
+   14:   tarjeta_activa?: boolean;
+   15:   email_verificado?: boolean;
+   16: };
+   17: 
+   18: type Props = {
+   19:   cliente: Cliente | null;
+   20:   loyalty: CustomerLoyaltySummary | null;
+   21:   premiosActivos: CustomerRewardSummary[];
+   22:   cargandoFidelizacion: boolean;
+   23:   mensaje: string;
+   24:   tipoMensaje: "success" | "error" | "info";
+   25:   setMensaje: (value: string) => void;
+   26:   reiniciando?: boolean;
+   27:   rol: "admin" | "superadmin" | null;
+   28:   exportarCSV?: () => void;
+   29:   mostrarAccionesAdministrativas: boolean;
+   30: };
+   31: 
+   32: const META_SELLOS = 7;
+   33: 
+   34: export default function AdminClienteDetalle({
+   35:   cliente,
+   36:   loyalty,
+   37:   premiosActivos,
+   38:   cargandoFidelizacion,
+   39:   mensaje,
+   40:   tipoMensaje,
+   41:   setMensaje,
+   42:   rol,
+   43:   exportarCSV,
+   44:   mostrarAccionesAdministrativas,
+   45: }: Props) {
+   46:   if (!cliente) return null;
+   47: 
+   48:   const sellos = loyalty?.currentStampBalance ?? 0;
+   49:   const premiosUsados = loyalty?.redeemedRewards.length ?? 0;
+   50: 
+   51:   const ultimoCanje = loyalty?.redeemedRewards.reduce<string | null>(
+   52:     (fechaMasReciente, premio) => {
+   53:       if (!premio.redeemedAt) return fechaMasReciente;
+   54: 
+   55:       if (!fechaMasReciente) return premio.redeemedAt;
+   56: 
+   57:       return new Date(premio.redeemedAt).getTime() >
+   58:         new Date(fechaMasReciente).getTime()
+   59:         ? premio.redeemedAt
+   60:         : fechaMasReciente;
+   61:     },
+   62:     null,
+   63:   );
+   64: 
+   65:   const formatearFecha = (fecha?: string | null) => {
+   66:     if (!fecha) return "Sin registro";
+   67: 
+   68:     const date = new Date(fecha);
+   69: 
+   70:     if (Number.isNaN(date.getTime())) return "Sin registro";
+   71: 
+   72:     return date.toLocaleString("es-CL", {
+   73:       dateStyle: "short",
+   74:       timeStyle: "short",
+   75:     });
+   76:   };
+   77: 
+   78:   return (
+   79:     <>
+   80:       <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
+   81:         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+   82:           <div>
+   83:             <p className="text-sm font-semibold text-violet-600">
+   84:               Cliente seleccionado
+   85:             </p>
+   86: 
+   87:             <h2 className="mt-1 text-2xl font-bold text-neutral-900">
+   88:               {cliente.nombre}
+   89:             </h2>
+   90: 
+   91:             <div className="mt-2 space-y-1 text-sm text-neutral-600">
+   92:               <p>{cliente.correo}</p>
+   93:               <p>{cliente.telefono}</p>
+   94:             </div>
+   95: 
+   96:             <div className="mt-3 flex flex-wrap gap-2">
+   97:               <span
+   98:                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
+   99:                   cliente.tarjeta_activa
+  100:                     ? "bg-green-100 text-green-700"
+  101:                     : "bg-yellow-100 text-yellow-700"
+  102:                 }`}
+  103:               >
+  104:                 {cliente.tarjeta_activa
+  105:                   ? "Tarjeta activa"
+  106:                   : "Pendiente de activaci√≥n"}
+  107:               </span>
+  108: 
+  109:               <span
+  110:                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
+  111:                   cliente.email_verificado
+  112:                     ? "bg-blue-100 text-blue-700"
+  113:                     : "bg-red-100 text-red-700"
+  114:                 }`}
+  115:               >
+  116:                 {cliente.email_verificado
+  117:                   ? "Correo verificado"
+  118:                   : "Correo no verificado"}
+  119:               </span>
+  120:             </div>
+  121:           </div>
+  122: 
+  123:           <div className="grid grid-cols-2 gap-3 md:min-w-[220px]">
+  124:             <div className="rounded-xl bg-violet-50 px-4 py-3">
+  125:               <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+  126:                 Sellos
+  127:               </p>
+  128:               <p className="mt-1 text-xl font-bold text-violet-700">
+  129:                 {cargandoFidelizacion ? "..." : `${sellos} / ${META_SELLOS}`}
+  130:               </p>
+  131:             </div>
+  132: 
+  133:             <div className="rounded-xl bg-pink-50 px-4 py-3">
+  134:               <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">
+  135:                 Premios
+  136:               </p>
+  137:               <p className="mt-1 text-xl font-bold text-pink-700">
+  138:                 {premiosActivos.length}
+  139:               </p>
+  140:             </div>
+  141:           </div>
+  142:         </div>
+  143: 
+  144:         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+  145:           <p className="mb-3 text-sm font-medium text-neutral-700">
+  146:             Premios activos
+  147:           </p>
+  148: 
+  149:           {premiosActivos.length === 0 ? (
+  150:             <p className="text-sm text-neutral-500">
+  151:               No hay premios activos para este cliente.
+  152:             </p>
+  153:           ) : (
+  154:             <div className="space-y-3">
+  155:               {premiosActivos.map((premio) => (
+  156:                 <div
+  157:                   key={premio.id}
+  158:                   className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm"
+  159:                 >
+  160:                   <div>
+  161:                     <p className="text-sm font-semibold text-neutral-900">
+  162:                       {premio.name}
+  163:                     </p>
+  164: 
+  165:                     {premio.expiresAt && (
+  166:                       <p className="mt-1 text-xs text-neutral-500">
+  167:                         Vence: {formatearFecha(premio.expiresAt)}
+  168:                       </p>
+  169:                     )}
+  170:                   </div>
+  171:                 </div>
+  172:               ))}
+  173:             </div>
+  174:           )}
+  175:         </div>
+  176: 
+  177:         <div className="mt-4 flex flex-wrap items-center gap-3">
+  178:           <a
+  179:             href={`/t/${cliente.public_token}`}
+  180:             target="_blank"
+  181:             rel="noreferrer"
+  182:             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:opacity-90"
+  183:           >
+  184:             Abrir tarjeta
+  185:           </a>
+  186: 
+  187:           <button
+  188:             onClick={() => {
+  189:               const url = `${window.location.origin}/t/${cliente.public_token}`;
+  190:               navigator.clipboard.writeText(url);
+  191:               setMensaje("Link copiado al portapapeles");
+  192:             }}
+  193:             className="cursor-pointer rounded-lg bg-neutral-100 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200"
+  194:           >
+  195:             Copiar link
+  196:           </button>
+  197:         </div>
+  198: 
+  199:         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+  200:           <p className="mb-3 text-sm font-medium text-neutral-700">
+  201:             QR tarjeta
+  202:           </p>
+  203: 
+  204:           <div className="inline-block rounded-lg bg-white p-3 shadow-sm">
+  205:             <QRCode
+  206:               value={`${window.location.origin}/t/${cliente.public_token}`}
+  207:               size={120}
+  208:             />
+  209:           </div>
+  210:         </div>
+  211: 
+  212:         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+  213:           <p className="mb-4 text-sm font-medium text-neutral-700">
+  214:             Historial cliente
+  215:           </p>
+  216: 
+  217:           <div className="grid gap-3 md:grid-cols-2">
+  218:             <div className="rounded-lg bg-white p-3 shadow-sm">
+  219:               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+  220:                 √öltimo movimiento
+  221:               </p>
+  222:               <p className="mt-1 text-sm font-medium text-neutral-800">
+  223:                 {formatearFecha(loyalty?.lastMovementAt)}
+  224:               </p>
+  225:             </div>
+  226: 
+  227:             <div className="rounded-lg bg-white p-3 shadow-sm">
+  228:               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+  229:                 √öltimo canje
+  230:               </p>
+  231:               <p className="mt-1 text-sm font-medium text-neutral-800">
+  232:                 {formatearFecha(ultimoCanje)}{" "}
+  233:               </p>
+  234:             </div>
+  235: 
+  236:             <div className="rounded-lg bg-white p-3 shadow-sm">
+  237:               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+  238:                 Sellos actuales
+  239:               </p>
+  240:               <p className="mt-1 text-sm font-medium text-neutral-800">
+  241:                 {cargandoFidelizacion
+  242:                   ? "Cargando..."
+  243:                   : `${sellos} / ${META_SELLOS}`}
+  244:               </p>
+  245:             </div>
+  246: 
+  247:             <div className="rounded-lg bg-white p-3 shadow-sm">
+  248:               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+  249:                 Premios usados
+  250:               </p>
+  251:               <p className="mt-1 text-sm font-medium text-neutral-800">
+  252:                 {premiosUsados}
+  253:               </p>
+  254:             </div>
+  255:           </div>
+  256:         </div>
+  257:       </div>
+  258: 
+  259:       <div className="mt-6 flex flex-wrap gap-4">
+  260:         {mostrarAccionesAdministrativas && rol === "superadmin" && (
+  261:           <button
+  262:             onClick={exportarCSV}
+  263:             className="cursor-pointer rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+  264:           >
+  265:             Exportar clientes CSV
+  266:           </button>
+  267:         )}
+  268:       </div>
+  269: 
+  270:       {mensaje && (
+  271:         <div
+  272:           className={`mt-6 rounded-lg p-4 text-sm ${
+  273:             tipoMensaje === "success"
+  274:               ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
+  275:               : tipoMensaje === "error"
+  276:                 ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+  277:                 : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+  278:           }`}
+  279:         >
+  280:           {mensaje}
+  281:         </div>
+  282:       )}
+  283:     </>
+  284:   );
+  285: }
+app/api/dashboard/overview/route.ts(274,26): error TS2352: Conversion of type '{ id: any; cliente_id: any; subscription_id: any; cycle_number: any; potes: any; toppings: any; barquillos: any; galletas: any; created_at: any; clientes: { nombre: any; }[]; subscriptions: { subscription_templates: { ...; }[]; }[]; }[]' to type 'ConsumptionRow[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: any; cliente_id: any; subscription_id: any; cycle_number: any; potes: any; toppings: any; barquillos: any; galletas: any; created_at: any; clientes: { nombre: any; }[]; subscriptions: { subscription_templates: { ...; }[]; }[]; }' is not comparable to type 'ConsumptionRow'.
+    Types of property 'clientes' are incompatible.
+      Property 'nombre' is missing in type '{ nombre: any; }[]' but required in type '{ nombre: string; }'.
+app/api/dashboard/overview/route.ts(276,7): error TS2352: Conversion of type '{ id: any; cliente_id: any; template_id: any; status: any; start_date: any; end_date: any; activated_at: any; created_at: any; next_cycle_date: any; clientes: { nombre: any; }[]; subscription_templates: { ...; }[]; }[]' to type 'SubscriptionRow[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: any; cliente_id: any; template_id: any; status: any; start_date: any; end_date: any; activated_at: any; created_at: any; next_cycle_date: any; clientes: { nombre: any; }[]; subscription_templates: { ...; }[]; }' is not comparable to type 'SubscriptionRow'.
+    Types of property 'clientes' are incompatible.
+      Property 'nombre' is missing in type '{ nombre: any; }[]' but required in type '{ nombre: string; }'.
+app/api/operacion/sales/export/route.ts(420,55): error TS2339: Property 'size' does not exist on type 'never'.
+app/api/subscriptions/register-consumption/route.ts(370,11): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | unknown[] | Record<string, unknown> | null'.
+  Type 'Date' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'Date'.
+app/api/subscriptions/register-consumption/route.ts(371,11): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | unknown[] | Record<string, unknown> | null'.
+  Type 'Date' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'Date'.
+app/clientes/page.tsx(449,19): error TS2322: Type 'Premio[]' is not assignable to type 'CustomerRewardSummary[]'.
+  Type 'Premio' is missing the following properties from type 'CustomerRewardSummary': customerId, rewardType, name, description, and 11 more.
+app/operacion/page.tsx(938,19): error TS2322: Type '{ cliente: Cliente | null; loyalty: CustomerLoyaltySummary | null; premiosActivos: CustomerRewardSummary[]; cargandoFidelizacion: boolean; ... 8 more ...; mostrarAccionesAdministrativas: false; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'eliminarClienteSeleccionado' does not exist on type 'IntrinsicAttributes & Props'.
+app/operacion/page.tsx(946,32): error TS18047: 'cliente' is possibly 'null'.
+app/operacion/page.tsx(950,62): error TS18047: 'cliente' is possibly 'null'.
+app/operacion/page.tsx(957,50): error TS18047: 'cliente' is possibly 'null'.
+components/operations/OrderQueueCard.tsx(190,29): error TS2339: Property 'product_sku' does not exist on type '{ id: number; product_name: string; quantity: number; notes?: string | null | undefined; sale_item_options?: { id?: number | undefined; option_group_code: string; option_value_name: string; quantity: number; }[] | undefined; }'.
+components/operations/OrderQueueCard.tsx(228,23): error TS2551: Property 'option_value_id' does not exist on type '{ id?: number | undefined; option_group_code: string; option_value_name: string; quantity: number; }'. Did you mean 'option_value_name'?

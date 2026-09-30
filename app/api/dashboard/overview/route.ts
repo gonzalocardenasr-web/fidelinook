@@ -3,7 +3,6 @@ import { getOperationSession } from "../../../../lib/operation-auth";
 import { authorizeOperationSession } from "@/lib/operation-rbac";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
-
 type ClienteRow = {
   id: number;
   nombre: string;
@@ -23,12 +22,16 @@ type SubscriptionRow = {
   activated_at: string | null;
   created_at: string | null;
   next_cycle_date: string | null;
-  clientes?: {
-    nombre: string;
-  } | null;
-  subscription_templates?: {
-    name: string;
-  } | null;
+  clientes?:
+    | {
+        nombre: string;
+      }[]
+    | null;
+  subscription_templates?:
+    | {
+        name: string;
+      }[]
+    | null;
 };
 
 type ConsumptionRow = {
@@ -41,14 +44,20 @@ type ConsumptionRow = {
   barquillos: number;
   galletas: number;
   created_at: string;
-  clientes?: {
-    nombre: string;
-  } | null;
-  subscriptions?: {
-    subscription_templates?: {
-      name: string;
-    } | null;
-  } | null;
+  clientes?:
+    | {
+        nombre: string;
+      }[]
+    | null;
+  subscriptions?:
+    | {
+        subscription_templates?:
+          | {
+              name: string;
+            }[]
+          | null;
+      }[]
+    | null;
 };
 
 function getMonthKey(dateStr?: string | null) {
@@ -80,10 +89,7 @@ function countPremios(premios: any, estado: "activo" | "usado") {
 async function validateOperationalUser() {
   const session = await getOperationSession();
 
-  const authorization = authorizeOperationSession(
-    session,
-    "analytics.view",
-  );
+  const authorization = authorizeOperationSession(session, "analytics.view");
 
   if (!authorization.ok) {
     return {
@@ -98,7 +104,7 @@ async function validateOperationalUser() {
     return {
       error: NextResponse.json(
         { ok: false, message: "Tu sesion no se encuentra activa." },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
@@ -111,7 +117,7 @@ async function validateOperationalUser() {
           message:
             "Tu sesion debe renovarse para identificar al usuario. Cierra sesion e inicia sesion nuevamente.",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
@@ -126,7 +132,7 @@ async function validateOperationalUser() {
   if (operationalUserError) {
     console.error(
       "Error validando usuario operacional en dashboard overview:",
-      operationalUserError
+      operationalUserError,
     );
 
     return {
@@ -135,7 +141,7 @@ async function validateOperationalUser() {
           ok: false,
           message: "No fue posible validar al usuario operacional.",
         },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }
@@ -147,7 +153,7 @@ async function validateOperationalUser() {
           ok: false,
           message: "El usuario operacional no se encuentra activo.",
         },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -159,7 +165,7 @@ async function validateOperationalUser() {
           ok: false,
           message: "La sesion operacional no es valida.",
         },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -189,10 +195,10 @@ export async function GET() {
     ] = await Promise.all([
       supabaseAdmin
         .from("clientes")
-        .select("id, nombre, email_verificado, tarjeta_activa, premios, created_At"),
-      supabaseAdmin
-        .from("subscriptions")
-        .select(`
+        .select(
+          "id, nombre, email_verificado, tarjeta_activa, premios, created_At",
+        ),
+      supabaseAdmin.from("subscriptions").select(`
           id,
           cliente_id,
           template_id,
@@ -205,7 +211,8 @@ export async function GET() {
         `),
       supabaseAdmin
         .from("subscription_consumptions")
-        .select(`
+        .select(
+          `
           id,
           cliente_id,
           subscription_id,
@@ -219,12 +226,14 @@ export async function GET() {
           subscriptions (
             subscription_templates ( name )
           )
-        `)
+        `,
+        )
         .order("created_at", { ascending: false })
         .limit(100),
       supabaseAdmin
         .from("subscriptions")
-        .select(`
+        .select(
+          `
           id,
           cliente_id,
           template_id,
@@ -236,7 +245,8 @@ export async function GET() {
           next_cycle_date,
           clientes ( nombre ),
           subscription_templates ( name )
-        `)
+        `,
+        )
         .eq("status", "active")
         .order("start_date", { ascending: false }),
     ]);
@@ -244,57 +254,57 @@ export async function GET() {
     if (clientesRes.error) {
       return NextResponse.json(
         { message: "Error cargando clientes para dashboard." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (subscriptionsRes.error) {
       return NextResponse.json(
         { message: "Error cargando suscripciones para dashboard." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (consumptionsRes.error) {
       return NextResponse.json(
         { message: "Error cargando consumos para dashboard." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (activeSubscriptionsRes.error) {
       return NextResponse.json(
         { message: "Error cargando suscripciones activas para dashboard." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const clientes = (clientesRes.data || []) as ClienteRow[];
     const subscriptions = (subscriptionsRes.data || []) as SubscriptionRow[];
     const consumptions = (consumptionsRes.data || []) as ConsumptionRow[];
-    const activeSubscriptions =
-      (activeSubscriptionsRes.data || []) as SubscriptionRow[];
+    const activeSubscriptions = (activeSubscriptionsRes.data ||
+      []) as SubscriptionRow[];
 
     const clientesTotales = clientes.length;
     const clientesConTarjetaActiva = clientes.filter(
-      (c) => c.tarjeta_activa
+      (c) => c.tarjeta_activa,
     ).length;
     const clientesConEmailVerificado = clientes.filter(
-      (c) => c.email_verificado
+      (c) => c.email_verificado,
     ).length;
 
     const premiosActivos = clientes.reduce(
       (acc, c) => acc + countPremios(c.premios, "activo"),
-      0
+      0,
     );
     const premiosUsados = clientes.reduce(
       (acc, c) => acc + countPremios(c.premios, "usado"),
-      0
+      0,
     );
 
     const suscripcionesActivas = activeSubscriptions.length;
     const clientesConSuscripcionActiva = new Set(
-      activeSubscriptions.map((s) => s.cliente_id)
+      activeSubscriptions.map((s) => s.cliente_id),
     ).size;
 
     const clientesConMasDeUnaSuscripcionActiva = Object.values(
@@ -302,7 +312,7 @@ export async function GET() {
         const key = String(s.cliente_id);
         acc[key] = (acc[key] || 0) + 1;
         return acc;
-      }, {})
+      }, {}),
     ).filter((count) => count > 1).length;
 
     const suscripcionesPorVencer7Dias = activeSubscriptions.filter((s) => {
@@ -332,7 +342,7 @@ export async function GET() {
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       },
-      {}
+      {},
     );
 
     const clientesPorMes = Object.entries(clientesPorMesMap)
@@ -358,7 +368,7 @@ export async function GET() {
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       },
-      {}
+      {},
     );
 
     const suscripcionesPorMes = Object.entries(suscripcionesPorMesMap)
@@ -412,14 +422,14 @@ export async function GET() {
       const endDate = s.end_date ? new Date(s.end_date) : null;
       const diasParaVencer = endDate
         ? Math.ceil(
-            (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
           )
         : null;
 
       return {
         id: s.id,
-        cliente: s.clientes?.nombre || "-",
-        suscripcion: s.subscription_templates?.name || "-",
+        cliente: s.clientes?.[0]?.nombre || "-",
+        suscripcion: s.subscription_templates?.[0]?.name || "-",
         inicio: s.start_date,
         fin: s.end_date,
         estado: s.status,
@@ -431,8 +441,9 @@ export async function GET() {
     const tablaConsumoReciente = consumptions.map((c) => ({
       id: c.id,
       fecha: c.created_at,
-      cliente: c.clientes?.nombre || "-",
-      suscripcion: c.subscriptions?.subscription_templates?.name || "-",
+      cliente: c.clientes?.[0]?.nombre || "-",
+      suscripcion:
+        c.subscriptions?.[0]?.subscription_templates?.[0]?.name || "-",
       ciclo: c.cycle_number,
       potes: c.potes,
       toppings: c.toppings,
@@ -466,7 +477,7 @@ export async function GET() {
 
     return NextResponse.json(
       { message: "Ocurrió un error inesperado al cargar el dashboard." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -935,13 +935,11 @@ export default function OperacionPage() {
                   setMensaje={setMensaje}
                   reiniciando={false}
                   rol={rol}
-                  eliminarClienteSeleccionado={undefined}
-                  reiniciarDatos={undefined}
                   exportarCSV={undefined}
                   mostrarAccionesAdministrativas={false}
                 />
 
-                {subscriptions.length > 0 && (
+                {cliente && subscriptions.length > 0 && (
                   <OperacionSuscripcionActiva
                     clienteId={cliente.id}
                     subscriptions={subscriptions}
@@ -953,7 +951,7 @@ export default function OperacionPage() {
                   />
                 )}
 
-                {subscriptions.length > 0 && (
+                {cliente && subscriptions.length > 0 && (
                   <UltimosMovimientos clienteId={cliente.id} />
                 )}
 

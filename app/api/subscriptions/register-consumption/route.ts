@@ -28,20 +28,20 @@ function normalizePositiveInteger(value: unknown) {
 async function validateOperationalUser() {
   const session = await getOperationSession();
 
-    const authorization = authorizeOperationSession(
-      session,
-      "subscriptions.operate",
-    );
+  const authorization = authorizeOperationSession(
+    session,
+    "subscriptions.operate",
+  );
 
-    if (!authorization.ok) {
-      return {
-        error: NextResponse.json(
-          { ok: false, message: authorization.message },
-          { status: authorization.status },
-        ),
-        role: null,
-      };
-    }
+  if (!authorization.ok) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: authorization.message },
+        { status: authorization.status },
+      ),
+      role: null,
+    };
+  }
 
   if (!session.ok || !session.userId) {
     return {
@@ -367,8 +367,8 @@ export async function POST(req: Request) {
           subscriptionTemplateId: template.id,
           subscriptionName: template.name || null,
           cycleNumber,
-          cycleStartDate,
-          cycleEndDate,
+          cycleStartDate: cycleStartDate.toISOString(),
+          cycleEndDate: cycleEndDate.toISOString(),
           potes: amounts.potes,
           toppings: amounts.toppings,
           barquillos: amounts.barquillos,

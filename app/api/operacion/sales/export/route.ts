@@ -192,10 +192,7 @@ export async function GET(req: Request) {
       { status: 401 },
     );
   }
-  const authorization = authorizeOperationSession(
-    session,
-    "sales.export",
-  );
+  const authorization = authorizeOperationSession(session, "sales.export");
 
   if (!authorization.ok) {
     return NextResponse.json(
@@ -417,7 +414,10 @@ export async function GET(req: Request) {
      * Si no existen coincidencias, generamos igualmente un CSV
      * válido con sus encabezados.
      */
-    if (candidateSaleIds !== null && candidateSaleIds.size === 0) {
+    const hasNoCandidateSales =
+      candidateSaleIds !== null && (candidateSaleIds as Set<number>).size === 0;
+
+    if (hasNoCandidateSales) {
       const emptyCsv = `\uFEFF${buildCsvRow(headers)}\r\n`;
 
       return new Response(emptyCsv, {

@@ -5,6 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import AdminRegistroCard from "../operacion/components/AdminRegistroCard";
 import AdminClienteDetalle from "../operacion/components/AdminClienteDetalle";
 
+import type {
+  CustomerLoyaltySummary,
+  CustomerRewardSummary,
+} from "../../lib/loyalty/customer-loyalty.types";
+
 type Premio = {
   id: number;
   nombre: string;
@@ -35,16 +40,59 @@ export default function ClientesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
   const [mensaje, setMensaje] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+    "info",
+  );
   const [cargando, setCargando] = useState(true);
   const [procesandoCanje, setProcesandoCanje] = useState(false);
   const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
   const [cargandoRol, setCargandoRol] = useState(true);
   const [mostrarRegistro, setMostrarRegistro] = useState(true);
+  const [customerLoyalty, setCustomerLoyalty] =
+    useState<CustomerLoyaltySummary | null>(null);
+  const [cargandoFidelizacion, setCargandoFidelizacion] = useState(false);
 
   useEffect(() => {
     cargarDatos();
     cargarSesion();
   }, []);
+
+  useEffect(() => {
+    if (!clienteSeleccionadoId) {
+      setCustomerLoyalty(null);
+      return;
+    }
+
+    void cargarFidelizacion(Number(clienteSeleccionadoId));
+  }, [clienteSeleccionadoId]);
+
+  async function cargarFidelizacion(clienteId: number) {
+    try {
+      setCargandoFidelizacion(true);
+      setCustomerLoyalty(null);
+
+      const res = await fetch(`/api/loyalty/customers/${clienteId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMensaje(
+          data.message || "No se pudo cargar la fidelización del cliente.",
+        );
+        return;
+      }
+
+      setCustomerLoyalty(data.loyalty as CustomerLoyaltySummary);
+    } catch (error) {
+      console.error("Error cargando fidelización del cliente:", error);
+      setMensaje("Ocurrió un error al cargar la fidelización del cliente.");
+    } finally {
+      setCargandoFidelizacion(false);
+    }
+  }
 
   const cargarSesion = async () => {
     try {
@@ -182,10 +230,8 @@ export default function ClientesPage() {
     clientes.find((c) => String(c.id) === String(clienteSeleccionadoId)) ||
     null;
 
-  const premiosArray = Array.isArray(cliente?.premios) ? cliente.premios : [];
-  const premiosActivos = premiosArray.filter(
-    (premio: Premio) => premio.estado === "activo",
-  );
+  const premiosActivos: CustomerRewardSummary[] =
+    customerLoyalty?.activeRewards ?? [];
 
   const exportarClientesCSV = () => {
     try {
@@ -446,10 +492,12 @@ export default function ClientesPage() {
 
                 <AdminClienteDetalle
                   cliente={cliente}
+                  loyalty={customerLoyalty}
                   premiosActivos={premiosActivos}
+                  cargandoFidelizacion={cargandoFidelizacion}
                   mensaje={mensaje}
+                  tipoMensaje={tipoMensaje}
                   setMensaje={setMensaje}
-                  procesandoCanje={procesandoCanje}
                   rol={rol}
                   exportarCSV={exportarClientesCSV}
                   mostrarAccionesAdministrativas={true}
