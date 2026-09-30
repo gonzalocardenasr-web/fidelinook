@@ -865,7 +865,7 @@ export default function HistorialVentasPage() {
                 />
               </div>
 
-              <div className="min-w-60 flex-1">
+              <div className="min-w-50 flex-1">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Búsqueda general
                 </label>
