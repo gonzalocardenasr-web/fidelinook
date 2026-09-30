@@ -37,8 +37,16 @@ export default function AdminLoginPage() {
         return;
       }
 
-      setMensaje("Ingresando al panel...");
-      window.location.href = "/admin";
+      const destination =
+        data.role === "preparation" ? "/operacion/cola" : "/admin";
+
+      setMensaje(
+        data.role === "preparation"
+          ? "Ingresando a preparación..."
+          : "Ingresando al panel...",
+      );
+
+      window.location.href = destination;
     } catch (error) {
       console.error("Error conectando login:", error);
       setError("Ocurrió un error al intentar iniciar sesión.");

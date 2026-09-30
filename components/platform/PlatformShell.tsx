@@ -387,10 +387,25 @@ export default function PlatformShell({ children }: PlatformShellProps) {
   const isPreparationStation =
     pathname.startsWith("/operacion/cola") && session?.role === "preparation";
 
+  useEffect(() => {
+    if (!session || session.role !== "preparation") return;
+    if (pathname.startsWith("/operacion/cola")) return;
+
+    router.replace("/operacion/cola");
+  }, [pathname, router, session]);
+
   if (sessionLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-200 border-t-[#4C00F7]" />
+      </div>
+    );
+  }
+
+  if (session?.role === "preparation" && !isPreparationStation) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F6F3FF]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-200 border-t-[#4C00F7]" />
       </div>
     );
   }
