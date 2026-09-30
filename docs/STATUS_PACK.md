@@ -1,6 +1,6 @@
 # STATUS PACK — PLATAFORMA NOOK
 
-**Última actualización:** 29-09-2026
+**Última actualización:** 30-09-2026
 **Estado:** Documento vivo
 **Propósito:** Fuente de continuidad técnica y funcional del desarrollo de Plataforma Nook.
 
@@ -1225,18 +1225,13 @@ Validación habitual:
 
 `npm.cmd run build`
 
-Baseline conocido:
+Baseline vigente:
 
-12 errores TypeScript preexistentes en 6 archivos:
-
-- `app/api/dashboard/overview/route.ts`
-- `app/api/operacion/sales/export/route.ts`
-- `app/api/subscriptions/register-consumption/route.ts`
-- `app/clientes/page.tsx`
-- `app/operacion/page.tsx`
-- `components/operations/OrderQueueCard.tsx`
-
-No atribuirlos a un DEV nuevo si siguen siendo exactamente el baseline.
+- `TECH-TS-01` cerró la deuda TypeScript conocida durante DEV-UX-ARCH-01.
+- `npx.cmd tsc --noEmit` finaliza con 0 errores.
+- El build productivo también fue validado exitosamente.
+- No utilizar nuevamente el antiguo baseline de 12 errores como referencia.
+- Nuevos errores TypeScript deben tratarse como regresiones o deuda nueva hasta determinar su origen.
 
 Deploy habitual:
 
@@ -1280,19 +1275,20 @@ Estado:
 - DEV-UX-ARCH-01.1 — Definir arquitectura objetivo y reglas UX — COMPLETADO.
 - DEV-UX-ARCH-01.2 — Construir carcasa base de Plataforma Nook — COMPLETADO.
 - DEV-UX-ARCH-01.3A — Integrar POS — COMPLETADO.
-- DEV-UX-ARCH-01.3B — Integrar Preparación + Historial — SIGUIENTE.
+- DEV-UX-ARCH-01.3B.1 — Resolver identidad y autorización de estación de Preparación — COMPLETADO.
+- TECH-TS-01 — Resolver baseline TypeScript — COMPLETADO.
+- DEV-UX-ARCH-01.3B.2 — Integrar modos Plataforma y Estación en Preparación — COMPLETADO.
+- DEV-UX-ARCH-01.3B.3 — Integrar Historial — SIGUIENTE.
 
 ### POS como baseline visual
 
-El POS fue integrado al PlatformShell y normalizado visualmente.
+El POS está integrado al PlatformShell y constituye el baseline visual validado de las superficies internas.
 
-Las decisiones visuales validadas se consolidan en:
+Las decisiones visuales vigentes se consolidan en:
 
 `docs/POS_UI_VOCABULARY_V1.md`
 
-POS UI Vocabulary v1 pasa a ser el baseline visual para superficies internas de Plataforma Nook.
-
-Principios relevantes:
+Principios:
 
 - optimización para notebook ~14" en superficies internas estándar;
 - alta densidad operacional sin sacrificar legibilidad;
@@ -1305,67 +1301,151 @@ Principios relevantes:
 
 Las superficies especializadas pueden divergir cuando exista una razón funcional o ergonómica explícita.
 
-### Preparación — dos modos de presentación
+### Preparación — arquitectura implementada
 
-Se cierra conceptualmente que Preparación tendrá dos contextos de uso.
+Preparación dispone de dos modos de presentación sobre una misma capacidad operacional.
 
 #### Platform Mode
 
-Para cashier/admin/superadmin u otro usuario operacional autorizado que accede a Preparación desde Plataforma Nook:
+Aplica a usuarios operacionales autorizados que acceden a Preparación desde Plataforma Nook.
+
+Características:
 
 - mantiene PlatformShell;
-- mantiene navegación correspondiente a sus capabilities;
-- breadcrumb conceptual `Operación › Preparación`;
-- Preparación funciona como una superficie operacional más de Plataforma Nook.
+- mantiene navegación según capabilities;
+- Preparación funciona como superficie operacional de Plataforma Nook;
+- ruta vigente: `/operacion/cola`.
 
 #### Preparation Station Mode
 
-Para tablets dedicadas a preparación:
+Aplica a identidades dedicadas de estación con rol `preparation`.
 
-- identidad operacional restringida;
-- ingreso directo a Preparación;
+Características:
+
+- ingreso directo a `/operacion/cola`;
 - sin sidebar;
-- sin navegación global;
-- sin accesos a otros módulos;
+- sin topbar global;
+- sin navegación general;
+- sin logout visible en la estación dedicada;
 - máximo aprovechamiento del viewport;
-- futura optimización touch-first para tablet ~8–9";
-- autorización server-side obligatoria.
+- otras rutas internas son reconducidas hacia `/operacion/cola`;
+- `/admin/login` permanece accesible como vía técnica de autenticación/cambio de identidad;
+- optimización touch-first específica para tablet ~8–9" queda diferida a DEV-UX-ARCH-01.7.
 
-La restricción NO debe implementarse mediante nombre, email o ID hardcodeado de una cuenta.
+La ausencia de logout visible en Station Mode es una decisión de superficie para una estación dedicada, no un defecto pendiente.
 
-La identidad de estación tampoco debe depender únicamente de ocultamiento frontend.
+### Identidad y autorización de Preparación
 
-### UXARCH-OPEN-001 — actualización
+`UXARCH-OPEN-001` queda CERRADO.
 
-Sigue abierta la implementación técnica de identidad/autorización de estación.
+Decisión implementada:
 
-Debe resolverse antes de implementar Preparation Station Mode.
+- rol operacional persistido: `preparation`;
+- capability autorizada: `orders.operate`;
+- `preparation` no recibe permisos de POS, caja, clientes, loyalty, Analytics, catálogo administrativo, inventario u otras capacidades no requeridas;
+- Station Mode se determina por rol/capability, no por nombre, email o ID hardcodeado;
+- la restricción no depende exclusivamente del frontend;
+- se mantiene la arquitectura Supabase Auth → `operational_users` → sesión verificada → RBAC server-side;
+- no se creó un segundo sistema de autenticación;
+- no se modificó el mecanismo de refresh/sesión de INC-PERF-01.7.
 
-Opciones a evaluar sobre el RBAC vigente:
+Identidades previstas:
 
-- nuevo rol `preparation`;
-- capability específica;
-- identidad/tipo de estación;
-- combinación mínima de las anteriores.
+- Preparación Local;
+- Preparación Web.
 
-La decisión debe preservar DEV-AUTH-01 y evitar reabrir innecesariamente la arquitectura de Auth.
+Ambas deben utilizar el mismo rol `preparation`; no crear roles específicos por dispositivo salvo nueva necesidad funcional demostrada.
 
-INC-PERF-01.7 continúa en observación operacional; evitar cambios innecesarios en ciclo de sesión/refresh.
+La identidad `Preparación Local` fue creada y validada operacionalmente.
 
-### Siguiente paso
+### Seguridad complementaria
 
-`DEV-UX-ARCH-01.3B.1 — Resolver identidad y autorización de estación de Preparación`
+Durante DEV-UX-ARCH-01.3B.1 se endurecieron endpoints de loyalty que podían ser invocados por una sesión operacional autenticada sin comprobar la capability correspondiente.
 
-Antes de modificar la Cola, realizar radiografía dirigida únicamente de:
+Los endpoints de envío asociados a premio/canje/sello exigen autorización de loyalty además de las validaciones existentes.
 
-- definición vigente de roles;
-- matriz de capabilities;
-- `operational_users`;
-- resolución server-side de sesión/capabilities;
-- guards de `/operacion/cola`;
-- APIs utilizadas por Cola;
-- PlatformShell/layout que actualmente envuelve `/operacion/cola`.
+Objetivo:
 
-No realizar una nueva radiografía general del proyecto.
+Una identidad `preparation` no debe poder ejecutar operaciones de loyalty mediante acceso directo a APIs aunque dichas superficies no estén visibles.
+
+### Migración de rol
+
+La migración:
+
+`database/migrations/20260930_01_add_preparation_operational_role.sql`
+
+incorporó `preparation` al constraint de roles operacionales.
+
+Constraint validado con:
+
+- `superadmin`;
+- `admin`;
+- `cashier`;
+- `preparation`.
+
+### TECH-TS-01
+
+**Estado: CERRADO**
+
+La deuda TypeScript conocida que constituía el baseline anterior fue resuelta durante DEV-UX-ARCH-01.
+
+Validación final:
+
+- `npx.cmd tsc --noEmit` → 0 errores;
+- `npm.cmd run build` → exitoso.
+
+El antiguo baseline de 12 errores en 6 archivos deja de ser válido.
+
+No utilizarlo como tolerancia para desarrollos posteriores.
+
+### QA DEV-UX-ARCH-01.3B.2
+
+Validado después de deploy:
+
+- usuario normal autorizado → Preparación en Platform Mode;
+- `Preparación Local` → login directo a `/operacion/cola`;
+- Station Mode → sin navegación global;
+- acceso manual de `preparation` a `/operacion` → redirección a `/operacion/cola`;
+- acceso manual a otras superficies internas protegidas → redirección a `/operacion/cola`;
+- `/admin/login` permanece accesible;
+- TypeScript → 0 errores;
+- build productivo → exitoso;
+- deploy → exitoso;
+- QA funcional → aprobado.
+
+DEV-UX-ARCH-01.3B.2 queda COMPLETADO.
+
+### Decisión sobre Auth/sesión
+
+INC-PERF-01.7 continúa en observación operacional.
+
+DEV-UX-ARCH-01.3B.1 y 3B.2 no modificaron el mecanismo de refresh/sesión.
+
+Mantener esta restricción:
+
+- no reintroducir refresh local;
+- no recrear `/api/session/refresh`;
+- no agregar mecanismos paralelos de recuperación de sesión;
+- no modificar Auth/session sin evidencia concreta de un defecto.
+
+### Siguiente desarrollo
+
+`DEV-UX-ARCH-01.3B.3 — Integrar Historial`
+
+Objetivo inmediato:
+
+Integrar Historial a la arquitectura vigente de Plataforma Nook respetando:
+
+- PlatformShell;
+- navegación capability-driven;
+- POS UI Vocabulary v1;
+- naturaleza operacional de Historial;
+- optimizaciones de performance ya cerradas en INC-PERF-01.HIST-01 / HIST-FIX / HIST-02;
+- autorización server-side vigente;
+- comportamiento funcional existente.
+
+No reconstruir la lógica de Historial ni reabrir optimizaciones ya cerradas sin evidencia de un problema.
+
+Después de Historial continúa la implementación incremental definida en DEV-UX-ARCH-01.
 
 ---
