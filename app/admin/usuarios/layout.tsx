@@ -1,9 +1,9 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 
 import PlatformShell from "@/components/platform/PlatformShell";
 
 export const metadata: Metadata = {
-  title: "Analytics",
+  title: "Usuarios",
 };
 
 export default function Layout({

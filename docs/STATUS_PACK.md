@@ -1,6 +1,6 @@
 # STATUS PACK — PLATAFORMA NOOK
 
-**Última actualización:** 27-09-2026
+**Última actualización:** 29-09-2026
 **Estado:** Documento vivo
 **Propósito:** Fuente de continuidad técnica y funcional del desarrollo de Plataforma Nook.
 
@@ -69,12 +69,33 @@ Los usuarios operacionales constituyen un dominio de identidad separado de los c
   - DEV-AUTH-01.3A–01.3I — Aplicación de matriz de roles
   - DEV-AUTH-01.4 — Gestión de usuarios operacionales
   - DEV-AUTH-01.5 — Retiro legacy, cierre RBAC y pruebas negativas
+- INC-AUTH-01 — Robustecer activación de usuarios operacionales
+- INC-PERF-01.2A — Reducir latencia crítica de confirmación de venta
+- INC-PERF-01.2B — Instrumentar camino crítico de confirmación de venta
+- INC-PERF-01.HIST-01 — Acotar historial operacional a 15 días
+- INC-PERF-01.HIST-FIX — Corregir regresión 500 del historial
+- INC-PERF-01.HIST-02 — Optimizar historial operacional, carga de detalle y encabezados
+- INC-PERF-01.4 — Implementar cola de preparación en tiempo real
+- INC-PERF-01.5 — Optimizar búsqueda de clientes en POS
+- INC-PERF-01.6 — Paralelizar validaciones de autenticación y caja
+- INC-EMAIL-01 — Corregir corte diario del presupuesto de emails
+- DEV-UX-POS-01 — Reorganizar flujo de pedido y pago en POS
+- DEV-AUTH-UX-01 — Mejorar visibilidad de contraseña en acceso operacional
+- DEV-UX-POS-02 — Actualizar motivos de regalo y descuento
 
 SEC-P0-01 está cerrado y no debe reabrirse sin nueva evidencia.
 
+### En observación
+
+- INC-PERF-01.7 — Sesión operacional resiliente / consolidación del ciclo de sesión.
+  - implementación desplegada;
+  - operación normal validada inicialmente;
+  - mantener en observación operacional natural antes de declararlo cerrado definitivamente;
+  - no introducir cambios innecesarios en Auth/sesión mientras permanezca en observación.
+
 ### Siguiente desarrollo
 
-- DEV-UX-ARCH-01 — Rediseñar arquitectura de información, navegación y superficies por rol.
+- DEV-UX-ARCH-01 — Rediseñar arquitectura de información, navegación, workspaces y superficies por rol.
 
 El frontend Analytics se construirá después de definir esta arquitectura y deberá consumir la capa analítica ya cerrada en DEV-ANL-01.
 
@@ -82,8 +103,6 @@ El frontend Analytics se construirá después de definir esta arquitectura y deb
 
 - DEV-AUDIT-01 — Auditoría operacional por usuario, estación y evento
 - DEV-LOY-EXP-02 — Automatizar expiración de premios y revisar acción manual global
-- DEV-AUTH-UX-01 — Estándar UX para creación/definición de contraseñas
-- DEV-UX-POS-01 — Evolución del workspace POS dentro de la arquitectura definitiva
 - SEC-HARD-01
 - DEV-SUP-01
 - DEV-OPS-01.1/01.2
@@ -94,6 +113,7 @@ El frontend Analytics se construirá después de definir esta arquitectura y deb
 - OBS-EMAIL-01
 - TECH-CAT-01
 - TECH-CAT-02
+- TECH-DEBT-01 — Technical Debt & Legacy Retirement
 - deuda de hardcode CAT
 - deuda TypeScript preexistente
 - deuda ESLint preexistente
@@ -101,6 +121,7 @@ El frontend Analytics se construirá después de definir esta arquitectura y deb
 Mailing/Resend permanece en stand-by por decisión explícita.
 
 ---
+
 ## 4. DEV-ANL-01 — Backend analítico
 
 **Estado: CERRADO**
@@ -807,21 +828,41 @@ No mezclar este cambio con AUTH ya cerrado.
 
 ---
 
-## 19. DEV-AUTH-UX-01 — UX de contraseñas
+## 19. DEV-AUTH-UX-01 — UX de acceso operacional
 
-**Estado: BACKLOG**
+**Estado: CERRADO — 29-09-2026**
 
-Toda superficie en que un usuario cree o defina contraseña debe incorporar:
+Se mejoró la experiencia de ingreso de contraseña en el acceso operacional incorporando visibilidad controlada de la contraseña.
 
-- control mostrar/ocultar contraseña;
-- confirmación de contraseña;
-- validación de coincidencia antes de enviar.
+Commit de cierre:
 
-Auditar como mínimo `/activar-acceso` y cualquier otro flujo vigente de definición/restablecimiento de contraseña.
+`104686f — DEV-AUTH-UX-01: mejorar visibilidad de contraseña en acceso operacional`
+
+Este DEV no modifica la arquitectura de autenticación ni RBAC establecida en DEV-AUTH-01.
 
 ---
 
 ## 20. Deuda técnica conocida
+
+### TECH-DEBT-01 — Technical Debt & Legacy Retirement
+
+Existe un backlog transversal permanente para retirar deuda técnica y capacidades legacy reemplazadas.
+
+Principio:
+
+Cuando una nueva implementación reemplaza funcionalidad existente, el trabajo no termina únicamente cuando la nueva capacidad funciona. Debe identificarse y retirar, cuando sea seguro, el código, endpoint, fallback, estado local, configuración o camino legacy que haya quedado sin consumidores.
+
+No mantener implementaciones duplicadas “por si acaso” indefinidamente.
+
+Elementos actualmente relevantes:
+
+- `operational_users.legacy_key` permanece físicamente en BD aunque ya no participa en autenticación/autorización;
+- compatibilidad transitoria con códigos históricos de motivos de descuento;
+- documentación histórica que ya no representa arquitectura vigente;
+- superficies frontend que DEV-UX-ARCH-01 determine reemplazar;
+- cualquier fallback o duplicación residual identificada durante futuros DEV.
+
+Los retiros deben ejecutarse de forma controlada y sólo después de comprobar que no existen consumidores legítimos.
 
 ### TypeScript
 
@@ -854,6 +895,51 @@ No mezclar correcciones masivas de lint con DEV funcionales no relacionados.
 
 ---
 
+## 20A. INC-PERF-01 — Performance y resiliencia operacional
+
+Durante el 27–29 de septiembre de 2026 se intervino el camino crítico operacional después de observar latencias y comportamiento deficiente de sesión.
+
+### Trabajo cerrado
+
+- INC-PERF-01.2A — reducción de latencia crítica de confirmación de venta;
+- INC-PERF-01.2B — instrumentación del camino crítico;
+- INC-PERF-01.HIST-01 — historial operacional acotado a 15 días;
+- INC-PERF-01.HIST-FIX — corrección de regresión 500;
+- INC-PERF-01.HIST-02 — optimización del historial y carga de detalle;
+- INC-PERF-01.4 — cola de preparación en tiempo real;
+- INC-PERF-01.5 — optimización de búsqueda de clientes en POS;
+- INC-PERF-01.6 — paralelización de validaciones de autenticación y caja.
+
+### INC-PERF-01.7 — Sesión operacional resiliente
+
+**Estado: EN OBSERVACIÓN OPERACIONAL**
+
+Implementación desplegada:
+
+- `lib/operation-auth.ts` utiliza validación de claims y distingue indisponibilidad operacional;
+- `middleware.ts` fue retirado;
+- `proxy.ts` concentra el refresh cuando falta access token y existe refresh token;
+- no se limpia sesión automáticamente ante un error transitorio de refresh;
+- la recuperación local duplicada de sesión de Cola fue retirada;
+- `/api/session/refresh` fue retirado;
+- `/api/session` diferencia sesión inválida, indisponibilidad de Auth y error inesperado;
+- `/operacion` no destruye el estado de rol frente a errores que no sean 401;
+- logging temporal innecesario de Supabase fue retirado.
+
+Principio vigente:
+
+No reintroducir mecanismos duplicados de recuperación/refresh de sesión.
+
+En particular, no recrear:
+
+- recuperación local propia de Cola;
+- `/api/session/refresh`;
+- múltiples caminos independientes de refresh para resolver el mismo problema.
+
+Mantener observación natural durante operación real. Evitar modificar Auth/sesión durante DEV-UX-ARCH-01 salvo evidencia concreta de un defecto.
+
+---
+
 ## 21. Decisiones pendientes de negocio/métrica
 
 No forzar definiciones hasta contar con criterio suficiente para:
@@ -867,16 +953,91 @@ No forzar definiciones hasta contar con criterio suficiente para:
 
 ---
 
+## 21A. DEV-UX-POS-01 / DEV-UX-POS-02 — Evolución reciente del POS
+
+### DEV-UX-POS-01
+
+**Estado: CERRADO — 29-09-2026**
+
+Se reorganizó el flujo de pedido y pago del POS.
+
+Commit:
+
+`6095d98 — DEV-UX-POS-01: reorganizar flujo de pedido y pago en POS`
+
+DEV-UX-ARCH-01 debe preservar estas mejoras y tratarlas como baseline vigente del POS, no reconstruir el POS desde una versión histórica.
+
+### DEV-UX-POS-02
+
+**Estado: CERRADO — 29-09-2026**
+
+Se normalizaron los motivos operacionales de regalos y descuentos.
+
+Motivos de regalo vigentes, en orden:
+
+1. Cortesía comercial
+2. Promoción
+3. Compensación cliente
+4. NookLovers
+5. Otro
+
+Cuando se selecciona `Otro`, debe existir detalle obligatorio. Se persiste como:
+
+`Otro: <detalle>`
+
+Motivos de descuento manual vigentes, en orden:
+
+1. Cortesía comercial
+2. Promoción
+3. Descuento plataforma
+4. Compensación cliente
+5. NookLovers
+6. Otro
+
+Códigos internos nuevos:
+
+- `courtesy`
+- `promotion`
+- `platform_discount`
+- `customer_compensation`
+- `nooklovers`
+- `other`
+
+Durante la transición, backend/DB conserva compatibilidad con códigos históricos:
+
+- `complaint`
+- `agreement`
+- `exceptional_promotion`
+- `service_error`
+
+No reescribir registros históricos para convertirlos a los nuevos códigos.
+
+Los helpers de visualización histórica deben continuar entendiendo códigos nuevos y legacy hasta completar el retiro mediante TECH-DEBT-01.
+
+La migración de DEV-UX-POS-02 fue ejecutada exitosamente, el despliegue fue validado y el QA funcional de regalos/descuentos fue aprobado.
+
+Commit:
+
+`431311e — DEV-UX-POS-02: actualizar motivos de regalo y descuento`
+
+---
+
 ## 22. Secuencia estratégica vigente
 
-Secuencia acordada:
+Secuencia vigente al corte del 29-09-2026:
 
 1. DEV-AUTH-01 — CERRADO;
-2. actualizar Status Pack — ESTE CORTE;
-3. DEV-UX-ARCH-01 — arquitectura final de información/navegación/workspaces por rol;
-4. iniciar implementación de frontend/flujo definitivo según arquitectura aprobada;
-5. construir Analytics UI dentro de esa arquitectura;
-6. abordar DEV específicos del backlog según prioridad y dependencia.
+2. INC-PERF-01.2–01.6 — CERRADOS;
+3. INC-PERF-01.7 — desplegado, EN OBSERVACIÓN OPERACIONAL;
+4. INC-EMAIL-01 — CERRADO;
+5. DEV-UX-POS-01 — CERRADO;
+6. DEV-AUTH-UX-01 — CERRADO;
+7. DEV-UX-POS-02 — CERRADO;
+8. actualizar Status Pack y efectuar handoff — ESTE CORTE;
+9. DEV-UX-ARCH-01 — SIGUIENTE DESARROLLO;
+10. implementar progresivamente la arquitectura aprobada;
+11. construir Analytics UI dentro de esa arquitectura;
+12. continuar backlog según prioridad y dependencias.
 
 Analytics backend permanece cerrado y disponible para consumo.
 
@@ -894,17 +1055,32 @@ No eliminar ni reescribir masivamente esos documentos sin un DEV documental espe
 
 ---
 
-## 24. Punto exacto de continuidad
+## 24. Punto exacto de continuidad — HANDOFF 29-09-2026
 
-### Cerrado inmediatamente antes de este corte
+### Estado del repositorio al corte
 
-- DEV-ANL-01 — backend analítico;
-- DEV-CASH-02 — retiro recomendado y comprobante de cierre;
-- DEV-AUTH-01 — identidad operacional, RBAC, gestión de usuarios y retiro legacy.
+El handoff fue generado con working tree limpio.
 
-### Siguiente trabajo
+Último commit observado:
 
-**DEV-UX-ARCH-01 — Rediseñar arquitectura de información y navegación por rol**
+`431311e — DEV-UX-POS-02: actualizar motivos de regalo y descuento`
+
+Últimos cambios relevantes:
+
+- `431311e` — DEV-UX-POS-02
+- `104686f` — DEV-AUTH-UX-01
+- `6095d98` — DEV-UX-POS-01
+- `6822a2e` — INC-PERF-01.7
+- `3c04e8c` — INC-EMAIL-01
+- `ea547cd` — INC-PERF-01.6
+- `fe3dd8b` — INC-PERF-01.5
+- `ec43bc1` — INC-PERF-01.4
+
+### Siguiente desarrollo
+
+**DEV-UX-ARCH-01 — Arquitectura de información, navegación y workspaces por rol**
+
+Este DEV debe comenzar por diseño/diagnóstico arquitectónico, no por cambios visuales aislados.
 
 Objetivo:
 
@@ -914,30 +1090,85 @@ Debe resolver, como mínimo:
 
 - shell/navegación por rol;
 - workspace operacional;
+- workspace administrativo;
 - módulos visibles por rol;
-- separación entre operación y administración;
+- separación entre operación, administración y analítica;
 - preservación de estado del POS;
 - pantalla global de Clientes vs uso contextual de clientes;
-- campañas vigentes para operación vs gestión de campañas;
-- caja y responsable de sesión;
+- campañas vigentes para operación vs gestión administrativa de campañas;
+- caja activa y responsable de sesión;
 - estaciones/tablets de preparación;
-- convivencia futura de Analytics dentro de la arquitectura;
-- superficies legacy que se mantienen, migran o desaparecen;
-- orden de migración hacia la arquitectura definitiva.
+- convivencia futura de Analytics;
+- superficies legacy que se mantienen, migran, consolidan o retiran;
+- estrategia incremental de migración sin big-bang.
 
-### Restricciones
+### Restricciones arquitectónicas
 
-- no debilitar RBAC ya cerrado;
-- no usar ocultamiento frontend como sustituto de autorización;
-- no mezclar clientes con usuarios operacionales;
-- no abrir Analytics directamente a `authenticated`;
-- no utilizar `service_role` en browser;
-- no diseñar navegación únicamente alrededor de las URLs históricas;
-- priorizar continuidad operacional del POS durante la migración.
+No:
 
-### Primera acción DEV-UX-ARCH-01
+- debilitar RBAC ya cerrado;
+- usar ocultamiento frontend como sustituto de autorización server-side;
+- mezclar clientes loyalty con usuarios operacionales;
+- abrir Analytics directamente a `authenticated`;
+- utilizar `service_role` en browser;
+- diseñar la nueva arquitectura simplemente copiando las URLs históricas;
+- destruir estado del POS por navegación;
+- reintroducir mecanismos legacy de Auth/session retirados;
+- modificar Auth/session durante INC-PERF-01.7 salvo evidencia concreta;
+- mantener indefinidamente componentes o rutas reemplazadas.
 
-Levantar un inventario funcional de las superficies actuales y clasificarlas por:
+### Hipótesis de trabajo
+
+`/operacion` es candidato a evolucionar hacia el workspace principal de operación local.
+
+Capacidades candidatas:
+
+- POS;
+- Cola de Preparación;
+- Historial;
+- Inventario operacional;
+- Caja;
+- contexto operacional de campañas vigentes.
+
+“Nueva Venta” debe evaluarse conceptualmente como `POS`.
+
+La capacidad RBAC y la superficie de navegación son conceptos distintos.
+
+Ejemplo:
+
+`customers.operate` permite usar clientes dentro del flujo POS sin obligar a mostrar al cashier una pantalla administrativa global de Clientes.
+
+De igual forma:
+
+`campaigns.manage` pertenece a administración, mientras el cashier sólo requiere información operacional sobre promociones/campañas aplicables.
+
+### Estaciones de preparación
+
+Existe:
+
+- una tablet actual para preparación;
+- intención de incorporar una segunda tablet para preparación web.
+
+No utilizar cuentas `admin` en dispositivos compartidos.
+
+DEV-UX-ARCH-01 debe determinar si esto requiere:
+
+- nuevo rol `preparation`;
+- capacidades específicas;
+- identidad de estación;
+- o una combinación.
+
+La decisión debe respetar autorización server-side y mínimo privilegio.
+
+DEV-AUDIT-01 deberá posteriormente distinguir actor/persona de estación/dispositivo.
+
+### Primera acción en el nuevo chat
+
+NO implementar inmediatamente.
+
+Primero utilizar el Status Pack y solicitar una radiografía amplia del repositorio mediante un único bloque PowerShell cuando sea posible.
+
+Levantar un inventario funcional de superficies y clasificarlas en:
 
 1. operación;
 2. administración;
@@ -945,13 +1176,91 @@ Levantar un inventario funcional de las superficies actuales y clasificarlas por
 4. cliente/público;
 5. infraestructura/técnico.
 
-Luego mapear cada superficie contra:
+Mapear cada superficie contra:
 
-- rol autorizado;
+- usuario/rol;
 - capacidad RBAC;
 - frecuencia de uso;
 - criticidad operacional;
 - dependencia con POS;
-- estado actual: conservar / mover / rediseñar / retirar.
+- dependencia con caja;
+- naturaleza contextual o administrativa;
+- estado objetivo: conservar / mover / consolidar / rediseñar / retirar.
 
-No implementar todavía cambios masivos de frontend antes de cerrar este blueprint.
+Con esa evidencia, proponer el blueprint objetivo de DEV-UX-ARCH-01 antes de implementar.
+
+### Estándar de trabajo para continuidad
+
+El usuario no es desarrollador profesional.
+
+Las instrucciones deben ser ejecutables y exactas.
+
+Maximizar el trabajo útil por iteración:
+
+- agrupar diagnósticos PowerShell independientes;
+- agrupar consultas SQL independientes;
+- evitar pedir un dato por turno cuando puedan obtenerse varios de forma segura;
+- separar iteraciones sólo cuando el resultado A sea realmente necesario para definir B.
+
+Para modificaciones de código:
+
+1. indicar `RUTA: <archivo>`;
+2. indicar filas exactas basadas en la radiografía vigente o un anchor inequívoco;
+3. indicar claramente insertar / reemplazar / eliminar;
+4. entregar bloques completos listos para copiar;
+5. no usar scripts automáticos de parcheo como mecanismo normal de implementación.
+
+Para SQL:
+
+1. explicar objetivo;
+2. indicar si es lectura o mutación;
+3. indicar reversibilidad;
+4. entregar SQL completo;
+5. usar semáforo de riesgo;
+6. no asumir resultado hasta recibir evidencia.
+
+Validación habitual:
+
+`npx.cmd tsc --noEmit`
+
+`npm.cmd run build`
+
+Baseline conocido:
+
+12 errores TypeScript preexistentes en 6 archivos:
+
+- `app/api/dashboard/overview/route.ts`
+- `app/api/operacion/sales/export/route.ts`
+- `app/api/subscriptions/register-consumption/route.ts`
+- `app/clientes/page.tsx`
+- `app/operacion/page.tsx`
+- `components/operations/OrderQueueCard.tsx`
+
+No atribuirlos a un DEV nuevo si siguen siendo exactamente el baseline.
+
+Deploy habitual:
+
+`edit → build → commit/push main → deploy automático → QA controlado`
+
+No cerrar un DEV únicamente porque compila.
+
+Definition of Done mínima:
+
+- implementación completa;
+- seguridad/RBAC preservados;
+- TypeScript comparado contra baseline;
+- build productivo exitoso;
+- migraciones ejecutadas cuando correspondan;
+- deploy exitoso;
+- QA funcional;
+- datos/invariantes verificados cuando corresponda;
+- legacy reemplazado identificado para retiro;
+- Status Pack actualizado cuando el cambio sea relevante.
+
+Después de cada DEV o pack cerrado entregar siempre:
+
+```bash
+git add .
+git commit -m "<ID DEV>: <descripción breve>"
+git push
+```
