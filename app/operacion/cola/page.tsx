@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import OrderQueue from "../../../components/operations/OrderQueue";
 import { QueueOrder, OrderStatus } from "../../../types/operations";
@@ -112,34 +111,45 @@ export default function ColaPreparacionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <Link
-            href="/operacion"
-            className="inline-flex rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition duration-200 hover:bg-white/25 active:scale-[0.98]"
-          >
-            ← Volver a operación
-          </Link>
+    <main className="min-h-[calc(100vh-3.5rem)] bg-[#F6F3FF] p-3 md:p-4">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600">
+              Operación
+            </p>
+            <h1 className="text-lg font-bold text-neutral-950">Preparación</h1>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Pedidos activos agrupados por estado operativo.
+            </p>
+          </div>
 
-          <h1 className="mt-3 text-3xl font-bold">Cola de preparación</h1>
-
-          <p className="text-sm opacity-90">
-            Pedidos no entregados, agrupados por estado operativo.
-          </p>
-        </div>
+          <div className="rounded-xl bg-violet-50 px-3 py-2 text-right">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+              Pedidos activos
+            </p>
+            <p className="text-lg font-bold leading-none text-violet-950">
+              {orders.length}
+            </p>
+          </div>
+        </header>
 
         {message && (
-          <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-sm text-neutral-700">
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+          >
             {message}
           </div>
         )}
 
-        <OrderQueue
-          orders={orders}
-          loading={loading}
-          onChangeStatus={cambiarEstado}
-        />
+        <section className="min-h-0 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+          <OrderQueue
+            orders={orders}
+            loading={loading}
+            onChangeStatus={cambiarEstado}
+          />
+        </section>
       </div>
     </main>
   );

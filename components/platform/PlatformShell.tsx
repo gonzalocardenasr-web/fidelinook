@@ -384,6 +384,25 @@ export default function PlatformShell({ children }: PlatformShellProps) {
     }
   }
 
+  const isPreparationStation =
+    pathname.startsWith("/operacion/cola") && session?.role === "preparation";
+
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-200 border-t-[#4C00F7]" />
+      </div>
+    );
+  }
+
+  if (isPreparationStation) {
+    return (
+      <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-950">
       <aside
