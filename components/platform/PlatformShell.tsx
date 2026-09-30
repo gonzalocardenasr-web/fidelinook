@@ -396,7 +396,7 @@ export default function PlatformShell({ children }: PlatformShellProps) {
 
   if (sessionLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#F6F3FF]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-200 border-t-[#4C00F7]" />
       </div>
     );
@@ -419,7 +419,7 @@ export default function PlatformShell({ children }: PlatformShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-950">
+    <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
       <aside
         className="
           group fixed inset-y-0 left-0 z-50

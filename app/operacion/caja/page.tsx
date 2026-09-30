@@ -1403,44 +1403,11 @@ export default function CashRegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-3">
-      <div className="mx-auto flex min-h-[calc(100vh-24px)] w-full max-w-[1600px] flex-col">
-        <div className="flex shrink-0 justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => void loadCashRegister()}
-            disabled={
-              loading ||
-              loadingMovements ||
-              loadingClosingHistory ||
-              loadingClosingPreview ||
-              submittingClosing
-            }
-            className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading || loadingMovements ? "Actualizando..." : "Actualizar"}
-          </button>
-
-          {session && !showClosingForm && (
-            <button
-              type="button"
-              onClick={startClosing}
-              disabled={
-                loadingMovements ||
-                submittingMovement ||
-                loadingClosingPreview ||
-                submittingClosing
-              }
-              className="cursor-pointer rounded-lg bg-neutral-900 px-3 py-2 text-[12px] font-black text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cerrar caja
-            </button>
-          )}
-        </div>
-
+    <main className="h-[calc(100vh-4rem)] overflow-hidden p-3">
+      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col">
         {message && (
           <div
-            className={`mt-2 shrink-0 rounded-lg border px-3 py-2 text-[12px] font-semibold ${
+            className={`mb-2 shrink-0 rounded-lg border px-3 py-2 text-[12px] font-semibold ${
               messageType === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : messageType === "error"
@@ -1452,7 +1419,7 @@ export default function CashRegisterPage() {
           </div>
         )}
 
-        <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
           {loading ? (
             <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <p className="text-sm text-neutral-600">
@@ -1515,6 +1482,38 @@ export default function CashRegisterPage() {
                       </dd>
                     </div>
                   </dl>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void loadCashRegister()}
+                      disabled={
+                        loading ||
+                        loadingMovements ||
+                        loadingClosingHistory ||
+                        loadingClosingPreview ||
+                        submittingClosing
+                      }
+                      className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loading || loadingMovements
+                        ? "Actualizando..."
+                        : "Actualizar"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={startClosing}
+                      disabled={
+                        loadingMovements ||
+                        submittingMovement ||
+                        loadingClosingPreview ||
+                        submittingClosing
+                      }
+                      className="cursor-pointer rounded-lg bg-neutral-900 px-3 py-2 text-[11px] font-black text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Cerrar caja
+                    </button>
+                  </div>
                 </div>
 
                 {session.opening_notes && (
@@ -2596,18 +2595,37 @@ export default function CashRegisterPage() {
             </section>
           ) : (
             <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-              <div>
-                <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
-                  Caja cerrada
-                </span>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
+                    Caja cerrada
+                  </span>
 
-                <h2 className="mt-3 text-xl font-bold text-neutral-950">
-                  Abrir caja
-                </h2>
+                  <h2 className="mt-3 text-xl font-bold text-neutral-950">
+                    Abrir caja
+                  </h2>
 
-                <p className="mt-1 text-sm text-neutral-600">
-                  Registra el fondo inicial antes de comenzar la operación.
-                </p>
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Registra el fondo inicial antes de comenzar la operación.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void loadCashRegister()}
+                  disabled={
+                    loading ||
+                    loadingMovements ||
+                    loadingClosingHistory ||
+                    loadingClosingPreview ||
+                    submittingClosing
+                  }
+                  className="shrink-0 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading || loadingMovements
+                    ? "Actualizando..."
+                    : "Actualizar"}
+                </button>
               </div>
 
               <form
@@ -2687,7 +2705,7 @@ export default function CashRegisterPage() {
 
         {!loading && (
           <>
-            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
@@ -2729,9 +2747,9 @@ export default function CashRegisterPage() {
                   </p>
                 </div>
               ) : (
-                <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200">
+                <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl border border-neutral-200">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-neutral-50">
+                    <thead className="sticky top-0 z-10 bg-neutral-50">
                       <tr>
                         <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
                           Sesión

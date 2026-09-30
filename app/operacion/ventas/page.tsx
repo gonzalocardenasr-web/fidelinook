@@ -828,14 +828,14 @@ export default function HistorialVentasPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-3">
-      <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1600px] flex-col">
+    <main className="h-[calc(100vh-4rem)] overflow-hidden p-3">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-col">
+        {" "}
         {message && (
           <div className="mt-2 shrink-0 rounded-lg border border-red-100 bg-white px-3 py-2 text-[12px] font-semibold text-red-700">
             {message}
           </div>
         )}
-
         <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
           <div className="shrink-0">
             <div className="flex flex-wrap items-end gap-2">
