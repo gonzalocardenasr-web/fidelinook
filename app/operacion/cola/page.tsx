@@ -111,7 +111,7 @@ export default function ColaPreparacionPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-[#F6F3FF] p-3 md:p-4">
+    <main className="h-full">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
           <div>

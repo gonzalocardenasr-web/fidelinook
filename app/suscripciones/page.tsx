@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -179,7 +179,7 @@ export default function SuscripcionesPage() {
     }
 
     const confirmado = window.confirm(
-      `¿Confirmas asignar una suscripción ${billingPeriodAsignacion} a ${clienteSeleccionado.nombre}?`,
+      `Â¿Confirmas asignar una suscripciÃ³n ${billingPeriodAsignacion} a ${clienteSeleccionado.nombre}?`,
     );
 
     if (!confirmado) return;
@@ -205,12 +205,12 @@ export default function SuscripcionesPage() {
 
       if (!res.ok) {
         setTipoMensaje("error");
-        setMensaje(data.message || "No se pudo asignar la suscripción.");
+        setMensaje(data.message || "No se pudo asignar la suscripciÃ³n.");
         return;
       }
 
       setTipoMensaje("success");
-      setMensaje("Suscripción asignada correctamente.");
+      setMensaje("SuscripciÃ³n asignada correctamente.");
       await cargarDatos();
     } finally {
       setProcesandoAsignacion(false);
@@ -228,13 +228,13 @@ export default function SuscripcionesPage() {
     if (!cantidades.some((valor) => valor > 0)) {
       setTipoMensaje("error");
       setMensaje(
-        "Debes configurar al menos un producto para generar un código.",
+        "Debes configurar al menos un producto para generar un cÃ³digo.",
       );
       return;
     }
 
     const confirmado = window.confirm(
-      `¿Confirmas generar un código para una suscripción ${billingPeriodCodigo}?`,
+      `Â¿Confirmas generar un cÃ³digo para una suscripciÃ³n ${billingPeriodCodigo}?`,
     );
 
     if (!confirmado) return;
@@ -259,13 +259,13 @@ export default function SuscripcionesPage() {
 
       if (!res.ok) {
         setTipoMensaje("error");
-        setMensaje(data.message || "No se pudo generar el código.");
+        setMensaje(data.message || "No se pudo generar el cÃ³digo.");
         return;
       }
 
       setCodigoGenerado(data.code);
       setTipoMensaje("success");
-      setMensaje("Código generado correctamente.");
+      setMensaje("CÃ³digo generado correctamente.");
       await cargarDatos();
     } finally {
       setProcesandoCodigo(false);
@@ -288,7 +288,7 @@ export default function SuscripcionesPage() {
       const data = await res.json();
       setRol(data.role || null);
     } catch (error) {
-      console.error("Error cargando sesión:", error);
+      console.error("Error cargando sesiÃ³n:", error);
       setRol(null);
     } finally {
       setCargandoRol(false);
@@ -297,7 +297,7 @@ export default function SuscripcionesPage() {
 
   const eliminarAsignacion = async (claimId: number) => {
     const confirmado = window.confirm(
-      "¿Seguro que quieres eliminar este registro pendiente?",
+      "Â¿Seguro que quieres eliminar este registro pendiente?",
     );
 
     if (!confirmado) return;
@@ -330,7 +330,7 @@ export default function SuscripcionesPage() {
 
   const eliminarSuscripcion = async (subscriptionId: number) => {
     const confirmado = window.confirm(
-      "¿Seguro que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
+      "Â¿Seguro que quieres eliminar esta suscripciÃ³n? Esta acciÃ³n no se puede deshacer.",
     );
 
     if (!confirmado) return;
@@ -348,23 +348,23 @@ export default function SuscripcionesPage() {
 
       if (!res.ok) {
         setTipoMensaje("error");
-        setMensaje(data?.message || "No se pudo eliminar la suscripción.");
+        setMensaje(data?.message || "No se pudo eliminar la suscripciÃ³n.");
         return;
       }
 
       setTipoMensaje("success");
-      setMensaje("Suscripción eliminada correctamente.");
+      setMensaje("SuscripciÃ³n eliminada correctamente.");
       await cargarDatos();
 
-      // aquí llama tus recargas actuales
+      // aquÃ­ llama tus recargas actuales
       // por ejemplo:
       // await cargarSuscripcionesActivas();
       // await cargarAsignacionesRecientes();
-      // o la función general que ya uses
+      // o la funciÃ³n general que ya uses
     } catch (error) {
-      console.error("Error eliminando suscripción:", error);
+      console.error("Error eliminando suscripciÃ³n:", error);
       setTipoMensaje("error");
-      setMensaje("Ocurrió un error inesperado al eliminar la suscripción.");
+      setMensaje("OcurriÃ³ un error inesperado al eliminar la suscripciÃ³n.");
     }
   };
 
@@ -375,12 +375,12 @@ export default function SuscripcionesPage() {
       });
       router.push("/admin/login");
     } catch (error) {
-      console.error("Error cerrando sesión:", error);
+      console.error("Error cerrando sesiÃ³n:", error);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
+    <main className="min-h-screen p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         {mensaje && (
           <div
@@ -402,20 +402,20 @@ export default function SuscripcionesPage() {
                 href="/"
                 className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
               >
-                ← Volver al inicio
+                â† Volver al inicio
               </Link>
 
               <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
 
               <p className="text-sm opacity-90">
-                Gestiona asignaciones, códigos y suscripciones activas del
+                Gestiona asignaciones, cÃ³digos y suscripciones activas del
                 programa
               </p>
 
               <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
                 {cargandoRol
                   ? "Cargando rol..."
-                  : `Rol: ${rol ?? "sin sesión"}`}
+                  : `Rol: ${rol ?? "sin sesiÃ³n"}`}
               </p>
             </div>
 
@@ -424,7 +424,7 @@ export default function SuscripcionesPage() {
                 onClick={cerrarSesion}
                 className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
               >
-                Cerrar sesión
+                Cerrar sesiÃ³n
               </button>
             </div>
           </div>
@@ -443,7 +443,7 @@ export default function SuscripcionesPage() {
               </p>
             </div>
             <span className="text-2xl leading-none">
-              {mostrarActivas ? "−" : "+"}
+              {mostrarActivas ? "âˆ’" : "+"}
             </span>
           </button>
 
@@ -491,7 +491,7 @@ export default function SuscripcionesPage() {
 
               {subscriptionsFiltradas.length === 0 ? (
                 <p className="text-sm text-neutral-500">
-                  No hay suscripciones activas registradas aún.
+                  No hay suscripciones activas registradas aÃºn.
                 </p>
               ) : (
                 <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
@@ -499,11 +499,11 @@ export default function SuscripcionesPage() {
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
                         <th className="px-4 py-3">Cliente</th>
-                        <th className="px-4 py-3">Suscripción</th>
+                        <th className="px-4 py-3">SuscripciÃ³n</th>
                         <th className="px-4 py-3">Estado</th>
                         <th className="px-4 py-3">Inicio</th>
                         <th className="px-4 py-3">Vencimiento</th>
-                        <th className="px-4 py-3">Próximo ciclo</th>
+                        <th className="px-4 py-3">PrÃ³ximo ciclo</th>
                         <th className="px-4 py-3">Activada</th>
                         {rol === "superadmin" && (
                           <th className="px-4 py-3">Acciones</th>
@@ -587,14 +587,14 @@ export default function SuscripcionesPage() {
           >
             <div>
               <h2 className="text-xl font-semibold">
-                Asignaciones y códigos recientes
+                Asignaciones y cÃ³digos recientes
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Revisa registros recientes y su historial
               </p>
             </div>
             <span className="text-2xl leading-none">
-              {mostrarAsignaciones ? "−" : "+"}
+              {mostrarAsignaciones ? "âˆ’" : "+"}
             </span>
           </button>
 
@@ -642,7 +642,7 @@ export default function SuscripcionesPage() {
 
               {asignacionesFiltradas.length === 0 ? (
                 <p className="text-sm text-neutral-500">
-                  No hay registros aún.
+                  No hay registros aÃºn.
                 </p>
               ) : (
                 <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
@@ -650,12 +650,12 @@ export default function SuscripcionesPage() {
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
                         <th className="px-4 py-3">Tipo</th>
-                        <th className="px-4 py-3">Suscripción</th>
+                        <th className="px-4 py-3">SuscripciÃ³n</th>
                         <th className="px-4 py-3">Cliente</th>
-                        <th className="px-4 py-3">Código</th>
+                        <th className="px-4 py-3">CÃ³digo</th>
                         <th className="px-4 py-3">Estado</th>
                         <th className="px-4 py-3">Fecha</th>
-                        <th className="px-4 py-3">Acción</th>
+                        <th className="px-4 py-3">AcciÃ³n</th>
                       </tr>
                     </thead>
 
@@ -663,7 +663,7 @@ export default function SuscripcionesPage() {
                       {asignacionesFiltradas.map((c) => (
                         <tr key={c.id} className="border-t text-sm">
                           <td className="px-4 py-3">
-                            {c.source === "admin_code" ? "Código" : "Asignado"}
+                            {c.source === "admin_code" ? "CÃ³digo" : "Asignado"}
                           </td>
 
                           <td className="px-4 py-3">
@@ -704,12 +704,12 @@ export default function SuscripcionesPage() {
                                         c.claim_code,
                                       );
                                       setMensaje(
-                                        "Código copiado al portapapeles.",
+                                        "CÃ³digo copiado al portapapeles.",
                                       );
                                     }}
                                     className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
                                   >
-                                    Copiar código
+                                    Copiar cÃ³digo
                                   </button>
                                 )}
 
@@ -725,7 +725,7 @@ export default function SuscripcionesPage() {
                               </div>
                             ) : (
                               <span className="text-xs text-neutral-400">
-                                —
+                                â€”
                               </span>
                             )}
                           </td>
@@ -746,14 +746,14 @@ export default function SuscripcionesPage() {
             className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Generar código genérico</h2>
+              <h2 className="text-xl font-semibold">Generar cÃ³digo genÃ©rico</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Configura una suscripción y genera un código para canje
+                Configura una suscripciÃ³n y genera un cÃ³digo para canje
                 posterior
               </p>
             </div>
             <span className="text-2xl leading-none">
-              {mostrarCodigo ? "−" : "+"}
+              {mostrarCodigo ? "âˆ’" : "+"}
             </span>
           </button>
 
@@ -762,7 +762,7 @@ export default function SuscripcionesPage() {
               <div className="grid gap-3 md:grid-cols-5">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    Tipo de suscripción
+                    Tipo de suscripciÃ³n
                   </label>
                   <select
                     value={billingPeriodCodigo}
@@ -835,13 +835,13 @@ export default function SuscripcionesPage() {
                 disabled={procesandoCodigo}
                 className="cursor-pointer rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
               >
-                {procesandoCodigo ? "Generando..." : "Generar código"}
+                {procesandoCodigo ? "Generando..." : "Generar cÃ³digo"}
               </button>
 
               {codigoGenerado && (
                 <div className="rounded-2xl bg-neutral-100 p-4">
                   <p className="mb-2 text-sm font-medium text-neutral-600">
-                    Código generado
+                    CÃ³digo generado
                   </p>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -852,11 +852,11 @@ export default function SuscripcionesPage() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(codigoGenerado);
-                        setMensaje("Código copiado al portapapeles.");
+                        setMensaje("CÃ³digo copiado al portapapeles.");
                       }}
                       className="cursor-pointer rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
                     >
-                      Copiar código
+                      Copiar cÃ³digo
                     </button>
                   </div>
                 </div>
@@ -875,15 +875,15 @@ export default function SuscripcionesPage() {
           >
             <div>
               <h2 className="text-xl font-semibold">
-                Asignar suscripción a cliente
+                Asignar suscripciÃ³n a cliente
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Selecciona un cliente, configura la suscripción y confirma la
-                asignación
+                Selecciona un cliente, configura la suscripciÃ³n y confirma la
+                asignaciÃ³n
               </p>
             </div>
             <span className="text-2xl leading-none">
-              {mostrarAsignacionCliente ? "−" : "+"}
+              {mostrarAsignacionCliente ? "âˆ’" : "+"}
             </span>
           </button>
 
@@ -891,12 +891,12 @@ export default function SuscripcionesPage() {
             <div className="border-t border-neutral-200 p-6 space-y-6">
               <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
                 <p className="text-sm font-semibold text-violet-800">
-                  Cliente seleccionado para asignación
+                  Cliente seleccionado para asignaciÃ³n
                 </p>
 
                 {!clienteSeleccionado ? (
                   <p className="mt-3 text-sm text-neutral-600">
-                    No hay ningún cliente seleccionado.
+                    No hay ningÃºn cliente seleccionado.
                   </p>
                 ) : (
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -920,7 +920,7 @@ export default function SuscripcionesPage() {
 
                     <div className="rounded-xl border border-violet-100 bg-white p-3">
                       <p className="text-xs uppercase tracking-wide text-neutral-500">
-                        Teléfono
+                        TelÃ©fono
                       </p>
                       <p className="mt-1 text-sm font-semibold text-[#111111]">
                         {clienteSeleccionado.telefono || "-"}
@@ -933,13 +933,13 @@ export default function SuscripcionesPage() {
               <div className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-violet-700">
-                    Buscar cliente por nombre, correo o teléfono
+                    Buscar cliente por nombre, correo o telÃ©fono
                   </label>
                   <input
                     type="text"
                     value={busquedaCliente}
                     onChange={(e) => setBusquedaCliente(e.target.value)}
-                    placeholder="Nombre, correo o teléfono"
+                    placeholder="Nombre, correo o telÃ©fono"
                     className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
@@ -998,7 +998,7 @@ export default function SuscripcionesPage() {
                     <option value="">Selecciona cliente</option>
                     {clientesFiltrados.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.nombre} · {c.correo}
+                        {c.nombre} Â· {c.correo}
                       </option>
                     ))}
                   </select>
@@ -1007,13 +1007,13 @@ export default function SuscripcionesPage() {
 
               <div>
                 <p className="mb-3 text-sm font-semibold text-violet-700">
-                  Configuración de la suscripción
+                  ConfiguraciÃ³n de la suscripciÃ³n
                 </p>
 
                 <div className="grid gap-3 md:grid-cols-5">
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      Tipo de suscripción
+                      Tipo de suscripciÃ³n
                     </label>
                     <select
                       value={billingPeriodAsignacion}
@@ -1092,7 +1092,7 @@ export default function SuscripcionesPage() {
                 >
                   {procesandoAsignacion
                     ? "Asignando..."
-                    : "Confirmar asignación"}
+                    : "Confirmar asignaciÃ³n"}
                 </button>
               </div>
             </div>
@@ -1108,3 +1108,4 @@ export default function SuscripcionesPage() {
     </main>
   );
 }
+

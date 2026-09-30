@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -133,7 +133,7 @@ export default function InventoryReceiptDetailPage() {
 
   const loadReceipt = useCallback(async () => {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
-      throw new Error("El identificador de la recepción no es válido.");
+      throw new Error("El identificador de la recepciÃ³n no es vÃ¡lido.");
     }
 
     const receiptDetail = await getInventoryReceiptById(transactionId);
@@ -153,7 +153,7 @@ export default function InventoryReceiptDetailPage() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Ocurrió un error al cargar la recepción.",
+            : "OcurriÃ³ un error al cargar la recepciÃ³n.",
         );
       } finally {
         setLoading(false);
@@ -275,7 +275,7 @@ export default function InventoryReceiptDetailPage() {
 
     if (!Number.isInteger(quantity) || quantity < 1) {
       setItemErrorMessage(
-        "La cantidad debe ser un número entero igual o mayor que 1.",
+        "La cantidad debe ser un nÃºmero entero igual o mayor que 1.",
       );
       return;
     }
@@ -288,7 +288,7 @@ export default function InventoryReceiptDetailPage() {
       (!Number.isFinite(enteredUnitCost) || enteredUnitCost < 0)
     ) {
       setItemErrorMessage(
-        "El costo unitario debe ser cero o un número positivo.",
+        "El costo unitario debe ser cero o un nÃºmero positivo.",
       );
       return;
     }
@@ -321,7 +321,7 @@ export default function InventoryReceiptDetailPage() {
       setItemErrorMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al guardar el producto.",
+          : "OcurriÃ³ un error al guardar el producto.",
       );
     } finally {
       setSavingItem(false);
@@ -340,7 +340,7 @@ export default function InventoryReceiptDetailPage() {
 
     if (receipt.items.length === 0) {
       setPostErrorMessage(
-        "Debes agregar al menos un producto antes de publicar la recepción.",
+        "Debes agregar al menos un producto antes de publicar la recepciÃ³n.",
       );
       return;
     }
@@ -365,12 +365,12 @@ export default function InventoryReceiptDetailPage() {
     }
 
     if (receipt.status !== "DRAFT") {
-      setPostErrorMessage("La recepción ya no se encuentra en borrador.");
+      setPostErrorMessage("La recepciÃ³n ya no se encuentra en borrador.");
       return;
     }
 
     if (receipt.items.length === 0) {
-      setPostErrorMessage("La recepción debe contener al menos un producto.");
+      setPostErrorMessage("La recepciÃ³n debe contener al menos un producto.");
       return;
     }
 
@@ -384,13 +384,13 @@ export default function InventoryReceiptDetailPage() {
 
       setShowPostConfirmation(false);
       setPostSuccessMessage(
-        "Recepción publicada correctamente. El inventario fue actualizado.",
+        "RecepciÃ³n publicada correctamente. El inventario fue actualizado.",
       );
     } catch (error) {
       setPostErrorMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al publicar la recepción.",
+          : "OcurriÃ³ un error al publicar la recepciÃ³n.",
       );
     } finally {
       setPostingReceipt(false);
@@ -400,7 +400,7 @@ export default function InventoryReceiptDetailPage() {
   function openDeleteItemConfirmation(item: InventoryReceiptItem) {
     if (!receipt || receipt.status !== "DRAFT") {
       setDeleteItemErrorMessage(
-        "Solo pueden eliminarse productos de una recepción en borrador.",
+        "Solo pueden eliminarse productos de una recepciÃ³n en borrador.",
       );
       return;
     }
@@ -436,7 +436,7 @@ export default function InventoryReceiptDetailPage() {
       setDeleteItemErrorMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al eliminar el producto.",
+          : "OcurriÃ³ un error al eliminar el producto.",
       );
     } finally {
       setDeletingItem(false);
@@ -475,7 +475,7 @@ export default function InventoryReceiptDetailPage() {
 
     if (receipt.status !== "DRAFT") {
       setCancelReceiptErrorMessage(
-        "La recepción ya no se encuentra en borrador.",
+        "La recepciÃ³n ya no se encuentra en borrador.",
       );
       return;
     }
@@ -492,7 +492,7 @@ export default function InventoryReceiptDetailPage() {
       setCancelReceiptErrorMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al cancelar la recepción.",
+          : "OcurriÃ³ un error al cancelar la recepciÃ³n.",
       );
     } finally {
       setCancellingReceipt(false);
@@ -501,11 +501,11 @@ export default function InventoryReceiptDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+      <main className="min-h-screen px-4 py-3">
         <div className="mx-auto w-full max-w-6xl">
           <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-sm">
             <p className="text-sm font-medium text-neutral-600">
-              Cargando recepción...
+              Cargando recepciÃ³n...
             </p>
           </div>
         </div>
@@ -515,23 +515,23 @@ export default function InventoryReceiptDetailPage() {
 
   if (errorMessage || !receipt) {
     return (
-      <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+      <main className="min-h-screen px-4 py-3">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
           <Link
             href="/operacion/inventario/recepciones"
             className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
           >
-            ← Volver a Recepciones
+            â† Volver a Recepciones
           </Link>
 
           <section className="rounded-2xl border border-red-200 bg-white p-4 shadow-sm">
             <h1 className="text-lg font-semibold text-neutral-950">
-              No fue posible cargar la recepción
+              No fue posible cargar la recepciÃ³n
             </h1>
 
             <p className="mt-2 text-sm text-red-700">
               {errorMessage ||
-                "La recepción indicada no se encuentra disponible."}
+                "La recepciÃ³n indicada no se encuentra disponible."}
             </p>
           </section>
         </div>
@@ -542,7 +542,7 @@ export default function InventoryReceiptDetailPage() {
   const isDraft = receipt.status === "DRAFT";
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+    <main className="min-h-screen px-4 py-3">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -550,12 +550,12 @@ export default function InventoryReceiptDetailPage() {
               href="/operacion/inventario/recepciones"
               className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
             >
-              ← Volver a Recepciones
+              â† Volver a Recepciones
             </Link>
 
             <div className="mt-1 flex items-center gap-3">
               <h1 className="text-xl font-semibold text-neutral-950">
-                Recepción #{receipt.id}
+                RecepciÃ³n #{receipt.id}
               </h1>
 
               <span
@@ -575,7 +575,7 @@ export default function InventoryReceiptDetailPage() {
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-950">
-            Información de la recepción
+            InformaciÃ³n de la recepciÃ³n
           </h2>
 
           <dl className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -590,7 +590,7 @@ export default function InventoryReceiptDetailPage() {
 
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Fecha de recepción
+                Fecha de recepciÃ³n
               </dt>
               <dd className="mt-0.5 text-sm font-medium text-neutral-900">
                 {formatDateTime(receipt.transactionDate)}
@@ -615,10 +615,10 @@ export default function InventoryReceiptDetailPage() {
 
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Número de documento
+                NÃºmero de documento
               </dt>
               <dd className="mt-0.5 text-sm font-medium text-neutral-900">
-                {receipt.referenceNumber || "Sin número"}
+                {receipt.referenceNumber || "Sin nÃºmero"}
               </dd>
             </div>
 
@@ -665,8 +665,8 @@ export default function InventoryReceiptDetailPage() {
               disabled={!isDraft}
               title={
                 isDraft
-                  ? "Agregar producto a la recepción."
-                  : "Una recepción publicada no puede modificarse."
+                  ? "Agregar producto a la recepciÃ³n."
+                  : "Una recepciÃ³n publicada no puede modificarse."
               }
               className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -677,7 +677,7 @@ export default function InventoryReceiptDetailPage() {
           {receipt.items.length === 0 ? (
             <div className="px-4 py-6 text-center">
               <p className="text-sm font-semibold text-neutral-700">
-                Esta recepción todavía no tiene productos.
+                Esta recepciÃ³n todavÃ­a no tiene productos.
               </p>
 
               <p className="mt-1 text-xs text-neutral-500">
@@ -716,7 +716,7 @@ export default function InventoryReceiptDetailPage() {
                         </p>
 
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          {item.inventoryItemCode} ·{" "}
+                          {item.inventoryItemCode} Â·{" "}
                           {getItemTypeLabel(item.itemType)}
                         </p>
                       </td>
@@ -774,7 +774,7 @@ export default function InventoryReceiptDetailPage() {
           <div className="grid gap-3 border-t border-neutral-200 bg-neutral-50 px-4 py-3 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Líneas
+                LÃ­neas
               </p>
               <p className="mt-0.5 text-base font-bold text-neutral-950">
                 {receipt.items.length}
@@ -840,12 +840,12 @@ export default function InventoryReceiptDetailPage() {
                 }
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Publicar recepción
+                Publicar recepciÃ³n
               </button>
             </div>
           ) : (
             <div className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-              Recepción publicada
+              RecepciÃ³n publicada
             </div>
           )}
         </section>
@@ -869,7 +869,7 @@ export default function InventoryReceiptDetailPage() {
                 </h2>
 
                 <p className="mt-0.5 text-xs text-neutral-500">
-                  Recepción #{receipt.id}
+                  RecepciÃ³n #{receipt.id}
                 </p>
               </div>
 
@@ -880,7 +880,7 @@ export default function InventoryReceiptDetailPage() {
                 aria-label="Cerrar"
                 className="rounded-lg px-2 py-1 text-lg font-semibold text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -1033,7 +1033,7 @@ export default function InventoryReceiptDetailPage() {
                     htmlFor="itemNotes"
                     className="mb-1 block text-xs font-semibold text-neutral-700"
                   >
-                    Observación de la línea
+                    ObservaciÃ³n de la lÃ­nea
                   </label>
 
                   <textarea
@@ -1104,11 +1104,11 @@ export default function InventoryReceiptDetailPage() {
                 id="post-receipt-title"
                 className="text-lg font-semibold text-neutral-950"
               >
-                Publicar recepción
+                Publicar recepciÃ³n
               </h2>
 
               <p className="mt-2 text-sm text-neutral-600">
-                Estás a punto de publicar la recepción{" "}
+                EstÃ¡s a punto de publicar la recepciÃ³n{" "}
                 <span className="font-semibold text-neutral-900">
                   #{receipt.id}
                 </span>
@@ -1118,20 +1118,20 @@ export default function InventoryReceiptDetailPage() {
 
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
               <p className="text-sm font-semibold text-amber-800">
-                Esta acción es definitiva
+                Esta acciÃ³n es definitiva
               </p>
 
               <ul className="mt-2 space-y-1 text-xs text-amber-700">
-                <li>• Se actualizará el stock disponible.</li>
-                <li>• Se generarán los movimientos de inventario.</li>
-                <li>• La recepción ya no podrá modificarse.</li>
+                <li>â€¢ Se actualizarÃ¡ el stock disponible.</li>
+                <li>â€¢ Se generarÃ¡n los movimientos de inventario.</li>
+                <li>â€¢ La recepciÃ³n ya no podrÃ¡ modificarse.</li>
               </ul>
             </div>
 
             <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-neutral-50 px-3 py-3">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Líneas
+                  LÃ­neas
                 </dt>
                 <dd className="mt-1 text-sm font-bold text-neutral-950">
                   {receipt.items.length}
@@ -1179,7 +1179,7 @@ export default function InventoryReceiptDetailPage() {
                 disabled={postingReceipt}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {postingReceipt ? "Publicando..." : "Confirmar publicación"}
+                {postingReceipt ? "Publicando..." : "Confirmar publicaciÃ³n"}
               </button>
             </div>
           </div>
@@ -1202,15 +1202,15 @@ export default function InventoryReceiptDetailPage() {
             </h2>
 
             <p className="mt-2 text-sm text-neutral-600">
-              Se eliminará{" "}
+              Se eliminarÃ¡{" "}
               <span className="font-semibold text-neutral-900">
                 {itemPendingDeletion.inventoryItemName}
               </span>{" "}
-              de esta recepción.
+              de esta recepciÃ³n.
             </p>
 
             <p className="mt-2 text-xs text-neutral-500">
-              Los totales se recalcularán automáticamente.
+              Los totales se recalcularÃ¡n automÃ¡ticamente.
             </p>
 
             {deleteItemErrorMessage && (
@@ -1258,20 +1258,20 @@ export default function InventoryReceiptDetailPage() {
             </h2>
 
             <p className="mt-2 text-sm text-neutral-600">
-              Se eliminará definitivamente la recepción{" "}
+              Se eliminarÃ¡ definitivamente la recepciÃ³n{" "}
               <span className="font-semibold text-neutral-900">
                 #{receipt.id}
               </span>{" "}
-              y todas sus líneas.
+              y todas sus lÃ­neas.
             </p>
 
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
               <p className="text-sm font-semibold text-amber-800">
-                Esta acción no puede deshacerse
+                Esta acciÃ³n no puede deshacerse
               </p>
 
               <p className="mt-1 text-xs text-amber-700">
-                No se modificará el stock porque esta recepción todavía no ha
+                No se modificarÃ¡ el stock porque esta recepciÃ³n todavÃ­a no ha
                 sido publicada.
               </p>
             </div>
@@ -1279,7 +1279,7 @@ export default function InventoryReceiptDetailPage() {
             <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-neutral-50 px-3 py-3">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Líneas
+                  LÃ­neas
                 </dt>
                 <dd className="mt-1 text-sm font-bold text-neutral-950">
                   {receipt.items.length}
@@ -1327,3 +1327,4 @@ export default function InventoryReceiptDetailPage() {
     </main>
   );
 }
+

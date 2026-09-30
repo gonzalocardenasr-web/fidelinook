@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -64,7 +64,7 @@ export default function CampanaDetallePage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok || !data.campana) {
-        setError(data.message || "No se encontró la campaña.");
+        setError(data.message || "No se encontrÃ³ la campaÃ±a.");
         return;
       }
 
@@ -90,8 +90,8 @@ export default function CampanaDetallePage() {
       );
       setRecurrencia(c.recurrencia || "una_vez");
     } catch (error) {
-      console.error("Error cargando campaña:", error);
-      setError("Ocurrió un error al cargar la campaña.");
+      console.error("Error cargando campaÃ±a:", error);
+      setError("OcurriÃ³ un error al cargar la campaÃ±a.");
     } finally {
       setLoading(false);
     }
@@ -121,14 +121,14 @@ export default function CampanaDetallePage() {
     }
 
     if (!premioDescripcion.trim()) {
-      setError("Ingresa la descripción visible del premio.");
+      setError("Ingresa la descripciÃ³n visible del premio.");
       return;
     }
 
     const duracion = Number(duracionHoras);
 
     if (!Number.isFinite(duracion) || duracion < 24 || duracion % 24 !== 0) {
-      setError("La vigencia debe ser un múltiplo de 24 horas.");
+      setError("La vigencia debe ser un mÃºltiplo de 24 horas.");
       return;
     }
 
@@ -153,15 +153,15 @@ export default function CampanaDetallePage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        setError(data.message || "No se pudo actualizar la campaña.");
+        setError(data.message || "No se pudo actualizar la campaÃ±a.");
         return;
       }
 
-      setMensaje("Campaña actualizada correctamente.");
+      setMensaje("CampaÃ±a actualizada correctamente.");
       await cargarCampana();
     } catch (error) {
-      console.error("Error guardando campaña:", error);
-      setError("Ocurrió un error al guardar la campaña.");
+      console.error("Error guardando campaÃ±a:", error);
+      setError("OcurriÃ³ un error al guardar la campaÃ±a.");
     } finally {
       setGuardando(false);
     }
@@ -169,16 +169,16 @@ export default function CampanaDetallePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+      <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
         <div className="mx-auto max-w-2xl rounded-[28px] bg-white p-6 shadow">
-          Cargando campaña...
+          Cargando campaÃ±a...
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+    <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
       <div className="mx-auto max-w-2xl">
         <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
           <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
@@ -186,10 +186,10 @@ export default function CampanaDetallePage() {
               Superadmin
             </p>
             <h1 className="mt-2 text-2xl font-bold leading-tight">
-              Detalle de campaña
+              Detalle de campaÃ±a
             </h1>
             <p className="mt-2 text-sm text-white/85">
-              Revisa y ajusta la configuración antes de lanzarla.
+              Revisa y ajusta la configuraciÃ³n antes de lanzarla.
             </p>
           </div>
 
@@ -269,13 +269,13 @@ export default function CampanaDetallePage() {
                       Vista previa
                     </p>
                     <h3 className="mt-3 text-xl font-bold text-[#4c00f7]">
-                      🎉 ¡Tienes un premio!
+                      ðŸŽ‰ Â¡Tienes un premio!
                     </h3>
                     <p className="mt-3 text-sm leading-6 text-[#555]">
                       {premioDescripcion || "Texto visible del premio..."}
                     </p>
                     <p className="mt-3 text-sm text-[#555]">
-                      Muéstralo en el local para canjearlo.
+                      MuÃ©stralo en el local para canjearlo.
                     </p>
                   </div>
 
@@ -292,7 +292,7 @@ export default function CampanaDetallePage() {
                       <option value="24">24 horas</option>
                       <option value="48">48 horas</option>
                       <option value="72">72 horas</option>
-                      <option value="168">7 días</option>
+                      <option value="168">7 dÃ­as</option>
                     </select>
                   </div>
 
@@ -324,7 +324,7 @@ export default function CampanaDetallePage() {
                       href="/operacion"
                       className="w-full rounded-2xl border border-[#D9C8FF] bg-white px-5 py-4 text-center text-base font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
                     >
-                      Volver a operación
+                      Volver a operaciÃ³n
                     </Link>
                   </div>
                 </form>
@@ -336,3 +336,4 @@ export default function CampanaDetallePage() {
     </main>
   );
 }
+

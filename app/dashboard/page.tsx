@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -365,7 +365,7 @@ export default function DashboardPage() {
       setData(json);
     } catch (error) {
       console.error("Error cargando dashboard:", error);
-      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
+      setMensaje("OcurriÃ³ un error inesperado al cargar el dashboard.");
       setData(null);
     } finally {
       setCargando(false);
@@ -390,7 +390,7 @@ export default function DashboardPage() {
 
       setRol(data?.role ?? null);
     } catch (error) {
-      console.error("Error cargando sesión:", error);
+      console.error("Error cargando sesiÃ³n:", error);
       setRol(null);
     } finally {
       setCargandoRol(false);
@@ -402,7 +402,7 @@ export default function DashboardPage() {
       await supabase.auth.signOut();
       router.push("/admin/login");
     } catch (error) {
-      console.error("Error cerrando sesión:", error);
+      console.error("Error cerrando sesiÃ³n:", error);
     }
   };
 
@@ -412,7 +412,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
+    <main className="min-h-screen p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         {cargando ? (
           <section className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm">
@@ -458,7 +458,7 @@ export default function DashboardPage() {
                   value={data.kpis.suscripcionesActivas}
                 />
                 <KpiCard
-                  label="Clientes con suscripción activa"
+                  label="Clientes con suscripciÃ³n activa"
                   value={data.kpis.clientesConSuscripcionActiva}
                 />
                 <KpiCard
@@ -469,7 +469,7 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard
-              title="Evolución de clientes"
+              title="EvoluciÃ³n de clientes"
               subtitle="Crecimiento mensual de usuarios registrados."
             >
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -510,7 +510,7 @@ export default function DashboardPage() {
 
             <SectionCard
               title="Suscripciones"
-              subtitle="Base activa, vencimientos y evolución mensual."
+              subtitle="Base activa, vencimientos y evoluciÃ³n mensual."
             >
               <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <KpiCard
@@ -518,15 +518,15 @@ export default function DashboardPage() {
                   value={data.kpis.suscripcionesActivas}
                 />
                 <KpiCard
-                  label="Vencen en 7 días"
+                  label="Vencen en 7 dÃ­as"
                   value={data.kpis.suscripcionesPorVencer7Dias}
                 />
                 <KpiCard
-                  label="Vencen en 30 días"
+                  label="Vencen en 30 dÃ­as"
                   value={data.kpis.suscripcionesPorVencer30Dias}
                 />
                 <KpiCard
-                  label="Clientes con más de una activa"
+                  label="Clientes con mÃ¡s de una activa"
                   value={data.kpis.clientesConMasDeUnaSuscripcionActiva}
                 />
               </div>
@@ -557,7 +557,7 @@ export default function DashboardPage() {
                       },
                       {
                         key: "suscripcion",
-                        label: "Suscripción",
+                        label: "SuscripciÃ³n",
                         className: "min-w-[220px]",
                       },
                       {
@@ -577,12 +577,12 @@ export default function DashboardPage() {
                       },
                       {
                         key: "proximoCiclo",
-                        label: "Próximo ciclo",
+                        label: "PrÃ³ximo ciclo",
                         className: "whitespace-nowrap",
                       },
                       {
                         key: "diasParaVencer",
-                        label: "Días para vencer",
+                        label: "DÃ­as para vencer",
                         className: "whitespace-nowrap",
                       },
                     ]}
@@ -602,7 +602,7 @@ export default function DashboardPage() {
               <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
                   <LineChart
-                    title="Movimientos de consumo por día"
+                    title="Movimientos de consumo por dÃ­a"
                     labels={data.consumosPorDia.map((item) =>
                       formatearFecha(item.fecha),
                     )}
@@ -612,7 +612,7 @@ export default function DashboardPage() {
 
                 <div className="min-w-0">
                   <LineChart
-                    title="Potes consumidos por día"
+                    title="Potes consumidos por dÃ­a"
                     labels={data.consumosPorDia.map((item) =>
                       formatearFecha(item.fecha),
                     )}
@@ -639,7 +639,7 @@ export default function DashboardPage() {
                     },
                     {
                       key: "suscripcion",
-                      label: "Suscripción",
+                      label: "SuscripciÃ³n",
                       className: "min-w-[220px]",
                     },
                     {
@@ -677,20 +677,20 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard
-              title="Efectividad de campañas"
-              subtitle="Performance de campañas ejecutadas"
+              title="Efectividad de campaÃ±as"
+              subtitle="Performance de campaÃ±as ejecutadas"
             >
               <DataTable
                 columns={[
-                  { key: "nombre", label: "Campaña" },
+                  { key: "nombre", label: "CampaÃ±a" },
                   { key: "estado", label: "Estado" },
                   { key: "enviados", label: "Enviados" },
                   { key: "canjeados", label: "Canjeados" },
                   { key: "caducados", label: "Caducados" },
-                  { key: "conversion", label: "Conversión" },
+                  { key: "conversion", label: "ConversiÃ³n" },
                 ]}
                 rows={campanasData}
-                emptyText="No hay campañas registradas."
+                emptyText="No hay campaÃ±as registradas."
               />
             </SectionCard>
           </div>
@@ -699,3 +699,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

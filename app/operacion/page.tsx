@@ -503,7 +503,7 @@ export default function OperacionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] p-6">
+    <main className="min-h-screen p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -968,3 +968,4 @@ export default function OperacionPage() {
     </main>
   );
 }
+

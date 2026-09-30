@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -33,12 +33,12 @@ const ROLE_LABELS: Record<Role, string> = {
   cashier: "Cashier",
   admin: "Administrador",
   superadmin: "Superadmin",
-  preparation: "Preparación",
+  preparation: "PreparaciÃ³n",
 };
 
 function formatDate(value: string | null) {
   if (!value) {
-    return "—";
+    return "â€”";
   }
 
   return new Intl.DateTimeFormat("es-CL", {
@@ -249,17 +249,17 @@ export default function UsersManagementClient({
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.message || "No se pudo enviar la invitación.");
+        throw new Error(data.message || "No se pudo enviar la invitaciÃ³n.");
       }
 
-      setMessage(data.message || "Invitación enviada.");
+      setMessage(data.message || "InvitaciÃ³n enviada.");
     } catch (inviteError) {
       console.error("Error sending invitation:", inviteError);
 
       setError(
         inviteError instanceof Error
           ? inviteError.message
-          : "No se pudo enviar la invitación.",
+          : "No se pudo enviar la invitaciÃ³n.",
       );
     } finally {
       setProcessingId(null);
@@ -267,7 +267,7 @@ export default function UsersManagementClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+    <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
           <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white md:px-8">
@@ -277,7 +277,7 @@ export default function UsersManagementClient({
                   Superadmin
                 </p>
 
-                <h1 className="mt-2 text-3xl font-bold">Gestión de usuarios</h1>
+                <h1 className="mt-2 text-3xl font-bold">GestiÃ³n de usuarios</h1>
 
                 <p className="mt-2 text-sm text-white/85">
                   Crea, activa y administra los accesos operacionales de
@@ -286,7 +286,7 @@ export default function UsersManagementClient({
               </div>
 
               <div className="text-sm text-white/85">
-                Sesión:{" "}
+                SesiÃ³n:{" "}
                 <strong>{currentDisplayName || "Super Administrador"}</strong>
               </div>
             </div>
@@ -297,7 +297,7 @@ export default function UsersManagementClient({
               href="/operacion"
               className="rounded-xl border border-[#DDD1E7] px-4 py-2 text-sm font-semibold text-[#4C00F7]"
             >
-              Volver a Operación
+              Volver a OperaciÃ³n
             </Link>
 
             <button
@@ -330,8 +330,8 @@ export default function UsersManagementClient({
             </h2>
 
             <p className="mt-1 text-sm text-[#666]">
-              Para un usuario nuevo deja “Nuevo usuario” seleccionado. Si existe
-              un registro legacy pendiente, selecciónalo para vincular su
+              Para un usuario nuevo deja â€œNuevo usuarioâ€ seleccionado. Si existe
+              un registro legacy pendiente, selecciÃ³nalo para vincular su
               identidad Auth sin duplicarlo.
             </p>
           </div>
@@ -400,7 +400,7 @@ export default function UsersManagementClient({
                 <option value="cashier">Cajer@</option>
                 <option value="admin">Admin</option>
                 <option value="superadmin">Superadmin</option>
-                <option value="preparation">Preparación</option>
+                <option value="preparation">PreparaciÃ³n</option>
               </select>
             </div>
 
@@ -413,8 +413,8 @@ export default function UsersManagementClient({
                 {processingId === "create"
                   ? "Procesando..."
                   : legacyUserId
-                    ? "Activar acceso y enviar invitación"
-                    : "Crear usuario y enviar invitación"}
+                    ? "Activar acceso y enviar invitaciÃ³n"
+                    : "Crear usuario y enviar invitaciÃ³n"}
               </button>
             </div>
           </form>
@@ -455,7 +455,7 @@ export default function UsersManagementClient({
 
                         {isSelf && (
                           <span className="rounded-full bg-[#EEE8FF] px-2.5 py-1 text-xs font-semibold text-[#4C00F7]">
-                            Tú
+                            TÃº
                           </span>
                         )}
 
@@ -485,12 +485,12 @@ export default function UsersManagementClient({
                           {user.auth_status === "linked"
                             ? "Auth vinculado"
                             : user.auth_status === "pending"
-                              ? "Pendiente de activación"
+                              ? "Pendiente de activaciÃ³n"
                               : "Identidad Auth no encontrada"}
                         </p>
 
                         <p>
-                          <strong>Último ingreso:</strong>{" "}
+                          <strong>Ãšltimo ingreso:</strong>{" "}
                           {formatDate(user.last_sign_in_at)}
                         </p>
                       </div>
@@ -511,7 +511,7 @@ export default function UsersManagementClient({
                           <option value="cashier">Cajer@</option>
                           <option value="admin">Admin</option>
                           <option value="superadmin">Superadmin</option>
-                          <option value="preparation">Preparación</option>
+                          <option value="preparation">PreparaciÃ³n</option>
                         </select>
 
                         <button
@@ -564,3 +564,4 @@ export default function UsersManagementClient({
     </main>
   );
 }
+

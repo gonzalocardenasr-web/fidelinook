@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +56,7 @@ export default function NewInventoryReceiptPage() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Ocurrió un error al cargar los proveedores.",
+            : "OcurriÃ³ un error al cargar los proveedores.",
         );
       } finally {
         setLoadingSuppliers(false);
@@ -75,7 +75,7 @@ export default function NewInventoryReceiptPage() {
     }
 
     if (!form.transactionDate) {
-      setErrorMessage("Debes indicar la fecha de recepción.");
+      setErrorMessage("Debes indicar la fecha de recepciÃ³n.");
       return;
     }
 
@@ -94,7 +94,7 @@ export default function NewInventoryReceiptPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al crear la recepción.",
+          : "OcurriÃ³ un error al crear la recepciÃ³n.",
       );
 
       setSubmitting(false);
@@ -102,7 +102,7 @@ export default function NewInventoryReceiptPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F3FF] px-4 py-3">
+    <main className="min-h-screen px-4 py-3">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -110,16 +110,16 @@ export default function NewInventoryReceiptPage() {
               href="/operacion/inventario/recepciones"
               className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
             >
-              ← Volver a Recepciones
+              â† Volver a Recepciones
             </Link>
 
             <h1 className="mt-1 text-xl font-semibold text-neutral-950">
-              Nueva recepción
+              Nueva recepciÃ³n
             </h1>
           </div>
 
           <p className="text-xs text-neutral-500">
-            Registra el ingreso de mercadería al inventario.
+            Registra el ingreso de mercaderÃ­a al inventario.
           </p>
         </header>
 
@@ -182,7 +182,7 @@ export default function NewInventoryReceiptPage() {
                 ) : (
                   suppliers.map((supplier) => (
                     <option key={supplier.id} value={supplier.id}>
-                      {supplier.name} · {supplier.code}
+                      {supplier.name} Â· {supplier.code}
                     </option>
                   ))
                 )}
@@ -194,7 +194,7 @@ export default function NewInventoryReceiptPage() {
                 htmlFor="transactionDate"
                 className="mb-1 block text-xs font-semibold text-neutral-700"
               >
-                Fecha de recepción
+                Fecha de recepciÃ³n
               </label>
 
               <input
@@ -217,7 +217,7 @@ export default function NewInventoryReceiptPage() {
                 htmlFor="referenceNumber"
                 className="mb-1 block text-xs font-semibold text-neutral-700"
               >
-                Número de documento
+                NÃºmero de documento
               </label>
 
               <input
@@ -255,7 +255,7 @@ export default function NewInventoryReceiptPage() {
                 }
                 rows={2}
                 maxLength={1000}
-                placeholder="Información adicional de la recepción."
+                placeholder="InformaciÃ³n adicional de la recepciÃ³n."
                 className="w-full resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>
@@ -290,3 +290,4 @@ export default function NewInventoryReceiptPage() {
     </main>
   );
 }
+

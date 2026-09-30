@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function InventoryPage() {
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-[#F6F3FF] px-4 py-4">
+    <main className="h-full">
       <div className="mx-auto w-full max-w-6xl">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Link
