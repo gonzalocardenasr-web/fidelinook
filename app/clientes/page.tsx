@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AdminRegistroCard from "../operacion/components/AdminRegistroCard";
 import AdminClienteDetalle from "../operacion/components/AdminClienteDetalle";
@@ -71,7 +70,7 @@ export default function ClientesPage() {
       setCargandoFidelizacion(true);
       setCustomerLoyalty(null);
 
-      const res = await fetch(`/api/loyalty/customers/${clienteId}`, {
+      const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
         method: "GET",
         cache: "no-store",
       });
@@ -340,40 +339,6 @@ export default function ClientesPage() {
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <Link
-                href="/"
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                ← Volver al inicio
-              </Link>
-
-              <h1 className="mt-3 text-2xl font-bold">Clientes</h1>
-
-              <p className="text-sm opacity-90">
-                Registro y gestión administrativa de clientes del programa
-              </p>
-
-              <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol
-                  ? "Cargando rol..."
-                  : `Rol: ${rol ?? "sin sesión"}`}
-              </p>
-            </div>
-
-            <div>
-              <button
-                onClick={cerrarSesion}
-                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        </div>
-
         <AdminRegistroCard
           mostrarRegistro={mostrarRegistro}
           setMostrarRegistro={setMostrarRegistro}

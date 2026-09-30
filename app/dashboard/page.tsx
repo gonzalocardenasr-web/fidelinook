@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
@@ -95,13 +94,7 @@ function formatearMes(mes: string) {
   });
 }
 
-function KpiCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | string;
-}) {
+function KpiCard({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
       <p className="text-sm font-medium text-neutral-500">{label}</p>
@@ -270,8 +263,8 @@ function DataTable({
 
   return (
     <div className="w-full max-w-full overflow-hidden rounded-2xl border border-neutral-200">
-        <div className={`w-full max-w-full overflow-auto ${maxHeight}`}>
-            <table className={`border-collapse text-sm ${minTableWidth}`}>
+      <div className={`w-full max-w-full overflow-auto ${maxHeight}`}>
+        <table className={`border-collapse text-sm ${minTableWidth}`}>
           <thead className="sticky top-0 bg-violet-50">
             <tr className="text-left text-violet-700">
               {columns.map((column) => (
@@ -309,7 +302,7 @@ function DataTable({
 
 export default function DashboardPage() {
   const router = useRouter();
-  
+
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState("");
@@ -378,39 +371,39 @@ export default function DashboardPage() {
       setCargando(false);
     }
   }
-  
+
   const cargarSesion = async () => {
     try {
-        setCargandoRol(true);
+      setCargandoRol(true);
 
-        const res = await fetch("/api/session", {
+      const res = await fetch("/api/session", {
         method: "GET",
-        });
+      });
 
-        if (!res.ok) {
+      if (!res.ok) {
         setRol(null);
         return;
-        }
+      }
 
-        const data = await res.json();
-        console.log("SESSION DASHBOARD:", data);
+      const data = await res.json();
+      console.log("SESSION DASHBOARD:", data);
 
-        setRol(data?.role ?? null);
+      setRol(data?.role ?? null);
     } catch (error) {
-        console.error("Error cargando sesión:", error);
-        setRol(null);
+      console.error("Error cargando sesión:", error);
+      setRol(null);
     } finally {
-        setCargandoRol(false);
+      setCargandoRol(false);
     }
-    };
-  
+  };
+
   const cerrarSesion = async () => {
-  try {
-    await supabase.auth.signOut();
-    router.push("/admin/login");
-  } catch (error) {
-    console.error("Error cerrando sesión:", error);
-  }
+    try {
+      await supabase.auth.signOut();
+      router.push("/admin/login");
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+    }
   };
 
   useEffect(() => {
@@ -420,40 +413,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-6">
-          <div className="mx-auto max-w-5xl space-y-6">
-            <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <Link
-                        href="/"
-                        className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                    >
-                        ← Volver al inicio
-                    </Link>
-    
-                  <h1 className="mt-3 text-2xl font-bold">Dashboard</h1>
-    
-                  <p className="text-sm opacity-90">
-                    Vista analítica del sistema de fidelización y suscripciones
-                  </p>
-    
-                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                    {cargandoRol ? "Cargando rol..." : `Rol: ${rol ?? "sin sesión"}`}
-                  </p>
-                </div>
-    
-                <div>
-                  <button
-                    onClick={cerrarSesion}
-                    className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-                  >
-                    Cerrar sesión
-                  </button>
-                </div>
-              </div>
-            </div>
-    
-    
+      <div className="mx-auto max-w-5xl space-y-6">
         {cargando ? (
           <section className="rounded-3xl border border-black/5 bg-white p-8 shadow-sm">
             <p className="text-base leading-7 text-[#454545]">
@@ -514,22 +474,30 @@ export default function DashboardPage() {
             >
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="min-w-0">
-                    <LineChart
-                        title="Nuevos usuarios por mes"
-                        labels={data.clientesPorMes.map((item) => formatearMes(item.mes))}
-                        values={data.clientesPorMes.map((item) => item.nuevosUsuarios)}
-                    />
+                  <LineChart
+                    title="Nuevos usuarios por mes"
+                    labels={data.clientesPorMes.map((item) =>
+                      formatearMes(item.mes),
+                    )}
+                    values={data.clientesPorMes.map(
+                      (item) => item.nuevosUsuarios,
+                    )}
+                  />
                 </div>
 
-              <div className="min-w-0">
+                <div className="min-w-0">
                   <p className="mb-4 text-sm font-semibold text-violet-700">
                     Detalle mensual
                   </p>
                   <DataTable
                     columns={[
-                        { key: "mes", label: "Mes", className: "whitespace-nowrap" },
-                        { key: "nuevosUsuarios", label: "Nuevos usuarios" },
-                        { key: "acumulado", label: "Acumulado" },
+                      {
+                        key: "mes",
+                        label: "Mes",
+                        className: "whitespace-nowrap",
+                      },
+                      { key: "nuevosUsuarios", label: "Nuevos usuarios" },
+                      { key: "acumulado", label: "Acumulado" },
                     ]}
                     rows={clientesPorMesRows}
                     emptyText="No hay datos de crecimiento de clientes."
@@ -565,56 +533,64 @@ export default function DashboardPage() {
 
               <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
-                    <LineChart
-                        title="Nuevas suscripciones por mes"
-                        labels={data.suscripcionesPorMes.map((item) =>
-                        formatearMes(item.mes)
-                        )}
-                        values={data.suscripcionesPorMes.map(
-                        (item) => item.nuevasSuscripciones
-                        )}
-                    />
+                  <LineChart
+                    title="Nuevas suscripciones por mes"
+                    labels={data.suscripcionesPorMes.map((item) =>
+                      formatearMes(item.mes),
+                    )}
+                    values={data.suscripcionesPorMes.map(
+                      (item) => item.nuevasSuscripciones,
+                    )}
+                  />
                 </div>
 
-              <div className="min-w-0">
+                <div className="min-w-0">
                   <p className="mb-4 text-sm font-semibold text-violet-700">
                     Suscripciones activas
                   </p>
                   <DataTable
                     columns={[
-                        { key: "cliente", label: "Cliente", className: "whitespace-nowrap" },
-                        { key: "suscripcion", label: "Suscripción", className: "min-w-[220px]" },
-                        {
+                      {
+                        key: "cliente",
+                        label: "Cliente",
+                        className: "whitespace-nowrap",
+                      },
+                      {
+                        key: "suscripcion",
+                        label: "Suscripción",
+                        className: "min-w-[220px]",
+                      },
+                      {
                         key: "inicio",
                         label: "Inicio",
                         className: "whitespace-nowrap",
-                        },
-                        {
+                      },
+                      {
                         key: "fin",
                         label: "Fin",
                         className: "whitespace-nowrap",
-                        },
-                        {
+                      },
+                      {
                         key: "estado",
                         label: "Estado",
                         className: "whitespace-nowrap",
-                        },
-                        {
+                      },
+                      {
                         key: "proximoCiclo",
                         label: "Próximo ciclo",
                         className: "whitespace-nowrap",
-                        },
-                        {
+                      },
+                      {
                         key: "diasParaVencer",
                         label: "Días para vencer",
                         className: "whitespace-nowrap",
-                        },
+                      },
                     ]}
                     rows={suscripcionesActivasRows}
                     emptyText="No hay suscripciones activas."
                     maxHeight="max-h-96"
                     minTableWidth="min-w-[720px]"
-                    />
+                  />
                 </div>
               </div>
             </SectionCard>
@@ -625,23 +601,23 @@ export default function DashboardPage() {
             >
               <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
-                    <LineChart
-                        title="Movimientos de consumo por día"
-                        labels={data.consumosPorDia.map((item) =>
-                        formatearFecha(item.fecha)
-                        )}
-                        values={data.consumosPorDia.map((item) => item.movimientos)}
-                    />
-                    </div>
+                  <LineChart
+                    title="Movimientos de consumo por día"
+                    labels={data.consumosPorDia.map((item) =>
+                      formatearFecha(item.fecha),
+                    )}
+                    values={data.consumosPorDia.map((item) => item.movimientos)}
+                  />
+                </div>
 
-                    <div className="min-w-0">
-                    <LineChart
-                        title="Potes consumidos por día"
-                        labels={data.consumosPorDia.map((item) =>
-                        formatearFecha(item.fecha)
-                        )}
-                        values={data.consumosPorDia.map((item) => item.potes)}
-                    />
+                <div className="min-w-0">
+                  <LineChart
+                    title="Potes consumidos por día"
+                    labels={data.consumosPorDia.map((item) =>
+                      formatearFecha(item.fecha),
+                    )}
+                    values={data.consumosPorDia.map((item) => item.potes)}
+                  />
                 </div>
               </div>
 
@@ -650,21 +626,53 @@ export default function DashboardPage() {
                   Consumo reciente de suscripciones
                 </p>
                 <DataTable
-                    columns={[
-                        { key: "fecha", label: "Fecha", className: "whitespace-nowrap" },
-                        { key: "cliente", label: "Cliente", className: "whitespace-nowrap" },
-                        { key: "suscripcion", label: "Suscripción", className: "min-w-[220px]" },
-                        { key: "ciclo", label: "Ciclo", className: "whitespace-nowrap" },
-                        { key: "potes", label: "Potes", className: "whitespace-nowrap" },
-                        { key: "toppings", label: "Toppings", className: "whitespace-nowrap" },
-                        { key: "barquillos", label: "Barquillos", className: "whitespace-nowrap" },
-                        { key: "galletas", label: "Galletas", className: "whitespace-nowrap" },
-                    ]}
-                    rows={consumoRecienteRows}
-                    emptyText="No hay consumos recientes."
-                    maxHeight="max-h-96"
-                    minTableWidth="min-w-[860px]"
-                  />
+                  columns={[
+                    {
+                      key: "fecha",
+                      label: "Fecha",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "cliente",
+                      label: "Cliente",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "suscripcion",
+                      label: "Suscripción",
+                      className: "min-w-[220px]",
+                    },
+                    {
+                      key: "ciclo",
+                      label: "Ciclo",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "potes",
+                      label: "Potes",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "toppings",
+                      label: "Toppings",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "barquillos",
+                      label: "Barquillos",
+                      className: "whitespace-nowrap",
+                    },
+                    {
+                      key: "galletas",
+                      label: "Galletas",
+                      className: "whitespace-nowrap",
+                    },
+                  ]}
+                  rows={consumoRecienteRows}
+                  emptyText="No hay consumos recientes."
+                  maxHeight="max-h-96"
+                  minTableWidth="min-w-[860px]"
+                />
               </div>
             </SectionCard>
 

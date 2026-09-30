@@ -101,7 +101,7 @@ const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
     shortLabel: "Clientes",
     href: "/clientes",
     section: "management",
-    permission: "analytics.view",
+    permission: "customers.operate",
     icon: "customers",
   },
   {
