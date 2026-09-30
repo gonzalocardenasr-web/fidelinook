@@ -235,7 +235,7 @@ export default function OrderBuilder({
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mb-2 shrink-0">
+      <div className="mb-2 shrink-0 px-3 pt-3">
         <h2 className="text-[13px] font-black uppercase tracking-wide text-neutral-600">
           Pedido
         </h2>
