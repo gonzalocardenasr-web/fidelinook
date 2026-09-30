@@ -59,6 +59,8 @@ Fideli-Nook mantiene su lógica de tarjeta/token y no debe confundirse con ident
 9. No reabrir Auth/session sin evidencia concreta mientras INC-PERF-01.7 permanezca en observación.
 10. Retirar legacy de forma controlada una vez reemplazado y sin consumidores legítimos.
 11. Las superficies dentro de PlatformShell no deben repetir un page header cuando el shell ya entrega contexto suficiente de sección y módulo. Las acciones o indicadores necesarios deben integrarse en la primera superficie funcional. Los modos especializados sin topbar, como Preparation Station Mode, pueden divergir de esta regla.
+12. El canvas corporativo transversal de Plataforma Nook es `#F4DCE8`. PlatformShell es responsable de suministrar este fondo; las superficies gestionables se presentan como tarjetas o paneles blancos directamente sobre el canvas, evitando fondos intermedios de página que generen doble canvas.
+13. Las vistas internas operacionales deben utilizar el viewport disponible sin generar scroll vertical del documento en condiciones normales de escritorio. Las áreas estructurales permanecen visibles y el contenido variable debe resolver su crecimiento mediante regiones internas con `min-h-0` y `overflow-auto`; en tablas extensas, el cuerpo debe desplazarse internamente manteniendo encabezados visibles.
 
 ---
 
@@ -239,6 +241,101 @@ No exponer `service_role` al browser ni abrir Analytics directamente a `authenti
 
 ---
 
+## 11A. Integración de Gestión y readiness operacional
+
+### DEV-UX-ARCH-01.4.1 — Analytics + Clientes
+
+**Estado: COMPLETADO**
+
+Analytics y Clientes fueron integrados a PlatformShell preservando sus capacidades y autorización vigentes.
+
+Decisiones:
+
+- Analytics pertenece a Gestión y requiere `analytics.view`.
+- Clientes utiliza `customers.operate` y mantiene naturaleza operacional donde corresponda.
+- se eliminó navegación/header legacy redundante;
+- se corrigió el endpoint de loyalty utilizado desde Clientes;
+- TypeScript y build productivo fueron validados.
+
+Clientes conserva deuda UX relevante y requiere una intervención posterior de mayor alcance para ajustarse completamente al estándar de viewport operacional. No resolver esa deuda mediante parches CSS aislados.
+
+### DEV-UX-ARCH-01.4.2 — Cashier Operational Readiness
+
+**Estado: COMPLETADO**
+
+El workspace de cashier queda operacionalmente preparado bajo la nueva arquitectura.
+
+Superficies disponibles:
+
+- POS;
+- Preparación en Platform Mode;
+- Historial;
+- Inventario operacional;
+- Caja;
+- Clientes según `customers.operate`.
+
+Reglas vigentes:
+
+- navegación capability-driven;
+- seguridad efectiva server-side;
+- `cash.operate` permite operación de caja;
+- `cash.audit` queda reservado a admin/superadmin para cierres históricos, detalle y trazabilidad;
+- cashier puede abrir, operar y cerrar su caja, pero no consultar auditoría histórica;
+- Recepciones/configuración de inventario no se exponen a cashier;
+- cierre de sesión se mantiene como última opción de navegación para usuarios estándar;
+- Preparation Station Mode mantiene deliberadamente ausencia de logout visible.
+
+### Canvas corporativo
+
+Se adopta transversalmente para las superficies internas:
+
+- canvas base: `#F4DCE8`;
+- violeta primario Nook: `#4C00F7`;
+- PlatformShell suministra el canvas;
+- las superficies gestionables utilizan tarjetas/paneles blancos;
+- no crear un segundo fondo de página entre el canvas y las tarjetas;
+- el POS constituye la referencia visual principal de esta relación canvas/superficie.
+
+### Operational viewport
+
+Las superficies internas deben converger hacia:
+
+`viewport fijo → superficies blancas → regiones flexibles → min-h-0 → scroll interno`
+
+El scroll de documento no es el patrón objetivo para vistas operacionales de escritorio.
+
+Historial ya implementa este contrato. Clientes y partes de Caja mantienen deuda pendiente.
+
+### `/operacion` y Resumen Operativo
+
+La ruta `/operacion` conserva temporalmente funciones de launcher legacy y no representa una capacidad arquitectónica definitiva.
+
+Sin embargo, **Resumen Operativo sí constituye una capacidad operacional que debe preservarse**.
+
+Antes de retirar el launcher en DEV-UX-ARCH-01.5:
+
+- extraer/preservar Resumen Operativo como superficie operacional;
+- mantener información diaria útil para conciliación operacional;
+- permitir al cashier contrastar ventas, monto y transacciones registradas en Nook con fuentes externas disponibles;
+- no confundir Resumen Operativo con Analytics.
+
+Landing objetivo:
+
+- cashier → Resumen Operativo;
+- preparation → `/operacion/cola`;
+- admin/superadmin → pendiente de decisión en `UXARCH-OPEN-003`.
+
+### Deuda UX explícita
+
+No bloquea Cashier Operational Readiness, pero debe resolverse dentro de DEV-UX-ARCH-01:
+
+- modernización de Clientes y adopción completa del operational viewport;
+- rediseño estructural del cierre de Caja para operar sin scroll de documento;
+- mejorar densidad/legibilidad de tabla de auditoría de Caja para admin/superadmin;
+- exportación histórica de ventas mediante `sales.export`;
+- retiro del launcher legacy sólo después de preservar Resumen Operativo;
+- normalización visual/tipográfica restante en superficies de Gestión/Admin.
+
 ## 12. Estado de implementación
 
 - 01.1 — Arquitectura objetivo y reglas UX — COMPLETADO.
@@ -248,8 +345,11 @@ No exponer `service_role` al browser ni abrir Analytics directamente a `authenti
 - TECH-TS-01 — Baseline TypeScript — COMPLETADO.
 - 01.3B.2 — Platform Mode + Preparation Station Mode — COMPLETADO.
 - 01.3B.3 — Historial — COMPLETADO.
-- 01.4 — Gestión/Admin — SIGUIENTE.
-- 01.5 — Retiro del launcher legacy — PENDIENTE.
+- 01.4.1 — Analytics + Clientes — COMPLETADO.
+- 01.4.2 — Cashier Operational Readiness — COMPLETADO.
+- TECH-ENC-01 — Normalización UTF-8 y eliminación de mojibake — COMPLETADO.
+- 01.4 — Gestión/Admin — EN CURSO.
+- 01.5 — Preservar Resumen Operativo y retirar launcher legacy — PENDIENTE.
 - 01.6 — Separaciones contextuales — PENDIENTE.
 - 01.7 — Preparación touch/tablet final — PENDIENTE.
 - 01.8 — Persistencia de venta activa — PENDIENTE.
@@ -318,10 +418,37 @@ No:
 
 ## 15. Punto de continuidad
 
+Estado del frente operacional:
+
+`Cashier Operational Readiness — COMPLETADO`
+
+Las superficies requeridas para cashier están integradas y funcionales bajo PlatformShell, con autorización capability-driven y RBAC server-side.
+
 Siguiente implementación:
 
-`DEV-UX-ARCH-01.3B.3 — Integrar Historial`
+`DEV-UX-ARCH-01.4 — Continuar integración de Gestión/Admin`
 
-Antes de modificar Historial realizar únicamente una radiografía dirigida de su superficie actual y dependencias inmediatas.
+Objetivo inmediato:
+
+Continuar la integración arquitectónica de las superficies de Gestión y Administración para admin/superadmin, aplicando los estándares ya cerrados:
+
+- PlatformShell;
+- navegación capability-driven;
+- canvas corporativo `#F4DCE8`;
+- superficies gestionables blancas;
+- eliminación de page headers redundantes;
+- operational viewport cuando la naturaleza de la superficie lo requiera;
+- preservación de lógica funcional estable;
+- separación explícita entre operación, gestión y administración;
+- autorización server-side vigente.
 
 No realizar una nueva radiografía general del repositorio.
+
+Las deudas detectadas en Clientes, Caja, exportación histórica y launcher legacy permanecen registradas y deben resolverse dentro de la secuencia de DEV-UX-ARCH-01 sin bloquear el avance hacia Gestión/Admin.
+
+TECH-TS-01 y TECH-ENC-01 están cerrados. El baseline vigente exige:
+
+- `npx.cmd tsc --noEmit` → 0 errores;
+- código ejecutable sin mojibake conocido;
+- archivos nuevos/modificados en UTF-8;
+- `.editorconfig` como contrato de encoding y finales de línea.

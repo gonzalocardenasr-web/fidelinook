@@ -1478,3 +1478,278 @@ Se registra `UXARCH-OPEN-005` para resolver posteriormente la exportación hist�
 `DEV-UX-ARCH-01.4 — Integrar Gestión/Admin`
 
 ---
+
+## 26. Corte canónico — DEV-UX-ARCH-01.4.2 — 30-09-2026
+
+> Este corte reemplaza como estado vigente cualquier información anterior de este Status Pack que resulte contradictoria. Las secciones históricas se conservan únicamente para trazabilidad.
+
+### 26.1 Estado general
+
+DEV-UX-ARCH-01 continúa EN CURSO.
+
+Estado vigente:
+
+- DEV-UX-ARCH-01.1 — Arquitectura objetivo y reglas UX — COMPLETADO.
+- DEV-UX-ARCH-01.2 — PlatformShell / carcasa base — COMPLETADO.
+- DEV-UX-ARCH-01.3A — POS — COMPLETADO.
+- DEV-UX-ARCH-01.3B.1 — Identidad/autorización de Preparación — COMPLETADO.
+- TECH-TS-01 — Baseline TypeScript — COMPLETADO.
+- DEV-UX-ARCH-01.3B.2 — Platform Mode + Preparation Station Mode — COMPLETADO.
+- DEV-UX-ARCH-01.3B.3 — Historial — COMPLETADO.
+- DEV-UX-ARCH-01.4.1 — Analytics + Clientes — COMPLETADO.
+- DEV-UX-ARCH-01.4.2 — Cashier Operational Readiness — COMPLETADO.
+- TECH-ENC-01 — Normalización UTF-8 y eliminación de mojibake — COMPLETADO.
+- DEV-UX-ARCH-01.4 — Integración Gestión/Admin — EN CURSO.
+
+### 26.2 Arquitectura interna vigente
+
+Plataforma Nook mantiene tres dominios internos:
+
+**Operación**
+
+- POS;
+- Preparación;
+- Historial;
+- Inventario operacional;
+- Caja;
+- Resumen Operativo.
+
+**Gestión**
+
+- Analytics;
+- Clientes;
+- Catálogo;
+- Inventario administrativo;
+- Campañas;
+- Suscripciones.
+
+**Administración**
+
+- Usuarios;
+- Auditoría futura.
+
+Cliente/público permanece separado de la plataforma interna.
+
+### 26.3 Roles y RBAC vigentes
+
+Roles persistidos:
+
+- `cashier`;
+- `admin`;
+- `superadmin`;
+- `preparation`.
+
+La autorización operacional continúa basada en capabilities y debe aplicarse server-side.
+
+`preparation` dispone únicamente de:
+
+- `orders.operate`.
+
+Para Caja se distingue:
+
+- `cash.operate` — operación corriente de caja;
+- `cash.audit` — consulta histórica, detalle y trazabilidad de cierres, reservada a admin/superadmin.
+
+Ocultar navegación o controles en frontend no constituye autorización.
+
+### 26.4 Cashier Operational Readiness
+
+**Estado: COMPLETADO**
+
+El cashier dispone bajo la arquitectura vigente de:
+
+- POS;
+- Preparación en Platform Mode;
+- Historial;
+- Inventario operacional;
+- Caja;
+- Clientes según `customers.operate`.
+
+Validaciones relevantes:
+
+- POS operacional;
+- Preparación integrada a PlatformShell;
+- Historial integrado y ajustado al viewport operacional;
+- Inventario expone capacidades operacionales sin Recepciones/configuración administrativa;
+- Caja permite abrir, operar y cerrar la sesión;
+- cashier no accede a auditoría histórica de Caja;
+- autorización server-side preservada;
+- logout operacional validado;
+- TypeScript sin errores;
+- build productivo exitoso.
+
+### 26.5 Preparación
+
+Preparación mantiene dos modos sobre la misma capacidad:
+
+**Platform Mode**
+
+Para usuarios estándar autorizados dentro de Plataforma Nook.
+
+**Preparation Station Mode**
+
+Para identidades con rol `preparation`:
+
+- acceso directo a `/operacion/cola`;
+- sin sidebar;
+- sin topbar global;
+- sin navegación general;
+- sin logout visible;
+- otras rutas internas protegidas reconducen a `/operacion/cola`;
+- `/admin/login` permanece accesible como vía técnica;
+- autorización efectiva server-side.
+
+No crear roles separados para Preparación Local y Preparación Web salvo nueva necesidad funcional demostrada.
+
+### 26.6 Estándar visual transversal
+
+Canvas corporativo:
+
+`#F4DCE8`
+
+Violeta primario Nook:
+
+`#4C00F7`
+
+Reglas:
+
+- PlatformShell suministra el canvas corporativo;
+- las superficies gestionables utilizan tarjetas/paneles blancos directamente sobre ese canvas;
+- evitar un segundo fondo de página intermedio;
+- POS constituye la referencia visual principal;
+- eliminar progresivamente page headers redundantes cuando PlatformShell ya entrega contexto suficiente.
+
+### 26.7 Operational viewport
+
+Las vistas internas operacionales de escritorio deben utilizar el viewport disponible sin generar scroll vertical del documento en condiciones normales.
+
+Patrón objetivo:
+
+`viewport fijo → superficies blancas → regiones flexibles → min-h-0 → scroll interno`
+
+Para contenido variable:
+
+- scroll dentro de la región correspondiente;
+- controles estructurales permanecen visibles;
+- tablas extensas desplazan su cuerpo internamente;
+- encabezados de tabla permanecen visibles cuando corresponda.
+
+Historial ya implementa este patrón.
+
+Deuda conocida:
+
+- Clientes requiere modernización estructural;
+- cierre de Caja requiere reorganización para eliminar scroll de documento;
+- auditoría de Caja para admin/superadmin requiere mejorar densidad y legibilidad.
+
+### 26.8 `/operacion` y Resumen Operativo
+
+`/operacion` mantiene temporalmente funciones de launcher legacy.
+
+El launcher NO constituye una capacidad arquitectónica que deba preservarse.
+
+**Resumen Operativo sí debe preservarse.**
+
+Su finalidad operacional incluye facilitar al cashier la revisión de:
+
+- ventas del día;
+- monto registrado;
+- cantidad de transacciones;
+- información operacional disponible para conciliación con fuentes externas.
+
+Resumen Operativo pertenece a Operación, no a Analytics.
+
+Antes de retirar el launcher en DEV-UX-ARCH-01.5 debe extraerse/preservarse esta capacidad.
+
+Landing objetivo vigente:
+
+- cashier → Resumen Operativo;
+- preparation → `/operacion/cola`;
+- admin/superadmin → pendiente de decisión.
+
+### 26.9 TECH-TS-01
+
+**Estado: CERRADO**
+
+El antiguo baseline de 12 errores TypeScript deja de ser válido.
+
+Baseline vigente:
+
+`npx.cmd tsc --noEmit` → 0 errores.
+
+Nuevos errores deben tratarse como regresiones o deuda nueva hasta determinar su origen.
+
+### 26.10 TECH-ENC-01
+
+**Estado: CERRADO — 30-09-2026**
+
+Se corrigió mojibake persistido en código ejecutable y se estableció contrato de encoding del repositorio.
+
+Resultado:
+
+- 274 líneas con contenido corrupto reparadas en 11 archivos;
+- 0 coincidencias conocidas de mojibake en `app/`, `components/` y `lib/`;
+- `.editorconfig` incorporado;
+- UTF-8 establecido como encoding del repositorio;
+- build productivo exitoso;
+- deploy exitoso;
+- QA visual aprobado en producción.
+
+Commit:
+
+`32d5006 — TECH-ENC-01: normalizar UTF-8 y corregir mojibake`
+
+Para scripts PowerShell que escriban archivos del repositorio, utilizar encoding UTF-8 explícito y evitar depender de defaults de Windows PowerShell.
+
+### 26.11 Deudas explícitas de DEV-UX-ARCH-01
+
+Pendientes conocidos:
+
+- modernizar Clientes y ajustarlo completamente al operational viewport;
+- rediseñar estructuralmente cierre de Caja para evitar scroll de documento;
+- mejorar tabla de auditoría de Caja para admin/superadmin;
+- implementar exportación histórica de ventas en Gestión mediante `sales.export`;
+- preservar/extractar Resumen Operativo antes de retirar `/operacion` como launcher;
+- resolver landing definitiva de admin/superadmin;
+- normalizar superficies restantes de Gestión/Admin;
+- completar Preparación touch-first para tablet ~8–9";
+- resolver preservación de venta activa durante navegación.
+
+Estas deudas no bloquean el cierre de Cashier Operational Readiness.
+
+### 26.12 Restricciones vigentes
+
+No:
+
+- debilitar RBAC;
+- utilizar ocultamiento frontend como seguridad;
+- modificar Auth/session sin evidencia concreta mientras INC-PERF-01.7 permanezca en observación;
+- reintroducir mecanismos paralelos de refresh;
+- reconstruir lógica funcional estable únicamente por razones visuales;
+- crear arquitecturas paralelas por módulo;
+- retirar `/operacion` antes de preservar Resumen Operativo;
+- volver a utilizar el antiguo baseline TypeScript;
+- introducir archivos con encoding inconsistente.
+
+### 26.13 Punto de continuidad
+
+**Cashier Operational Readiness queda COMPLETADO.**
+
+Siguiente frente:
+
+`DEV-UX-ARCH-01.4 — Continuar integración de Gestión/Admin`
+
+Aplicar a las siguientes superficies el estándar ya validado:
+
+- PlatformShell;
+- navegación capability-driven;
+- canvas corporativo `#F4DCE8`;
+- tarjetas/paneles blancos;
+- eliminación de headers redundantes;
+- operational viewport cuando corresponda;
+- autorización server-side;
+- preservación de lógica funcional estable.
+
+No realizar una nueva radiografía general del repositorio.
+
+Continuar mediante radiografías dirigidas únicamente de las superficies de Gestión/Admin que se intervengan.
