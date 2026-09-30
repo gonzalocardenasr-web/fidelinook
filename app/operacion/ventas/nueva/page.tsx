@@ -1159,12 +1159,6 @@ export default function NuevaVentaPage() {
   return (
     <>
       <POSLayout
-        title={channel === "local" ? "Venta local" : "Pedido digital"}
-        subtitle={
-          channel === "local"
-            ? "POS Operacional Nook"
-            : "Ingreso manual multicanal"
-        }
         center={
           <div
             className={
