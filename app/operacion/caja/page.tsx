@@ -1405,59 +1405,38 @@ export default function CashRegisterPage() {
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-3">
       <div className="mx-auto flex min-h-[calc(100vh-24px)] w-full max-w-[1600px] flex-col">
-        <header className="flex shrink-0 flex-col gap-3 rounded-xl bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/operacion"
-              className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50"
-            >
-              ← Operación
-            </Link>
+        <div className="flex shrink-0 justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => void loadCashRegister()}
+            disabled={
+              loading ||
+              loadingMovements ||
+              loadingClosingHistory ||
+              loadingClosingPreview ||
+              submittingClosing
+            }
+            className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading || loadingMovements ? "Actualizando..." : "Actualizar"}
+          </button>
 
-            <div className="min-w-0">
-              <h1 className="text-lg font-black leading-tight text-neutral-900">
-                Caja
-              </h1>
-
-              <p className="text-[11px] text-neutral-500">
-                Apertura, movimientos y cierre de efectivo.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
+          {session && !showClosingForm && (
             <button
               type="button"
-              onClick={() => void loadCashRegister()}
+              onClick={startClosing}
               disabled={
-                loading ||
                 loadingMovements ||
-                loadingClosingHistory ||
+                submittingMovement ||
                 loadingClosingPreview ||
                 submittingClosing
               }
-              className="cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="cursor-pointer rounded-lg bg-neutral-900 px-3 py-2 text-[12px] font-black text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading || loadingMovements ? "Actualizando..." : "Actualizar"}
+              Cerrar caja
             </button>
-
-            {session && !showClosingForm && (
-              <button
-                type="button"
-                onClick={startClosing}
-                disabled={
-                  loadingMovements ||
-                  submittingMovement ||
-                  loadingClosingPreview ||
-                  submittingClosing
-                }
-                className="cursor-pointer rounded-lg bg-neutral-900 px-3 py-2 text-[12px] font-black text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cerrar caja
-              </button>
-            )}
-          </div>
-        </header>
+          )}
+        </div>
 
         {message && (
           <div

@@ -488,6 +488,26 @@ export default function PlatformShell({ children }: PlatformShellProps) {
               </div>
             );
           })}
+
+          {session && (
+            <div className="px-2">
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                disabled={loggingOut}
+                title="Cerrar sesión"
+                className="flex h-11 w-full items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                  <Icon name="logout" className="h-5 w-5" />
+                </span>
+
+                <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+                </span>
+              </button>
+            </div>
+          )}
         </nav>
       </aside>
 
