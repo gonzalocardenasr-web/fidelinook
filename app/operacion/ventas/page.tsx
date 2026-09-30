@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import ClienteSelector, {
@@ -831,48 +830,16 @@ export default function HistorialVentasPage() {
   return (
     <main className="min-h-screen bg-[#F6F3FF] p-3">
       <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1600px] flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-4 rounded-xl bg-white px-4 py-3 shadow-sm">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/operacion"
-              className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50"
-            >
-              ← Operación
-            </Link>
-
-            <div className="min-w-0">
-              <h1 className="text-lg font-black leading-tight text-neutral-900">
-                Historial de ventas
-              </h1>
-
-              <p className="text-[11px] text-neutral-500">
-                Consulta operacional de ventas locales y digitales.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => cargarVentas(page)}
-              disabled={loading}
-              className="cursor-pointer rounded-lg bg-violet-600 px-3 py-2 text-[12px] font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Actualizando..." : "Actualizar"}
-            </button>
-          </div>
-        </header>
-
         {message && (
           <div className="mt-2 shrink-0 rounded-lg border border-red-100 bg-white px-3 py-2 text-[12px] font-semibold text-red-700">
             {message}
           </div>
         )}
 
-        <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
+        <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
           <div className="shrink-0">
             <div className="flex flex-wrap items-end gap-2">
-              <div className="w-36">
+              <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Desde
                 </label>
@@ -885,7 +852,7 @@ export default function HistorialVentasPage() {
                 />
               </div>
 
-              <div className="w-36">
+              <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Hasta
                 </label>
@@ -1007,6 +974,16 @@ export default function HistorialVentasPage() {
                 className="h-9 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Limpiar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => cargarVentas(page)}
+                disabled={loading}
+                title="Actualizar historial"
+                className="h-9 shrink-0 cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 text-[11px] font-bold text-neutral-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-wait disabled:opacity-50"
+              >
+                {loading ? "Actualizando..." : "Actualizar"}
               </button>
             </div>
 
