@@ -8,7 +8,6 @@ type Props = {
   rewardDiscountTotal: number;
   manualDiscountAmount: number;
   discountTotal: number;
-  total: number;
 };
 
 function formatCurrency(value: number) {
@@ -25,7 +24,6 @@ export default function OrderTotals({
   rewardDiscountTotal,
   manualDiscountAmount,
   discountTotal,
-  total,
 }: Props) {
   const discountPercentage = Math.round(discountRate * 100);
 
@@ -100,14 +98,6 @@ export default function OrderTotals({
           <div className="border-t border-neutral-200" />
         </>
       )}
-
-      <div className="flex items-center justify-between">
-        <span className="text-[18px] font-black text-neutral-950">Total</span>
-
-        <span className="text-[18px] font-black text-neutral-950">
-          {formatCurrency(total)}
-        </span>
-      </div>
     </div>
   );
 }

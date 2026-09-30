@@ -1,6 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
+
 import { Product } from "../../types/sales";
 import ProductCard from "./ProductCard";
-import { useMemo, useState, useEffect } from "react";
 
 type Props = {
   products: Product[];
@@ -61,15 +62,15 @@ export default function ProductGrid({
     : "grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2";
 
   return (
-    <section className="flex h-full min-h-0 flex-col">
+    <section className="flex h-full min-h-0 flex-col p-3">
       <div className="shrink-0">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+        <div className="flex min-h-8 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[13px] font-black uppercase tracking-wide text-neutral-600">
               Productos
             </h2>
 
-            <p className="text-xs text-neutral-400">
+            <p className="mt-0.5 text-[11px] leading-none text-neutral-500">
               {products.length} disponible{products.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -78,7 +79,7 @@ export default function ProductGrid({
             <button
               type="button"
               onClick={() => onSearchChange("")}
-              className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50 active:scale-95"
+              className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-violet-700 transition hover:bg-violet-50 active:scale-95"
             >
               Limpiar
             </button>
@@ -89,18 +90,20 @@ export default function ProductGrid({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar producto, SKU o categoría"
-          className="mt-2 h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          className="mt-2 h-8 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[12px] outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
         />
       </div>
 
       {loading ? (
-        <p className="mt-4 text-sm text-neutral-600">Cargando catálogo...</p>
+        <p className="mt-3 text-[12px] text-neutral-500">
+          Cargando catálogo...
+        </p>
       ) : products.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-dashed border-neutral-200 p-6 text-center text-sm text-neutral-400">
+        <div className="mt-3 rounded-lg border border-dashed border-neutral-200 p-5 text-center text-[12px] text-neutral-400">
           No hay productos para esta búsqueda.
         </div>
       ) : (
-        <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="space-y-1.5">
             {Object.entries(groupedProducts).map(
               ([category, categoryProducts]) => {
@@ -109,24 +112,24 @@ export default function ProductGrid({
                 return (
                   <section
                     key={category}
-                    className="rounded-lg border border-neutral-200 bg-neutral-50"
+                    className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50"
                   >
                     <button
                       type="button"
                       onClick={() => toggleCategory(category)}
-                      className="flex min-h-8 w-full cursor-pointer items-center justify-between px-3 py-1 text-left transition hover:bg-violet-50 active:bg-violet-100"
+                      className="flex h-8 w-full cursor-pointer items-center justify-between px-3 text-left transition hover:bg-violet-50 active:bg-violet-100"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-violet-700">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="shrink-0 text-[10px] font-black text-violet-700">
                           {expanded ? "▼" : "▶"}
                         </span>
 
-                        <span className="text-[11px] font-black uppercase tracking-wide text-neutral-700">
+                        <span className="truncate text-[11px] font-black uppercase tracking-wide text-neutral-700">
                           {category}
                         </span>
                       </div>
 
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-neutral-500">
+                      <span className="ml-2 shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-neutral-500">
                         {categoryProducts.length}
                       </span>
                     </button>

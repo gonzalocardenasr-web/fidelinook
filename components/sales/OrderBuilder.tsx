@@ -235,18 +235,13 @@ export default function OrderBuilder({
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
-        <div>
-          <h2 className="text-[12px] font-black uppercase tracking-wide text-neutral-500">
-            Pedido
-          </h2>
-          <p className="text-[10px] text-neutral-400">
-            {totalItems} producto{totalItems === 1 ? "" : "s"}
-          </p>
-        </div>
+      <div className="mb-2 shrink-0">
+        <h2 className="text-[13px] font-black uppercase tracking-wide text-neutral-600">
+          Pedido
+        </h2>
 
-        <p className="text-[13px] font-black text-violet-700">
-          ${total.toLocaleString("es-CL")}
+        <p className="mt-0.5 text-[11px] leading-none text-neutral-500">
+          {totalItems} producto{totalItems === 1 ? "" : "s"}
         </p>
       </div>
 
@@ -915,27 +910,42 @@ export default function OrderBuilder({
 
         {/* RESUMEN */}
         <div className="shrink-0 border-t border-neutral-200 bg-white p-2">
-          <OrderTotals
-            subtotal={subtotal}
-            potQuantity={potQuantity}
-            discountRate={discountRate}
-            potDiscountTotal={potDiscountTotal}
-            giftDiscountTotal={giftDiscountTotal}
-            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
-            rewardDiscountTotal={rewardDiscountTotal}
-            manualDiscountAmount={manualDiscountAmount}
-            discountTotal={discountTotal}
-            total={total}
-          />
+          {discountTotal > 0 && (
+            <div className="mb-2">
+              <OrderTotals
+                subtotal={subtotal}
+                potQuantity={potQuantity}
+                discountRate={discountRate}
+                potDiscountTotal={potDiscountTotal}
+                giftDiscountTotal={giftDiscountTotal}
+                mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+                rewardDiscountTotal={rewardDiscountTotal}
+                manualDiscountAmount={manualDiscountAmount}
+                discountTotal={discountTotal}
+              />
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={confirmDisabled}
-            className="mt-1.5 w-full cursor-pointer rounded-lg bg-violet-600 px-3 py-2.5 text-[12px] font-black uppercase tracking-wide text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Confirmando..." : "Confirmar venta"}
-          </button>
+          <div className="grid grid-cols-[minmax(120px,0.8fr)_1.5fr] gap-2">
+            <div className="flex min-w-0 flex-col justify-center rounded-lg border border-neutral-200 bg-neutral-50 px-3">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                Total
+              </span>
+
+              <span className="truncate text-[18px] font-black leading-tight text-neutral-950">
+                ${total.toLocaleString("es-CL")}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={confirmDisabled}
+              className="h-11 cursor-pointer rounded-lg bg-violet-600 px-3 text-[12px] font-black uppercase tracking-wide text-white transition duration-150 hover:bg-violet-700 hover:shadow-sm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? "Confirmando..." : "Confirmar venta"}
+            </button>
+          </div>
         </div>
       </div>
     </aside>

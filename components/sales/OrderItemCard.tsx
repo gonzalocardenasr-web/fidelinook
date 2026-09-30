@@ -124,18 +124,128 @@ export default function OrderItemCard({
 
   return (
     <div
-      className={`rounded-lg border px-2.5 py-2 ${
+      className={`rounded-lg border px-2.5 py-1.5 ${
         item.isGift
           ? "border-emerald-300 bg-emerald-50"
           : "border-neutral-200 bg-neutral-50"
       }`}
     >
-      <div className="flex items-baseline gap-2">
-        <p className="min-w-0 flex-1 truncate text-[12px] font-black text-neutral-900">
+      <div className="flex min-w-0 items-center gap-1">
+        <p className="min-w-0 flex-1 truncate text-[13px] font-black text-neutral-900">
           {item.quantity}x {item.product.name}
         </p>
 
-        <div className="shrink-0 text-right">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => onReconfigure(item)}
+            title="Editar producto"
+            aria-label="Editar producto"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-200 hover:text-neutral-800 active:scale-95"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDuplicate(item)}
+            title="Duplicar producto"
+            aria-label="Duplicar producto"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-violet-600 transition hover:bg-violet-100 hover:text-violet-800 active:scale-95"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <rect x="8" y="8" width="11" height="11" rx="2" />
+              <path
+                d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleGift}
+            title={item.isGift ? "Quitar regalo" : "Marcar como regalo"}
+            aria-label={item.isGift ? "Quitar regalo" : "Marcar como regalo"}
+            className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition active:scale-95 ${
+              item.isGift
+                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                : "text-emerald-600 hover:bg-emerald-100 hover:text-emerald-800"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path
+                d="M20 12v9H4v-9M2 7h20v5H2zM12 7v14"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 7H8.5A2.5 2.5 0 1 1 11 4.5L12 7Zm0 0h3.5A2.5 2.5 0 1 0 13 4.5L12 7Z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onRemove(item.localId)}
+            title="Quitar producto"
+            aria-label="Quitar producto"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-red-500 transition hover:bg-red-50 hover:text-red-700 active:scale-95"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 11v5M14 11v5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="ml-1 shrink-0 text-right">
           {item.isGift && (
             <span className="mr-1 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
               Regalo
@@ -149,7 +259,7 @@ export default function OrderItemCard({
           )}
 
           <span
-            className={`text-[12px] font-black ${
+            className={`text-[13px] font-black ${
               item.isGift ? "text-emerald-700" : "text-violet-700"
             }`}
           >
@@ -239,50 +349,6 @@ export default function OrderItemCard({
           Motivo: {item.giftReason}
         </div>
       )}
-
-      <div className="mt-1.5 flex items-center gap-1 border-t border-neutral-200 pt-1.5">
-        <button
-          type="button"
-          onClick={() => onReconfigure(item)}
-          className="cursor-pointer rounded-md px-1.5 py-1 text-[10px] font-bold text-neutral-700 transition hover:bg-neutral-100 active:scale-95"
-        >
-          Editar
-        </button>
-
-        <span className="text-neutral-300">·</span>
-
-        <button
-          type="button"
-          onClick={() => onDuplicate(item)}
-          className="cursor-pointer rounded-md px-1.5 py-1 text-[10px] font-bold text-violet-700 transition hover:bg-violet-50 active:scale-95"
-        >
-          Duplicar
-        </button>
-
-        <span className="text-neutral-300">·</span>
-
-        <button
-          type="button"
-          onClick={toggleGift}
-          className={`cursor-pointer rounded-md px-1.5 py-1 text-[10px] font-bold transition active:scale-95 ${
-            item.isGift
-              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-              : "text-emerald-700 hover:bg-emerald-50"
-          }`}
-        >
-          {item.isGift ? "Quitar regalo" : "Regalo"}
-        </button>
-
-        <span className="text-neutral-300">·</span>
-
-        <button
-          type="button"
-          onClick={() => onRemove(item.localId)}
-          className="cursor-pointer rounded-md px-1.5 py-1 text-[10px] font-bold text-red-600 transition hover:bg-red-50 active:scale-95"
-        >
-          Quitar
-        </button>
-      </div>
     </div>
   );
 }

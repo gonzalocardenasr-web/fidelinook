@@ -7,7 +7,6 @@ import SalesChannelSelector, { SalesChannel } from "./SalesChannelSelector";
 type Props = {
   selectedCliente: ClienteSelectorValue | null;
   cart: CartItem[];
-  total: number;
   message?: string;
   onClienteChange: (cliente: ClienteSelectorValue | null) => void;
   clienteSelectorResetKey: number;
@@ -23,7 +22,6 @@ type Props = {
 export default function POSContextPanel({
   selectedCliente,
   cart,
-  total,
   message,
   onClienteChange,
   clienteSelectorResetKey,
@@ -47,7 +45,7 @@ export default function POSContextPanel({
 
   return (
     <aside className="flex h-full min-h-0 flex-col">
-      <h2 className="shrink-0 text-[13px] font-black uppercase tracking-wide text-neutral-500">
+      <h2 className="shrink-0 text-[13px] font-black uppercase tracking-wide text-neutral-600">
         Contexto
       </h2>
 
@@ -188,18 +186,12 @@ export default function POSContextPanel({
             Pedido actual
           </span>
 
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] text-neutral-500">
-              <strong className="font-black text-neutral-900">
-                {totalItems}
-              </strong>{" "}
-              ítem{totalItems === 1 ? "" : "s"}
-            </span>
-
-            <span className="text-[13px] font-black text-violet-700">
-              ${total.toLocaleString("es-CL")}
-            </span>
-          </div>
+          <span className="text-[11px] text-neutral-500">
+            <strong className="font-black text-neutral-900">
+              {totalItems}
+            </strong>{" "}
+            ítem{totalItems === 1 ? "" : "s"}
+          </span>
         </div>
       </section>
 

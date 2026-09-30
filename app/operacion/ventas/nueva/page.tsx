@@ -1260,7 +1260,6 @@ export default function NuevaVentaPage() {
           <POSContextPanel
             selectedCliente={selectedCliente}
             cart={cart}
-            total={total}
             message={message}
             onClienteChange={handleClienteChange}
             clienteSelectorResetKey={clienteSelectorResetKey}
