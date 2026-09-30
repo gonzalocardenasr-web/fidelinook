@@ -7,6 +7,7 @@ export type OperationPermission =
   | "customers.operate"
   | "loyalty.operate"
   | "cash.operate"
+  | "cash.audit"
   | "catalog.read"
   | "catalog.manage"
   | "inventory.stock.read"
@@ -45,6 +46,7 @@ const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
   "campaigns.manage",
   "subscriptions.manage",
   "analytics.view",
+  "cash.audit",
 ];
 
 const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-
 import {
   getOperationSession,
   OperationAuthUnavailableError,
 } from "@/lib/operation-auth";
+import { ROLE_PERMISSIONS } from "@/lib/operation-rbac";
 
 export async function GET() {
   try {
@@ -26,6 +26,7 @@ export async function GET() {
       authUserId: session.authUserId,
       displayName: session.displayName,
       authSource: session.source,
+      permissions: ROLE_PERMISSIONS[session.role],
     });
   } catch (error) {
     if (error instanceof OperationAuthUnavailableError) {

@@ -11,7 +11,7 @@ export default function POSLayout({ center, right, context }: Props) {
     "min-h-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm";
 
   return (
-    <main className="h-[calc(100vh-3.5rem)] overflow-hidden bg-[#F6F3FF] p-2">
+    <main className="h-full overflow-hidden">
       <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] gap-2">
         <section className={surfaceClass}>{center}</section>
 

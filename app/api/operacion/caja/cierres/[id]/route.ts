@@ -205,7 +205,7 @@ export async function GET(
   const operationSession = await getOperationSession();
   const authorization = authorizeOperationSession(
     operationSession,
-    "cash.operate",
+    "cash.audit",
   );
 
   if (!authorization.ok) {

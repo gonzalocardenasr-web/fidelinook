@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import type { OperationRole } from "@/lib/operation-auth";
+import type { OperationPermission } from "@/lib/operation-rbac";
 import {
   getPlatformNavigation,
   getRoleLabel,
@@ -19,15 +20,18 @@ import {
   type PlatformNavigationSection,
 } from "@/lib/platform-navigation";
 
+import {
+  PlatformSessionProvider,
+  type PlatformSession,
+} from "@/components/platform/PlatformSessionContext";
+
 type SessionPayload = {
   role?: OperationRole | null;
   displayName?: string | null;
+  permissions?: OperationPermission[];
 };
 
-type ShellSession = {
-  role: OperationRole;
-  displayName: string | null;
-};
+type ShellSession = PlatformSession;
 
 type PlatformShellProps = {
   children: ReactNode;
@@ -321,6 +325,7 @@ export default function PlatformShell({ children }: PlatformShellProps) {
         setSession({
           role: data.role,
           displayName: data.displayName ?? null,
+          permissions: Array.isArray(data.permissions) ? data.permissions : [],
         });
         setSessionUnavailable(false);
       } catch (error) {
@@ -410,202 +415,212 @@ export default function PlatformShell({ children }: PlatformShellProps) {
     );
   }
 
-  if (isPreparationStation) {
+  if (isPreparationStation && session) {
     return (
-      <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
-        {children}
-      </div>
+      <PlatformSessionProvider session={session}>
+        <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
+          {children}
+        </div>
+      </PlatformSessionProvider>
     );
   }
 
+  if (!session) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
-      <aside
-        className="
+    <PlatformSessionProvider session={session}>
+      <div className="min-h-screen bg-[#F6F3FF] text-neutral-950">
+        <aside
+          className="
           group fixed inset-y-0 left-0 z-50
           w-16 overflow-hidden border-r border-neutral-200 bg-white
           shadow-[2px_0_12px_rgba(0,0,0,0.04)]
           transition-[width,box-shadow] duration-200 ease-out
           hover:w-60 hover:shadow-[8px_0_28px_rgba(0,0,0,0.12)]
         "
-      >
-        <div className="flex h-14 items-center border-b border-neutral-200 px-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4C00F7] text-sm font-bold text-white">
-            N
-          </div>
-
-          <div className="ml-3 min-w-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-            <p className="whitespace-nowrap text-sm font-semibold text-neutral-950">
-              Plataforma Nook
-            </p>
-            <p className="whitespace-nowrap text-xs text-neutral-500">
-              Operación y gestión
-            </p>
-          </div>
-        </div>
-
-        <nav className="h-[calc(100vh-3.5rem)] overflow-y-auto overflow-x-hidden py-3">
-          {SECTION_ORDER.map((section) => {
-            const items = navigation.filter((item) => item.section === section);
-
-            if (items.length === 0) return null;
-
-            return (
-              <div key={section} className="mb-4">
-                <div className="mb-1 h-6 px-4">
-                  <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
-                    {PLATFORM_SECTION_LABELS[section]}
-                  </p>
-                </div>
-
-                <div className="space-y-1 px-2">
-                  {items.map((item) => {
-                    const active = isActiveRoute(pathname, item.href);
-
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        title={item.label}
-                        className={[
-                          "flex h-11 items-center rounded-xl transition",
-                          active
-                            ? "bg-violet-50 text-[#4C00F7]"
-                            : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950",
-                        ].join(" ")}
-                      >
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center">
-                          <Icon name={item.icon} className="h-5 w-5" />
-                        </span>
-
-                        <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                          {item.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-
-          {session && (
-            <div className="px-2">
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                disabled={loggingOut}
-                title="Cerrar sesión"
-                className="flex h-11 w-full items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center">
-                  <Icon name="logout" className="h-5 w-5" />
-                </span>
-
-                <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                  {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
-                </span>
-              </button>
-            </div>
-          )}
-        </nav>
-      </aside>
-
-      <div className="min-h-screen pl-16">
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-neutral-200 bg-white/95 px-4 backdrop-blur md:px-5">
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2 text-sm">
-              {breadcrumbs.map((breadcrumb, index) => (
-                <div
-                  key={`${breadcrumb}-${index}`}
-                  className="flex min-w-0 items-center gap-2"
-                >
-                  {index > 0 && <span className="text-neutral-300">/</span>}
-
-                  <span
-                    className={
-                      index === breadcrumbs.length - 1
-                        ? "truncate font-semibold text-neutral-900"
-                        : "truncate text-neutral-500"
-                    }
-                  >
-                    {breadcrumb}
-                  </span>
-                </div>
-              ))}
+        >
+          <div className="flex h-14 items-center border-b border-neutral-200 px-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4C00F7] text-sm font-bold text-white">
+              N
             </div>
 
-            {sessionUnavailable && (
-              <p className="mt-0.5 text-[11px] text-amber-700">
-                No fue posible actualizar temporalmente la información de
-                sesión.
+            <div className="ml-3 min-w-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <p className="whitespace-nowrap text-sm font-semibold text-neutral-950">
+                Plataforma Nook
               </p>
-            )}
+              <p className="whitespace-nowrap text-xs text-neutral-500">
+                Operación y gestión
+              </p>
+            </div>
           </div>
 
-          <div className="relative ml-4 flex shrink-0 items-center gap-3">
-            {sessionLoading ? (
-              <div className="h-8 w-32 animate-pulse rounded-lg bg-neutral-100" />
-            ) : session ? (
-              <>
-                <div className="hidden text-right sm:block">
-                  <p className="max-w-44 truncate text-sm font-medium text-neutral-900">
-                    {session.displayName || "Usuario Nook"}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    {getRoleLabel(session.role)}
-                  </p>
-                </div>
+          <nav className="h-[calc(100vh-3.5rem)] overflow-y-auto overflow-x-hidden py-3">
+            {SECTION_ORDER.map((section) => {
+              const items = navigation.filter(
+                (item) => item.section === section,
+              );
 
+              if (items.length === 0) return null;
+
+              return (
+                <div key={section} className="mb-4">
+                  <div className="mb-1 h-6 px-4">
+                    <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                      {PLATFORM_SECTION_LABELS[section]}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 px-2">
+                    {items.map((item) => {
+                      const active = isActiveRoute(pathname, item.href);
+
+                      return (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          title={item.label}
+                          className={[
+                            "flex h-11 items-center rounded-xl transition",
+                            active
+                              ? "bg-violet-50 text-[#4C00F7]"
+                              : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950",
+                          ].join(" ")}
+                        >
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                            <Icon name={item.icon} className="h-5 w-5" />
+                          </span>
+
+                          <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            {item.label}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {session && (
+              <div className="px-2">
                 <button
                   type="button"
-                  onClick={() => setUserMenuOpen((current) => !current)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4C00F7] text-xs font-semibold text-white transition hover:bg-[#3F00CC]"
-                  aria-label="Abrir menú de usuario"
-                  aria-expanded={userMenuOpen}
+                  onClick={() => void handleLogout()}
+                  disabled={loggingOut}
+                  title="Cerrar sesión"
+                  className="flex h-11 w-full items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {initials}
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                    <Icon name="logout" className="h-5 w-5" />
+                  </span>
+
+                  <span className="ml-1 whitespace-nowrap text-sm font-medium opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                    {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+                  </span>
                 </button>
+              </div>
+            )}
+          </nav>
+        </aside>
 
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-12 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl">
-                    <div className="border-b border-neutral-100 px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[#4C00F7]">
-                          <Icon name="user" className="h-5 w-5" />
-                        </div>
+        <div className="min-h-screen pl-16">
+          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-neutral-200 bg-white/95 px-4 backdrop-blur md:px-5">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2 text-sm">
+                {breadcrumbs.map((breadcrumb, index) => (
+                  <div
+                    key={`${breadcrumb}-${index}`}
+                    className="flex min-w-0 items-center gap-2"
+                  >
+                    {index > 0 && <span className="text-neutral-300">/</span>}
 
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-neutral-950">
-                            {session.displayName || "Usuario Nook"}
-                          </p>
-                          <p className="text-xs text-neutral-500">
-                            {getRoleLabel(session.role)}
-                          </p>
+                    <span
+                      className={
+                        index === breadcrumbs.length - 1
+                          ? "truncate font-semibold text-neutral-900"
+                          : "truncate text-neutral-500"
+                      }
+                    >
+                      {breadcrumb}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {sessionUnavailable && (
+                <p className="mt-0.5 text-[11px] text-amber-700">
+                  No fue posible actualizar temporalmente la información de
+                  sesión.
+                </p>
+              )}
+            </div>
+
+            <div className="relative ml-4 flex shrink-0 items-center gap-3">
+              {sessionLoading ? (
+                <div className="h-8 w-32 animate-pulse rounded-lg bg-neutral-100" />
+              ) : session ? (
+                <>
+                  <div className="hidden text-right sm:block">
+                    <p className="max-w-44 truncate text-sm font-medium text-neutral-900">
+                      {session.displayName || "Usuario Nook"}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      {getRoleLabel(session.role)}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setUserMenuOpen((current) => !current)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4C00F7] text-xs font-semibold text-white transition hover:bg-[#3F00CC]"
+                    aria-label="Abrir menú de usuario"
+                    aria-expanded={userMenuOpen}
+                  >
+                    {initials}
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-12 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl">
+                      <div className="border-b border-neutral-100 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[#4C00F7]">
+                            <Icon name="user" className="h-5 w-5" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-neutral-950">
+                              {session.displayName || "Usuario Nook"}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              {getRoleLabel(session.role)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="p-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleLogout()}
-                        disabled={loggingOut}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Icon name="logout" className="h-5 w-5" />
-                        {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
-                      </button>
+                      <div className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleLogout()}
+                          disabled={loggingOut}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Icon name="logout" className="h-5 w-5" />
+                          {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            ) : null}
-          </div>
-        </header>
+                  )}
+                </>
+              ) : null}
+            </div>
+          </header>
 
-        <div className="min-h-[calc(100vh-3.5rem)]">{children}</div>
+          <div className="h-[calc(100vh-3.5rem)] p-2">{children}</div>
+        </div>
       </div>
-    </div>
+    </PlatformSessionProvider>
   );
 }

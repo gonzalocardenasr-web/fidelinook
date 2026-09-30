@@ -828,7 +828,7 @@ export default function HistorialVentasPage() {
   }
 
   return (
-    <main className="h-[calc(100vh-4rem)] overflow-hidden p-3">
+    <main className="h-full overflow-hidden">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-col">
         {" "}
         {message && (
