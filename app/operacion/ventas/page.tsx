@@ -883,7 +883,7 @@ export default function HistorialVentasPage() {
                 />
               </div>
 
-              <div className="w-36">
+              <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Canal
                 </label>
@@ -923,7 +923,7 @@ export default function HistorialVentasPage() {
                 </select>
               </div>
 
-              <div className="w-36">
+              <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Estado
                 </label>
@@ -942,7 +942,7 @@ export default function HistorialVentasPage() {
                 </select>
               </div>
 
-              <div className="w-36">
+              <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Cliente
                 </label>
