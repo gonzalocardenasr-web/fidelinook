@@ -22,20 +22,20 @@ export default async function UsersManagementPage() {
               </p>
 
               <h1 className="mt-2 text-2xl font-bold">
-                GestiÃ³n de usuarios
+                Gestión de usuarios
               </h1>
             </div>
 
             <div className="px-6 py-7 md:px-8 md:py-8">
               <div className="rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-4 text-sm text-[#8A3550]">
-                No tienes permisos para acceder a esta secciÃ³n.
+                No tienes permisos para acceder a esta sección.
               </div>
 
               <Link
                 href="/operacion"
                 className="mt-6 inline-flex rounded-xl bg-[#4C00F7] px-4 py-3 text-sm font-semibold text-white"
               >
-                Volver a OperaciÃ³n
+                Volver a Operación
               </Link>
             </div>
           </div>

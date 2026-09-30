@@ -637,14 +637,14 @@ export async function POST(req: Request) {
 
                       if (failedEmails.length > 0) {
                         console.error(
-                          "Uno o mÃ¡s correos de premio no pudieron registrarse o despacharse:",
+                          "Uno o más correos de premio no pudieron registrarse o despacharse:",
                           failedEmails,
                         );
 
                         warnings.push(
                           conversion.rewardsIssued === 1
                             ? "El premio fue generado, pero su correo no pudo procesarse."
-                            : "Los premios fueron generados, pero uno o mÃ¡s correos no pudieron procesarse.",
+                            : "Los premios fueron generados, pero uno o más correos no pudieron procesarse.",
                         );
                       }
                     }

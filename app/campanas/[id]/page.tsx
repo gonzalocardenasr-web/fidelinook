@@ -64,7 +64,7 @@ export default function CampanaDetallePage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok || !data.campana) {
-        setError(data.message || "No se encontrÃ³ la campaÃ±a.");
+        setError(data.message || "No se encontró la campaña.");
         return;
       }
 
@@ -90,8 +90,8 @@ export default function CampanaDetallePage() {
       );
       setRecurrencia(c.recurrencia || "una_vez");
     } catch (error) {
-      console.error("Error cargando campaÃ±a:", error);
-      setError("OcurriÃ³ un error al cargar la campaÃ±a.");
+      console.error("Error cargando campaña:", error);
+      setError("Ocurrió un error al cargar la campaña.");
     } finally {
       setLoading(false);
     }
@@ -121,14 +121,14 @@ export default function CampanaDetallePage() {
     }
 
     if (!premioDescripcion.trim()) {
-      setError("Ingresa la descripciÃ³n visible del premio.");
+      setError("Ingresa la descripción visible del premio.");
       return;
     }
 
     const duracion = Number(duracionHoras);
 
     if (!Number.isFinite(duracion) || duracion < 24 || duracion % 24 !== 0) {
-      setError("La vigencia debe ser un mÃºltiplo de 24 horas.");
+      setError("La vigencia debe ser un múltiplo de 24 horas.");
       return;
     }
 
@@ -153,15 +153,15 @@ export default function CampanaDetallePage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        setError(data.message || "No se pudo actualizar la campaÃ±a.");
+        setError(data.message || "No se pudo actualizar la campaña.");
         return;
       }
 
-      setMensaje("CampaÃ±a actualizada correctamente.");
+      setMensaje("Campaña actualizada correctamente.");
       await cargarCampana();
     } catch (error) {
-      console.error("Error guardando campaÃ±a:", error);
-      setError("OcurriÃ³ un error al guardar la campaÃ±a.");
+      console.error("Error guardando campaña:", error);
+      setError("Ocurrió un error al guardar la campaña.");
     } finally {
       setGuardando(false);
     }
@@ -171,7 +171,7 @@ export default function CampanaDetallePage() {
     return (
       <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
         <div className="mx-auto max-w-2xl rounded-[28px] bg-white p-6 shadow">
-          Cargando campaÃ±a...
+          Cargando campaña...
         </div>
       </main>
     );
@@ -186,10 +186,10 @@ export default function CampanaDetallePage() {
               Superadmin
             </p>
             <h1 className="mt-2 text-2xl font-bold leading-tight">
-              Detalle de campaÃ±a
+              Detalle de campaña
             </h1>
             <p className="mt-2 text-sm text-white/85">
-              Revisa y ajusta la configuraciÃ³n antes de lanzarla.
+              Revisa y ajusta la configuración antes de lanzarla.
             </p>
           </div>
 
@@ -269,13 +269,13 @@ export default function CampanaDetallePage() {
                       Vista previa
                     </p>
                     <h3 className="mt-3 text-xl font-bold text-[#4c00f7]">
-                      ðŸŽ‰ Â¡Tienes un premio!
+                      🎉 ¡Tienes un premio!
                     </h3>
                     <p className="mt-3 text-sm leading-6 text-[#555]">
                       {premioDescripcion || "Texto visible del premio..."}
                     </p>
                     <p className="mt-3 text-sm text-[#555]">
-                      MuÃ©stralo en el local para canjearlo.
+                      Muéstralo en el local para canjearlo.
                     </p>
                   </div>
 
@@ -292,7 +292,7 @@ export default function CampanaDetallePage() {
                       <option value="24">24 horas</option>
                       <option value="48">48 horas</option>
                       <option value="72">72 horas</option>
-                      <option value="168">7 dÃ­as</option>
+                      <option value="168">7 días</option>
                     </select>
                   </div>
 
@@ -324,7 +324,7 @@ export default function CampanaDetallePage() {
                       href="/operacion"
                       className="w-full rounded-2xl border border-[#D9C8FF] bg-white px-5 py-4 text-center text-base font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
                     >
-                      Volver a operaciÃ³n
+                      Volver a operación
                     </Link>
                   </div>
                 </form>

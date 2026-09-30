@@ -79,15 +79,15 @@ export default function ClientesPage() {
 
       if (!res.ok) {
         setMensaje(
-          data.message || "No se pudo cargar la fidelizaciÃ³n del cliente.",
+          data.message || "No se pudo cargar la fidelización del cliente.",
         );
         return;
       }
 
       setCustomerLoyalty(data.loyalty as CustomerLoyaltySummary);
     } catch (error) {
-      console.error("Error cargando fidelizaciÃ³n del cliente:", error);
-      setMensaje("OcurriÃ³ un error al cargar la fidelizaciÃ³n del cliente.");
+      console.error("Error cargando fidelización del cliente:", error);
+      setMensaje("Ocurrió un error al cargar la fidelización del cliente.");
     } finally {
       setCargandoFidelizacion(false);
     }
@@ -109,7 +109,7 @@ export default function ClientesPage() {
       const data = await res.json();
       setRol(data.role || null);
     } catch (error) {
-      console.error("Error cargando sesiÃ³n:", error);
+      console.error("Error cargando sesión:", error);
       setRol(null);
     } finally {
       setCargandoRol(false);
@@ -165,7 +165,7 @@ export default function ClientesPage() {
       localStorage.setItem("clientesClienteSeleccionadoId", primerId);
     } catch (err) {
       console.error("Error inesperado cargando clientes:", err);
-      setMensaje("OcurriÃ³ un error inesperado al cargar clientes.");
+      setMensaje("Ocurrió un error inesperado al cargar clientes.");
       setClientes([]);
     } finally {
       setCargando(false);
@@ -260,12 +260,12 @@ export default function ClientesPage() {
         "ID",
         "Nombre",
         "Correo",
-        "TelÃ©fono",
+        "Teléfono",
         "Sellos actuales",
         "Premios activos",
         "Premios usados",
-        "Ãšltimo sello",
-        "Ãšltimo canje",
+        "Último sello",
+        "Último canje",
         "Tarjeta activa",
         "Correo verificado",
         "Public token",
@@ -290,8 +290,8 @@ export default function ClientesPage() {
           premiosUsadosCount,
           formatearFecha(cliente.fecha_ultimo_sello),
           formatearFecha(cliente.fecha_ultimo_canje),
-          cliente.tarjeta_activa ? "SÃ­" : "No",
-          cliente.email_verificado ? "SÃ­" : "No",
+          cliente.tarjeta_activa ? "Sí" : "No",
+          cliente.email_verificado ? "Sí" : "No",
           cliente.public_token,
         ]
           .map(escaparCSV)
@@ -320,7 +320,7 @@ export default function ClientesPage() {
       setMensaje("Clientes exportados correctamente.");
     } catch (error) {
       console.error("Error exportando CSV:", error);
-      setMensaje("OcurriÃ³ un error al exportar los clientes.");
+      setMensaje("Ocurrió un error al exportar los clientes.");
     }
   };
 
@@ -331,8 +331,8 @@ export default function ClientesPage() {
       });
       window.location.href = "/admin/login";
     } catch (error) {
-      console.error("Error al cerrar sesiÃ³n:", error);
-      setMensaje("No se pudo cerrar sesiÃ³n.");
+      console.error("Error al cerrar sesión:", error);
+      setMensaje("No se pudo cerrar sesión.");
     }
   };
 
@@ -348,7 +348,7 @@ export default function ClientesPage() {
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 p-4">
             <span className="text-lg font-semibold text-violet-800">
-              GestiÃ³n de clientes
+              Gestión de clientes
             </span>
           </div>
 
@@ -360,7 +360,7 @@ export default function ClientesPage() {
             ) : clientes.length === 0 ? (
               <div className="mt-2">
                 <p className="text-neutral-600">
-                  No hay clientes registrados todavÃ­a.
+                  No hay clientes registrados todavía.
                 </p>
 
                 {mensaje && (
@@ -381,7 +381,7 @@ export default function ClientesPage() {
                         type="text"
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
-                        placeholder="Nombre, telÃ©fono o correo"
+                        placeholder="Nombre, teléfono o correo"
                         className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                       />
                     </div>
@@ -442,7 +442,7 @@ export default function ClientesPage() {
                         ) : (
                           clientesFiltrados.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.nombre} Â· {c.telefono} Â· {c.correo}
+                              {c.nombre} · {c.telefono} · {c.correo}
                             </option>
                           ))
                         )}

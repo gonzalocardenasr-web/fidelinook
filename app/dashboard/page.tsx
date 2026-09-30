@@ -365,7 +365,7 @@ export default function DashboardPage() {
       setData(json);
     } catch (error) {
       console.error("Error cargando dashboard:", error);
-      setMensaje("OcurriÃ³ un error inesperado al cargar el dashboard.");
+      setMensaje("Ocurrió un error inesperado al cargar el dashboard.");
       setData(null);
     } finally {
       setCargando(false);
@@ -390,7 +390,7 @@ export default function DashboardPage() {
 
       setRol(data?.role ?? null);
     } catch (error) {
-      console.error("Error cargando sesiÃ³n:", error);
+      console.error("Error cargando sesión:", error);
       setRol(null);
     } finally {
       setCargandoRol(false);
@@ -402,7 +402,7 @@ export default function DashboardPage() {
       await supabase.auth.signOut();
       router.push("/admin/login");
     } catch (error) {
-      console.error("Error cerrando sesiÃ³n:", error);
+      console.error("Error cerrando sesión:", error);
     }
   };
 
@@ -458,7 +458,7 @@ export default function DashboardPage() {
                   value={data.kpis.suscripcionesActivas}
                 />
                 <KpiCard
-                  label="Clientes con suscripciÃ³n activa"
+                  label="Clientes con suscripción activa"
                   value={data.kpis.clientesConSuscripcionActiva}
                 />
                 <KpiCard
@@ -469,7 +469,7 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard
-              title="EvoluciÃ³n de clientes"
+              title="Evolución de clientes"
               subtitle="Crecimiento mensual de usuarios registrados."
             >
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -510,7 +510,7 @@ export default function DashboardPage() {
 
             <SectionCard
               title="Suscripciones"
-              subtitle="Base activa, vencimientos y evoluciÃ³n mensual."
+              subtitle="Base activa, vencimientos y evolución mensual."
             >
               <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <KpiCard
@@ -518,15 +518,15 @@ export default function DashboardPage() {
                   value={data.kpis.suscripcionesActivas}
                 />
                 <KpiCard
-                  label="Vencen en 7 dÃ­as"
+                  label="Vencen en 7 días"
                   value={data.kpis.suscripcionesPorVencer7Dias}
                 />
                 <KpiCard
-                  label="Vencen en 30 dÃ­as"
+                  label="Vencen en 30 días"
                   value={data.kpis.suscripcionesPorVencer30Dias}
                 />
                 <KpiCard
-                  label="Clientes con mÃ¡s de una activa"
+                  label="Clientes con más de una activa"
                   value={data.kpis.clientesConMasDeUnaSuscripcionActiva}
                 />
               </div>
@@ -557,7 +557,7 @@ export default function DashboardPage() {
                       },
                       {
                         key: "suscripcion",
-                        label: "SuscripciÃ³n",
+                        label: "Suscripción",
                         className: "min-w-[220px]",
                       },
                       {
@@ -577,12 +577,12 @@ export default function DashboardPage() {
                       },
                       {
                         key: "proximoCiclo",
-                        label: "PrÃ³ximo ciclo",
+                        label: "Próximo ciclo",
                         className: "whitespace-nowrap",
                       },
                       {
                         key: "diasParaVencer",
-                        label: "DÃ­as para vencer",
+                        label: "Días para vencer",
                         className: "whitespace-nowrap",
                       },
                     ]}
@@ -602,7 +602,7 @@ export default function DashboardPage() {
               <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
                   <LineChart
-                    title="Movimientos de consumo por dÃ­a"
+                    title="Movimientos de consumo por día"
                     labels={data.consumosPorDia.map((item) =>
                       formatearFecha(item.fecha),
                     )}
@@ -612,7 +612,7 @@ export default function DashboardPage() {
 
                 <div className="min-w-0">
                   <LineChart
-                    title="Potes consumidos por dÃ­a"
+                    title="Potes consumidos por día"
                     labels={data.consumosPorDia.map((item) =>
                       formatearFecha(item.fecha),
                     )}
@@ -639,7 +639,7 @@ export default function DashboardPage() {
                     },
                     {
                       key: "suscripcion",
-                      label: "SuscripciÃ³n",
+                      label: "Suscripción",
                       className: "min-w-[220px]",
                     },
                     {
@@ -677,20 +677,20 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard
-              title="Efectividad de campaÃ±as"
-              subtitle="Performance de campaÃ±as ejecutadas"
+              title="Efectividad de campañas"
+              subtitle="Performance de campañas ejecutadas"
             >
               <DataTable
                 columns={[
-                  { key: "nombre", label: "CampaÃ±a" },
+                  { key: "nombre", label: "Campaña" },
                   { key: "estado", label: "Estado" },
                   { key: "enviados", label: "Enviados" },
                   { key: "canjeados", label: "Canjeados" },
                   { key: "caducados", label: "Caducados" },
-                  { key: "conversion", label: "ConversiÃ³n" },
+                  { key: "conversion", label: "Conversión" },
                 ]}
                 rows={campanasData}
-                emptyText="No hay campaÃ±as registradas."
+                emptyText="No hay campañas registradas."
               />
             </SectionCard>
           </div>

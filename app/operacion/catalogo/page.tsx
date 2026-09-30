@@ -227,7 +227,7 @@ export default function CatalogoOperacionPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message || "No se pudo cargar catÃ¡logo.");
+        setMessage(data.message || "No se pudo cargar catálogo.");
         return;
       }
 
@@ -237,7 +237,7 @@ export default function CatalogoOperacionPage() {
       setInventoryComponentCandidates(data.inventoryComponentCandidates || []);
     } catch (error) {
       console.error(error);
-      setMessage("Error cargando catÃ¡logo.");
+      setMessage("Error cargando catálogo.");
     } finally {
       setLoading(false);
     }
@@ -318,7 +318,7 @@ export default function CatalogoOperacionPage() {
 
       if (!savedProductId) {
         setMessage(
-          "El producto fue guardado, pero no fue posible identificarlo para completar su configuraciÃ³n.",
+          "El producto fue guardado, pero no fue posible identificarlo para completar su configuración.",
         );
         return;
       }
@@ -342,7 +342,7 @@ export default function CatalogoOperacionPage() {
 
         setMessage(
           structuralData.message ||
-            "El producto fue guardado, pero no fue posible actualizar su opciÃ³n estructural.",
+            "El producto fue guardado, pero no fue posible actualizar su opción estructural.",
         );
         return;
       }
@@ -355,7 +355,7 @@ export default function CatalogoOperacionPage() {
       setMessage(
         isEditing
           ? "Producto actualizado correctamente."
-          : "Producto creado como inactivo. Completa su configuraciÃ³n antes de activarlo.",
+          : "Producto creado como inactivo. Completa su configuración antes de activarlo.",
       );
     } catch (error) {
       console.error(error);
@@ -368,7 +368,7 @@ export default function CatalogoOperacionPage() {
   async function actualizarEstadoProducto(product: Product, isActive: boolean) {
     const action = isActive ? "activar" : "desactivar";
 
-    if (!window.confirm(`Â¿Confirmas que deseas ${action} "${product.name}"?`)) {
+    if (!window.confirm(`¿Confirmas que deseas ${action} "${product.name}"?`)) {
       return;
     }
 
@@ -521,7 +521,7 @@ export default function CatalogoOperacionPage() {
       }
     }
 
-    return `OpciÃ³n #${optionValueId}`;
+    return `Opción #${optionValueId}`;
   }
 
   async function agregarVarianteInventario() {
@@ -835,7 +835,7 @@ export default function CatalogoOperacionPage() {
     const price = Number(rawPrice);
 
     if (!Number.isInteger(price) || price < 0) {
-      setMessage(`El precio de ${channel.name} no es vÃ¡lido.`);
+      setMessage(`El precio de ${channel.name} no es válido.`);
       return;
     }
 
@@ -919,7 +919,7 @@ export default function CatalogoOperacionPage() {
 
     if (!Number.isInteger(price) || price < 0) {
       setMessage(
-        `El precio de ${optionValue.name} en ${channel.name} no es vÃ¡lido.`,
+        `El precio de ${optionValue.name} en ${channel.name} no es válido.`,
       );
       return;
     }
@@ -944,7 +944,7 @@ export default function CatalogoOperacionPage() {
 
       if (!res.ok) {
         setMessage(
-          data.message || "No se pudo actualizar el precio de la opciÃ³n.",
+          data.message || "No se pudo actualizar el precio de la opción.",
         );
         return;
       }
@@ -989,7 +989,7 @@ export default function CatalogoOperacionPage() {
       );
     } catch (error) {
       console.error(error);
-      setMessage("Error actualizando precio de opciÃ³n.");
+      setMessage("Error actualizando precio de opción.");
     } finally {
       setSavingOptionPriceKey(null);
     }
@@ -1038,15 +1038,15 @@ export default function CatalogoOperacionPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message || "No se pudo guardar opciÃ³n.");
+        setMessage(data.message || "No se pudo guardar opción.");
         return;
       }
 
-      setMessage("OpciÃ³n actualizada correctamente.");
+      setMessage("Opción actualizada correctamente.");
       await cargarCatalogo();
     } catch (error) {
       console.error(error);
-      setMessage("Error guardando opciÃ³n.");
+      setMessage("Error guardando opción.");
     } finally {
       setSavingKey(null);
     }
@@ -1054,8 +1054,8 @@ export default function CatalogoOperacionPage() {
 
   async function eliminarOpcion(option: OptionValue) {
     const confirmed = window.confirm(
-      `Â¿Eliminar definitivamente "${option.name}"?\n\n` +
-        "Esta acciÃ³n solo se realizarÃ¡ si la opciÃ³n no tiene informaciÃ³n asociada.",
+      `¿Eliminar definitivamente "${option.name}"?\n\n` +
+        "Esta acción solo se realizará si la opción no tiene información asociada.",
     );
 
     if (!confirmed) {
@@ -1077,7 +1077,7 @@ export default function CatalogoOperacionPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message || "No se pudo eliminar la opciÃ³n.");
+        setMessage(data.message || "No se pudo eliminar la opción.");
         return;
       }
 
@@ -1085,7 +1085,7 @@ export default function CatalogoOperacionPage() {
       await cargarCatalogo();
     } catch (error) {
       console.error(error);
-      setMessage("Error eliminando opciÃ³n.");
+      setMessage("Error eliminando opción.");
     } finally {
       setSavingKey(null);
     }
@@ -1095,7 +1095,7 @@ export default function CatalogoOperacionPage() {
     const name = (newOptionNames[group.id] || "").trim();
 
     if (!name) {
-      setMessage(`Ingresa un nombre para la nueva opciÃ³n de ${group.name}.`);
+      setMessage(`Ingresa un nombre para la nueva opción de ${group.name}.`);
       return;
     }
 
@@ -1115,7 +1115,7 @@ export default function CatalogoOperacionPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message || "No se pudo crear la opciÃ³n.");
+        setMessage(data.message || "No se pudo crear la opción.");
         return;
       }
 
@@ -1124,11 +1124,11 @@ export default function CatalogoOperacionPage() {
         [group.id]: "",
       }));
 
-      setMessage("OpciÃ³n creada correctamente.");
+      setMessage("Opción creada correctamente.");
       await cargarCatalogo();
     } catch (error) {
       console.error(error);
-      setMessage("Error creando opciÃ³n.");
+      setMessage("Error creando opción.");
     } finally {
       setCreatingOptionGroupId(null);
     }
@@ -1219,15 +1219,15 @@ export default function CatalogoOperacionPage() {
             href="/operacion"
             className="inline-flex shrink-0 items-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 active:scale-[0.98]"
           >
-            â† OperaciÃ³n
+            ← Operación
           </Link>
 
           <div>
             <h1 className="text-2xl font-black text-neutral-900">
-              CatÃ¡logo Maestro
+              Catálogo Maestro
             </h1>
             <p className="text-sm text-neutral-500">
-              Administra productos, configuraciÃ³n y disponibilidad comercial por
+              Administra productos, configuración y disponibilidad comercial por
               canal.
             </p>
           </div>
@@ -1241,7 +1241,7 @@ export default function CatalogoOperacionPage() {
 
         {loading ? (
           <div className="rounded-2xl bg-white p-6 text-neutral-600 shadow-sm">
-            Cargando catÃ¡logo...
+            Cargando catálogo...
           </div>
         ) : (
           <>
@@ -1249,7 +1249,7 @@ export default function CatalogoOperacionPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-black text-neutral-900">
-                    CatÃ¡logo Maestro
+                    Catálogo Maestro
                   </h2>
                   <p className="mt-1 text-sm text-neutral-500">
                     {filteredProducts.length} de {products.length} productos
@@ -1270,7 +1270,7 @@ export default function CatalogoOperacionPage() {
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por producto, SKU o categorÃ­a"
+                  placeholder="Buscar por producto, SKU o categoría"
                   className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                 />
 
@@ -1279,7 +1279,7 @@ export default function CatalogoOperacionPage() {
                   onChange={(event) => setCategoryFilter(event.target.value)}
                   className="h-10 cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                 >
-                  <option value="all">Todas las categorÃ­as</option>
+                  <option value="all">Todas las categorías</option>
                   {categories.map((category) => (
                     <option key={category} value={category}>
                       {category}
@@ -1316,12 +1316,12 @@ export default function CatalogoOperacionPage() {
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
                       <th className="px-3 py-2">Producto</th>
-                      <th className="px-3 py-2">ClasificaciÃ³n</th>
+                      <th className="px-3 py-2">Clasificación</th>
                       <th className="px-3 py-2">Tipo</th>
                       <th className="px-3 py-2">Precio local</th>
                       <th className="px-3 py-2">Canales</th>
                       <th className="px-3 py-2">Estado</th>
-                      <th className="px-3 py-2 text-right">AcciÃ³n</th>
+                      <th className="px-3 py-2 text-right">Acción</th>
                     </tr>
                   </thead>
 
@@ -1342,7 +1342,7 @@ export default function CatalogoOperacionPage() {
                             {product.category}
                           </p>
                           <p className="mt-1 text-xs text-neutral-500">
-                            {product.subcategory || "Sin subcategorÃ­a"}
+                            {product.subcategory || "Sin subcategoría"}
                           </p>
                         </td>
 
@@ -1384,7 +1384,7 @@ export default function CatalogoOperacionPage() {
                                   }
                                   title={
                                     !channel.is_active
-                                      ? `${channel.name} estÃ¡ inactivo como canal de venta`
+                                      ? `${channel.name} está inactivo como canal de venta`
                                       : enabled
                                         ? `Deshabilitar ${channel.name}`
                                         : `Habilitar ${channel.name}`
@@ -1515,7 +1515,7 @@ export default function CatalogoOperacionPage() {
                             void crearOpcion(group);
                           }
                         }}
-                        placeholder={`Nueva opciÃ³n de ${group.name.toLowerCase()}`}
+                        placeholder={`Nueva opción de ${group.name.toLowerCase()}`}
                         disabled={creatingOptionGroupId === group.id}
                         className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:opacity-60"
                       />
@@ -1611,8 +1611,8 @@ export default function CatalogoOperacionPage() {
                 </h2>
                 <p className="text-sm text-neutral-500">
                   {productForm.productId
-                    ? "Modifica la identidad y configuraciÃ³n base del producto."
-                    : "El producto se crearÃ¡ inactivo hasta completar su configuraciÃ³n comercial."}
+                    ? "Modifica la identidad y configuración base del producto."
+                    : "El producto se creará inactivo hasta completar su configuración comercial."}
                 </p>
               </div>
 
@@ -1629,7 +1629,7 @@ export default function CatalogoOperacionPage() {
             <div className="grid gap-5 p-5 lg:grid-cols-2">
               <section className="space-y-4">
                 <h3 className="font-black text-neutral-900">
-                  Identidad y clasificaciÃ³n
+                  Identidad y clasificación
                 </h3>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1662,7 +1662,7 @@ export default function CatalogoOperacionPage() {
                   </label>
 
                   <label className="text-sm font-semibold text-neutral-700">
-                    CategorÃ­a
+                    Categoría
                     <input
                       list="catalog-categories"
                       value={productForm.category}
@@ -1682,7 +1682,7 @@ export default function CatalogoOperacionPage() {
                   </label>
 
                   <label className="text-sm font-semibold text-neutral-700">
-                    SubcategorÃ­a
+                    Subcategoría
                     <input
                       value={productForm.subcategory}
                       onChange={(event) =>
@@ -1739,7 +1739,7 @@ export default function CatalogoOperacionPage() {
 
               <section className="space-y-4">
                 <h3 className="font-black text-neutral-900">
-                  ConfiguraciÃ³n operacional
+                  Configuración operacional
                 </h3>
 
                 <label className="block text-sm font-semibold text-neutral-700">
@@ -1774,13 +1774,13 @@ export default function CatalogoOperacionPage() {
                         }))
                       }
                     />
-                    Permite selecciÃ³n de sabores
+                    Permite selección de sabores
                   </label>
 
                   {productForm.hasFlavors && (
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <label className="text-sm font-semibold text-neutral-700">
-                        MÃ¡ximo de sabores
+                        Máximo de sabores
                         <input
                           type="number"
                           min={0}
@@ -1832,7 +1832,7 @@ export default function CatalogoOperacionPage() {
 
                   {productForm.allowsToppings && (
                     <label className="mt-3 block text-sm font-semibold text-neutral-700">
-                      MÃ¡ximo de toppings
+                      Máximo de toppings
                       <input
                         type="number"
                         min={0}
@@ -1854,7 +1854,7 @@ export default function CatalogoOperacionPage() {
 
                 <div className="rounded-xl border border-neutral-200 p-3">
                   <label className="block text-sm font-bold text-neutral-800">
-                    OpciÃ³n estructural
+                    Opción estructural
                     <select
                       value={productForm.structuralOptionGroupId ?? ""}
                       onChange={(event) =>
@@ -1867,7 +1867,7 @@ export default function CatalogoOperacionPage() {
                       }
                       className="mt-2 h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     >
-                      <option value="">Sin opciÃ³n estructural</option>
+                      <option value="">Sin opción estructural</option>
 
                       {structuralOptionGroups.map((group) => (
                         <option key={group.id} value={group.id}>
@@ -1895,7 +1895,7 @@ export default function CatalogoOperacionPage() {
                         }))
                       }
                     />
-                    Permite baÃ±o de chocolate
+                    Permite baño de chocolate
                   </label>
 
                   <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-neutral-200 p-3 text-sm font-semibold text-neutral-700">
@@ -1909,7 +1909,7 @@ export default function CatalogoOperacionPage() {
                         }))
                       }
                     />
-                    Requiere preparaciÃ³n
+                    Requiere preparación
                   </label>
                 </div>
               </section>
@@ -1917,9 +1917,9 @@ export default function CatalogoOperacionPage() {
 
             <div className="sticky bottom-0 flex items-center justify-between border-t border-neutral-200 bg-white px-5 py-4">
               <p className="max-w-2xl text-xs text-neutral-500">
-                Precio, canales de venta e integraciÃ³n de inventario se
+                Precio, canales de venta e integración de inventario se
                 administran separadamente. Guardar esta ficha no activa
-                automÃ¡ticamente el producto.
+                automáticamente el producto.
               </p>
 
               <button
@@ -1944,7 +1944,7 @@ export default function CatalogoOperacionPage() {
             <div className="flex items-start justify-between border-b border-neutral-200 px-5 py-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">
-                  IntegraciÃ³n de inventario
+                  Integración de inventario
                 </p>
 
                 <h2 className="mt-1 text-xl font-black text-neutral-900">
@@ -1984,8 +1984,8 @@ export default function CatalogoOperacionPage() {
                     Consumo directo
                   </h3>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Define cuÃ¡nto inventario propio descuenta cada unidad u
-                    opciÃ³n vendida.
+                    Define cuánto inventario propio descuenta cada unidad u
+                    opción vendida.
                   </p>
                 </div>
 
@@ -1994,8 +1994,8 @@ export default function CatalogoOperacionPage() {
                 ).length > 0 ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-[minmax(0,1fr)_150px_160px_100px] gap-3 px-3 text-xs font-bold uppercase tracking-wide text-neutral-500">
-                      <span>Ãtem de inventario</span>
-                      <span>OpciÃ³n</span>
+                      <span>Ítem de inventario</span>
+                      <span>Opción</span>
                       <span>Consumo por unidad</span>
                       <span></span>
                     </div>
@@ -2064,9 +2064,9 @@ export default function CatalogoOperacionPage() {
                       })}
 
                     <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
-                      El consumo indica cuÃ¡ntas unidades de este Ã­tem de
+                      El consumo indica cuántas unidades de este ítem de
                       inventario descuenta la venta de una unidad del producto u
-                      opciÃ³n. Modificarlo no altera el stock actual ni los
+                      opción. Modificarlo no altera el stock actual ni los
                       precios.
                     </div>
                   </div>
@@ -2077,7 +2077,7 @@ export default function CatalogoOperacionPage() {
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
                       Puede configurarse como producto compuesto mediante los
-                      componentes de inventario de la secciÃ³n siguiente.
+                      componentes de inventario de la sección siguiente.
                     </p>
                   </div>
                 )}
@@ -2141,7 +2141,7 @@ export default function CatalogoOperacionPage() {
                     </div>
 
                     <p className="mt-3 text-[11px] leading-4 text-neutral-500">
-                      Selecciona un sabor existente del catÃ¡logo maestro para
+                      Selecciona un sabor existente del catálogo maestro para
                       habilitarlo en este producto. Un mismo sabor puede
                       utilizarse en distintos productos o formatos de
                       inventario.
@@ -2156,8 +2156,8 @@ export default function CatalogoOperacionPage() {
                     Componentes consumidos
                   </h3>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Para productos compuestos, define quÃ© otros Ã­tems de
-                    inventario se descuentan y en quÃ© cantidad.
+                    Para productos compuestos, define qué otros ítems de
+                    inventario se descuentan y en qué cantidad.
                   </p>
                 </div>
 
@@ -2190,7 +2190,7 @@ export default function CatalogoOperacionPage() {
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-bold text-neutral-900">
                                   {component?.name ??
-                                    `Ãtem #${mapping.inventory_item_id}`}
+                                    `Ítem #${mapping.inventory_item_id}`}
                                 </p>
 
                                 <span
@@ -2270,7 +2270,7 @@ export default function CatalogoOperacionPage() {
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
                       Si este SKU consume otro producto del inventario, puedes
-                      agregarlo a continuaciÃ³n.
+                      agregarlo a continuación.
                     </p>
                   </div>
                 )}
@@ -2338,7 +2338,7 @@ export default function CatalogoOperacionPage() {
 
                   <p className="mt-3 text-[11px] leading-4 text-neutral-500">
                     Un producto con inventario directo activo no puede
-                    convertirse accidentalmente en compuesto. Esta regla tambiÃ©n
+                    convertirse accidentalmente en compuesto. Esta regla también
                     se valida en base de datos.
                   </p>
                 </div>
@@ -2487,7 +2487,7 @@ export default function CatalogoOperacionPage() {
 
                   <div className="rounded-xl bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
                     El precio se administra independientemente para cada tipo de
-                    cafÃ© y canal. La configuraciÃ³n operacional de consumo se
+                    café y canal. La configuración operacional de consumo se
                     administra desde Inventario. Un precio puede configurarse
                     antes de habilitar el canal.
                   </div>
@@ -2579,7 +2579,7 @@ export default function CatalogoOperacionPage() {
                     Un precio puede configurarse antes de habilitar el canal.
                     Cambiar un precio conserva su historial de vigencia; no
                     modifica el estado global del producto ni habilita
-                    automÃ¡ticamente el canal.
+                    automáticamente el canal.
                   </div>
                 </div>
               )}
