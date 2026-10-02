@@ -205,7 +205,7 @@ export default function POSContextPanel({
         </button>
       </section>
 
-      <div className="mt-2 min-h-0 flex-1">
+      <div className="mt-2 min-h-[64px] flex-1 overflow-y-auto">
         {message ? (
           <section
             className={`rounded-lg border px-2.5 py-2 text-[11px] font-semibold leading-snug ${

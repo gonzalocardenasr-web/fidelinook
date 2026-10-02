@@ -684,6 +684,8 @@ export default function CashRegisterPage() {
   const [closingCashCount, setClosingCashCount] = useState<CashCountQuantities>(
     () => createEmptyCashCount(),
   );
+  const [completedClosingCashCount, setCompletedClosingCashCount] =
+    useState<CashCountQuantities | null>(null);
   const [closingNotes, setClosingNotes] = useState("");
   const [closingPreview, setClosingPreview] =
     useState<CashClosingPreview | null>(null);
@@ -767,15 +769,15 @@ export default function CashRegisterPage() {
 
   const completedClosingWithdrawalRecommendation =
     useMemo<CashWithdrawalRecommendation | null>(() => {
-      if (!completedClosing) {
+      if (!completedClosing || !completedClosingCashCount) {
         return null;
       }
 
       return recommendCashWithdrawal(
-        cashCountToEntries(closingCashCount),
+        cashCountToEntries(completedClosingCashCount),
         completedClosing.opening_amount,
       );
-    }, [completedClosing, closingCashCount]);
+    }, [completedClosing, completedClosingCashCount]);
 
   const closingDetailCashSalesMatch =
     closingDetail !== null &&
@@ -1225,6 +1227,7 @@ export default function CashRegisterPage() {
       }
 
       const completedClosingResult = data.closing;
+      const completedClosingCashCountSnapshot = { ...closingCashCount };
 
       setSession(null);
       setMovements([]);
@@ -1237,6 +1240,7 @@ export default function CashRegisterPage() {
 
       await loadCashRegister();
 
+      setCompletedClosingCashCount(completedClosingCashCountSnapshot);
       setCompletedClosing(completedClosingResult);
 
       setMessageType("success");
@@ -1253,6 +1257,7 @@ export default function CashRegisterPage() {
 
   function finishCompletedClosing() {
     setCompletedClosing(null);
+    setCompletedClosingCashCount(null);
     setMessage("");
     setOpeningCashCount(createEmptyCashCount());
     setOpeningNotes("");

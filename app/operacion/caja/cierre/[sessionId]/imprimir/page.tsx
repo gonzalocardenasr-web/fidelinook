@@ -79,9 +79,12 @@ export default function ImprimirCierreCajaPage() {
       setLoading(true);
       setMessage("");
 
-      const res = await fetch(`/api/operacion/caja/cierres/${sessionId}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/operacion/caja/comprobante?sessionId=${sessionId}`,
+        {
+          cache: "no-store",
+        },
+      );
 
       const data = (await res.json()) as ClosingDetailResponse;
 
