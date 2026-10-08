@@ -1038,7 +1038,7 @@ export default function HistorialVentasPage() {
                 <button
                   type="button"
                   onClick={descargarVentasCsv}
-                  className="rounded-lg border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+                  className="h-11 whitespace-nowrap rounded-xl border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
                   title="Descargar transacciones con los filtros seleccionados"
                 >
                   Descargar CSV
