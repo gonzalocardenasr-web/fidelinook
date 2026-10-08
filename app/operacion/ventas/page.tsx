@@ -6,6 +6,8 @@ import ClienteSelector, {
   ClienteSelectorValue,
 } from "../../../components/client/ClienteSelector";
 
+import { usePlatformSession } from "../../../components/platform/PlatformSessionContext";
+
 type SaleItemOption = {
   id: number;
   option_group_code: string;
@@ -274,6 +276,8 @@ function getItemOptions(item: SaleItem) {
 }
 
 export default function HistorialVentasPage() {
+  const { hasPermission } = usePlatformSession();
+  const canExportSales = hasPermission("sales.export");
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [editingCustomer, setEditingCustomer] = useState(false);
@@ -449,6 +453,50 @@ export default function HistorialVentasPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function descargarVentasCsv() {
+    if (!canExportSales) return;
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setMessage("La fecha inicial no puede ser posterior a la fecha final.");
+      return;
+    }
+
+    const params = new URLSearchParams();
+
+    if (dateFrom) {
+      const startDate = new Date(`${dateFrom}T00:00:00`);
+      params.set("dateFrom", startDate.toISOString());
+    }
+
+    if (dateTo) {
+      const endDateExclusive = new Date(`${dateTo}T00:00:00`);
+      endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+      params.set("dateTo", endDateExclusive.toISOString());
+    }
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    if (channelFilter !== "all") {
+      params.set("channel", channelFilter);
+    }
+
+    if (paymentFilter !== "all") {
+      params.set("paymentMethod", paymentFilter);
+    }
+
+    if (statusFilter !== "all") {
+      params.set("orderStatus", statusFilter);
+    }
+
+    if (customerFilter !== "all") {
+      params.set("customerType", customerFilter);
+    }
+
+    window.location.assign(`/api/operacion/sales/export?${params.toString()}`);
   }
 
   async function abrirDetalleVenta(saleId: number) {
@@ -985,6 +1033,17 @@ export default function HistorialVentasPage() {
               >
                 {loading ? "Actualizando..." : "Actualizar"}
               </button>
+
+              {canExportSales && (
+                <button
+                  type="button"
+                  onClick={descargarVentasCsv}
+                  className="rounded-lg border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+                  title="Descargar transacciones con los filtros seleccionados"
+                >
+                  Descargar CSV
+                </button>
+              )}
             </div>
 
             <div className="mt-2 flex items-center justify-between gap-3">
