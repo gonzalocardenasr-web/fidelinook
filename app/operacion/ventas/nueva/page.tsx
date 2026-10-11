@@ -17,6 +17,7 @@ import POSContextPanel from "../../../../components/pos/POSContextPanel";
 import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
 import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
 import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
+import { sortPosProducts } from "../../../../lib/pos/posProductOrder";
 
 type ManualDiscountType = "percent" | "fixed";
 
@@ -144,8 +145,8 @@ export default function NuevaVentaPage() {
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
 
-    return products
-      .filter((product) => {
+    return sortPosProducts(
+      products.filter((product) => {
         if (!isProductSellable(product)) {
           return false;
         }
@@ -167,8 +168,8 @@ export default function NuevaVentaPage() {
           operationalType.includes(search) ||
           subcategory.includes(search)
         );
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+      }),
+    );
   }, [products, productSearch, channel, coffeeOptionPrices]);
 
   const flavors = useMemo(() => {
