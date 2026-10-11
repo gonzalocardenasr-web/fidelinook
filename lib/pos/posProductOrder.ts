@@ -11,15 +11,15 @@ const CATEGORY_ORDER = [
 const PRODUCT_ORDER: Record<string, string[]> = {
   HELADOS: ["Helado Simple", "Helado Doble", "Paleta"],
 
-  POTES: ["Pote listo", "Pote armado"],
+  POTES: ["Pote 16 oz listo", "Pote 16 oz armado"],
 
   COMPLEMENTOS: [
     "Pack barquillos",
     "Pack galletas",
     "Brownie",
-    "Baño chocolate",
+    "Baño de chocolate",
     "Topping",
-    "Agua mineral",
+    "Agua mineral 500 cc",
     "Unidad barquillo",
     "Waffle",
   ],
