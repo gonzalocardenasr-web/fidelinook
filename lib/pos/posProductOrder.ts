@@ -9,7 +9,7 @@ const CATEGORY_ORDER = [
 ] as const;
 
 const PRODUCT_ORDER: Record<string, string[]> = {
-  HELADOS: ["Simple", "Doble", "Paleta"],
+  HELADOS: ["Helado Simple", "Helado Doble", "Paleta"],
 
   POTES: ["Pote listo", "Pote armado"],
 
@@ -55,7 +55,13 @@ function getProductRank(product: Product): number {
   const priorities = PRODUCT_ORDER[category] || [];
   const productName = normalize(product.name);
 
-  const index = priorities.findIndex((name) => normalize(name) === productName);
+  const index = priorities.findIndex((name) => {
+    const expectedName = normalize(name);
+
+    return (
+      productName === expectedName || productName.startsWith(`${expectedName} `)
+    );
+  });
 
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
