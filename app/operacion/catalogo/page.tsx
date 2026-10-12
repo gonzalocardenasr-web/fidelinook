@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
@@ -1212,26 +1211,8 @@ export default function CatalogoOperacionPage() {
   );
 
   return (
-    <main className="min-h-screen p-3">
+    <main className="min-w-0 w-full p-3">
       <div className="w-full space-y-2">
-        <header className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-3 shadow-sm">
-          <Link
-            href="/operacion"
-            className="inline-flex shrink-0 items-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 active:scale-[0.98]"
-          >
-            ← Operación
-          </Link>
-
-          <div>
-            <h1 className="text-2xl font-black text-neutral-900">
-              Catálogo Maestro
-            </h1>
-            <p className="text-sm text-neutral-500">
-              Administra productos, configuración y disponibilidad comercial por
-              canal.
-            </p>
-          </div>
-        </header>
 
         {message && (
           <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-sm text-neutral-700">
