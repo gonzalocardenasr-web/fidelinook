@@ -407,10 +407,10 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarActivas(!mostrarActivas)}
-            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
+            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Suscripciones activas</h2>
+              <h2 className="text-lg font-semibold">Suscripciones activas</h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Revisa suscripciones activas y su historial reciente
               </p>
@@ -421,13 +421,13 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarActivas && (
-            <div className="border-t border-neutral-200 p-6">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="border-t border-neutral-200 p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => setSubscriptionFilter("all")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       subscriptionFilter === "all"
                         ? "cursor-pointer bg-black text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -439,7 +439,7 @@ export default function SuscripcionesPage() {
                   <button
                     type="button"
                     onClick={() => setSubscriptionFilter("active")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       subscriptionFilter === "active"
                         ? "cursor-pointer bg-green-600 text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -451,7 +451,7 @@ export default function SuscripcionesPage() {
                   <button
                     type="button"
                     onClick={() => setSubscriptionFilter("expired")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       subscriptionFilter === "expired"
                         ? "cursor-pointer bg-neutral-700 text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -471,15 +471,15 @@ export default function SuscripcionesPage() {
                   <table className="min-w-full">
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
-                        <th className="px-4 py-3">Cliente</th>
-                        <th className="px-4 py-3">Suscripción</th>
-                        <th className="px-4 py-3">Estado</th>
-                        <th className="px-4 py-3">Inicio</th>
-                        <th className="px-4 py-3">Vencimiento</th>
-                        <th className="px-4 py-3">Próximo ciclo</th>
-                        <th className="px-4 py-3">Activada</th>
+                        <th className="px-3 py-2.5">Cliente</th>
+                        <th className="px-3 py-2.5">Suscripción</th>
+                        <th className="px-3 py-2.5">Estado</th>
+                        <th className="px-3 py-2.5">Inicio</th>
+                        <th className="px-3 py-2.5">Vencimiento</th>
+                        <th className="px-3 py-2.5">Próximo ciclo</th>
+                        <th className="px-3 py-2.5">Activada</th>
                         {rol === "superadmin" && (
-                          <th className="px-4 py-3">Acciones</th>
+                          <th className="px-3 py-2.5">Acciones</th>
                         )}
                       </tr>
                     </thead>
@@ -487,13 +487,13 @@ export default function SuscripcionesPage() {
                     <tbody>
                       {subscriptionsFiltradas.map((s) => (
                         <tr key={s.id} className="border-t text-sm">
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {s.clientes?.nombre || "-"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {s.subscription_templates?.name || "-"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             <span
                               className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                 s.status === "active"
@@ -504,26 +504,26 @@ export default function SuscripcionesPage() {
                               {s.status === "active" ? "Activa" : s.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-neutral-600">
+                          <td className="px-3 py-2.5 text-neutral-600">
                             {s.start_date
                               ? new Date(s.start_date).toLocaleDateString(
                                   "es-CL",
                                 )
                               : "-"}
                           </td>
-                          <td className="px-4 py-3 text-neutral-600">
+                          <td className="px-3 py-2.5 text-neutral-600">
                             {s.end_date
                               ? new Date(s.end_date).toLocaleDateString("es-CL")
                               : "-"}
                           </td>
-                          <td className="px-4 py-3 text-neutral-600">
+                          <td className="px-3 py-2.5 text-neutral-600">
                             {s.next_cycle_date
                               ? new Date(s.next_cycle_date).toLocaleDateString(
                                   "es-CL",
                                 )
                               : "-"}
                           </td>
-                          <td className="px-4 py-3 text-neutral-500">
+                          <td className="px-3 py-2.5 text-neutral-500">
                             {s.activated_at
                               ? new Date(s.activated_at).toLocaleString("es-CL")
                               : s.created_at
@@ -532,7 +532,7 @@ export default function SuscripcionesPage() {
                           </td>
 
                           {rol === "superadmin" && (
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2.5">
                               <button
                                 type="button"
                                 onClick={() => eliminarSuscripcion(s.id)}
@@ -556,10 +556,10 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarAsignaciones(!mostrarAsignaciones)}
-            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
+            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-lg font-semibold">
                 Asignaciones y códigos recientes
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
@@ -572,13 +572,13 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarAsignaciones && (
-            <div className="border-t border-neutral-200 p-6">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="border-t border-neutral-200 p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => setClaimFilter("all")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       claimFilter === "all"
                         ? "cursor-pointer bg-black text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -590,7 +590,7 @@ export default function SuscripcionesPage() {
                   <button
                     type="button"
                     onClick={() => setClaimFilter("pending")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       claimFilter === "pending"
                         ? "cursor-pointer bg-amber-500 text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -602,7 +602,7 @@ export default function SuscripcionesPage() {
                   <button
                     type="button"
                     onClick={() => setClaimFilter("claimed")}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                       claimFilter === "claimed"
                         ? "cursor-pointer bg-green-600 text-white"
                         : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -622,36 +622,36 @@ export default function SuscripcionesPage() {
                   <table className="min-w-full">
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
-                        <th className="px-4 py-3">Tipo</th>
-                        <th className="px-4 py-3">Suscripción</th>
-                        <th className="px-4 py-3">Cliente</th>
-                        <th className="px-4 py-3">Código</th>
-                        <th className="px-4 py-3">Estado</th>
-                        <th className="px-4 py-3">Fecha</th>
-                        <th className="px-4 py-3">Acción</th>
+                        <th className="px-3 py-2.5">Tipo</th>
+                        <th className="px-3 py-2.5">Suscripción</th>
+                        <th className="px-3 py-2.5">Cliente</th>
+                        <th className="px-3 py-2.5">Código</th>
+                        <th className="px-3 py-2.5">Estado</th>
+                        <th className="px-3 py-2.5">Fecha</th>
+                        <th className="px-3 py-2.5">Acción</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {asignacionesFiltradas.map((c) => (
                         <tr key={c.id} className="border-t text-sm">
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {c.source === "admin_code" ? "Código" : "Asignado"}
                           </td>
 
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {c.subscription_templates?.name || "-"}
                           </td>
 
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {c.clientes?.nombre || "-"}
                           </td>
 
-                          <td className="px-4 py-3 font-mono">
+                          <td className="px-3 py-2.5 font-mono">
                             {c.claim_code || "-"}
                           </td>
 
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             <span
                               className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                 c.status === "claimed"
@@ -663,11 +663,11 @@ export default function SuscripcionesPage() {
                             </span>
                           </td>
 
-                          <td className="px-4 py-3 text-neutral-500">
+                          <td className="px-3 py-2.5 text-neutral-500">
                             {new Date(c.created_at).toLocaleString("es-CL")}
                           </td>
 
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {c.status === "pending" ? (
                               <div className="flex flex-wrap gap-2">
                                 {c.claim_code && (
@@ -716,10 +716,10 @@ export default function SuscripcionesPage() {
           <button
             type="button"
             onClick={() => setMostrarCodigo(!mostrarCodigo)}
-            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
+            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">Generar código genérico</h2>
+              <h2 className="text-lg font-semibold">Generar código genérico</h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Configura una suscripción y genera un código para canje
                 posterior
@@ -731,7 +731,7 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarCodigo && (
-            <div className="border-t border-neutral-200 p-6 space-y-4">
+            <div className="space-y-4 border-t border-neutral-200 p-4">
               <div className="grid gap-3 md:grid-cols-5">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -844,10 +844,10 @@ export default function SuscripcionesPage() {
             onClick={() =>
               setMostrarAsignacionCliente(!mostrarAsignacionCliente)
             }
-            className="cursor-pointer flex w-full items-center justify-between p-6 text-left"
+            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
           >
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-lg font-semibold">
                 Asignar suscripción a cliente
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
