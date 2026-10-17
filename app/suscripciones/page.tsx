@@ -380,8 +380,8 @@ export default function SuscripcionesPage() {
   };
 
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <main className="min-w-0 w-full px-3 py-3">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
         {mensaje && (
           <div
             className={`rounded-2xl px-4 py-3 text-sm ${
@@ -395,42 +395,15 @@ export default function SuscripcionesPage() {
             {mensaje}
           </div>
         )}
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <Link
-                href="/"
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                ← Volver al inicio
-              </Link>
-
-              <h1 className="mt-3 text-2xl font-bold">Suscripciones</h1>
-
-              <p className="text-sm opacity-90">
-                Gestiona asignaciones, códigos y suscripciones activas del
-                programa
-              </p>
-
-              <p className="mt-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol
-                  ? "Cargando rol..."
-                  : `Rol: ${rol ?? "sin sesión"}`}
-              </p>
-            </div>
-
-            <div>
-              <button
-                onClick={cerrarSesion}
-                className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
+        <div className="rounded-xl border border-neutral-200 bg-white px-5 py-4 shadow-sm">
+          <h1 className="text-xl font-semibold text-neutral-950">
+            Suscripciones
+          </h1>
+          <p className="mt-1 text-sm text-neutral-600">
+            Gestiona asignaciones, códigos y suscripciones activas del programa.
+          </p>
         </div>
-
-        <section className="rounded-2xl bg-white shadow-sm">
+<section className="rounded-2xl bg-white shadow-sm">
           <button
             type="button"
             onClick={() => setMostrarActivas(!mostrarActivas)}
