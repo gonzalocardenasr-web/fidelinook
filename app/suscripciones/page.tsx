@@ -395,14 +395,6 @@ export default function SuscripcionesPage() {
             {mensaje}
           </div>
         )}
-        <div className="rounded-xl border border-neutral-200 bg-white px-5 py-4 shadow-sm">
-          <h1 className="text-xl font-semibold text-neutral-950">
-            Suscripciones
-          </h1>
-          <p className="mt-1 text-sm text-neutral-600">
-            Gestiona asignaciones, códigos y suscripciones activas del programa.
-          </p>
-        </div>
 <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-2">
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <button
