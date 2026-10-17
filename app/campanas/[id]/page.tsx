@@ -170,7 +170,7 @@ export default function CampanaDetallePage() {
   if (loading) {
     return (
       <main className="min-w-0 w-full px-3 py-3">
-        <div className="mx-auto w-full max-w-4xl rounded-[28px] bg-white p-6 shadow">
+        <div className="mx-auto w-full max-w-7xl rounded-[28px] bg-white p-6 shadow">
           Cargando campaña...
         </div>
       </main>
@@ -179,9 +179,9 @@ export default function CampanaDetallePage() {
 
   return (
     <main className="min-w-0 w-full px-3 py-3">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-7xl">
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <div className="border-b border-neutral-200 bg-white px-5 py-4">
+          <div className="border-b border-neutral-200 bg-white px-5 py-3">
             <h1 className="mt-2 text-xl font-semibold text-neutral-950">
               Detalle de campaña
             </h1>
@@ -190,7 +190,7 @@ export default function CampanaDetallePage() {
             </p>
           </div>
 
-          <div className="px-5 py-5">
+          <div className="px-5 py-4">
             {error && (
               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 {error}
@@ -205,7 +205,7 @@ export default function CampanaDetallePage() {
 
             {campana && (
               <>
-                <div className="mb-5 rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4 text-sm text-[#555]">
+                <div className="mb-4 rounded-xl border border-[#E3D2EA] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
                   <p>
                     Estado:{" "}
                     <span className="font-semibold text-[#4c00f7]">
@@ -223,7 +223,7 @@ export default function CampanaDetallePage() {
                   )}
                 </div>
 
-                <form onSubmit={guardarCambios} className="space-y-5">
+                <form onSubmit={guardarCambios} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-[#444]">
                       Nombre interno
@@ -232,7 +232,7 @@ export default function CampanaDetallePage() {
                       value={nombreInterno}
                       onChange={(e) => setNombreInterno(e.target.value)}
                       disabled={!editable}
-                      className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition disabled:bg-neutral-100"
+                      className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
                     />
                   </div>
 
@@ -244,7 +244,7 @@ export default function CampanaDetallePage() {
                       value={premioNombre}
                       onChange={(e) => setPremioNombre(e.target.value)}
                       disabled={!editable}
-                      className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition disabled:bg-neutral-100"
+                      className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
                     />
                   </div>
 
@@ -256,22 +256,22 @@ export default function CampanaDetallePage() {
                       value={premioDescripcion}
                       onChange={(e) => setPremioDescripcion(e.target.value)}
                       disabled={!editable}
-                      rows={4}
-                      className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition disabled:bg-neutral-100"
+                      rows={3}
+                      className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
                     />
                   </div>
 
-                  <div className="rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4">
+                  <div className="h-full rounded-xl border border-[#E3D2EA] bg-[#FCF8FF] p-4">
                     <p className="text-xs uppercase tracking-[0.25em] text-[#7A57F6]">
                       Vista previa
                     </p>
-                    <h3 className="mt-3 text-xl font-bold text-[#4c00f7]">
+                    <h3 className="mt-2 text-lg font-bold text-[#4c00f7]">
                       🎉 ¡Tienes un premio!
                     </h3>
-                    <p className="mt-3 text-sm leading-6 text-[#555]">
+                    <p className="mt-2 text-sm leading-5 text-[#555]">
                       {premioDescripcion || "Texto visible del premio..."}
                     </p>
-                    <p className="mt-3 text-sm text-[#555]">
+                    <p className="mt-2 text-sm text-[#555]">
                       Muéstralo en el local para canjearlo.
                     </p>
                   </div>
@@ -284,7 +284,7 @@ export default function CampanaDetallePage() {
                       value={duracionHoras}
                       onChange={(e) => setDuracionHoras(e.target.value)}
                       disabled={!editable}
-                      className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition disabled:bg-neutral-100"
+                      className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
                     >
                       <option value="24">24 horas</option>
                       <option value="48">48 horas</option>
@@ -302,26 +302,26 @@ export default function CampanaDetallePage() {
                       value={fechaLanzamiento}
                       onChange={(e) => setFechaLanzamiento(e.target.value)}
                       disabled={!editable}
-                      className="w-full rounded-2xl border border-[#E3D2EA] bg-white px-4 py-4 text-base text-[#222] outline-none transition disabled:bg-neutral-100"
+                      className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-3 md:flex-row">
+                  <div className="flex flex-col gap-3 lg:col-span-2 sm:flex-row sm:justify-end">
                     {editable && (
                       <button
                         type="submit"
                         disabled={guardando}
-                        className="w-full rounded-2xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
+                        className="w-full rounded-xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-3 text-sm font-semibold sm:w-auto text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
                       >
                         {guardando ? "Guardando..." : "Guardar cambios"}
                       </button>
                     )}
 
                     <Link
-                      href="/operacion"
-                      className="w-full rounded-2xl border border-[#D9C8FF] bg-white px-5 py-4 text-center text-base font-semibold text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+                      href="/campanas"
+                      className="w-full rounded-xl border border-[#D9C8FF] bg-white px-5 py-3 text-center text-sm font-semibold sm:w-auto text-[#4c00f7] transition hover:bg-[#F7F2FF]"
                     >
-                      Volver a operación
+                      Volver a Campañas
                     </Link>
                   </div>
                 </form>
