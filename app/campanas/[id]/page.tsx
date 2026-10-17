@@ -169,8 +169,8 @@ export default function CampanaDetallePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-2xl rounded-[28px] bg-white p-6 shadow">
+      <main className="min-w-0 w-full px-3 py-3">
+        <div className="mx-auto w-full max-w-4xl rounded-[28px] bg-white p-6 shadow">
           Cargando campaña...
         </div>
       </main>
@@ -178,22 +178,19 @@ export default function CampanaDetallePage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
-      <div className="mx-auto max-w-2xl">
-        <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/80">
-              Superadmin
-            </p>
-            <h1 className="mt-2 text-2xl font-bold leading-tight">
+    <main className="min-w-0 w-full px-3 py-3">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-200 bg-white px-5 py-4">
+            <h1 className="mt-2 text-xl font-semibold text-neutral-950">
               Detalle de campaña
             </h1>
-            <p className="mt-2 text-sm text-white/85">
+            <p className="mt-1 text-sm text-neutral-600">
               Revisa y ajusta la configuración antes de lanzarla.
             </p>
           </div>
 
-          <div className="px-6 py-7 md:px-8 md:py-8">
+          <div className="px-5 py-5">
             {error && (
               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 {error}

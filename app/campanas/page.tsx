@@ -47,8 +47,8 @@ export default function CampanasPage() {
     setMensaje("");
     setError("");
 
-    if (rol !== "superadmin") {
-      setError("Solo el superadmin puede crear campañas.");
+    if (rol !== "admin" && rol !== "superadmin") {
+      setError("No tienes permisos para crear campañas.");
       return;
     }
 
@@ -116,8 +116,8 @@ export default function CampanasPage() {
 
   if (cargandoRol) {
     return (
-      <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-2xl">
+      <main className="min-w-0 w-full px-3 py-3">
+        <div className="mx-auto w-full max-w-4xl">
           <div className="rounded-[28px] bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <p className="text-sm text-[#555]">Cargando...</p>
           </div>
@@ -126,26 +126,26 @@ export default function CampanasPage() {
     );
   }
 
-  if (rol !== "superadmin") {
+  if (rol !== "admin" && rol !== "superadmin") {
     return (
-      <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
-        <div className="mx-auto max-w-2xl">
-          <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
-              <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+      <main className="min-w-0 w-full px-3 py-3">
+        <div className="mx-auto w-full max-w-4xl">
+          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+            <div className="border-b border-neutral-200 bg-white px-5 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Nook
               </p>
-              <h1 className="mt-2 text-2xl font-bold leading-tight">
+              <h1 className="mt-2 text-xl font-semibold text-neutral-950">
                 Campañas
               </h1>
-              <p className="mt-2 text-sm text-white/85">
+              <p className="mt-1 text-sm text-neutral-600">
                 Acceso restringido
               </p>
             </div>
 
-            <div className="px-6 py-7 md:px-8 md:py-8">
+            <div className="px-5 py-5">
               <div className="rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
-                Solo el superadmin puede acceder a esta sección.
+                No tienes permisos para acceder a esta sección.
               </div>
 
               <Link
@@ -162,22 +162,19 @@ export default function CampanasPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
-      <div className="mx-auto max-w-2xl">
-        <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-          <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/80">
-              Superadmin
-            </p>
-            <h1 className="mt-2 text-2xl font-bold leading-tight">
+    <main className="min-w-0 w-full px-3 py-3">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-200 bg-white px-5 py-4">
+            <h1 className="mt-2 text-xl font-semibold text-neutral-950">
               Crear campaña
             </h1>
-            <p className="mt-2 text-sm text-white/85">
+            <p className="mt-1 text-sm text-neutral-600">
               Programa beneficios para activar ventas en días de menor flujo.
             </p>
           </div>
 
-          <div className="px-6 py-7 md:px-8 md:py-8">
+          <div className="px-5 py-5">
             {error && (
               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 {error}
