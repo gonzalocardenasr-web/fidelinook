@@ -380,8 +380,8 @@ export default function SuscripcionesPage() {
   };
 
   return (
-    <main className="min-w-0 w-full px-3 py-3">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
+    <main className="h-full min-h-0 w-full overflow-hidden rounded-xl bg-neutral-50 p-2">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-none flex-col gap-2">
         {mensaje && (
           <div
             className={`rounded-2xl px-4 py-3 text-sm ${
@@ -403,14 +403,15 @@ export default function SuscripcionesPage() {
             Gestiona asignaciones, códigos y suscripciones activas del programa.
           </p>
         </div>
-<section className="rounded-2xl bg-white shadow-sm">
+<div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-2">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <button
             type="button"
             onClick={() => setMostrarActivas(!mostrarActivas)}
-            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
           >
             <div>
-              <h2 className="text-lg font-semibold">Suscripciones activas</h2>
+              <h2 className="text-sm font-semibold">Suscripciones activas</h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Revisa suscripciones activas y su historial reciente
               </p>
@@ -421,7 +422,7 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarActivas && (
-            <div className="border-t border-neutral-200 p-4">
+            <div className="min-h-0 flex-1 overflow-auto border-t border-neutral-200 p-3">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -467,33 +468,33 @@ export default function SuscripcionesPage() {
                   No hay suscripciones activas registradas aún.
                 </p>
               ) : (
-                <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
-                  <table className="min-w-full">
+                <div className="min-w-0 overflow-x-auto">
+                  <table className="min-w-full text-xs">
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
-                        <th className="px-3 py-2.5">Cliente</th>
-                        <th className="px-3 py-2.5">Suscripción</th>
-                        <th className="px-3 py-2.5">Estado</th>
-                        <th className="px-3 py-2.5">Inicio</th>
-                        <th className="px-3 py-2.5">Vencimiento</th>
-                        <th className="px-3 py-2.5">Próximo ciclo</th>
-                        <th className="px-3 py-2.5">Activada</th>
+                        <th className="px-2 py-1.5">Cliente</th>
+                        <th className="px-2 py-1.5">Suscripción</th>
+                        <th className="px-2 py-1.5">Estado</th>
+                        <th className="px-2 py-1.5">Inicio</th>
+                        <th className="px-2 py-1.5">Vencimiento</th>
+                        <th className="px-2 py-1.5">Próximo ciclo</th>
+                        <th className="px-2 py-1.5">Activada</th>
                         {rol === "superadmin" && (
-                          <th className="px-3 py-2.5">Acciones</th>
+                          <th className="px-2 py-1.5">Acciones</th>
                         )}
                       </tr>
                     </thead>
 
                     <tbody>
                       {subscriptionsFiltradas.map((s) => (
-                        <tr key={s.id} className="border-t text-sm">
-                          <td className="px-3 py-2.5">
+                        <tr key={s.id} className="border-t text-xs">
+                          <td className="px-2 py-1.5">
                             {s.clientes?.nombre || "-"}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             {s.subscription_templates?.name || "-"}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             <span
                               className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                 s.status === "active"
@@ -504,26 +505,26 @@ export default function SuscripcionesPage() {
                               {s.status === "active" ? "Activa" : s.status}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 text-neutral-600">
+                          <td className="px-2 py-1.5 text-neutral-600">
                             {s.start_date
                               ? new Date(s.start_date).toLocaleDateString(
                                   "es-CL",
                                 )
                               : "-"}
                           </td>
-                          <td className="px-3 py-2.5 text-neutral-600">
+                          <td className="px-2 py-1.5 text-neutral-600">
                             {s.end_date
                               ? new Date(s.end_date).toLocaleDateString("es-CL")
                               : "-"}
                           </td>
-                          <td className="px-3 py-2.5 text-neutral-600">
+                          <td className="px-2 py-1.5 text-neutral-600">
                             {s.next_cycle_date
                               ? new Date(s.next_cycle_date).toLocaleDateString(
                                   "es-CL",
                                 )
                               : "-"}
                           </td>
-                          <td className="px-3 py-2.5 text-neutral-500">
+                          <td className="px-2 py-1.5 text-neutral-500">
                             {s.activated_at
                               ? new Date(s.activated_at).toLocaleString("es-CL")
                               : s.created_at
@@ -532,7 +533,7 @@ export default function SuscripcionesPage() {
                           </td>
 
                           {rol === "superadmin" && (
-                            <td className="px-3 py-2.5">
+                            <td className="px-2 py-1.5">
                               <button
                                 type="button"
                                 onClick={() => eliminarSuscripcion(s.id)}
@@ -552,14 +553,14 @@ export default function SuscripcionesPage() {
           )}
         </section>
 
-        <section className="rounded-2xl bg-white shadow-sm">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <button
             type="button"
             onClick={() => setMostrarAsignaciones(!mostrarAsignaciones)}
-            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
           >
             <div>
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-sm font-semibold">
                 Asignaciones y códigos recientes
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
@@ -572,7 +573,7 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarAsignaciones && (
-            <div className="border-t border-neutral-200 p-4">
+            <div className="min-h-0 flex-1 overflow-auto border-t border-neutral-200 p-3">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -618,40 +619,40 @@ export default function SuscripcionesPage() {
                   No hay registros aún.
                 </p>
               ) : (
-                <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
-                  <table className="min-w-full">
+                <div className="min-w-0 overflow-x-auto">
+                  <table className="min-w-full text-xs">
                     <thead className="sticky top-0 bg-white">
                       <tr className="text-left text-xs uppercase text-neutral-500">
-                        <th className="px-3 py-2.5">Tipo</th>
-                        <th className="px-3 py-2.5">Suscripción</th>
-                        <th className="px-3 py-2.5">Cliente</th>
-                        <th className="px-3 py-2.5">Código</th>
-                        <th className="px-3 py-2.5">Estado</th>
-                        <th className="px-3 py-2.5">Fecha</th>
-                        <th className="px-3 py-2.5">Acción</th>
+                        <th className="px-2 py-1.5">Tipo</th>
+                        <th className="px-2 py-1.5">Suscripción</th>
+                        <th className="px-2 py-1.5">Cliente</th>
+                        <th className="px-2 py-1.5">Código</th>
+                        <th className="px-2 py-1.5">Estado</th>
+                        <th className="px-2 py-1.5">Fecha</th>
+                        <th className="px-2 py-1.5">Acción</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {asignacionesFiltradas.map((c) => (
-                        <tr key={c.id} className="border-t text-sm">
-                          <td className="px-3 py-2.5">
+                        <tr key={c.id} className="border-t text-xs">
+                          <td className="px-2 py-1.5">
                             {c.source === "admin_code" ? "Código" : "Asignado"}
                           </td>
 
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             {c.subscription_templates?.name || "-"}
                           </td>
 
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             {c.clientes?.nombre || "-"}
                           </td>
 
-                          <td className="px-3 py-2.5 font-mono">
+                          <td className="px-2 py-1.5 font-mono">
                             {c.claim_code || "-"}
                           </td>
 
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             <span
                               className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                 c.status === "claimed"
@@ -663,11 +664,11 @@ export default function SuscripcionesPage() {
                             </span>
                           </td>
 
-                          <td className="px-3 py-2.5 text-neutral-500">
+                          <td className="px-2 py-1.5 text-neutral-500">
                             {new Date(c.created_at).toLocaleString("es-CL")}
                           </td>
 
-                          <td className="px-3 py-2.5">
+                          <td className="px-2 py-1.5">
                             {c.status === "pending" ? (
                               <div className="flex flex-wrap gap-2">
                                 {c.claim_code && (
@@ -712,14 +713,14 @@ export default function SuscripcionesPage() {
           )}
         </section>
 
-        <section className="rounded-2xl bg-white shadow-sm">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <button
             type="button"
             onClick={() => setMostrarCodigo(!mostrarCodigo)}
-            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
           >
             <div>
-              <h2 className="text-lg font-semibold">Generar código genérico</h2>
+              <h2 className="text-sm font-semibold">Generar código genérico</h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Configura una suscripción y genera un código para canje
                 posterior
@@ -731,8 +732,8 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarCodigo && (
-            <div className="space-y-4 border-t border-neutral-200 p-4">
-              <div className="grid gap-3 md:grid-cols-5">
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto border-t border-neutral-200 p-3">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Tipo de suscripción
@@ -740,7 +741,7 @@ export default function SuscripcionesPage() {
                   <select
                     value={billingPeriodCodigo}
                     onChange={(e) => setBillingPeriodCodigo(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   >
                     {PERIODOS.map((periodo) => (
                       <option key={periodo.value} value={periodo.value}>
@@ -759,7 +760,7 @@ export default function SuscripcionesPage() {
                     min="0"
                     value={potsCodigo}
                     onChange={(e) => setPotsCodigo(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
@@ -772,7 +773,7 @@ export default function SuscripcionesPage() {
                     min="0"
                     value={toppingsCodigo}
                     onChange={(e) => setToppingsCodigo(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
@@ -785,7 +786,7 @@ export default function SuscripcionesPage() {
                     min="0"
                     value={waferCodigo}
                     onChange={(e) => setWaferCodigo(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
@@ -798,7 +799,7 @@ export default function SuscripcionesPage() {
                     min="0"
                     value={cookieCodigo}
                     onChange={(e) => setCookieCodigo(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
               </div>
@@ -838,16 +839,16 @@ export default function SuscripcionesPage() {
           )}
         </section>
 
-        <section className="rounded-2xl bg-white shadow-sm">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <button
             type="button"
             onClick={() =>
               setMostrarAsignacionCliente(!mostrarAsignacionCliente)
             }
-            className="flex w-full cursor-pointer items-center justify-between px-5 py-4 text-left"
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
           >
             <div>
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-sm font-semibold">
                 Asignar suscripción a cliente
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
@@ -861,7 +862,7 @@ export default function SuscripcionesPage() {
           </button>
 
           {mostrarAsignacionCliente && (
-            <div className="border-t border-neutral-200 p-6 space-y-6">
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto border-t border-neutral-200 p-3">
               <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
                 <p className="text-sm font-semibold text-violet-800">
                   Cliente seleccionado para asignación
@@ -913,7 +914,7 @@ export default function SuscripcionesPage() {
                     value={busquedaCliente}
                     onChange={(e) => setBusquedaCliente(e.target.value)}
                     placeholder="Nombre, correo o teléfono"
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
@@ -966,7 +967,7 @@ export default function SuscripcionesPage() {
                   <select
                     value={clienteId}
                     onChange={(e) => setClienteId(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   >
                     <option value="">Selecciona cliente</option>
                     {clientesFiltrados.map((c) => (
@@ -983,7 +984,7 @@ export default function SuscripcionesPage() {
                   Configuración de la suscripción
                 </p>
 
-                <div className="grid gap-3 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
                       Tipo de suscripción
@@ -993,7 +994,7 @@ export default function SuscripcionesPage() {
                       onChange={(e) =>
                         setBillingPeriodAsignacion(e.target.value)
                       }
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     >
                       {PERIODOS.map((periodo) => (
                         <option key={periodo.value} value={periodo.value}>
@@ -1012,7 +1013,7 @@ export default function SuscripcionesPage() {
                       min="0"
                       value={potsAsignacion}
                       onChange={(e) => setPotsAsignacion(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     />
                   </div>
 
@@ -1025,7 +1026,7 @@ export default function SuscripcionesPage() {
                       min="0"
                       value={toppingsAsignacion}
                       onChange={(e) => setToppingsAsignacion(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     />
                   </div>
 
@@ -1038,7 +1039,7 @@ export default function SuscripcionesPage() {
                       min="0"
                       value={waferAsignacion}
                       onChange={(e) => setWaferAsignacion(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     />
                   </div>
 
@@ -1051,7 +1052,7 @@ export default function SuscripcionesPage() {
                       min="0"
                       value={cookieAsignacion}
                       onChange={(e) => setCookieAsignacion(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                     />
                   </div>
                 </div>
@@ -1071,6 +1072,7 @@ export default function SuscripcionesPage() {
             </div>
           )}
         </section>
+        </div>
 
         {mensaje && (
           <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
