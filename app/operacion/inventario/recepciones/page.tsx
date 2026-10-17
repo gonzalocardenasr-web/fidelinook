@@ -54,17 +54,10 @@ export default async function InventoryReceiptsPage() {
   const receipts = await getInventoryReceipts();
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6">
+    <main className="mx-auto flex min-w-0 w-full max-w-7xl flex-col gap-4 px-3 py-3">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Link
-            href="/operacion/inventario"
-            className="text-sm font-medium text-neutral-600 hover:text-neutral-900"
-          >
-            ← Volver a Inventario
-          </Link>
-
-          <h1 className="mt-3 text-2xl font-semibold text-neutral-950">
+          <h1 className="text-2xl font-semibold text-neutral-950">
             Recepciones de mercadería
           </h1>
 

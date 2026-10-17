@@ -102,18 +102,11 @@ export default function NewInventoryReceiptPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-3">
+    <main className="min-w-0 w-full px-3 py-3">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
         <header className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <Link
-              href="/operacion/inventario/recepciones"
-              className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
-            >
-              ← Volver a Recepciones
-            </Link>
-
-            <h1 className="mt-1 text-xl font-semibold text-neutral-950">
+            <h1 className="text-xl font-semibold text-neutral-950">
               Nueva recepción
             </h1>
           </div>
