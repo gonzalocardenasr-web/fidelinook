@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import CampanasListado from "./components/CampanasListado";
 
 export default function CampanasPage() {
   const [rol, setRol] = useState<string | null>(null);
@@ -163,7 +164,8 @@ export default function CampanasPage() {
 
   return (
     <main className="min-w-0 w-full px-3 py-3">
-      <div className="mx-auto w-full max-w-7xl">
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <CampanasListado />
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 bg-white px-5 py-3">
             <h1 className="mt-2 text-xl font-semibold text-neutral-950">
