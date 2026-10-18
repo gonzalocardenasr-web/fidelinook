@@ -167,16 +167,16 @@ export default function CampanasPage() {
       <div className="mx-auto grid w-full max-w-[1800px] grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]">
         <div className="min-w-0"><CampanasListado /></div>
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <div className="border-b border-neutral-200 bg-white px-5 py-3">
-            <h1 className="mt-2 text-xl font-semibold text-neutral-950">
+          <div className="border-b border-neutral-200 bg-white px-4 py-3">
+            <h1 className="text-base font-semibold text-neutral-950">
               Crear campaña
             </h1>
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="text-[11px] text-neutral-500">
               Programa beneficios para activar ventas en días de menor flujo.
             </p>
           </div>
 
-          <div className="px-5 py-4">
+          <div className="px-4 py-3">
             {error && (
               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
                 {error}
@@ -189,9 +189,9 @@ export default function CampanasPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Nombre interno de campaña
                 </label>
                 <input
@@ -199,12 +199,12 @@ export default function CampanasPage() {
                   value={nombreInterno}
                   onChange={(e) => setNombreInterno(e.target.value)}
                   placeholder="Ej: Domingo topping gratis"
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Nombre del premio
                 </label>
                 <input
@@ -212,12 +212,12 @@ export default function CampanasPage() {
                   value={premioNombre}
                   onChange={(e) => setPremioNombre(e.target.value)}
                   placeholder="Ej: 1 topping gratis"
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
               <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Texto visible del premio
                 </label>
                 <textarea
@@ -225,21 +225,21 @@ export default function CampanasPage() {
                   onChange={(e) => setPremioDescripcion(e.target.value)}
                   placeholder="Ej: 🍫 Suma un baño de chocolate gratis con la compra de tu helado simple, doble o triple."
                   rows={2}
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition placeholder:text-[#999] focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
-                <p className="mt-2 text-xs leading-5 text-[#777]">
+                <p className="mt-1 text-[11px] leading-4 text-neutral-500">
                   Este texto aparecerá entre “🎉 ¡Tienes un premio!” y “Muéstralo en el local para canjearlo.”
                 </p>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Vigencia del premio
                 </label>
                 <select
                   value={duracionHoras}
                   onChange={(e) => setDuracionHoras(e.target.value)}
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 >
                   <option value="24">24 horas</option>
                   <option value="48">48 horas</option>
@@ -249,19 +249,19 @@ export default function CampanasPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Fecha y hora de lanzamiento
                 </label>
                 <input
                   type="datetime-local"
                   value={fechaLanzamiento}
                   onChange={(e) => setFechaLanzamiento(e.target.value)}
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[#444]">
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
                   Recurrencia
                 </label>
                 <select
@@ -269,7 +269,7 @@ export default function CampanasPage() {
                   onChange={(e) =>
                     setRecurrencia(e.target.value === "semanal" ? "semanal" : "una_vez")
                   }
-                  className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
+                  className="w-full rounded-lg border border-[#E3D2EA] bg-white px-3 py-2 text-xs text-[#222] outline-none transition focus:border-[#7A57F6] focus:ring-4 focus:ring-[#7A57F6]/10"
                 >
                   <option value="una_vez">Una vez</option>
                   <option value="semanal">Semanal</option>
@@ -279,7 +279,7 @@ export default function CampanasPage() {
               <button
                 type="submit"
                 disabled={procesando}
-                className="lg:col-span-2 mt-1 w-full rounded-xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="lg:col-span-2 mt-1 w-full rounded-lg bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {procesando ? "Procesando..." : "Crear campaña"}
               </button>
