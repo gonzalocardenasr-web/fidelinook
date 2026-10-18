@@ -164,8 +164,8 @@ export default function CampanasPage() {
 
   return (
     <main className="min-w-0 w-full px-3 py-3">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <CampanasListado />
+      <div className="mx-auto grid w-full max-w-[1800px] grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]">
+        <div className="min-w-0"><CampanasListado /></div>
         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 bg-white px-5 py-3">
             <h1 className="mt-2 text-xl font-semibold text-neutral-950">

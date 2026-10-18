@@ -1,0 +1,468 @@
+﻿=== app/api/operacion/campanas/route.ts ===
+   1: import { NextResponse } from "next/server";
+   2: 
+   3: import { getOperationSession } from "@/lib/operation-auth";
+   4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+   5: import { supabaseAdmin } from "@/lib/supabase-admin";
+   6: 
+   7: export async function GET() {
+   8:   try {
+   9:     const session = await getOperationSession();
+  10: 
+  11:     const authorization = authorizeOperationSession(
+  12:       session,
+  13:       "campaigns.manage",
+  14:     );
+  15: 
+  16:     if (!authorization.ok) {
+  17:       return NextResponse.json(
+  18:         { ok: false, message: authorization.message },
+  19:         { status: authorization.status },
+  20:       );
+  21:     }
+  22: 
+  23:     if (!session.ok) {
+  24:       return NextResponse.json(
+  25:         {
+  26:           ok: false,
+  27:           message: "Tu sesión no se encuentra activa.",
+  28:         },
+  29:         { status: 401 },
+  30:       );
+  31:     }
+  32: 
+  33:     if (!session.userId) {
+  34:       return NextResponse.json(
+  35:         {
+  36:           ok: false,
+  37:           message:
+  38:             "Tu sesión debe renovarse para identificar al usuario. Cierra sesión e inicia sesión nuevamente.",
+  39:         },
+  40:         { status: 401 },
+  41:       );
+  42:     }
+  43: 
+  44:     const { data: operationalUser, error: operationalUserError } =
+  45:       await supabaseAdmin
+  46:         .from("operational_users")
+  47:         .select("id, role, is_active")
+  48:         .eq("id", session.userId)
+  49:         .maybeSingle();
+  50: 
+  51:     if (operationalUserError) {
+  52:       console.error(
+  53:         "Error validando usuario operacional para campañas:",
+  54:         operationalUserError,
+  55:       );
+  56: 
+  57:       return NextResponse.json(
+  58:         {
+  59:           ok: false,
+  60:           message: "No fue posible validar al usuario operacional.",
+  61:         },
+  62:         { status: 500 },
+  63:       );
+  64:     }
+  65: 
+  66:     if (!operationalUser || !operationalUser.is_active) {
+  67:       return NextResponse.json(
+  68:         {
+  69:           ok: false,
+  70:           message: "El usuario operacional no se encuentra activo.",
+  71:         },
+  72:         { status: 403 },
+  73:       );
+  74:     }
+  75: 
+  76:     if (operationalUser.role !== session.role) {
+  77:       console.error(
+  78:         "Rol inconsistente consultando campañas:",
+  79:         session.userId,
+  80:         session.role,
+  81:         operationalUser.role,
+  82:       );
+  83: 
+  84:       return NextResponse.json(
+  85:         {
+  86:           ok: false,
+  87:           message: "La sesión operacional no es válida.",
+  88:         },
+  89:         { status: 403 },
+  90:       );
+  91:     }
+  92: 
+  93:     const { data, error } = await supabaseAdmin
+  94:       .from("campanas")
+  95:       .select(
+  96:         "id, nombre_interno, premio_nombre, duracion_horas, fecha_lanzamiento, recurrencia, estado, total_objetivo, total_enviados, created_at",
+  97:       )
+  98:       .order("created_at", { ascending: false })
+  99:       .limit(20);
+ 100: 
+ 101:     if (error) {
+ 102:       console.error("Error cargando campañas operacionales:", error);
+ 103: 
+ 104:       return NextResponse.json(
+ 105:         {
+ 106:           ok: false,
+ 107:           message: "No fue posible cargar las campañas.",
+ 108:         },
+ 109:         { status: 500 },
+ 110:       );
+ 111:     }
+ 112: 
+ 113:     return NextResponse.json({
+ 114:       ok: true,
+ 115:       campanas: data || [],
+ 116:     });
+ 117:   } catch (error) {
+ 118:     console.error("Error inesperado cargando campañas operacionales:", error);
+ 119: 
+ 120:     return NextResponse.json(
+ 121:       {
+ 122:         ok: false,
+ 123:         message: "Ocurrió un error inesperado al cargar las campañas.",
+ 124:       },
+ 125:       { status: 500 },
+ 126:     );
+ 127:   }
+ 128: }
+
+=== app/campanas/[id]/page.tsx ===
+   1: "use client";
+   2: 
+   3: import { useEffect, useState } from "react";
+   4: import Link from "next/link";
+   5: import { useParams, useRouter } from "next/navigation";
+   6: 
+   7: type Campana = {
+   8:   id: number;
+   9:   nombre_interno: string;
+  10:   premio_nombre: string;
+  11:   premio_descripcion: string;
+  12:   duracion_horas: number;
+  13:   fecha_lanzamiento: string;
+  14:   recurrencia: "una_vez" | "semanal";
+  15:   estado:
+  16:     | "borrador"
+  17:     | "programada"
+  18:     | "lanzando"
+  19:     | "lanzada"
+  20:     | "fallida"
+  21:     | "cancelada";
+  22:   total_objetivo?: number | null;
+  23:   total_enviados?: number | null;
+  24:   error_message?: string | null;
+  25:   created_at?: string | null;
+  26:   launched_at?: string | null;
+  27: };
+  28: 
+  29: export default function CampanaDetallePage() {
+  30:   const params = useParams();
+  31:   const router = useRouter();
+  32:   const campanaId = Number(params.id);
+  33: 
+  34:   const [campana, setCampana] = useState<Campana | null>(null);
+  35:   const [loading, setLoading] = useState(true);
+  36:   const [guardando, setGuardando] = useState(false);
+  37:   const [mensaje, setMensaje] = useState("");
+  38:   const [error, setError] = useState("");
+  39: 
+  40:   const [nombreInterno, setNombreInterno] = useState("");
+  41:   const [premioNombre, setPremioNombre] = useState("");
+  42:   const [premioDescripcion, setPremioDescripcion] = useState("");
+  43:   const [duracionHoras, setDuracionHoras] = useState("48");
+  44:   const [fechaLanzamiento, setFechaLanzamiento] = useState("");
+  45:   const [recurrencia, setRecurrencia] = useState<"una_vez" | "semanal">(
+  46:     "una_vez",
+  47:   );
+  48: 
+  49:   const editable =
+  50:     campana?.estado === "borrador" ||
+  51:     campana?.estado === "programada" ||
+  52:     campana?.estado === "fallida";
+  53: 
+  54:   const cargarCampana = async () => {
+  55:     try {
+  56:       setLoading(true);
+  57:       setError("");
+  58: 
+  59:       const response = await fetch(`/api/operacion/campanas/${campanaId}`, {
+  60:         method: "GET",
+  61:         cache: "no-store",
+  62:       });
+  63: 
+  64:       const data = await response.json();
+  65: 
+  66:       if (!response.ok || !data.ok || !data.campana) {
+  67:         setError(data.message || "No se encontró la campaña.");
+  68:         return;
+  69:       }
+  70: 
+  71:       const c = data.campana as Campana;
+  72:       setCampana(c);
+  73:       setNombreInterno(c.nombre_interno || "");
+  74:       setPremioNombre(c.premio_nombre || "");
+  75:       setPremioDescripcion(c.premio_descripcion || "");
+  76:       setDuracionHoras(String(c.duracion_horas || 48));
+  77:       setFechaLanzamiento(
+  78:         c.fecha_lanzamiento
+  79:           ? new Date(c.fecha_lanzamiento)
+  80:               .toLocaleString("sv-SE", {
+  81:                 timeZone: "America/Santiago",
+  82:                 year: "numeric",
+  83:                 month: "2-digit",
+  84:                 day: "2-digit",
+  85:                 hour: "2-digit",
+  86:                 minute: "2-digit",
+  87:               })
+  88:               .replace(" ", "T")
+  89:           : "",
+  90:       );
+  91:       setRecurrencia(c.recurrencia || "una_vez");
+  92:     } catch (error) {
+  93:       console.error("Error cargando campaña:", error);
+  94:       setError("Ocurrió un error al cargar la campaña.");
+  95:     } finally {
+  96:       setLoading(false);
+  97:     }
+  98:   };
+  99: 
+ 100:   useEffect(() => {
+ 101:     if (!Number.isFinite(campanaId)) return;
+ 102:     void cargarCampana();
+ 103:   }, [campanaId]);
+ 104: 
+ 105:   const guardarCambios = async (e: React.FormEvent<HTMLFormElement>) => {
+ 106:     e.preventDefault();
+ 107: 
+ 108:     if (!campana || !editable) return;
+ 109: 
+ 110:     setMensaje("");
+ 111:     setError("");
+ 112: 
+ 113:     if (!nombreInterno.trim()) {
+ 114:       setError("Ingresa un nombre interno.");
+ 115:       return;
+ 116:     }
+ 117: 
+ 118:     if (!premioNombre.trim()) {
+ 119:       setError("Ingresa el nombre del premio.");
+ 120:       return;
+ 121:     }
+ 122: 
+ 123:     if (!premioDescripcion.trim()) {
+ 124:       setError("Ingresa la descripción visible del premio.");
+ 125:       return;
+ 126:     }
+ 127: 
+ 128:     const duracion = Number(duracionHoras);
+ 129: 
+ 130:     if (!Number.isFinite(duracion) || duracion < 24 || duracion % 24 !== 0) {
+ 131:       setError("La vigencia debe ser un múltiplo de 24 horas.");
+ 132:       return;
+ 133:     }
+ 134: 
+ 135:     try {
+ 136:       setGuardando(true);
+ 137: 
+ 138:       const response = await fetch(`/api/operacion/campanas/${campana.id}`, {
+ 139:         method: "PATCH",
+ 140:         headers: {
+ 141:           "Content-Type": "application/json",
+ 142:         },
+ 143:         body: JSON.stringify({
+ 144:           nombre_interno: nombreInterno.trim(),
+ 145:           premio_nombre: premioNombre.trim(),
+ 146:           premio_descripcion: premioDescripcion.trim(),
+ 147:           duracion_horas: duracion,
+ 148:           fecha_lanzamiento: new Date(fechaLanzamiento).toISOString(),
+ 149:           recurrencia,
+ 150:         }),
+ 151:       });
+ 152: 
+ 153:       const data = await response.json();
+ 154: 
+ 155:       if (!response.ok || !data.ok) {
+ 156:         setError(data.message || "No se pudo actualizar la campaña.");
+ 157:         return;
+ 158:       }
+ 159: 
+ 160:       setMensaje("Campaña actualizada correctamente.");
+ 161:       await cargarCampana();
+ 162:     } catch (error) {
+ 163:       console.error("Error guardando campaña:", error);
+ 164:       setError("Ocurrió un error al guardar la campaña.");
+ 165:     } finally {
+ 166:       setGuardando(false);
+ 167:     }
+ 168:   };
+ 169: 
+ 170:   if (loading) {
+ 171:     return (
+ 172:       <main className="min-w-0 w-full px-3 py-3">
+ 173:         <div className="mx-auto w-full max-w-7xl rounded-[28px] bg-white p-6 shadow">
+ 174:           Cargando campaña...
+ 175:         </div>
+ 176:       </main>
+ 177:     );
+ 178:   }
+ 179: 
+ 180:   return (
+ 181:     <main className="min-w-0 w-full px-3 py-3">
+ 182:       <div className="mx-auto w-full max-w-7xl">
+ 183:         <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+ 184:           <div className="border-b border-neutral-200 bg-white px-5 py-3">
+ 185:             <h1 className="mt-2 text-xl font-semibold text-neutral-950">
+ 186:               Detalle de campaña
+ 187:             </h1>
+ 188:             <p className="mt-1 text-sm text-neutral-600">
+ 189:               Revisa y ajusta la configuración antes de lanzarla.
+ 190:             </p>
+ 191:           </div>
+ 192: 
+ 193:           <div className="px-5 py-4">
+ 194:             {error && (
+ 195:               <div className="mb-5 rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-3 text-sm text-[#8A3550]">
+ 196:                 {error}
+ 197:               </div>
+ 198:             )}
+ 199: 
+ 200:             {mensaje && (
+ 201:               <div className="mb-5 rounded-2xl border border-[#D8E7C9] bg-[#F3FAEC] px-4 py-3 text-sm text-[#42622B]">
+ 202:                 {mensaje}
+ 203:               </div>
+ 204:             )}
+ 205: 
+ 206:             {campana && (
+ 207:               <>
+ 208:                 <div className="mb-4 rounded-xl border border-[#E3D2EA] bg-[#FCF8FF] px-4 py-3 text-sm text-[#555]">
+ 209:                   <p>
+ 210:                     Estado:{" "}
+ 211:                     <span className="font-semibold text-[#4c00f7]">
+ 212:                       {campana.estado}
+ 213:                     </span>
+ 214:                   </p>
+ 215:                   <p className="mt-1">
+ 216:                     Alcance: {campana.total_enviados || 0}/
+ 217:                     {campana.total_objetivo || 0}
+ 218:                   </p>
+ 219:                   {campana.error_message && (
+ 220:                     <p className="mt-1 text-[#8A3550]">
+ 221:                       Error: {campana.error_message}
+ 222:                     </p>
+ 223:                   )}
+ 224:                 </div>
+ 225: 
+ 226:                 <form onSubmit={guardarCambios} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+ 227:                   <div>
+ 228:                     <label className="mb-2 block text-sm font-medium text-[#444]">
+ 229:                       Nombre interno
+ 230:                     </label>
+ 231:                     <input
+ 232:                       value={nombreInterno}
+ 233:                       onChange={(e) => setNombreInterno(e.target.value)}
+ 234:                       disabled={!editable}
+ 235:                       className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
+ 236:                     />
+ 237:                   </div>
+ 238: 
+ 239:                   <div>
+ 240:                     <label className="mb-2 block text-sm font-medium text-[#444]">
+ 241:                       Nombre del premio
+ 242:                     </label>
+ 243:                     <input
+ 244:                       value={premioNombre}
+ 245:                       onChange={(e) => setPremioNombre(e.target.value)}
+ 246:                       disabled={!editable}
+ 247:                       className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
+ 248:                     />
+ 249:                   </div>
+ 250: 
+ 251:                   <div>
+ 252:                     <label className="mb-2 block text-sm font-medium text-[#444]">
+ 253:                       Texto visible del premio
+ 254:                     </label>
+ 255:                     <textarea
+ 256:                       value={premioDescripcion}
+ 257:                       onChange={(e) => setPremioDescripcion(e.target.value)}
+ 258:                       disabled={!editable}
+ 259:                       rows={3}
+ 260:                       className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
+ 261:                     />
+ 262:                   </div>
+ 263: 
+ 264:                   <div className="h-full rounded-xl border border-[#E3D2EA] bg-[#FCF8FF] p-4">
+ 265:                     <p className="text-xs uppercase tracking-[0.25em] text-[#7A57F6]">
+ 266:                       Vista previa
+ 267:                     </p>
+ 268:                     <h3 className="mt-2 text-lg font-bold text-[#4c00f7]">
+ 269:                       🎉 ¡Tienes un premio!
+ 270:                     </h3>
+ 271:                     <p className="mt-2 text-sm leading-5 text-[#555]">
+ 272:                       {premioDescripcion || "Texto visible del premio..."}
+ 273:                     </p>
+ 274:                     <p className="mt-2 text-sm text-[#555]">
+ 275:                       Muéstralo en el local para canjearlo.
+ 276:                     </p>
+ 277:                   </div>
+ 278: 
+ 279:                   <div>
+ 280:                     <label className="mb-2 block text-sm font-medium text-[#444]">
+ 281:                       Vigencia
+ 282:                     </label>
+ 283:                     <select
+ 284:                       value={duracionHoras}
+ 285:                       onChange={(e) => setDuracionHoras(e.target.value)}
+ 286:                       disabled={!editable}
+ 287:                       className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
+ 288:                     >
+ 289:                       <option value="24">24 horas</option>
+ 290:                       <option value="48">48 horas</option>
+ 291:                       <option value="72">72 horas</option>
+ 292:                       <option value="168">7 días</option>
+ 293:                     </select>
+ 294:                   </div>
+ 295: 
+ 296:                   <div>
+ 297:                     <label className="mb-2 block text-sm font-medium text-[#444]">
+ 298:                       Fecha y hora referencial
+ 299:                     </label>
+ 300:                     <input
+ 301:                       type="datetime-local"
+ 302:                       value={fechaLanzamiento}
+ 303:                       onChange={(e) => setFechaLanzamiento(e.target.value)}
+ 304:                       disabled={!editable}
+ 305:                       className="w-full rounded-xl border border-[#E3D2EA] bg-white px-3 py-2.5 text-sm text-[#222] outline-none transition disabled:bg-neutral-100"
+ 306:                     />
+ 307:                   </div>
+ 308: 
+ 309:                   <div className="flex flex-col gap-3 lg:col-span-2 sm:flex-row sm:justify-end">
+ 310:                     {editable && (
+ 311:                       <button
+ 312:                         type="submit"
+ 313:                         disabled={guardando}
+ 314:                         className="w-full rounded-xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-3 text-sm font-semibold sm:w-auto text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
+ 315:                       >
+ 316:                         {guardando ? "Guardando..." : "Guardar cambios"}
+ 317:                       </button>
+ 318:                     )}
+ 319: 
+ 320:                     <Link
+ 321:                       href="/campanas"
+ 322:                       className="w-full rounded-xl border border-[#D9C8FF] bg-white px-5 py-3 text-center text-sm font-semibold sm:w-auto text-[#4c00f7] transition hover:bg-[#F7F2FF]"
+ 323:                     >
+ 324:                       Volver a Campañas
+ 325:                     </Link>
+ 326:                   </div>
+ 327:                 </form>
+ 328:               </>
+ 329:             )}
+ 330:           </div>
+ 331:         </div>
+ 332:       </div>
+ 333:     </main>
+ 334:   );
+ 335: }
+ 336: 
+

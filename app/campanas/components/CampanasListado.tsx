@@ -109,9 +109,9 @@ export default function CampanasListado() {
           No hay campañas registradas.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="max-h-[650px] overflow-auto">
           <table className="w-full min-w-[850px] text-left text-xs">
-            <thead className="bg-neutral-50 text-neutral-600">
+            <thead className="sticky top-0 z-10 bg-neutral-50 text-neutral-600">
               <tr>
                 <th className="px-4 py-3 font-semibold">Campaña</th>
                 <th className="px-4 py-3 font-semibold">Premio</th>
