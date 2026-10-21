@@ -1,0 +1,367 @@
+﻿import { supabaseAdmin } from "@/lib/supabase-admin";
+import {
+  buildCustomerEventIdempotencyKey,
+  recordCustomerEvent,
+} from "@/lib/customer-events";
+import { dispatchQueuedEmailById } from "@/lib/email/emailDispatcher";
+import { enqueueEmail } from "@/lib/email/emailQueue";
+
+export async function aplicarCampana({
+  campanaId,
+  duracionHoras,
+  clienteCorreoPrueba,
+  actorRole,
+}: {
+  campanaId: number;
+  duracionHoras: number;
+  clienteCorreoPrueba?: string;
+  actorRole?: string | null;
+}) {
+  const esPrueba = Boolean(clienteCorreoPrueba);
+  let ejecucionAdquirida = false;
+
+  const { data: campana, error: campanaError } = await supabaseAdmin
+    .from("campanas")
+    .select(
+      `
+        id,
+        estado,
+        premio_nombre,
+        premio_descripcion,
+        duracion_horas
+      `,
+    )
+    .eq("id", campanaId)
+    .single();
+
+  if (campanaError || !campana) {
+    throw new Error("No se encontró la campaña.");
+  }
+
+  if (!esPrueba) {
+    const { data: claimedRows, error: launchingError } = await supabaseAdmin
+      .from("campanas")
+      .update({
+        estado: "lanzando",
+        error_message: null,
+      })
+      .eq("id", campana.id)
+      .eq("estado", campana.estado)
+      .in("estado", ["programada", "fallida"])
+      .select("id");
+
+    if (launchingError || !claimedRows || claimedRows.length !== 1) {
+      throw new Error("La campaña ya cambió de estado o no pudo iniciarse. Actualiza antes de reintentar.");
+    }
+
+    ejecucionAdquirida = true;
+  }
+
+  try {
+    const clientesObjetivo: Array<{
+      id: number;
+      correo: string;
+      public_token: string | null;
+    }> = [];
+
+    const tamanoPagina = 500;
+    let desde = 0;
+
+    while (true) {
+      let clientesQuery = supabaseAdmin
+        .from("clientes")
+        .select("id, correo, public_token")
+        .order("id", { ascending: true });
+
+      if (esPrueba) {
+        clientesQuery = clientesQuery.eq("correo", clienteCorreoPrueba!);
+      } else {
+        clientesQuery = clientesQuery.or(
+          "acepta_marketing.eq.true,marketing_preferencia_definida.eq.false",
+        );
+      }
+
+      const { data: pagina, error: clientesError } = await clientesQuery.range(
+        desde,
+        desde + tamanoPagina - 1,
+      );
+
+      if (clientesError) {
+        throw clientesError;
+      }
+
+      const clientesPagina = pagina || [];
+      clientesObjetivo.push(...clientesPagina);
+
+      if (esPrueba || clientesPagina.length < tamanoPagina) {
+        break;
+      }
+
+      desde += tamanoPagina;
+    }
+
+    if (esPrueba && clientesObjetivo.length === 0) {
+      throw new Error(
+        "No se encontró un cliente con el correo de prueba indicado.",
+      );
+    }
+
+
+
+    let totalElegibles = 0;
+    let totalAplicados = 0;
+    let totalErrores = 0;
+
+    const fechaAsignacion = new Date();
+    const fechaExpiracion = new Date(fechaAsignacion);
+
+    fechaExpiracion.setHours(fechaExpiracion.getHours() + duracionHoras);
+
+    for (const cliente of clientesObjetivo) {
+      totalElegibles += 1;
+
+      const premioId = crypto.randomUUID();
+
+      const { data: rpcRows, error: rpcError } = await supabaseAdmin.rpc(
+        "asignar_premio_campana_atomico",
+        {
+          p_campana_id: campana.id,
+          p_cliente_id: cliente.id,
+          p_premio_id: premioId,
+          p_nombre: campana.premio_nombre,
+          p_descripcion: campana.premio_descripcion || "",
+          p_vencimiento: fechaExpiracion.toISOString(),
+          p_es_prueba: esPrueba,
+        },
+      );
+
+      const rpcResult = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+
+      if (rpcError || !rpcResult) {
+        console.error(
+          "Error asignando premio de campaña mediante RPC:",
+          cliente.id,
+          rpcError,
+        );
+        totalErrores += 1;
+        continue;
+      }
+
+      if (!rpcResult.asignado) {
+        // La asignación ya existe: nunca crear otro premio ni reenviar correo.
+        totalElegibles -= 1;
+
+        const trackingId = rpcResult.tracking_id;
+
+        if (!trackingId) {
+          console.error(
+            "Asignación existente sin identificador de tracking:",
+            campana.id,
+            cliente.id,
+          );
+          totalErrores += 1;
+          continue;
+        }
+
+        try {
+          // Reutiliza la reconciliación idempotente del Event Bus.
+          const { data: tracking, error: trackingError } =
+            await supabaseAdmin
+              .from("campana_clientes")
+              .select("id, premio_id, asignado_at, vencimiento")
+              .eq("id", trackingId)
+              .eq("campana_id", campana.id)
+              .eq("cliente_id", cliente.id)
+              .single();
+
+          if (trackingError || !tracking) {
+            throw new Error(
+              "No fue posible recuperar la asignación existente.",
+            );
+          }
+
+          await recordCustomerEvent({
+            customerId: cliente.id,
+            eventType: "campaign.reward_assigned",
+            sourceModule: "campaigns",
+            sourceEntityType: "campaign_customer",
+            sourceEntityId: tracking.id,
+            actorRole,
+            occurredAt: tracking.asignado_at,
+            idempotencyKey: buildCustomerEventIdempotencyKey([
+              "campaign-reward-assigned",
+              tracking.id,
+            ]),
+            metadata: {
+              campaignId: campana.id,
+              campaignTrackingId: tracking.id,
+              legacyRewardId: tracking.premio_id,
+              rewardName: campana.premio_nombre,
+              rewardDescription: campana.premio_descripcion || null,
+              expiresAt: tracking.vencimiento,
+            },
+          });
+        } catch (eventError) {
+          console.error(
+            "No fue posible reconciliar el evento de una asignación existente:",
+            campana.id,
+            cliente.id,
+            eventError,
+          );
+        }
+
+        continue;
+      }
+
+      const campaignTracking = {
+        id: rpcResult.tracking_id,
+        asignado_at: rpcResult.asignado_at,
+      };
+
+      totalAplicados += 1;
+
+      /*
+       * La asignación y su trazabilidad ya fueron confirmadas
+       * conjuntamente por PostgreSQL.
+       */
+      try {
+        await recordCustomerEvent({
+          customerId: cliente.id,
+          eventType: "campaign.reward_assigned",
+          sourceModule: "campaigns",
+          sourceEntityType: "campaign_customer",
+          sourceEntityId: campaignTracking.id,
+          actorRole,
+          occurredAt: campaignTracking.asignado_at || fechaAsignacion,
+          idempotencyKey: buildCustomerEventIdempotencyKey([
+            "campaign-reward-assigned",
+            campaignTracking.id,
+          ]),
+          metadata: {
+            campaignId: campana.id,
+            campaignTrackingId: campaignTracking.id,
+            legacyRewardId: premioId,
+            rewardName: campana.premio_nombre,
+            rewardDescription: campana.premio_descripcion || null,
+            expiresAt: fechaExpiracion.toISOString(),
+            testMode: esPrueba,
+          },
+        });
+      } catch (eventError) {
+        console.error(
+          "Premio asignado, pero falló su evento:",
+          cliente.id,
+          eventError,
+        );
+
+        // El premio y su trazabilidad permanecen asignados.
+        // El evento fallido debe recuperarse posteriormente.
+
+      }
+
+      /*
+       * 4. El correo es un efecto posterior. Su falla no elimina
+       *    el premio ni el evento, porque el hecho ya ocurrió.
+       *
+       *    La obligación queda persistida en email_queue y su despacho
+       *    está sujeto al presupuesto P2 del Email Dispatch Manager.
+       */
+      try {
+        if (!cliente.public_token) {
+          console.error(
+            "Cliente sin public_token para correo de campaña:",
+            cliente.id,
+          );
+        } else {
+          const queuedEmail = await enqueueEmail({
+            recipientEmail: cliente.correo,
+            emailType: "CAMPAIGN_REWARD_ASSIGNED",
+            priority: 2,
+            idempotencyKey: `campaign-reward-assigned-email:${campaignTracking.id}`,
+            payload: {
+              nombrePremio: campana.premio_nombre,
+              descripcion: campana.premio_descripcion || null,
+              vencimiento: fechaExpiracion.toISOString(),
+              publicToken: cliente.public_token,
+              campaignTrackingId: campaignTracking.id,
+            },
+            customerId: cliente.id,
+            sourceType: "campaign_reward_assigned",
+            sourceReference: String(campaignTracking.id),
+            maxAttempts: 5,
+          });
+
+          await dispatchQueuedEmailById(queuedEmail.id);
+        }
+      } catch (emailError) {
+        console.error(
+          "Error encolando/despachando correo de campaña:",
+          cliente.id,
+          emailError,
+        );
+      }
+
+    }
+
+    if (!esPrueba) {
+      // Los contadores deben incluir asignaciones de intentos anteriores.
+      const { count: totalAsignaciones, error: conteoError } =
+        await supabaseAdmin
+          .from("campana_clientes")
+          .select("id", { count: "exact", head: true })
+          .eq("campana_id", campana.id);
+
+      if (conteoError || totalAsignaciones === null) {
+        throw new Error(
+          "No fue posible verificar el total acumulado de premios asignados.",
+        );
+      }
+
+      const finalStatus =
+        totalErrores > 0 ? "fallida" : "lanzada";
+
+      const { data: finalRows, error: finalCampaignError } = await supabaseAdmin
+        .from("campanas")
+        .update({
+          estado: finalStatus,
+          launched_at: new Date().toISOString(),
+          total_objetivo: clientesObjetivo.length,
+          total_enviados: totalAsignaciones,
+          error_message:
+            totalErrores > 0
+              ? `${totalErrores} asignación(es) no pudieron completarse.`
+              : null,
+        })
+        .eq("id", campana.id)
+        .eq("estado", "lanzando")
+        .select("id");
+
+      if (finalCampaignError || !finalRows || finalRows.length !== 1) {
+        throw new Error(
+          "La campaña terminó, pero no se pudo confirmar su cierre.",
+        );
+      }
+    }
+
+    return {
+      modoPrueba: esPrueba,
+      totalObjetivo: totalElegibles,
+      totalAplicados,
+      totalErrores,
+    };
+  } catch (error) {
+    if (!esPrueba && ejecucionAdquirida) {
+      await supabaseAdmin
+        .from("campanas")
+        .update({
+          estado: "fallida",
+          error_message:
+            error instanceof Error ? error.message : "Error en ejecución",
+        })
+        .eq("id", campana.id)
+        .eq("estado", "lanzando");
+    }
+
+    throw error;
+  }
+}

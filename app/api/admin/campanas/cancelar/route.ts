@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
 import { getOperationSession } from "../../../../../lib/operation-auth";
 import { authorizeOperationSession } from "@/lib/operation-rbac";
@@ -143,13 +143,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const { error: updateError } = await supabaseAdmin
+    const { data: updatedRows, error: updateError } = await supabaseAdmin
       .from("campanas")
       .update({
         estado: "cancelada",
         cancelada_at: new Date().toISOString(),
       })
-      .eq("id", campana.id);
+      .eq("id", campana.id)
+      .eq("estado", campana.estado)
+      .select("id");
 
     if (updateError) {
       console.error("Error cancelando campaña:", updateError);
@@ -160,6 +162,12 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!updatedRows || updatedRows.length !== 1) {
+      return NextResponse.json(
+        { ok: false, message: "La campaña cambió de estado; actualiza la página antes de cancelar." },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({
       ok: true,
       message: "Campaña cancelada correctamente.",

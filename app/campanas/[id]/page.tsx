@@ -34,6 +34,9 @@ export default function CampanaDetallePage() {
   const [campana, setCampana] = useState<Campana | null>(null);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [accionEnCurso, setAccionEnCurso] = useState<string | null>(null);
+  const [correoPrueba, setCorreoPrueba] = useState("");
+  const [lanzamientoGeneralHabilitado] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
 
@@ -51,10 +54,10 @@ export default function CampanaDetallePage() {
     campana?.estado === "programada" ||
     campana?.estado === "fallida";
 
-  const cargarCampana = async () => {
+  const cargarCampana = async (silenciosa = false) => {
     try {
-      setLoading(true);
-      setError("");
+      if (!silenciosa) setLoading(true);
+      if (!silenciosa) setError("");
 
       const response = await fetch(`/api/operacion/campanas/${campanaId}`, {
         method: "GET",
@@ -101,6 +104,65 @@ export default function CampanaDetallePage() {
     if (!Number.isFinite(campanaId)) return;
     void cargarCampana();
   }, [campanaId]);
+
+  const ejecutarAccion = async (
+    accion: "probar" | "programar" | "ejecutar" | "cancelar",
+  ) => {
+    if (!campana || accionEnCurso || guardando) return;
+
+    const correo = correoPrueba.trim().toLowerCase();
+
+    if (accion === "probar" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      setError("Ingresa el correo válido de un cliente registrado para la prueba.");
+      return;
+    }
+
+    const confirmacion = {
+      probar: `La prueba asignará un premio real al cliente ${correo} y podrá enviarle un correo. Este cliente no recibirá un segundo premio cuando se lance la misma campaña. ¿Confirmas la prueba?`,
+      programar: "Se programará esta campaña para ejecutarse en aproximadamente 5 minutos. ¿Continuar?",
+      ejecutar: "ATENCIÓN: esta acción ejecutará la campaña REAL sobre sus destinatarios. Puede asignar premios y enviar correos. ¿Confirmas el lanzamiento?",
+      cancelar: "Se cancelará esta campaña y no podrá lanzarse desde este estado. ¿Continuar?",
+    }[accion];
+
+    if (!window.confirm(confirmacion)) return;
+
+    const endpoint = accion === "programar"
+      ? "/api/admin/campanas/programar-lanzamiento"
+      : accion === "cancelar"
+        ? "/api/admin/campanas/cancelar"
+        : "/api/admin/campanas/ejecutar";
+
+    setAccionEnCurso(accion);
+    setError("");
+    setMensaje("");
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campanaId: campana.id,
+          ...(accion === "probar" ? { clienteCorreoPrueba: correo } : {}),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.ok === false) {
+        setError(data.message || "No fue posible completar la acción.");
+      } else {
+        setMensaje(data.message || "Acción completada correctamente.");
+      }
+
+      await cargarCampana(true);
+    } catch (err) {
+      console.error("Error ejecutando acción de campaña:", err);
+      setError("No se pudo completar la acción. Revisa el estado antes de reintentar.");
+      await cargarCampana(true);
+    } finally {
+      setAccionEnCurso(null);
+    }
+  };
 
   const guardarCambios = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -223,6 +285,90 @@ export default function CampanaDetallePage() {
                   )}
                 </div>
 
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+  <p className="font-semibold">
+    Lanzamientos generales temporalmente suspendidos
+  </p>
+  <p className="mt-1">
+    Puedes editar campañas, realizar pruebas con clientes registrados
+    y cancelar campañas. La programación y el lanzamiento general
+    permanecen suspendidos hasta completar sus controles operacionales.
+  </p>
+</div>
+<section className="mb-5 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                  <h2 className="text-sm font-semibold text-neutral-900">
+                    Acciones de campaña
+                  </h2>
+
+                  <p className="mt-1 text-xs text-neutral-600">
+                    Las pruebas asignan premios reales. El cliente utilizado no recibirá otro premio en el lanzamiento definitivo de esta campaña.
+                    Guarda primero los cambios pendientes.
+                  </p>
+
+                  {(campana.estado === "borrador") && (
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <label className="flex-1 text-xs font-medium text-neutral-700">
+                        Correo del cliente para prueba
+                        <input
+                          type="email"
+                          value={correoPrueba}
+                          onChange={(e) => setCorreoPrueba(e.target.value)}
+                          disabled={Boolean(accionEnCurso) || guardando}
+                          placeholder="cliente@ejemplo.cl"
+                          className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => void ejecutarAccion("probar")}
+                        disabled={Boolean(accionEnCurso) || guardando}
+                        className="rounded-lg border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 disabled:opacity-50"
+                      >
+                        {accionEnCurso === "probar"
+                          ? "Procesando..."
+                          : "Probar con cliente"}
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {lanzamientoGeneralHabilitado && (["borrador", "fallida"].includes(campana.estado)) && (
+                      <button
+                        type="button"
+                        onClick={() => void ejecutarAccion("programar")}
+                        disabled={Boolean(accionEnCurso) || guardando}
+                        className="rounded-lg border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 disabled:opacity-50"
+                      >
+                        Programar en 5 minutos
+                      </button>
+                    )}
+
+                    {lanzamientoGeneralHabilitado && (["programada", "fallida"].includes(campana.estado)) && (
+                      <button
+                        type="button"
+                        onClick={() => void ejecutarAccion("ejecutar")}
+                        disabled={Boolean(accionEnCurso) || guardando}
+                        className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        {accionEnCurso === "ejecutar"
+                          ? "Ejecutando..."
+                          : "Ejecutar campaña real"}
+                      </button>
+                    )}
+
+                    {(["borrador", "programada", "fallida"].includes(campana.estado)) && (
+                      <button
+                        type="button"
+                        onClick={() => void ejecutarAccion("cancelar")}
+                        disabled={Boolean(accionEnCurso) || guardando}
+                        className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"
+                      >
+                        Cancelar campaña
+                      </button>
+                    )}
+                  </div>
+                </section>
                 <form onSubmit={guardarCambios} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-[#444]">
@@ -310,7 +456,7 @@ export default function CampanaDetallePage() {
                     {editable && (
                       <button
                         type="submit"
-                        disabled={guardando}
+                        disabled={guardando || Boolean(accionEnCurso)}
                         className="w-full rounded-xl bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-5 py-3 text-sm font-semibold sm:w-auto text-white shadow-[0_10px_20px_rgba(76,0,247,0.25)] transition hover:opacity-95 disabled:opacity-60"
                       >
                         {guardando ? "Guardando..." : "Guardar cambios"}

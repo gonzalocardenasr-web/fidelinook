@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
 import { getOperationSession } from "../../../../../lib/operation-auth";
 import { authorizeOperationSession } from "@/lib/operation-rbac";
@@ -106,6 +106,17 @@ export async function POST(req: Request) {
       return validation.error;
     }
 
+    if (process.env.CAMPAIGN_LAUNCH_ENABLED !== "true") {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "La programación de campañas está temporalmente deshabilitada.",
+        },
+        { status: 503 },
+      );
+    }
+
     const { campanaId } = await req.json();
 
     if (!campanaId) {
@@ -141,14 +152,16 @@ export async function POST(req: Request) {
     const fechaLanzamiento = new Date();
     fechaLanzamiento.setMinutes(fechaLanzamiento.getMinutes() + 5);
 
-    const { error: updateError } = await supabaseAdmin
+    const { data: updatedRows, error: updateError } = await supabaseAdmin
       .from("campanas")
       .update({
         estado: "programada",
         fecha_lanzamiento: fechaLanzamiento.toISOString(),
         error_message: null,
       })
-      .eq("id", campana.id);
+      .eq("id", campana.id)
+      .eq("estado", campana.estado)
+      .select("id");
 
     if (updateError) {
       console.error("Error programando lanzamiento:", updateError);
@@ -159,6 +172,12 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!updatedRows || updatedRows.length !== 1) {
+      return NextResponse.json(
+        { ok: false, message: "La campaña cambió de estado; actualiza la página antes de programar." },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({
       ok: true,
       message: "Campaña programada para lanzarse en 5 minutos.",
