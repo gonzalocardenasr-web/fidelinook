@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AdminClienteDetalle from "../components/AdminClienteDetalle";
-import UltimosMovimientosCard from "../components/UltimosMovimientosCard";
 import OperacionSuscripcionActiva from "../components/OperacionSuscripcionActiva";
 import UltimosMovimientos from "../components/UltimosMovimientos";
 import OperationSummary from "../../../components/operations/OperationSummary";
@@ -48,6 +46,7 @@ export default function ResumenOperativoPage() {
     useState<any>(null);
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+  const [consultaAbierta, setConsultaAbierta] = useState(false);
   useEffect(() => {
     cargarSesion();
     cargarDatos();
@@ -276,128 +275,24 @@ export default function ResumenOperativoPage() {
 
   const premiosActivos = customerLoyalty?.activeRewards ?? [];
 
-  const cerrarSesion = async () => {
-    try {
-      await fetch("/api/logout", {
-        method: "POST",
-      });
-      window.location.href = "/admin/login";
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-      setTipoMensaje("error");
-      setMensaje("No se pudo cerrar sesión.");
-    }
-  };
-
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <main className="w-full min-w-0 px-3 py-3 sm:px-4">
+      <div className="mx-auto w-full max-w-[1500px] space-y-3">
+        <OperationSummary />
+        <section className="rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-4">
             <div>
-              <Link
-                href="/"
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-              >
-                ← Volver al inicio
-              </Link>
-
-              <h1 className="mt-3 text-2xl font-bold">Resumen Operativo</h1>
-
-              <p className="text-sm opacity-90">
-                Gestión operativa de clientes, fidelización y suscripciones
-              </p>
-
-              <p className="mt-3 text-xs font-medium uppercase tracking-[0.2em] text-white/80">
-                {cargandoRol
-                  ? "Cargando rol..."
-                  : `ROL: ${rol ?? "sin sesión"}`}
-              </p>
+              <h2 className="text-sm font-semibold text-neutral-900">Consulta rápida de cliente</h2>
+              <p className="text-[11px] text-neutral-500">Buscar y consultar fidelización, premios y suscripciones</p>
             </div>
-
-            <button
-              onClick={cerrarSesion}
-              className="cursor-pointer rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/25"
-            >
-              Cerrar sesión
+            <button type="button" onClick={() => setConsultaAbierta((actual) => !actual)}
+              aria-expanded={consultaAbierta}
+              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50">
+              {consultaAbierta ? "Ocultar consulta" : "Consultar cliente"}
             </button>
           </div>
-        </div>
-
-        <OperationSummary />
-
-        <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <Link
-            href="/operacion/ventas/nueva"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
-          >
-            <p className="text-lg font-bold text-neutral-900">Nueva Venta</p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Crear una venta local y generar un pedido.
-            </p>
-          </Link>
-
-          <Link
-            href="/operacion/cola"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
-          >
-            <p className="text-lg font-bold text-neutral-900">
-              Cola de Preparación
-            </p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Gestionar pedidos pendientes de entrega.
-            </p>
-          </Link>
-
-          <Link
-            href="/operacion/ventas"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
-          >
-            <p className="text-lg font-bold text-neutral-900">Historial</p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Revisar ventas y pedidos recientes.
-            </p>
-          </Link>
-
-          <Link
-            href="/operacion/catalogo"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md active:scale-[0.98]"
-          >
-            <p className="text-lg font-bold text-neutral-900">Catálogo</p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Productos, precios y opciones activas.
-            </p>
-          </Link>
-
-          <Link
-            href="/operacion/inventario"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
-          >
-            <p className="text-lg font-bold text-neutral-900">Inventario</p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Recepciones, stock y movimientos de productos.
-            </p>
-          </Link>
-
-          <Link
-            href="/operacion/caja"
-            className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow-md"
-          >
-            <p className="text-lg font-bold text-neutral-900">Caja</p>
-
-            <p className="mt-2 text-sm text-neutral-500">
-              Abrir caja y consultar su estado actual.
-            </p>
-          </Link>
-        </section>
-
-        <UltimosMovimientosCard clientes={clientes} />
-
+          {consultaAbierta && (
+            <div className="border-t border-neutral-100 p-3 sm:p-4">
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 p-4">
             <span className="text-lg font-semibold text-violet-800">
@@ -546,9 +441,11 @@ export default function ResumenOperativoPage() {
               </>
             )}
           </div>
-        </div>
+          </div>
+          </div>
+          )}
+        </section>
       </div>
     </main>
   );
 }
-

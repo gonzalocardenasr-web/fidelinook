@@ -12,134 +12,86 @@ type Summary = {
   deliveredOrders: number;
 };
 
-type Card = {
-  label: string;
-  value: string | number;
-  helper: string;
-};
+const money = (value: number) => `$${value.toLocaleString("es-CL", { maximumFractionDigits: 0 })}`;
 
 export default function OperationSummary() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    cargarResumen();
-
-    const interval = window.setInterval(cargarResumen, 30000);
-
-    return () => window.clearInterval(interval);
-  }, []);
+  const [updatedAt, setUpdatedAt] = useState("");
 
   async function cargarResumen() {
     try {
-      const res = await fetch("/api/operacion/summary");
+      const res = await fetch("/api/operacion/summary", { cache: "no-store" });
       const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.message || "No se pudo cargar resumen.");
+      if (!res.ok || !data.ok) {
+        setMessage(data.message || "No se pudo cargar el resumen.");
         return;
       }
-
       setSummary(data.summary);
+      setUpdatedAt(new Date().toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" }));
       setMessage("");
     } catch (error) {
-      console.error(error);
-      setMessage("Error cargando resumen operacional.");
+      console.error("Error cargando resumen operacional:", error);
+      setMessage("No se pudo actualizar el resumen operacional.");
     } finally {
       setLoading(false);
     }
   }
 
-  if (loading) {
-    return (
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <p className="text-sm text-neutral-600">Cargando resumen del día...</p>
-      </section>
-    );
-  }
+  useEffect(() => {
+    void cargarResumen();
+    const interval = window.setInterval(() => { void cargarResumen(); }, 30000);
+    return () => window.clearInterval(interval);
+  }, []);
 
-  if (message) {
-    return (
-      <section className="rounded-2xl border border-red-100 bg-white p-5 text-sm text-red-700 shadow-sm">
-        {message}
-      </section>
-    );
-  }
-
-  if (!summary) return null;
-
-  const cards: Card[] = [
-    {
-      label: "Ventas del día",
-      value: summary.totalSales,
-      helper: "Transacciones registradas",
-    },
-    {
-      label: "Monto vendido",
-      value: `$${summary.totalRevenue.toLocaleString("es-CL")}`,
-      helper: "Total confirmado hoy",
-    },
-    {
-      label: "Pendientes",
-      value: summary.pendingOrders,
-      helper: "Pedidos por preparar",
-    },
-    {
-      label: "En preparación",
-      value: summary.preparingOrders,
-      helper: "Pedidos activos",
-    },
-    {
-      label: "Listos",
-      value: summary.readyOrders,
-      helper: "Esperando entrega",
-    },
-    {
-      label: "Entregados",
-      value: summary.deliveredOrders,
-      helper: "Pedidos finalizados",
-    },
-  ];
+  const metric = (label: string, value: string, detail: string) => (
+    <div className="min-w-0 px-2 py-2">
+      <p className="text-[11px] font-medium text-neutral-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-neutral-900">{value}</p>
+      <p className="mt-0.5 text-[10px] text-neutral-500">{detail}</p>
+    </div>
+  );
 
   return (
-    <section className="rounded-2xl bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="rounded-xl border border-neutral-200 bg-white px-3 py-3 shadow-sm sm:px-4">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-            Resumen operativo
-          </p>
-
-          <h2 className="mt-1 text-xl font-black text-neutral-900">Hoy</h2>
+          <h1 className="text-base font-semibold text-neutral-900">Resumen operativo</h1>
+          <p className="text-[11px] text-neutral-500">Jornada actual · {updatedAt ? `Actualizado ${updatedAt}` : "Actualizando"}</p>
         </div>
-
-        <button
-          type="button"
-          onClick={cargarResumen}
-          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition duration-200 hover:border-violet-300 hover:bg-violet-50 active:scale-[0.98]"
-        >
+        <button type="button" onClick={() => { void cargarResumen(); }}
+          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50">
           Actualizar
         </button>
       </div>
-
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-2xl border border-neutral-100 bg-[#FCF8FF] p-4"
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              {card.label}
-            </p>
-
-            <p className="mt-2 text-2xl font-black text-neutral-900">
-              {card.value}
-            </p>
-
-            <p className="mt-1 text-xs text-neutral-500">{card.helper}</p>
+      {message && <p role="alert" className="mt-2 text-xs text-red-700">{message}</p>}
+      {loading && !summary ? <p className="mt-4 text-xs text-neutral-500">Cargando indicadores…</p> : summary && (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-1 border-b border-neutral-100 pb-2 md:grid-cols-4">
+            {metric("Facturación", money(summary.totalRevenue), `${summary.totalSales} ventas`)}
+            {metric("Ticket promedio", summary.totalSales ? money(summary.totalRevenue / summary.totalSales) : "—", "Ventas de la jornada")}
+            {metric("Ventas identificadas", "—", "Fuente pendiente de validar")}
+            {metric("Clientes nuevos", "—", "Fuente pendiente de validar")}
           </div>
-        ))}
-      </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-xl border border-neutral-200 p-3">
+              <h2 className="text-sm font-semibold text-neutral-900">Fidelización de hoy</h2>
+              <p className="mt-2 text-xs text-neutral-500">Sellos, premios y facturación identificada</p>
+              <p className="mt-1 text-xs text-neutral-500">Indicadores pendientes de validación de fuentes.</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 p-3">
+              <h2 className="text-sm font-semibold text-neutral-900">Operación en curso</h2>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {metric("Pendientes", String(summary.pendingOrders), "Por preparar")}
+                {metric("Preparación", String(summary.preparingOrders), "En curso")}
+                {metric("Listos", String(summary.readyOrders), "Por entregar")}
+                {metric("Entregados", String(summary.deliveredOrders), "Hoy")}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
