@@ -1,10 +1,83 @@
 **# STATUS PACK — PLATAFORMA NOOK**
 
-**\*\*Última actualización:\*\*** 18-10-2026
+**\*\*Última actualización:\*\*** 21-10-2026
 
 **\*\*Estado:\*\*** Documento vivo
 
 **\*\*Propósito:\*\*** Fuente de continuidad técnica y funcional del desarrollo de Plataforma Nook.
+
+**---**
+
+**## Actualización 21-10-2026 — Gobierno de continuidad, Campañas y estrategia de infraestructura**
+
+**Estado del corte:** decisión arquitectónica/documental; DEV-CAMP-01.1/01.2/01.3 con cambios locales y auditorías estáticas, **sin QA funcional integral, sin commit/push ni despliegue confirmado de estos cambios**. DEV-UX-ARCH-01.4 conserva su cierre y QA transversal del 18-10-2026. Esta sección prevalece para el estado actual sin reescribir fotografías históricas.
+
+### Decisión estratégica: dos etapas, sin anticipar capacidad comercial
+
+**Etapa 1 — Consolidación funcional y operacional (prioridad actual).** Mantener el stack Next.js/Vercel, Supabase y Resend y evitar nuevos costos o ampliaciones de capacidad mientras no exista una necesidad comercial definida. Terminar el traslado y ordenamiento de capacidades existentes, ubicación en navegación, permisos por rol, validación server-side, retiro de duplicidades verificadas, estabilidad y QA. No convertir estimaciones de crecimiento en requerimientos implementados.
+
+**Etapa 2 — Escalamiento condicionado por hitos reales de negocio, operación, costos o cumplimiento.** Definir más adelante volumen/frecuencia de campañas, número de destinatarios, exigencia de puntualidad de lanzamientos, tiempos de procesamiento, concurrencia, tráfico, almacenamiento y disponibilidad. Evaluar entonces planes pagados de **Vercel, Resend y Supabase**, y alternativas de hosting/servicios, comparando costo total, límites, operación, portabilidad y cumplimiento. No existe todavía una fecha, volumen ni presupuesto aprobado que dispare esta etapa. Registrar métricas y umbrales antes de decidir.
+
+**Salvedad contractual independiente de capacidad:** el plan Vercel **Hobby** actual es gratuito, pero sus condiciones de uso comercial deben revisarse/regularizarse para la operación productiva de Nook. No presentar «seguir gratis» como autorización contractual confirmada ni confundir la necesidad de cumplimiento con un límite de consumo. No hay decisión de compra ni migración aprobada en este corte.
+
+**Infraestructura observada en P0.22 (diagnóstico local, no verificación del panel de producción):** `vercel.json` solo registra `/api/daily-crm` con `0 14 * * *`; la ruta `/api/cron/campanas` existe, pero **no está registrada** allí. `next.config.ts` contiene `typescript.ignoreBuildErrors: true`; no hay `maxDuration` explícito observado en `app/` o `lib/`. `.env.local` incluye nombres de variables `CRON_SECRET`, `RESEND_API_KEY` y Supabase; **esto no demuestra su configuración productiva**. No copiar valores de secretos al Status Pack. No dar por garantizado el lanzamiento automático de campañas por Vercel. La configuración de cron, cuotas y tiempos efectivos depende del plan y despliegue; verificar antes de habilitar procesos dependientes de frecuencia.
+
+### DEV-CAMP-01 — Estado y trazabilidad del trabajo local
+
+**DEV-CAMP-01.1 — RBAC administrativo: implementado localmente; cierre/deploy pendiente.** Acciones de cancelar, ejecutar y programar lanzamiento, y pantalla de detalle, se ajustaron al permiso `campaigns.manage` para `admin`/`superadmin`; validar siempre backend y frontend. La creación de campañas permanece en `/api/admin/campanas/lanzar` (nombre histórico: crea borrador, no ejecuta lanzamiento). Se retiró de esa ruta una función legacy no utilizada que asignaba premios sin la RPC atómica (P0.14).
+
+**DEV-CAMP-01.2 — Ejecutor compartido: implementado localmente; cierre/deploy pendiente.** `lib/campaigns/campaignExecutor.ts` centraliza la ejecución usada por `/api/admin/campanas/ejecutar` y `/api/cron/campanas`. La ejecución real adquiere estado `lanzando` mediante actualización condicional desde `programada`/`fallida`; el modo prueba no adquiere ese bloqueo. La ruta cron valida `CRON_SECRET`, pero no se encuentra programada en `vercel.json`. No afirmar funcionamiento programado en producción.
+
+**DEV-CAMP-01.3 — Asignación atómica, eventos y correo: EN CURSO; P0.1–P0.21 con avances y validaciones estáticas; sin QA funcional integral ni despliegue confirmado.**
+
+- Base de datos: `clientes.id` y `campanas.id` son `bigint`; `clientes.premios` es JSONB; `campana_clientes` registra premio/campaña/cliente, asignación, vigencia y estado de correo. Índice único por `(campana_id, cliente_id)`. RPC `public.asignar_premio_campana_atomico(bigint,bigint,text,text,text,timestamptz,boolean)` ejecuta de forma transaccional la incorporación del premio y el tracking, con bloqueo del cliente e idempotencia. Se revisó su instalación en Supabase; no repetir migraciones ya ejecutadas.
+- Ejecutor: pagina clientes en bloques de lectura de 500, pero **acumula todos los clientes y los procesa secuencialmente en una misma solicitud**. Por cada asignación nueva llama la RPC, intenta registrar `campaign.reward_assigned`, encola email con clave de idempotencia y solicita despacho sujeto al gestor de email. Errores de evento o correo no revierten un premio ya asignado. Asignaciones existentes no generan un segundo premio ni un nuevo envío de correo; se intenta recuperar su evento. `total_enviados` en BD cuenta asignaciones acumuladas y `total_objetivo` corresponde a la población seleccionada en esa ejecución; P0.21 alineó `totalObjetivo` de la respuesta con esta última definición. `totalAplicados` mide nuevas asignaciones; `totalErrores`, fallas de asignación. Cualquier error de asignación deja la campaña `fallida` para reintento; cierre mediante comparación de estado.
+- Modo prueba: **asigna un premio real** y puede enviar correo real al cliente indicado; la restricción única impide otro premio para ese cliente en el lanzamiento de la misma campaña. Advertencia visible reforzada en P0.16.1. Desde P0.20, UI y API solo permiten probar campañas en estado `borrador`. Esta es una mitigación conservadora de concurrencia, **no un mecanismo transaccional completo de exclusión mutua**.
+- Event Bus: tipo `campaign.reward_assigned` activo; `recordCustomerEvent` usa clave idempotente derivada del tracking. Servicio `lib/campaigns/reconcileCampaignEvents.ts` revisa asignaciones y recupera eventos faltantes sin tocar premios ni reenviar correos; rechaza explícitamente campañas históricas 14–19. P0.17 lo integró temporalmente al cierre síncrono; **P0.19 retiró esa integración por riesgo de timeout**. El servicio existe, pero **no tiene orquestación independiente habilitada**. No declarar la reconciliación automática como operativa.
+- Email: `enqueue_email`/`email_queue` utilizan clave de idempotencia; `claim_pending_email_by_id_with_budget` solo reclama mensajes pendientes elegibles, sujeto a presupuesto. Reintentos y resultado de proveedor se gestionan en el dispatcher. No confundir encolado, intento de despacho y entrega efectiva al destinatario.
+- Auditoría histórica P0.7/P0.11: campañas 14–19 tienen **870 asignaciones reales** y premios correspondientes; cero duplicados detectados por campaña/cliente. Los contadores históricos informaban **875** en total (diferencia de +5); **no corregir retrospectivamente** sin intervención separada. No hacer backfill de eventos históricos por defecto. La campaña 20 figuraba en borrador al corte de aquella auditoría; no inferir su estado actual sin consulta nueva.
+- QA estático: P0.18 confirmó `npx.cmd tsc --noEmit = 0` y `git diff --check = 0`, ejecutor compartido y una única referencia de asignación atómica en el código auditado. P0.19–P0.21 fueron reportados como aplicados por el usuario con validaciones de sus scripts; **no sustituyen QA end-to-end, build productivo ni prueba en entorno real**.
+- Riesgos abiertos: timeout de ejecución monolítica; campañas que podrían quedar `lanzando` ante interrupción; recuperación de encolados fallidos/ausentes; reconciliación sin orquestador; exactitud de contadores ante cambios de audiencia o pruebas; validación del flujo de estados y del cron. **No habilitar ni prometer campañas masivas o lanzamiento automático confiable** antes de resolver/validar estos riesgos.
+- **Diferido por decisión de negocio del 21-10-2026:** procesamiento masivo incremental, cursores persistentes, recuperación avanzada por lease, reconciliación programada, mayor frecuencia de cron y ampliación de cuotas/planes de envío. El diseño conceptual de P0.22 no equivale a implementación. Se permite trabajo mínimo de seguridad/corrección necesario para estabilizar capacidades actuales; no construir escalamiento hipotético.
+
+### Arquitectura funcional y permisos: prioridad de continuidad
+
+**Conservar como baseline la actualización DEV-UX-ARCH-01.4 del 18-10-2026:** `PlatformShell` y `lib/platform-navigation.ts` organizan **Operación** (POS, Preparación, Historial, Inventario operacional, Caja), **Gestión** (Analytics, Clientes, Catálogo, Recepciones, Campañas, Suscripciones) y **Administración** (Usuarios, solo superadmin). Algunas rutas físicas mantienen prefijo `/operacion` aunque funcionalmente sean Gestión; no mover URLs solo por estética. Estaciones `preparation` usan acceso restringido. Clientes loyalty y usuarios operacionales siguen siendo dominios separados.
+
+**Permisos objetivo a verificar contra código y endpoints, no asumir certificados por la matriz:** `cashier` opera ventas, preparación, caja, inventario operacional, consulta contextual de clientes/loyalty y suscripciones operacionales; `admin` agrega Gestión, Analytics, catálogo, recepciones, campañas y configuración de suscripciones; `superadmin` agrega Usuarios y acciones de máximo privilegio; `preparation` accede únicamente a su cola/estados autorizados. `customers.operate` no abre el gestor global de Clientes; `campaigns.manage` no es necesario para que Cashier visualice/aplique beneficios vigentes desde POS. El ocultamiento de botones **no reemplaza RBAC server-side**.
+
+**Próximo frente de DEV (prioridad):** auditar estado real de cada módulo y capacidad existente frente a ubicación, menú, ruta, rol, permiso de API, dependencias POS, duplicidades y estado de migración. Clasificar **correcto / parcialmente migrado / pendiente / diferido**, y resolver discrepancias focalizadas. Continuar la reorganización funcional sin ampliar capacidad comercial ni reabrir DEV-UX-ARCH-01.4 ya cerrado. La paginación del listado de Campañas (límite observado de 20) sigue pendiente en DEV separado; DEV-LOY-EXP-02 e INC-PERF-01.7 mantienen sus estados previos salvo nueva evidencia.
+
+### Handoff, control de cambios y documentación
+
+- `docs/STATUS_PACK.md` es la **única versión viva**. Este registro se incorpora por adición; las secciones fechadas 18-10, 12-10 y anteriores se mantienen como evidencia histórica, aunque sus expresiones «siguiente desarrollo», «Analytics no construido», «estación pendiente» o «mailing stand-by» ya no describan por sí solas el estado vigente.
+- El diagnóstico P0.22 reportó cambios locales sin seguimiento/commit y archivos `.bak` y `.txt` auxiliares. **Antes de `git add .` revisar y excluir respaldos, diagnósticos locales y archivos con datos sensibles**; no incluirlos automáticamente. No confundir scripts ejecutados localmente con código desplegado.
+- Antes de cerrar DEV-CAMP-01: revisar riesgos mínimos, ejecutar build y QA funcional controlado, confirmar invariantes SQL, registrar estado y solo entonces autorizar commit/push/deploy. No cerrar un DEV por compilar. Para un DEV cerrado, entregar comandos Git según estándar vigente, una vez depurado el staging.
+- **Punto exacto de reanudación:** inventario transversal de ubicación/permisos/capacidades ya existentes y continuación de DEV-UX-ARCH; mantener DEV-CAMP-01.3 abierto y su escalamiento en espera. No iniciar P0.23 de capacidad por inercia. Revisar el Status Pack nuevamente al cerrar el siguiente grupo de DEV o antes de despliegue relevante.
+
+**---**
+
+**## Actualización complementaria 21-10-2026 — DEV-CAMP-01: contención y limpieza documental**
+
+**Estado del corte:** controles de contención y limpieza local reportados; **no equivale a cierre productivo de DEV-CAMP-01.3**. Esta subsección complementa y actualiza el estado anterior de Campañas registrado en la actualización del mismo día, sin alterar sus antecedentes.
+
+### Contención de lanzamientos
+
+- **P0.23B — aplicado localmente y validado estáticamente:** `lib/campaigns/campaignExecutor.ts` impide ejecución general si `CAMPAIGN_LAUNCH_ENABLED` no es exactamente `true`; `/api/admin/campanas/programar-lanzamiento` responde HTTP 503 si esa condición no se cumple. La configuración es **deshabilitada por defecto**. El modo prueba queda diferenciado; continúa asignando un premio real y puede generar correo real, por lo que requiere cliente controlado y consentimiento operativo.
+- **P0.23C — consulta SQL de solo lectura:** no se encontraron campañas en estados `lanzando`, `programada` o `fallida` al momento de la consulta. Es una fotografía puntual, no una garantía permanente.
+- **P0.24A — interfaz de acciones:** se entregó una propuesta de ocultamiento/bloqueo de programación y ejecución general en `/campanas/[id]`; **su aplicación y QA no quedan acreditados por las evidencias aquí conciliadas**. Verificar antes de marcarla completada. La autorización efectiva debe permanecer en servidor.
+- **Límite de seguridad:** el bloqueo de lanzamiento solo protege el entorno donde esté desplegado. Sin confirmación de despliegue y variables efectivas de producción, **no afirmar que los lanzamientos generales están bloqueados en producción**.
+- **Pendiente:** QA funcional controlado, comprobación de permisos/estados, build y evidencia de despliegue. No habilitar ejecución masiva, cron de campañas ni prometer entrega automática confiable; las limitaciones de duración, procesamiento, reintentos y reconciliación permanecen diferidas.
+
+### P0.25B.3 — Limpieza de artefactos auxiliares
+
+- Prevalidación reportada: **33 archivos evaluados**, **18 archivados fuera del repositorio** y **15 respaldos `.bak` versionados conservados sin modificación**.
+- Destino externo informado: `C:\Users\gonza\Proyectos\_archivo_nook\DEV-CAMP-01_cierre_2026-10-21`.
+- `git status --short` al cierre de la limpieza reportó únicamente dos archivos sin seguimiento: `P0.25A_AUDITORIA_LIMPIEZA.txt` y `docs/STATUS_PACK_ACTUALIZADO_2026-10-21.md`. No se informó commit/push/deploy.
+- Los respaldos `.bak` versionados constituyen deuda de higiene del repositorio; su retiro debe hacerse en cambio específico y verificando consumidores, no como eliminación improvisada.
+- La conciliación documental P0.25C verificó que la versión candidata de 21-10 agrega una sección nueva y cambia la fecha respecto del maestro de 18-10, **sin alterar ni suprimir su contenido histórico**. Consolidar en `docs/STATUS_PACK.md` como única versión viva; evitar versionar simultáneamente una segunda copia candidata.
+
+**Siguiente acción:** validar el estado real de P0.24A y las comprobaciones pendientes de Campañas; después de un cierre respaldado por QA, abordar la auditoría transversal de capacidades residuales de Operación/Gestión/Administración, sin repetir DEV-UX-ARCH-01.4.
 
 **---**
 
