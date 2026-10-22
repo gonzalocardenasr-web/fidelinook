@@ -1,0 +1,128 @@
+﻿==========================================
+P0.25A - AUDITORIA DOCUMENTAL Y LIMPIEZA
+==========================================
+
+=== 1. GIT STATUS ===
+?? DEV-CAMP-01.0_DIAGNOSTICO.txt
+?? DEV-CAMP-01.1_CONTRATOS.txt
+?? DEV-CAMP-01.1_QA.txt
+?? DEV-CAMP-01.2_AUDITORIA.txt
+?? DEV-CAMP-01.3_CONTRATOS.txt
+?? DEV-CAMP-01.3_P0.12_CIERRE.txt
+?? DEV-CAMP-01.3_P0.13_RUTAS.txt
+?? DEV-CAMP-01.3_P0.16_MODO_PRUEBA.txt
+?? DEV-CAMP-01.3_P0.18_QA_INTEGRAL.txt
+?? DEV-CAMP-01.3_P0.22_INFRAESTRUCTURA.txt
+?? DEV-CAMP-01.3_P0.23A_EJECUCION.txt
+?? DEV-CAMP-01.3_P0.6_EVENTBUS.txt
+?? DEV-CAMP-01.3_P0.8_QA.txt
+?? DEV-UX-ARCH-01.4.7B_DIAGNOSTICO.txt
+?? DEV-UX-ARCH-01.4.8A_AUDITORIA.txt
+?? app/api/admin/campanas/ejecutar/route.ts.P0.20.bak
+?? app/api/admin/campanas/lanzar/route.ts.P0.14.bak
+?? app/api/admin/campanas/programar-lanzamiento/route.ts.P0.23B.bak
+?? docs/STATUS_PACK_ACTUALIZADO_2026-10-21.md
+
+=== 2. ARCHIVOS TXT / PS1 EN RAIZ ===
+DEV-CAMP-01.0_DIAGNOSTICO.txt | 14127 bytes | 2026-10-18 14:51
+DEV-CAMP-01.1_CONTRATOS.txt | 87833 bytes | 2026-10-18 16:13
+DEV-CAMP-01.1_QA.txt | 64262 bytes | 2026-10-18 17:54
+DEV-CAMP-01.2_AUDITORIA.txt | 33891 bytes | 2026-10-18 18:07
+DEV-CAMP-01.3_CONTRATOS.txt | 21266 bytes | 2026-10-18 19:24
+DEV-CAMP-01.3_P0.12_CIERRE.txt | 42381 bytes | 2026-10-18 21:58
+DEV-CAMP-01.3_P0.13_RUTAS.txt | 10040 bytes | 2026-10-18 22:00
+DEV-CAMP-01.3_P0.16_MODO_PRUEBA.txt | 22012 bytes | 2026-10-18 22:13
+DEV-CAMP-01.3_P0.18_QA_INTEGRAL.txt | 28703 bytes | 2026-10-18 22:17
+DEV-CAMP-01.3_P0.22_INFRAESTRUCTURA.txt | 2739 bytes | 2026-10-18 22:23
+DEV-CAMP-01.3_P0.23A_EJECUCION.txt | 37031 bytes | 2026-10-21 11:14
+DEV-CAMP-01.3_P0.6_EVENTBUS.txt | 16054 bytes | 2026-10-18 19:52
+DEV-CAMP-01.3_P0.8_QA.txt | 25593 bytes | 2026-10-18 21:42
+DEV-UX-ARCH-01.3B.1_RADIOGRAFIA.txt | 91053 bytes | 2026-09-30 07:32
+DEV-UX-ARCH-01.3B.1_RBAC_FINAL.txt | 40621 bytes | 2026-09-30 07:34
+DEV-UX-ARCH-01.4.7A.1_CONTRATOS.txt | 18494 bytes | 2026-10-17 21:16
+DEV-UX-ARCH-01.4.7B_DIAGNOSTICO.txt | 23700 bytes | 2026-10-17 21:38
+DEV-UX-ARCH-01.4.8A_AUDITORIA.txt | 14146 bytes | 2026-10-17 21:40
+DEV-UX-ARCH-01_RADIOGRAFIA.txt | 2955318 bytes | 2026-09-29 20:48
+handoff_dev_ux_arch_01.txt | 517582 bytes | 2026-09-29 20:34
+INC-PERF-01_HIST-02-SOURCE.txt | 114003 bytes | 2026-09-27 18:11
+INC-PERF-01_PS6-HISTORY.txt | 168881 bytes | 2026-09-27 17:52
+INC-PERF-01_PS7-HISTORY-500.txt | 43272 bytes | 2026-09-27 18:00
+INC-PERF-01_PS8-HISTORY-DETAIL.txt | 98619 bytes | 2026-09-27 18:10
+INC-PERF-01_PS-CLIENT-SEARCH.txt | 53319 bytes | 2026-09-27 19:48
+INC-PERF-01-HIST-02.ps1 | 0 bytes | 2026-09-27 18:16
+migration_discount_base_temp.txt | 54319 bytes | 2026-09-29 19:03
+radiografia_dev_ux_pos_02.txt | 530432 bytes | 2026-09-29 19:53
+radiografia_motivos_pos_temp.txt | 129716 bytes | 2026-09-29 17:33
+TECH-TS-01_RADIOGRAFIA.txt | 146051 bytes | 2026-09-30 07:58
+
+=== 3. RESPALDOS BAK ===
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\ejecutar\route.ts.P0.20.bak
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\lanzar\route.ts.P0.14.bak
+C:\Users\gonza\Proyectos\fidelinook\app\api\admin\campanas\programar-lanzamiento\route.ts.P0.23B.bak
+C:\Users\gonza\Proyectos\fidelinook\app\api\operacion\sales\route.ts.INC-PERF-01-HIST-01.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.DEV-CAMP-01.3.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.10.1.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.10.2.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.15.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.17.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.19.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.21.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.23B.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.3.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.4.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.5.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.6.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\campaignExecutor.ts.P0.9.bak
+C:\Users\gonza\Proyectos\fidelinook\lib\campaigns\reconcileCampaignEvents.ts.P0.7.2.bak
+
+=== 4. DOCUMENTACION DE CONTINUIDAD ===
+ARCHIVO: docs/STATUS_PACK.md
+LINEAS: 1736
+BYTES: 47020
+MODIFICADO: 18-10-2026 14:48:25
+
+ARCHIVO: docs/STATUS_PACK_ACTUALIZADO_2026-10-21.md
+LINEAS: 1785
+BYTES: 58945
+MODIFICADO: 21-10-2026 8:25:50
+
+ARCHIVO: AGENTS.md
+LINEAS: 5
+BYTES: 332
+MODIFICADO: 29-06-2026 13:13:13
+
+ARCHIVO: CLAUDE.md
+LINEAS: 1
+BYTES: 12
+MODIFICADO: 29-06-2026 13:13:13
+
+=== 5. ENCABEZADOS STATUS PACK MAESTRO ===
+### Arquitectura frontend vigente
+### DEV-UX-ARCH-01.4 â€” Estado por entregable
+### Evidencia y lÃ­mites
+### Pendientes explÃ­citos y siguientes acciones
+
+=== 6. COMPARACION STATUS PACKS ===
+SHA256 MAESTRO: 698E38C4C8D72B6D879759F062114FAB1F0A4064EA683B63C1FDB8DE0C8846BD
+SHA256 ACTUALIZADO: DE6C0D68F547C784FD7ADF308D37F1B9237D198D0F7988F960EA03172431CD2F
+LINEAS MAESTRO: 1736
+LINEAS ACTUALIZADO: 1785
+MAESTRO CONSERVADO COMO PREFIJO: False
+
+=== 7. ARCHIVOS DEV-CAMP Y SU SEGUIMIENTO GIT ===
+DEV-CAMP-01.0_DIAGNOSTICO.txt | UNTRACKED
+DEV-CAMP-01.1_CONTRATOS.txt | UNTRACKED
+DEV-CAMP-01.1_QA.txt | UNTRACKED
+DEV-CAMP-01.2_AUDITORIA.txt | UNTRACKED
+DEV-CAMP-01.3_CONTRATOS.txt | UNTRACKED
+DEV-CAMP-01.3_P0.12_CIERRE.txt | UNTRACKED
+DEV-CAMP-01.3_P0.13_RUTAS.txt | UNTRACKED
+DEV-CAMP-01.3_P0.16_MODO_PRUEBA.txt | UNTRACKED
+DEV-CAMP-01.3_P0.18_QA_INTEGRAL.txt | UNTRACKED
+DEV-CAMP-01.3_P0.22_INFRAESTRUCTURA.txt | UNTRACKED
+DEV-CAMP-01.3_P0.23A_EJECUCION.txt | UNTRACKED
+DEV-CAMP-01.3_P0.6_EVENTBUS.txt | UNTRACKED
+DEV-CAMP-01.3_P0.8_QA.txt | UNTRACKED
+
+=== 8. FIN DE AUDITORIA ===
+Solo lectura. No se eliminaron ni modificaron archivos del proyecto.

@@ -1,0 +1,3442 @@
+﻿DEV-UX-ARCH-01.9 - P0.01B
+RADIOGRAFIA FUNCIONAL FRONTEND
+Fecha: 2026-10-21 22:57:28
+
+=== 1. INVENTARIO DE PAGINAS ===
+Total: 44
+
+==================================================
+PAGINA: app\activar-acceso\page.tsx
+LINEAS: 374
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useEffect, useState } from "react";
+5: import { useRouter } from "next/navigation";
+6: 
+7: import { supabase } from "@/lib/supabase";
+8: 
+9: type ActivationState = "checking" | "ready" | "invalid";
+10: 
+11: export default function ActivarAccesoPage() {
+12:   const router = useRouter();
+13: 
+14:   const [password, setPassword] = useState("");
+15:   const [confirmation, setConfirmation] = useState("");
+16:   const [showPassword, setShowPassword] = useState(false);
+17:   const [showConfirmation, setShowConfirmation] = useState(false);
+18: 
+19:   const [activationState, setActivationState] =
+20:     useState<ActivationState>("checking");
+21: 
+22:   const [loading, setLoading] = useState(false);
+23:   const [error, setError] = useState("");
+24:   const [message, setMessage] = useState("");
+25: 
+26:   useEffect(() => {
+27:     let mounted = true;
+28: 
+29:     async function prepareActivationSession() {
+30:       try {
+31:         setError("");
+32: 
+33:         /*
+34:          * Caso 1:
+35:          * Supabase/PKCE puede devolver ?code=...
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+7: import { supabase } from "@/lib/supabase";
+11: export default function ActivarAccesoPage() {
+29: async function prepareActivationSession() {
+35: * Supabase/PKCE puede devolver ?code=...
+42: await supabase.auth.exchangeCodeForSession(code);
+79: * Normalmente supabase-js procesa este hash automáticamente,
+84: } = await supabase.auth.getSession();
+96: await supabase.auth.setSession({
+129: * updateUser requiere una sesión Supabase válida.
+134: } = await supabase.auth.getSession();
+175: async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+201: const { error: updateError } = await supabase.auth.updateUser({
+219: await supabase.auth.signOut();
+226: router.replace("/admin/login");
+251: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+362: <Link
+363: href="/admin/login"
+
+==================================================
+PAGINA: app\activar-cuenta\page.tsx
+LINEAS: 10
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import { Suspense } from "react";
+2: import ActivarCuentaForm from "./ActivarCuentaForm";
+3: 
+4: export default function ActivarCuentaPage() {
+5:   return (
+6:     <Suspense fallback={<div className="p-6">Cargando...</div>}>
+7:       <ActivarCuentaForm />
+8:     </Suspense>
+9:   );
+10: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+4: export default function ActivarCuentaPage() {
+
+==================================================
+PAGINA: app\admin\login\page.tsx
+LINEAS: 151
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useState } from "react";
+4: 
+5: export default function AdminLoginPage() {
+6:   const [usuario, setUsuario] = useState("");
+7:   const [password, setPassword] = useState("");
+8:   const [showPassword, setShowPassword] = useState(false);
+9:   const [loading, setLoading] = useState(false);
+10:   const [error, setError] = useState("");
+11:   const [mensaje, setMensaje] = useState("");
+12: 
+13:   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+14:     e.preventDefault();
+15: 
+16:     setError("");
+17:     setMensaje("");
+18:     setLoading(true);
+19: 
+20:     try {
+21:       const res = await fetch("/api/login", {
+22:         method: "POST",
+23:         headers: {
+24:           "Content-Type": "application/json",
+25:         },
+26:         body: JSON.stringify({
+27:           usuario: usuario.trim(),
+28:           password,
+29:         }),
+30:       });
+31: 
+32:       const data = await res.json();
+33: 
+34:       if (!res.ok) {
+35:         setError(data.message || "Credenciales inválidas.");
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: export default function AdminLoginPage() {
+21: const res = await fetch("/api/login", {
+41: data.role === "preparation" ? "/operacion/cola" : "/admin";
+44: data.role === "preparation"
+65: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+
+==================================================
+PAGINA: app\admin\page.tsx
+LINEAS: 5
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import { redirect } from "next/navigation";
+2: 
+3: export default function AdminRedirect() {
+4:   redirect("/operacion");
+5: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: export default function AdminRedirect() {
+4: redirect("/operacion");
+
+==================================================
+PAGINA: app\admin\usuarios\page.tsx
+LINEAS: 54
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import Link from "next/link";
+2: 
+3: import { getOperationSession } from "@/lib/operation-auth";
+4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+5: 
+6: import UsersManagementClient from "./UsersManagementClient";
+7: 
+8: export const dynamic = "force-dynamic";
+9: 
+10: export default async function UsersManagementPage() {
+11:   const session = await getOperationSession();
+12:   const authorization = authorizeOperationSession(session, "users.manage");
+13: 
+14:   if (!authorization.ok) {
+15:     return (
+16:       <main className="min-h-screen px-4 py-8 md:px-6 md:py-10">
+17:         <div className="mx-auto max-w-2xl">
+18:           <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+19:             <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
+20:               <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+21:                 Plataforma Nook
+22:               </p>
+23: 
+24:               <h1 className="mt-2 text-2xl font-bold">
+25:                 Gestión de usuarios
+26:               </h1>
+27:             </div>
+28: 
+29:             <div className="px-6 py-7 md:px-8 md:py-8">
+30:               <div className="rounded-2xl border border-[#E7C9D1] bg-[#FFF1F4] px-4 py-4 text-sm text-[#8A3550]">
+31:                 No tienes permisos para acceder a esta sección.
+32:               </div>
+33: 
+34:               <Link
+35:                 href="/operacion"
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: import { getOperationSession } from "@/lib/operation-auth";
+4: import { authorizeOperationSession } from "@/lib/operation-rbac";
+10: export default async function UsersManagementPage() {
+11: const session = await getOperationSession();
+12: const authorization = authorizeOperationSession(session, "users.manage");
+24: <h1 className="mt-2 text-2xl font-bold">
+31: No tienes permisos para acceder a esta sección.
+34: <Link
+35: href="/operacion"
+
+==================================================
+PAGINA: app\campanas\[id]\page.tsx
+LINEAS: 482
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useState } from "react";
+4: import Link from "next/link";
+5: import { useParams, useRouter } from "next/navigation";
+6: 
+7: type Campana = {
+8:   id: number;
+9:   nombre_interno: string;
+10:   premio_nombre: string;
+11:   premio_descripcion: string;
+12:   duracion_horas: number;
+13:   fecha_lanzamiento: string;
+14:   recurrencia: "una_vez" | "semanal";
+15:   estado:
+16:     | "borrador"
+17:     | "programada"
+18:     | "lanzando"
+19:     | "lanzada"
+20:     | "fallida"
+21:     | "cancelada";
+22:   total_objetivo?: number | null;
+23:   total_enviados?: number | null;
+24:   error_message?: string | null;
+25:   created_at?: string | null;
+26:   launched_at?: string | null;
+27: };
+28: 
+29: export default function CampanaDetallePage() {
+30:   const params = useParams();
+31:   const router = useRouter();
+32:   const campanaId = Number(params.id);
+33: 
+34:   const [campana, setCampana] = useState<Campana | null>(null);
+35:   const [loading, setLoading] = useState(true);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+29: export default function CampanaDetallePage() {
+57: const cargarCampana = async (silenciosa = false) => {
+62: const response = await fetch(`/api/operacion/campanas/${campanaId}`, {
+140: const response = await fetch(endpoint, {
+167: const guardarCambios = async (e: React.FormEvent<HTMLFormElement>) => {
+200: const response = await fetch(`/api/operacion/campanas/${campana.id}`, {
+247: <h1 className="mt-2 text-xl font-semibold text-neutral-950">
+295: permanecen suspendidos hasta completar sus controles operacionales.
+299: <h2 className="text-sm font-semibold text-neutral-900">
+414: <h3 className="mt-2 text-lg font-bold text-[#4c00f7]">
+466: <Link
+467: href="/campanas"
+
+==================================================
+PAGINA: app\campanas\page.tsx
+LINEAS: 293
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useState } from "react";
+4: import Link from "next/link";
+5: import CampanasListado from "./components/CampanasListado";
+6: 
+7: export default function CampanasPage() {
+8:   const [rol, setRol] = useState<string | null>(null);
+9:   const [cargandoRol, setCargandoRol] = useState(true);
+10: 
+11:   const [nombreInterno, setNombreInterno] = useState("");
+12:   const [premioNombre, setPremioNombre] = useState("");
+13:   const [premioDescripcion, setPremioDescripcion] = useState("");
+14:   const [duracionHoras, setDuracionHoras] = useState("48");
+15:   const [fechaLanzamiento, setFechaLanzamiento] = useState("");
+16:   const [recurrencia, setRecurrencia] = useState<"una_vez" | "semanal">("una_vez");
+17: 
+18:   const [procesando, setProcesando] = useState(false);
+19:   const [mensaje, setMensaje] = useState("");
+20:   const [error, setError] = useState("");
+21: 
+22:   useEffect(() => {
+23:     const cargarSesion = async () => {
+24:       try {
+25:         const res = await fetch("/api/session");
+26: 
+27:         if (!res.ok) {
+28:           setRol(null);
+29:           return;
+30:         }
+31: 
+32:         const data = await res.json();
+33:         setRol(data.role || null);
+34:       } catch (error) {
+35:         console.error("Error cargando sesión:", error);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+7: export default function CampanasPage() {
+8: const [rol, setRol] = useState<string | null>(null);
+9: const [cargandoRol, setCargandoRol] = useState(true);
+23: const cargarSesion = async () => {
+25: const res = await fetch("/api/session");
+28: setRol(null);
+33: setRol(data.role || null);
+36: setRol(null);
+38: setCargandoRol(false);
+51: if (rol !== "admin" && rol !== "superadmin") {
+52: setError("No tienes permisos para crear campañas.");
+79: const res = await fetch("/api/admin/campanas/lanzar", {
+118: if (cargandoRol) {
+130: if (rol !== "admin" && rol !== "superadmin") {
+139: <h1 className="mt-2 text-xl font-semibold text-neutral-950">
+149: No tienes permisos para acceder a esta sección.
+152: <Link
+153: href="/operacion"
+171: <h1 className="text-base font-semibold text-neutral-950">
+
+==================================================
+PAGINA: app\clientes\page.tsx
+LINEAS: 478
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: import AdminRegistroCard from "../operacion/components/AdminRegistroCard";
+5: import AdminClienteDetalle from "../operacion/components/AdminClienteDetalle";
+6: 
+7: import type {
+8:   CustomerLoyaltySummary,
+9:   CustomerRewardSummary,
+10: } from "../../lib/loyalty/customer-loyalty.types";
+11: 
+12: type Premio = {
+13:   id: number;
+14:   nombre: string;
+15:   estado: "activo" | "usado";
+16:   vencimiento?: string;
+17: };
+18: 
+19: type Cliente = {
+20:   id: number;
+21:   nombre: string;
+22:   correo: string;
+23:   telefono: string;
+24:   sellos?: number;
+25:   premios?: Premio[] | number | null;
+26:   public_token: string;
+27:   tarjeta_activa?: boolean;
+28:   email_verificado?: boolean;
+29:   fecha_ultimo_sello?: string | null;
+30:   fecha_ultimo_canje?: string | null;
+31: };
+32: 
+33: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+34: 
+35: export default function ClientesPage() {
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+35: export default function ClientesPage() {
+47: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+48: const [cargandoRol, setCargandoRol] = useState(true);
+68: async function cargarFidelizacion(clienteId: number) {
+73: const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+96: const cargarSesion = async () => {
+98: setCargandoRol(true);
+100: const res = await fetch("/api/session", {
+105: setRol(null);
+110: setRol(data.role || null);
+113: setRol(null);
+115: setCargandoRol(false);
+119: const cargarDatos = async (mantenerSeleccion = true) => {
+123: const res = await fetch("/api/operacion/clientes", {
+329: await fetch("/api/logout", {
+466: rol={rol}
+
+==================================================
+PAGINA: app\dashboard\page.tsx
+LINEAS: 702
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: import { useRouter } from "next/navigation";
+5: import { supabase } from "../../lib/supabase";
+6: 
+7: type KPIData = {
+8:   clientesTotales: number;
+9:   clientesConTarjetaActiva: number;
+10:   clientesConEmailVerificado: number;
+11:   premiosActivos: number;
+12:   premiosUsados: number;
+13:   suscripcionesActivas: number;
+14:   clientesConSuscripcionActiva: number;
+15:   clientesConMasDeUnaSuscripcionActiva: number;
+16:   suscripcionesPorVencer7Dias: number;
+17:   suscripcionesPorVencer30Dias: number;
+18:   consumosDelMes: number;
+19: };
+20: 
+21: type ClientesPorMesRow = {
+22:   mes: string;
+23:   nuevosUsuarios: number;
+24:   acumulado: number;
+25: };
+26: 
+27: type SuscripcionesPorMesRow = {
+28:   mes: string;
+29:   nuevasSuscripciones: number;
+30: };
+31: 
+32: type ConsumosPorDiaRow = {
+33:   fecha: string;
+34:   movimientos: number;
+35:   potes: number;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: import { supabase } from "../../lib/supabase";
+74: function formatearFecha(fecha?: string | null) {
+81: function formatearFechaHora(fecha?: string | null) {
+88: function formatearMes(mes: string) {
+97: function KpiCard({ label, value }: { label: string; value: number | string }) {
+106: function EmptyState({ text }: { text: string }) {
+114: function SectionCard({
+126: <h2 className="text-xl font-bold text-neutral-900">{title}</h2>
+136: function LineChart({
+247: function DataTable({
+303: export default function DashboardPage() {
+310: const [cargandoRol, setCargandoRol] = useState(true);
+311: const [rol, setRol] = useState<string | null>(null);
+345: async function cargarDashboard() {
+350: const res = await fetch("/api/dashboard/overview");
+351: const resCampanas = await fetch("/api/dashboard/campanas");
+375: const cargarSesion = async () => {
+377: setCargandoRol(true);
+379: const res = await fetch("/api/session", {
+384: setRol(null);
+391: setRol(data?.role ?? null);
+394: setRol(null);
+396: setCargandoRol(false);
+402: await supabase.auth.signOut();
+403: router.push("/admin/login");
+
+==================================================
+PAGINA: app\login\page.tsx
+LINEAS: 10
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import { Suspense } from "react";
+2: import LoginForm from "./LoginForm";
+3: 
+4: export default function LoginPage() {
+5:   return (
+6:     <Suspense fallback={<div className="p-6">Cargando...</div>}>
+7:       <LoginForm />
+8:     </Suspense>
+9:   );
+10: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+4: export default function LoginPage() {
+
+==================================================
+PAGINA: app\mi-cuenta\page.tsx
+LINEAS: 142
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useState } from "react";
+4: import { useRouter } from "next/navigation";
+5: import { supabase } from "../../lib/supabase";
+6: import ClienteLogoutButton from "./components/ClienteLogoutButton";
+7: 
+8: type Cliente = {
+9:   id: number;
+10:   nombre: string;
+11:   correo: string;
+12:   telefono: string;
+13:   auth_user_id?: string | null;
+14: };
+15: 
+16: export default function MiCuentaPage() {
+17:   const router = useRouter();
+18: 
+19:   const [loading, setLoading] = useState(true);
+20:   const [cliente, setCliente] = useState<Cliente | null>(null);
+21: 
+22:   useEffect(() => {
+23:     const revisarSesionYCargarCliente = async () => {
+24:       const {
+25:         data: { session },
+26:       } = await supabase.auth.getSession();
+27: 
+28:       if (!session) {
+29:         router.replace("/login?next=/mi-cuenta");
+30:         return;
+31:       }
+32: 
+33:       const { data, error } = await supabase
+34:         .from("clientes")
+35:         .select("id, nombre, correo, telefono, auth_user_id")
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: import { supabase } from "../../lib/supabase";
+16: export default function MiCuentaPage() {
+26: } = await supabase.auth.getSession();
+29: router.replace("/login?next=/mi-cuenta");
+33: const { data, error } = await supabase
+69: <h1 className="mt-2 text-3xl font-bold leading-tight">
+90: onClick={() => router.push("/mi-cuenta/perfil")}
+103: onClick={() => router.push("/mi-cuenta/tarjeta")}
+116: onClick={() => router.push("/mi-cuenta/suscripciones")}
+
+==================================================
+PAGINA: app\mi-cuenta\perfil\page.tsx
+LINEAS: 325
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: import { useRouter } from "next/navigation";
+5: import { supabase } from "../../../lib/supabase";
+6: import ClienteLogoutButton from "../components/ClienteLogoutButton";
+7: 
+8: type Cliente = {
+9:   id: number;
+10:   nombre: string;
+11:   correo: string;
+12:   telefono: string;
+13:   auth_user_id?: string | null;
+14:   acepta_terminos?: boolean | null;
+15:   acepta_marketing?: boolean | null;
+16:   marketing_preferencia_definida?: boolean | null;
+17:   fecha_aceptacion?: string | null;
+18:   version_terminos?: string | null;
+19: };
+20: 
+21: export default function MiPerfilPage() {
+22:   const router = useRouter();
+23: 
+24:   const [loading, setLoading] = useState(true);
+25:   const [guardando, setGuardando] = useState(false);
+26:   const [clienteId, setClienteId] = useState<number | null>(null);
+27: 
+28:   const [nombre, setNombre] = useState("");
+29:   const [correo, setCorreo] = useState("");
+30:   const [telefono, setTelefono] = useState("");
+31: 
+32:   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+33:   const [aceptaMarketing, setAceptaMarketing] = useState(false);
+34:   const [terminosAceptadosOriginalmente, setTerminosAceptadosOriginalmente] = useState(false);
+35: 
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: import { supabase } from "../../../lib/supabase";
+21: export default function MiPerfilPage() {
+40: const cargarPerfil = async () => {
+43: } = await supabase.auth.getSession();
+46: router.replace("/login?next=/mi-cuenta/perfil");
+52: const { data, error } = await supabase
+98: const { error } = await supabase
+147: <h1 className="text-2xl font-bold text-[#4C00F7]">Mi perfil</h1>
+151: onClick={() => router.push("/mi-cuenta")}
+171: <h1 className="mt-2 text-2xl font-bold leading-tight">
+187: onClick={() => router.push("/mi-cuenta")}
+271: href="/terminos"
+
+==================================================
+PAGINA: app\mi-cuenta\suscripciones\page.tsx
+LINEAS: 1192
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useEffect, useMemo, useState, type FormEvent } from "react";
+5: import { supabase } from "../../../lib/supabase";
+6: import ClienteLogoutButton from "../components/ClienteLogoutButton";
+7: 
+8: 
+9: type TemplateInfo = {
+10:   id: number;
+11:   name: string;
+12:   billing_period: string | null;
+13:   pots_per_month: number | null;
+14:   toppings_per_month: number | null;
+15:   wafer_packs_per_month: number | null;
+16:   cookie_packs_per_month: number | null;
+17:   pots_per_cycle: number | null;
+18:   toppings_per_cycle: number | null;
+19:   wafer_packs_per_cycle: number | null;
+20:   cookie_packs_per_cycle: number | null;
+21:   duration_months: number | null;
+22: };
+23: 
+24: type PendingClaimRaw = {
+25:   id: number;
+26:   source: string;
+27:   status: string;
+28:   claim_code: string | null;
+29:   assigned_cliente_id: number | null;
+30:   template_id: number | null;
+31: };
+32: 
+33: type SubscriptionRaw = {
+34:   id: number;
+35:   status: string;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: import { supabase } from "../../../lib/supabase";
+96: function formatearFecha(fecha?: string | null) {
+103: function formatearPeriodicidad(periodo?: string | null) {
+116: function leerClienteSesionDesdeStorage(): { id: number } | null {
+149: function toDate(fecha?: string | null) {
+155: function toIsoDate(fecha: Date | null) {
+163: function addMonths(date: Date, months: number) {
+169: function addDays(date: Date, days: number) {
+175: function clampNonNegative(value: number) {
+179: function calcularCicloActual(
+274: function TarjetaDisponibilidad({
+301: function TarjetaSuscripcionCompacta({
+407: function obtenerCantidadIncluida(
+416: export default function MisSuscripcionesPage() {
+436: } = await supabase.auth.getUser();
+443: const { data: clienteData, error: clienteError } = await supabase
+462: const cargarDatos = async () => {
+470: const { data: claimsRaw, error: claimsError } = await supabase
+480: const { data: subscriptionsRaw, error: subscriptionsError } = await supabase
+488: const { data: consumptionsRaw, error: consumptionsError } = await supabase
+508: const { data: templatesData, error: templatesError } = await supabase
+736: const res = await fetch("/api/subscriptions/activate-assigned", {
+789: const res = await fetch("/api/subscriptions/redeem-code", {
+836: <h1 className="mt-2 text-2xl font-bold leading-tight">
+870: <h1 className="mt-2 text-2xl font-bold leading-tight">
+887: <Link
+888: href="/mi-cuenta"
+910: <h1 className="mt-2 text-2xl font-bold leading-tight">
+924: <Link
+925: href="/mi-cuenta"
+934: <h2 className="text-2xl font-bold text-[#4C00F7]">Canjear código</h2>
+974: <h2 className="text-2xl font-bold text-[#4C00F7]">Suscripciones por activar</h2>
+1078: <h2 className="text-2xl font-bold text-[#4C00F7]">Ver mis suscripciones</h2>
+1112: <h2 className="text-2xl font-bold text-[#4C00F7]">
+
+==================================================
+PAGINA: app\mi-cuenta\tarjeta\page.tsx
+LINEAS: 401
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useState } from "react";
+4: import { useRouter } from "next/navigation";
+5: import { supabase } from "../../../lib/supabase";
+6: import QRCode from "react-qr-code";
+7: import ClienteLogoutButton from "../components/ClienteLogoutButton";
+8: import type {
+9:   CustomerLoyaltySummary,
+10:   CustomerRewardSummary,
+11: } from "../../../lib/loyalty/customer-loyalty.types";
+12: 
+13: type Cliente = {
+14:   id: number;
+15:   nombre: string;
+16:   correo: string;
+17:   telefono: string;
+18:   public_token: string;
+19:   tarjeta_activa?: boolean;
+20:   email_verificado?: boolean;
+21:   auth_user_id?: string | null;
+22:   loyalty?: CustomerLoyaltySummary;
+23: };
+24: 
+25: const META_SELLOS = 7;
+26: 
+27: function formatearFecha(fecha?: string) {
+28:   if (!fecha) return "Sin definir";
+29: 
+30:   const date = new Date(fecha);
+31: 
+32:   if (Number.isNaN(date.getTime())) return "Sin definir";
+33: 
+34:   return date.toLocaleString("es-CL", {
+35:     day: "2-digit",
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: import { supabase } from "../../../lib/supabase";
+27: function formatearFecha(fecha?: string) {
+44: export default function MiTarjetaPage() {
+52: const cargarTarjeta = async () => {
+55: } = await supabase.auth.getSession();
+58: router.replace("/login?next=/mi-cuenta/tarjeta");
+64: const { data, error } = await supabase
+76: const loyaltyRes = await fetch("/api/mi-cuenta/loyalty", {
+135: <h1 className="text-2xl font-bold text-[#4C00F7]">Mi tarjeta</h1>
+141: onClick={() => router.push("/mi-cuenta")}
+161: <h1 className="mt-2 text-2xl font-bold leading-tight">
+176: onClick={() => router.push("/mi-cuenta")}
+187: <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+
+==================================================
+PAGINA: app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx
+LINEAS: 276
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useParams, useSearchParams } from "next/navigation";
+5: import { useEffect, useRef, useState } from "react";
+6: 
+7: import CashClosingReceipt80mm, {
+8:   type CashClosingReceiptDocument,
+9: } from "../../../../../../components/documents/CashClosingReceipt80mm";
+10: 
+11: import {
+12:   recommendCashWithdrawal,
+13:   type CashCountEntry,
+14: } from "../../../../../../lib/cash/cashWithdrawalRecommendation";
+15: 
+16: type ClosingDetailResponse = {
+17:   ok: boolean;
+18:   message?: string;
+19:   detail?: {
+20:     session: {
+21:       id: number;
+22:       closed_at: string;
+23:       closed_by_role: string;
+24:       opening_amount: number;
+25:       closing_notes: string | null;
+26:     };
+27:     summary: {
+28:       openingAmount: number;
+29:       expectedCashAmount: number;
+30:       countedCashAmount: number;
+31:       cashDifference: number;
+32:     };
+33:     closingCashCount: Array<
+34:       CashCountEntry & {
+35:         subtotal?: number;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+23: closed_by_role: string;
+41: export default function ImprimirCierreCajaPage() {
+77: async function cargarDocumento() {
+82: const res = await fetch(
+122: closedByRole: session.closed_by_role,
+143: async function esperarImagenes() {
+169: async function imprimirCuandoEsteListo() {
+181: function imprimir() {
+233: <Link
+234: href="/operacion/caja"
+
+==================================================
+PAGINA: app\operacion\caja\page.tsx
+LINEAS: 3840
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+5: import {
+6:   recommendCashWithdrawal,
+7:   type CashWithdrawalRecommendation,
+8: } from "../../../lib/cash/cashWithdrawalRecommendation";
+9: import { usePlatformSession } from "@/components/platform/PlatformSessionContext";
+10: 
+11: type CashRegisterSession = {
+12:   id: number;
+13:   status: "OPEN" | "CLOSED";
+14:   opened_at: string;
+15:   opened_by_role: string;
+16:   opening_amount: number;
+17:   opening_notes: string | null;
+18:   closed_at: string | null;
+19:   closed_by_role: string | null;
+20:   expected_cash_amount: number | null;
+21:   counted_cash_amount: number | null;
+22:   cash_difference: number | null;
+23:   closing_notes: string | null;
+24:   created_at: string;
+25:   updated_at: string;
+26: };
+27: 
+28: type CashRegisterResponse = {
+29:   ok: boolean;
+30:   hasOpenSession?: boolean;
+31:   session?: CashRegisterSession | null;
+32:   message?: string;
+33: };
+34: 
+35: type CashMovementType = "CASH_IN" | "CASH_OUT";
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+15: opened_by_role: string;
+19: closed_by_role: string | null;
+53: created_by_role: string;
+115: closed_by_role: string;
+129: opened_by_role: string;
+133: closed_by_role: string;
+179: actorRole: string | null;
+243: actor_role: string | null;
+284: function createEmptyCashCount(): CashCountQuantities {
+290: function cashCountToEntries(quantities: CashCountQuantities): CashCountEntry[] {
+305: function calculateCashCountTotal(quantities: CashCountQuantities): number {
+312: function isValidCashCount(quantities: CashCountQuantities): boolean {
+392: function formatCurrency(value: number) {
+400: function formatDateTime(value: string) {
+411: function getChannelLabel(channel?: string | null) {
+439: function getPaymentMethodLabel(value?: string | null) {
+455: function getOrderStatusLabel(value?: string | null) {
+467: function getManualDiscountTypeLabel(value?: string | null) {
+474: function getManualDiscountReasonLabel(value?: string | null) {
+500: function formatRepeatedNames(names: string[]) {
+512: function getSaleItemOptions(item: SaleDetailItem) {
+546: function getDefaultReason(movementType: CashMovementType): CashMovementReason {
+550: function CashCountForm({
+658: export default function CashRegisterPage() {
+659: const { hasPermission } = usePlatformSession();
+660: const canAuditCash = hasPermission("cash.audit");
+791: const response = await fetch("/api/operacion/caja/movimientos", {
+842: const response = await fetch("/api/operacion/caja/cierres?limit=10", {
+872: const response = await fetch(`/api/operacion/caja/cierres/${closingId}`, {
+912: const response = await fetch(`/api/operacion/sales/${saleId}`, {
+959: const response = await fetch("/api/operacion/caja", {
+1024: function selectMovementType(type: CashMovementType) {
+1037: function closeMovementForm() {
+1044: function updateCashCountQuantity(
+1072: function resetClosingState() {
+1081: function startClosing() {
+1090: function cancelClosing() {
+1099: async function previewClosing(event: FormEvent<HTMLFormElement>) {
+1122: const response = await fetch("/api/operacion/caja/cierre/preview", {
+1163: async function confirmClosing() {
+1210: const response = await fetch("/api/operacion/caja/cierre", {
+1258: function finishCompletedClosing() {
+1266: function closeClosingDetail() {
+1277: async function openCashRegister(event: FormEvent<HTMLFormElement>) {
+1294: const response = await fetch("/api/operacion/caja", {
+1342: async function registerMovement(event: FormEvent<HTMLFormElement>) {
+1375: const response = await fetch("/api/operacion/caja/movimientos", {
+1450: <h2 className="text-[14px] font-black text-neutral-900">
+1493: {session.opened_by_role}
+1547: <h2 className="text-[14px] font-black text-neutral-900">
+1637: <h3 className="mt-0.5 text-[13px] font-black text-neutral-900">
+1777: <h3 className="text-[12px] font-black text-neutral-900">
+1835: {movement.created_by_role}
+1883: <h2 className="mt-0.5 text-[14px] font-black text-neutral-900">
+2327: <h2 className="mt-3 text-xl font-bold text-neutral-950">
+2561: {completedClosing.closed_by_role}
+2590: <Link
+2591: href={`/operacion/caja/cierre/${completedClosing.id}/imprimir`}
+2616: <h2 className="mt-3 text-xl font-bold text-neutral-950">
+2729: <h2 className="mt-0.5 text-lg font-black text-neutral-900">
+2817: {item.closed_by_role}
+2876: <h2 className="mt-1 text-xl font-bold text-neutral-950">
+3190: {closingDetail.session.opened_by_role}
+3210: {closingDetail.session.closed_by_role}
+3249: <h3 className="mt-1 text-lg font-bold text-neutral-950">
+3369: {sale.actorRole || "Sin registro"}
+3432: <h3 className="mt-1 text-lg font-bold text-neutral-950">
+3488: {movement.created_by_role}
+3546: <h2 className="mt-0.5 text-lg font-black leading-tight text-neutral-900">
+3631: {selectedSaleDetail.actor_role || "—"}
+
+==================================================
+PAGINA: app\operacion\catalogo\page.tsx
+LINEAS: 2574
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: 
+5: type Product = {
+6:   id: number;
+7:   sku: string;
+8:   name: string;
+9:   category: string;
+10:   subcategory?: string | null;
+11:   operational_type: string;
+12:   portion_quantity: number;
+13:   has_flavors: boolean;
+14:   max_flavors: number;
+15:   allow_repeat_flavor: boolean;
+16:   allows_toppings: boolean;
+17:   max_toppings: number;
+18:   allows_chocolate_dip: boolean;
+19:   requires_preparation: boolean;
+20:   is_active: boolean;
+21:   sort_order: number;
+22:   product_prices?: {
+23:     id: number;
+24:     channel: string;
+25:     price_list: string;
+26:     price: number;
+27:     is_active: boolean;
+28:   }[];
+29:   product_option_prices?: {
+30:     id: number;
+31:     option_value_id: number;
+32:     channel: string;
+33:     price_list: string;
+34:     price: number;
+35:     inventory_quantity: number | string;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+154: export default function CatalogoOperacionPage() {
+220: async function cargarCatalogo() {
+225: const res = await fetch("/api/catalogo");
+245: function abrirNuevoProducto() {
+251: function abrirEditarProducto(product: Product) {
+287: function cerrarFormularioProducto() {
+294: async function guardarProducto() {
+301: const res = await fetch("/api/catalogo/products/manage", {
+325: const structuralRes = await fetch(
+367: async function actualizarEstadoProducto(product: Product, isActive: boolean) {
+378: const res = await fetch("/api/catalogo/products/status", {
+407: async function actualizarCanalProducto(
+418: const res = await fetch("/api/catalogo/products/channels", {
+448: function getChannelPrice(product: Product, channelCode: string) {
+459: function getCoffeeOptionValues() {
+467: function getProductOptionPrice(
+483: function abrirInventarioProducto(product: Product) {
+508: function getInventoryOptionName(optionValueId: number | null) {
+526: async function agregarVarianteInventario() {
+540: const res = await fetch("/api/catalogo/products/inventory-variants", {
+588: async function guardarConsumoInventario(inventoryItemId: number) {
+610: const res = await fetch("/api/catalogo/products/inventory-consumption", {
+657: async function guardarMappingInventario(
+675: const res = await fetch("/api/catalogo/products/inventory-mappings", {
+727: async function agregarMappingInventario() {
+747: const res = await fetch("/api/catalogo/products/inventory-mappings", {
+800: function abrirPreciosProducto(product: Product) {
+824: async function guardarPrecioProducto(channel: SalesChannel) {
+845: const res = await fetch("/api/catalogo/products/prices", {
+901: async function guardarPrecioOpcion(
+930: const res = await fetch("/api/catalogo/products/option-prices", {
+997: function getLocalPrice(product: Product) {
+1008: function updateOptionLocal(
+1022: async function guardarOpcion(option: OptionValue) {
+1027: const res = await fetch("/api/catalogo/options", {
+1054: async function eliminarOpcion(option: OptionValue) {
+1068: const res = await fetch("/api/catalogo/options", {
+1093: async function crearOpcion(group: OptionGroup) {
+1105: const res = await fetch("/api/catalogo/options", {
+1193: function isProductEnabledForChannel(product: Product, channelCode: string) {
+1232: <h2 className="text-xl font-black text-neutral-900">
+1477: <h2 className="text-xl font-black text-neutral-900">
+1590: <h2 className="text-xl font-black text-neutral-900">
+1612: <h3 className="font-black text-neutral-900">
+1722: <h3 className="font-black text-neutral-900">
+1931: <h2 className="mt-1 text-xl font-black text-neutral-900">
+1964: <h3 className="text-sm font-black text-neutral-900">
+2136: <h3 className="text-sm font-black text-neutral-900">
+2340: <h2 className="mt-1 text-xl font-black text-neutral-900">
+
+==================================================
+PAGINA: app\operacion\cola\page.tsx
+LINEAS: 156
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useCallback, useEffect, useRef, useState } from "react";
+4: import OrderQueue from "../../../components/operations/OrderQueue";
+5: import { QueueOrder, OrderStatus } from "../../../types/operations";
+6: import { supabase } from "../../../lib/supabase";
+7: 
+8: export default function ColaPreparacionPage() {
+9:   const [orders, setOrders] = useState<QueueOrder[]>([]);
+10:   const [loading, setLoading] = useState(true);
+11:   const [message, setMessage] = useState("");
+12: 
+13:   const realtimeRefreshTimeoutRef = useRef<number | null>(null);
+14: 
+15:   const cargarPedidos = useCallback(async () => {
+16:     try {
+17:       const res = await fetch("/api/operacion/orders", {
+18:         cache: "no-store",
+19:       });
+20: 
+21:       const data = await res.json();
+22: 
+23:       if (!res.ok) {
+24:         setMessage(data.message || "No se pudo cargar la cola.");
+25:         return;
+26:       }
+27: 
+28:       setOrders(data.orders || []);
+29:       setMessage("");
+30:     } catch (error) {
+31:       console.error(error);
+32:       setMessage("Error cargando cola.");
+33:     } finally {
+34:       setLoading(false);
+35:     }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: import { supabase } from "../../../lib/supabase";
+8: export default function ColaPreparacionPage() {
+15: const cargarPedidos = useCallback(async () => {
+17: const res = await fetch("/api/operacion/orders", {
+52: const channel = supabase
+83: void supabase.removeChannel(channel);
+87: async function cambiarEstado(orderId: number, newStatus: OrderStatus) {
+91: const res = await fetch("/api/operacion/orders/status", {
+121: <h1 className="text-lg font-bold text-neutral-950">Preparación</h1>
+139: role="alert"
+
+==================================================
+PAGINA: app\operacion\imprimir\mensaje\page.tsx
+LINEAS: 155
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useRef, useState } from "react";
+4: 
+5: import CustomMessageTicket80mm from "../../../../components/documents/CustomMessageTicket80mm";
+6: 
+7: const STORAGE_KEY = "nook-custom-print-message";
+8: 
+9: export default function ImprimirMensajePage() {
+10:   const [message, setMessage] = useState("");
+11:   const [errorMessage, setErrorMessage] = useState("");
+12: 
+13:   const automaticPrintStarted = useRef(false);
+14: 
+15:   useEffect(() => {
+16:     try {
+17:       const storedMessage =
+18:         window.sessionStorage.getItem(STORAGE_KEY)?.trim() || "";
+19: 
+20:       if (!storedMessage) {
+21:         setErrorMessage(
+22:           "No se encontró un mensaje personalizado para imprimir.",
+23:         );
+24:         return;
+25:       }
+26: 
+27:       setMessage(storedMessage);
+28:     } catch (error) {
+29:       console.error("Error recuperando mensaje personalizado:", error);
+30: 
+31:       setErrorMessage("No se pudo recuperar el mensaje personalizado.");
+32:     }
+33:   }, []);
+34: 
+35:   useEffect(() => {
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+9: export default function ImprimirMensajePage() {
+46: function handleAfterPrint() {
+63: async function esperarImagenes() {
+89: async function imprimirCuandoEsteListo() {
+
+==================================================
+PAGINA: app\operacion\inventario\ajustes\page.tsx
+LINEAS: 13
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import InventoryAdjustmentPanel from "@/components/inventory/InventoryAdjustmentPanel";
+2: 
+3: export const dynamic = "force-dynamic";
+4: 
+5: export default function InventoryAdjustmentsPage() {
+6:   return (
+7:     <main className="h-full overflow-hidden">
+8:       <div className="mx-auto h-full w-full max-w-7xl">
+9:         <InventoryAdjustmentPanel />
+10:       </div>
+11:     </main>
+12:   );
+13: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: export default function InventoryAdjustmentsPage() {
+
+==================================================
+PAGINA: app\operacion\inventario\bachas\page.tsx
+LINEAS: 14
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import BatchOpeningPanel from "@/components/inventory/BatchOpeningPanel";
+2: 
+3: export const dynamic = "force-dynamic";
+4: 
+5: export default function InventoryBatchesPage() {
+6:   return (
+7:     <main className="h-full overflow-hidden">
+8:       {" "}
+9:       <div className="mx-auto h-full w-full max-w-7xl">
+10:         <BatchOpeningPanel />
+11:       </div>
+12:     </main>
+13:   );
+14: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+5: export default function InventoryBatchesPage() {
+
+==================================================
+PAGINA: app\operacion\inventario\movimientos\page.tsx
+LINEAS: 11
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import InventoryMovementHistory from "@/components/inventory/InventoryMovementHistory";
+2: 
+3: export default function InventoryMovementsPage() {
+4:   return (
+5:     <main className="h-full">
+6:       <div className="mx-auto w-full max-w-[1600px]">
+7:         <InventoryMovementHistory />
+8:       </div>
+9:     </main>
+10:   );
+11: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: export default function InventoryMovementsPage() {
+
+==================================================
+PAGINA: app\operacion\inventario\page.tsx
+LINEAS: 62
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import Link from "next/link";
+2: 
+3: export default function InventoryPage() {
+4:   return (
+5:     <main className="h-full">
+6:       <div className="mx-auto w-full max-w-6xl">
+7:         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+8:           <Link
+9:             href="/operacion/inventario/stock"
+10:             className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow"
+11:           >
+12:             <h2 className="font-semibold text-neutral-950">Stock actual</h2>
+13: 
+14:             <p className="mt-2 text-sm text-neutral-600">
+15:               Consultar existencias disponibles, variación del día y último
+16:               movimiento.
+17:             </p>
+18:           </Link>
+19: 
+20:           <Link
+21:             href="/operacion/inventario/bachas"
+22:             className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow"
+23:           >
+24:             <h2 className="font-semibold text-neutral-950">
+25:               Apertura de bachas
+26:             </h2>
+27: 
+28:             <p className="mt-2 text-sm text-neutral-600">
+29:               Abrir sabores disponibles y consultar las bachas activas.
+30:             </p>
+31:           </Link>
+32: 
+33:           <Link
+34:             href="/operacion/inventario/ajustes"
+35:             className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-violet-300 hover:shadow"
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: export default function InventoryPage() {
+8: <Link
+9: href="/operacion/inventario/stock"
+12: <h2 className="font-semibold text-neutral-950">Stock actual</h2>
+20: <Link
+21: href="/operacion/inventario/bachas"
+24: <h2 className="font-semibold text-neutral-950">
+33: <Link
+34: href="/operacion/inventario/ajustes"
+37: <h2 className="font-semibold text-neutral-950">
+46: <Link
+47: href="/operacion/inventario/movimientos"
+50: <h2 className="font-semibold text-neutral-950">
+
+==================================================
+PAGINA: app\operacion\inventario\recepciones\[transactionId]\page.tsx
+LINEAS: 1323
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useParams, useRouter } from "next/navigation";
+5: import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+6: import {
+7:   getInventoryReceiptById,
+8:   type InventoryReceiptDetail,
+9:   type InventoryReceiptItem,
+10:   type InventoryReceiptStatus,
+11: } from "@/lib/inventory/receipt";
+12: import {
+13:   getActiveInventoryItems,
+14:   type ActiveInventoryItem,
+15: } from "@/lib/inventory/items";
+16: import { saveInventoryReceiptItem } from "@/lib/inventory/receiptItems";
+17: import { postInventoryReceipt } from "@/lib/inventory/postReceipt";
+18: import { deleteInventoryReceiptItem } from "@/lib/inventory/deleteReceiptItem";
+19: import { cancelInventoryReceipt } from "@/lib/inventory/cancelReceipt";
+20: import {
+21:   getInventoryReferenceTypeBadgeClasses,
+22:   getInventoryReferenceTypeLabel,
+23: } from "@/lib/inventory/referenceType";
+24: 
+25: type ReceiptItemForm = {
+26:   inventoryItemCode: string;
+27:   quantity: string;
+28:   unitCost: string;
+29:   costIncludesVat: boolean;
+30:   notes: string;
+31: };
+32: 
+33: const initialItemForm: ReceiptItemForm = {
+34:   inventoryItemCode: "",
+35:   quantity: "1",
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+43: function formatDateTime(value: string): string {
+50: function formatCurrency(value: number): string {
+58: function formatQuantity(value: number): string {
+64: function getStatusLabel(status: InventoryReceiptStatus): string {
+74: function getStatusClasses(status: InventoryReceiptStatus): string {
+84: function getItemTypeLabel(itemType: string): string {
+94: export default function InventoryReceiptDetailPage() {
+145: async function initializePage() {
+186: async function ensureInventoryItemsLoaded() {
+202: async function openNewItemForm() {
+223: async function openEditItemForm(item: InventoryReceiptItem) {
+250: function closeItemForm() {
+261: async function handleSaveItem(event: FormEvent<HTMLFormElement>) {
+331: function openPostConfirmation() {
+353: function closePostConfirmation() {
+362: async function handlePostReceipt() {
+400: function openDeleteItemConfirmation(item: InventoryReceiptItem) {
+412: function closeDeleteItemConfirmation() {
+421: async function handleDeleteItem() {
+446: function openCancelReceiptConfirmation() {
+462: function closeCancelReceiptConfirmation() {
+471: async function handleCancelReceipt() {
+489: router.push("/operacion/inventario/recepciones");
+520: <Link
+521: href="/operacion/inventario/recepciones"
+528: <h1 className="text-lg font-semibold text-neutral-950">
+550: <h1 className="text-xl font-semibold text-neutral-950">
+570: <h2 className="text-sm font-semibold text-neutral-950">
+644: <h2 className="text-sm font-semibold text-neutral-950">
+798: <Link
+799: href="/operacion/inventario/recepciones"
+850: role="dialog"
+857: <h2
+1090: role="dialog"
+1096: <h2
+1185: role="dialog"
+1190: <h2
+1241: role="dialog"
+1246: <h2
+
+==================================================
+PAGINA: app\operacion\inventario\recepciones\nueva\page.tsx
+LINEAS: 286
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useRouter } from "next/navigation";
+5: import { FormEvent, useEffect, useState } from "react";
+6: import {
+7:   createInventoryReceipt,
+8:   type CreateInventoryReceiptInput,
+9: } from "@/lib/inventory/createReceipt";
+10: import {
+11:   getActiveInventorySuppliers,
+12:   type InventorySupplier,
+13: } from "@/lib/inventory/suppliers";
+14: 
+15: function getCurrentLocalDateTime(): string {
+16:   const now = new Date();
+17:   const timezoneOffset = now.getTimezoneOffset() * 60_000;
+18: 
+19:   return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 16);
+20: }
+21: 
+22: const initialForm: CreateInventoryReceiptInput = {
+23:   supplierId: 0,
+24:   referenceType: "PURCHASE",
+25:   referenceNumber: "",
+26:   transactionDate: getCurrentLocalDateTime(),
+27:   notes: "",
+28: };
+29: 
+30: export default function NewInventoryReceiptPage() {
+31:   const router = useRouter();
+32: 
+33:   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([]);
+34:   const [form, setForm] = useState<CreateInventoryReceiptInput>(initialForm);
+35:   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+15: function getCurrentLocalDateTime(): string {
+30: export default function NewInventoryReceiptPage() {
+40: async function loadSuppliers() {
+69: async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+92: router.push(`/operacion/inventario/recepciones/${transactionId}`);
+109: <h1 className="text-xl font-semibold text-neutral-950">
+264: <Link
+265: href="/operacion/inventario/recepciones"
+
+==================================================
+PAGINA: app\operacion\inventario\recepciones\page.tsx
+LINEAS: 211
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import Link from "next/link";
+2: 
+3: import {
+4:   getInventoryReceipts,
+5:   type InventoryReceiptListItem,
+6: } from "@/lib/inventory/receipts";
+7: 
+8: import {
+9:   getInventoryReferenceTypeBadgeClasses,
+10:   getInventoryReferenceTypeLabel,
+11: } from "@/lib/inventory/referenceType";
+12: 
+13: export const dynamic = "force-dynamic";
+14: 
+15: const dateFormatter = new Intl.DateTimeFormat("es-CL", {
+16:   day: "2-digit",
+17:   month: "2-digit",
+18:   year: "numeric",
+19: });
+20: 
+21: const currencyFormatter = new Intl.NumberFormat("es-CL", {
+22:   style: "currency",
+23:   currency: "CLP",
+24:   maximumFractionDigits: 0,
+25: });
+26: 
+27: function formatDate(value: string): string {
+28:   const normalizedDate = value.includes("T") ? value : `${value}T12:00:00`;
+29: 
+30:   return dateFormatter.format(new Date(normalizedDate));
+31: }
+32: 
+33: function getStatusLabel(status: InventoryReceiptListItem["status"]): string {
+34:   const labels: Record<InventoryReceiptListItem["status"], string> = {
+35:     DRAFT: "Borrador",
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+27: function formatDate(value: string): string {
+33: function getStatusLabel(status: InventoryReceiptListItem["status"]): string {
+43: function getStatusClasses(status: InventoryReceiptListItem["status"]): string {
+53: export default async function InventoryReceiptsPage() {
+60: <h1 className="text-2xl font-semibold text-neutral-950">
+69: <Link
+70: href="/operacion/inventario/recepciones/nueva"
+79: <h2 className="font-semibold text-neutral-950">
+88: <Link
+89: href="/operacion/inventario/recepciones/nueva"
+195: <Link
+196: href={`/operacion/inventario/recepciones/${receipt.id}`}
+
+==================================================
+PAGINA: app\operacion\inventario\stock\page.tsx
+LINEAS: 12
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import InventoryStockTable from "@/components/inventory/InventoryStockTable";
+2: 
+3: export default function InventoryStockPage() {
+4:   return (
+5:     <main className="h-full">
+6:       {" "}
+7:       <div className="mx-auto w-full max-w-[1600px]">
+8:         <InventoryStockTable />
+9:       </div>
+10:     </main>
+11:   );
+12: }
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: export default function InventoryStockPage() {
+
+==================================================
+PAGINA: app\operacion\page.tsx
+LINEAS: 554
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useEffect, useMemo, useState } from "react";
+5: import AdminClienteDetalle from "./components/AdminClienteDetalle";
+6: import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
+7: import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
+8: import UltimosMovimientos from "./components/UltimosMovimientos";
+9: import OperationSummary from "../../components/operations/OperationSummary";
+10: import type {
+11:   CustomerLoyaltySummary,
+12:   CustomerRewardSummary,
+13: } from "../../lib/loyalty/customer-loyalty.types";
+14: 
+15: type Cliente = {
+16:   id: number;
+17:   nombre: string;
+18:   correo: string;
+19:   telefono: string;
+20:   public_token: string;
+21:   tarjeta_activa?: boolean;
+22:   email_verificado?: boolean;
+23:   created_At?: string | null;
+24:   fecha_activacion?: string | null;
+25: };
+26: 
+27: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+28: const META_SELLOS = 7;
+29: 
+30: export default function OperacionPage() {
+31:   const [clientes, setClientes] = useState<Cliente[]>([]);
+32:   const [clienteSeleccionadoId, setClienteSeleccionadoId] =
+33:     useState<string>("");
+34:   const [busqueda, setBusqueda] = useState("");
+35:   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+30: export default function OperacionPage() {
+44: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+45: const [cargandoRol, setCargandoRol] = useState(true);
+71: async function cargarSuscripcionActiva(clienteId: number) {
+76: const res = await fetch(
+102: async function cargarFidelizacionCliente(clienteId: number) {
+107: const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+133: const cargarSesion = async () => {
+135: setCargandoRol(true);
+137: const res = await fetch("/api/session", {
+142: setRol(null);
+157: setRol(data.role || null);
+161: setCargandoRol(false);
+165: const cargarDatos = async (mantenerSeleccion = true) => {
+169: const res = await fetch("/api/operacion/clientes", {
+281: await fetch("/api/logout", {
+298: <Link
+299: href="/"
+305: <h1 className="mt-3 text-2xl font-bold">Operación</h1>
+312: {cargandoRol
+313: ? "Cargando rol..."
+314: : `ROL: ${rol ?? "sin sesión"}`}
+330: <Link
+331: href="/operacion/ventas/nueva"
+341: <Link
+342: href="/operacion/cola"
+354: <Link
+355: href="/operacion/ventas"
+365: <Link
+366: href="/operacion/catalogo"
+376: <Link
+377: href="/operacion/inventario"
+387: <Link
+388: href="/operacion/caja"
+520: rol={rol}
+
+==================================================
+PAGINA: app\operacion\ventas\imprimir\[saleId]\page.tsx
+LINEAS: 231
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useParams, useSearchParams } from "next/navigation";
+5: import { useEffect, useRef, useState } from "react";
+6: 
+7: import SaleReceipt80mm from "../../../../../components/documents/SaleReceipt80mm";
+8: import { SaleDocument } from "../../../../../lib/documents/sales/types";
+9: 
+10: export default function ImprimirVentaPage() {
+11:   const params = useParams();
+12: 
+13:   const saleId = Number(params.saleId);
+14: 
+15:   const searchParams = useSearchParams();
+16:   const autoPrint = searchParams.get("autoPrint") === "1";
+17: 
+18:   const automaticPrintStarted = useRef(false);
+19: 
+20:   const [document, setDocument] = useState<SaleDocument | null>(null);
+21: 
+22:   const [loading, setLoading] = useState(true);
+23:   const [message, setMessage] = useState("");
+24: 
+25:   useEffect(() => {
+26:     if (!Number.isInteger(saleId) || saleId <= 0) {
+27:       setMessage("La venta indicada no es válida.");
+28:       setLoading(false);
+29:       return;
+30:     }
+31: 
+32:     void cargarDocumento();
+33:   }, [saleId]);
+34: 
+35:   useEffect(() => {
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+10: export default function ImprimirVentaPage() {
+46: function handleAfterPrint() {
+66: async function cargarDocumento() {
+71: const res = await fetch(
+95: async function esperarImagenes() {
+121: async function imprimirCuandoEsteListo() {
+136: function imprimir() {
+188: <Link
+189: href="/operacion/ventas"
+
+==================================================
+PAGINA: app\operacion\ventas\imprimir-pack\[saleId]\page.tsx
+LINEAS: 255
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useParams, useSearchParams } from "next/navigation";
+5: import { useEffect, useRef, useState } from "react";
+6: 
+7: import CustomerOrderTicket80mm from "../../../../../components/documents/CustomerOrderTicket80mm";
+8: import SaleReceipt80mm from "../../../../../components/documents/SaleReceipt80mm";
+9: import { SaleDocument } from "../../../../../lib/documents/sales/types";
+10: 
+11: export default function ImprimirPackVentaPage() {
+12:   const params = useParams();
+13:   const saleId = Number(params.saleId);
+14:   const searchParams = useSearchParams();
+15:   const autoPrint = searchParams.get("autoPrint") === "1";
+16: 
+17:   const [document, setDocument] = useState<SaleDocument | null>(null);
+18: 
+19:   const [loading, setLoading] = useState(true);
+20:   const [message, setMessage] = useState("");
+21: 
+22:   const automaticPrintStarted = useRef(false);
+23: 
+24:   useEffect(() => {
+25:     if (!Number.isInteger(saleId) || saleId <= 0) {
+26:       setMessage("La venta indicada no es válida.");
+27:       setLoading(false);
+28:       return;
+29:     }
+30: 
+31:     void cargarDocumento();
+32:   }, [saleId]);
+33: 
+34:   useEffect(() => {
+35:     if (!document || !autoPrint || automaticPrintStarted.current) {
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+11: export default function ImprimirPackVentaPage() {
+45: function handleAfterPrint() {
+64: async function cargarDocumento() {
+69: const res = await fetch(
+100: async function esperarImagenes() {
+126: async function imprimirCuandoEsteListo() {
+142: function imprimirNuevamente() {
+206: <Link
+207: href="/operacion/ventas/nueva"
+
+==================================================
+PAGINA: app\operacion\ventas\nueva\page.tsx
+LINEAS: 1284
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: import { ClienteSelectorValue } from "../../../../components/client/ClienteSelector";
+5: import ProductGrid from "../../../../components/sales/ProductGrid";
+6: import OrderBuilder from "../../../../components/sales/OrderBuilder";
+7: import {
+8:   CartItem,
+9:   CoffeeOption,
+10:   CustomCartItem,
+11:   OptionGroup,
+12:   Product,
+13:   ProductCartItem,
+14: } from "../../../../types/sales";
+15: import POSLayout from "../../../../components/pos/POSLayout";
+16: import POSContextPanel from "../../../../components/pos/POSContextPanel";
+17: import ProductConfigurator from "../../../../components/sales/ProductConfigurator";
+18: import { SalesChannel } from "../../../../components/pos/SalesChannelSelector";
+19: import CustomMessagePrintModal from "../../../../components/pos/CustomMessagePrintModal";
+20: import { sortPosProducts } from "../../../../lib/pos/posProductOrder";
+21: 
+22: type ManualDiscountType = "percent" | "fixed";
+23: 
+24: type ManualDiscountReason =
+25:   | "courtesy"
+26:   | "promotion"
+27:   | "platform_discount"
+28:   | "customer_compensation"
+29:   | "nooklovers"
+30:   | "other";
+31: 
+32: export default function NuevaVentaPage() {
+33:   const [products, setProducts] = useState<Product[]>([]);
+34:   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+35:   const [cart, setCart] = useState<CartItem[]>([]);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+32: export default function NuevaVentaPage() {
+117: async function cargarCatalogo() {
+121: const res = await fetch("/api/operacion/catalogo");
+260: function getChannelPrice(product: Product): number | null {
+271: function isProductEnabledForChannel(product: Product): boolean {
+279: function isProductSellable(product: Product): boolean {
+293: function getPrice(product: Product): number {
+297: function getItemExtraUnitPrice(item: ProductCartItem): number | null {
+316: function addProduct(product: Product) {
+321: function addCustomItem(input: {
+340: function removeItem(localId: string) {
+344: function updateItem(localId: string, patch: Partial<CartItem>) {
+359: function toggleFlavor(item: ProductCartItem, flavorId: number) {
+377: function removeFlavorSelection(
+388: function toggleTopping(item: ProductCartItem, toppingId: number) {
+556: function handleClienteChange(cliente: ClienteSelectorValue | null) {
+561: function handleRewardChange(rewardId: number | null) {
+565: function handlePaymentMethodChange(value: string) {
+570: function validarVenta() {
+762: function getCartItemSignature(item: Omit<ProductCartItem, "localId">) {
+797: function addConfiguredProduct(item: Omit<ProductCartItem, "localId">) {
+834: function imprimirVentaEnSegundoPlano(saleId: number) {
+862: function cleanup() {
+874: function handlePrintMessage(event: MessageEvent) {
+902: async function confirmarVenta() {
+1019: const res = await fetch("/api/operacion/sales", {
+1089: function duplicateItem(item: ProductCartItem) {
+1099: function reconfigureItem(item: ProductCartItem) {
+1104: function updateConfiguredProduct(
+
+==================================================
+PAGINA: app\operacion\ventas\page.tsx
+LINEAS: 1760
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useMemo, useState } from "react";
+4: 
+5: import ClienteSelector, {
+6:   ClienteSelectorValue,
+7: } from "../../../components/client/ClienteSelector";
+8: 
+9: import { usePlatformSession } from "../../../components/platform/PlatformSessionContext";
+10: 
+11: type SaleItemOption = {
+12:   id: number;
+13:   option_group_code: string;
+14:   option_value_name: string;
+15:   quantity: number;
+16: };
+17: 
+18: type SaleItem = {
+19:   id: number;
+20:   product_sku?: string | null;
+21:   product_name: string;
+22:   quantity: number;
+23:   unit_price: number;
+24:   total_price: number;
+25:   notes?: string | null;
+26:   sale_item_options?: SaleItemOption[];
+27: };
+28: 
+29: type SaleOrder = {
+30:   id: number;
+31:   business_date?: string | null;
+32:   daily_order_number?: number | null;
+33:   display_order_code: string;
+34:   status: string;
+35:   notes?: string | null;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+65: actor_role?: string | null;
+76: function formatMoney(value?: number | null) {
+80: function formatDateTime(value?: string | null) {
+93: function getChannelLabel(channel?: string | null) {
+119: function getChannelClassName(channel?: string | null) {
+149: function getPaymentMethodLabel(value?: string | null) {
+165: function getManualDiscountTypeLabel(value?: string | null) {
+174: function getManualDiscountReasonLabel(value?: string | null) {
+200: function getOrderStatusLabel(value?: string | null) {
+212: function getStatusClassName(value?: string | null) {
+238: function formatRepeatedNames(names: string[]) {
+249: function getItemOptions(item: SaleItem) {
+278: export default function HistorialVentasPage() {
+279: const { hasPermission } = usePlatformSession();
+280: const canExportSales = hasPermission("sales.export");
+328: function handleKeyDown(event: KeyboardEvent) {
+346: async function cargarVentas(
+432: const res = await fetch(`/api/operacion/sales?${params.toString()}`);
+458: function descargarVentasCsv() {
+502: async function abrirDetalleVenta(saleId: number) {
+507: const res = await fetch(`/api/operacion/sales/${saleId}`, {
+532: function startCustomerChange() {
+540: function cancelCustomerChange() {
+548: async function saveCustomerChange() {
+560: const res = await fetch("/api/operacion/sales/customer", {
+614: function applyFilters() {
+625: function goToPage(nextPage: number) {
+634: function changeSort(field: SortField) {
+644: function clearFilters() {
+723: function imprimirDocumentoEnSegundoPlano({
+762: function cleanup() {
+774: function handlePrintMessage(event: MessageEvent) {
+795: async function cancelarPedidoSeleccionado() {
+843: const res = await fetch("/api/operacion/orders/status", {
+1320: <h2 className="mt-0.5 text-lg font-black leading-tight text-neutral-900">
+1407: {selectedSale.actor_role || "—"}
+
+==================================================
+PAGINA: app\operacion\ventas\ticket\[saleId]\page.tsx
+LINEAS: 230
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useParams, useSearchParams } from "next/navigation";
+5: import { useEffect, useRef, useState } from "react";
+6: 
+7: import CustomerOrderTicket80mm from "../../../../../components/documents/CustomerOrderTicket80mm";
+8: import { SaleDocument } from "../../../../../lib/documents/sales/types";
+9: 
+10: export default function TicketPedidoPage() {
+11:   const params = useParams();
+12:   const saleId = Number(params.saleId);
+13: 
+14:   const searchParams = useSearchParams();
+15:   const autoPrint = searchParams.get("autoPrint") === "1";
+16: 
+17:   const automaticPrintStarted = useRef(false);
+18: 
+19:   const [document, setDocument] = useState<SaleDocument | null>(null);
+20: 
+21:   const [loading, setLoading] = useState(true);
+22:   const [message, setMessage] = useState("");
+23: 
+24:   useEffect(() => {
+25:     if (!Number.isInteger(saleId) || saleId <= 0) {
+26:       setMessage("La venta indicada no es válida.");
+27:       setLoading(false);
+28:       return;
+29:     }
+30: 
+31:     void cargarDocumento();
+32:   }, [saleId]);
+33: 
+34:   useEffect(() => {
+35:     if (!document || !autoPrint || automaticPrintStarted.current) {
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+10: export default function TicketPedidoPage() {
+45: function handleAfterPrint() {
+65: async function cargarDocumento() {
+70: const res = await fetch(
+94: async function esperarImagenes() {
+120: async function imprimirCuandoEsteListo() {
+135: function imprimir() {
+187: <Link
+188: href="/operacion/ventas"
+
+==================================================
+PAGINA: app\page.tsx
+LINEAS: 110
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import Link from "next/link";
+2: 
+3: const modules = [
+4:   {
+5:     title: "Operación local",
+6:     description:
+7:       "Busca clientes, valida compras y canjea premios en la atención diaria del local.",
+8:     href: "/operacion",
+9:     icon: "✓",
+10:     iconBg: "bg-[#E1B4D0]",
+11:     iconText: "text-[#111111]",
+12:     buttonLabel: "Abrir operación",
+13:   },
+14:   {
+15:     title: "Clientes",
+16:     description:
+17:       "Registra, revisa y administra la base de clientes del programa de fidelización.",
+18:     href: "/clientes",
+19:     icon: "+",
+20:     iconBg: "bg-[#4C00F7]",
+21:     iconText: "text-white",
+22:     buttonLabel: "Abrir clientes",
+23:   },
+24:   {
+25:     title: "Suscripciones",
+26:     description:
+27:       "Crea, asigna y revisa suscripciones y códigos para clientes.",
+28:     href: "/suscripciones",
+29:     icon: "★",
+30:     iconBg: "bg-[#111111]",
+31:     iconText: "text-white",
+32:     buttonLabel: "Abrir suscripciones",
+33:   },
+34:   {
+35:     title: "Dashboard",
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+46: export default function HomePage() {
+55: <h1 className="mt-4 text-5xl font-bold tracking-tight text-[#111111]">
+77: <h2 className="text-2xl font-semibold text-[#111111]">
+86: <Link
+87: href={module.href}
+
+==================================================
+PAGINA: app\recuperar-contrasena\page.tsx
+LINEAS: 125
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useState } from "react";
+5: 
+6: export default function RecuperarContrasenaPage() {
+7:   const [correo, setCorreo] = useState("");
+8:   const [loading, setLoading] = useState(false);
+9:   const [error, setError] = useState("");
+10:   const [mensaje, setMensaje] = useState("");
+11: 
+12:   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+13:     e.preventDefault();
+14: 
+15:     setError("");
+16:     setMensaje("");
+17: 
+18:     const correoLimpio = correo.trim().toLowerCase();
+19:     if (!correoLimpio) {
+20:       setError("Ingresa tu correo.");
+21:       return;
+22:     }
+23: 
+24:     setLoading(true);
+25: 
+26:     try {
+27:       
+28:       const response = await fetch("/api/password/recovery", {
+29:         method: "POST",
+30:         headers: {
+31:           "Content-Type": "application/json",
+32:         },
+33:         body: JSON.stringify({
+34:           correo: correoLimpio,
+35:         }),
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: export default function RecuperarContrasenaPage() {
+28: const response = await fetch("/api/password/recovery", {
+70: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+116: <Link href="/login" className="font-semibold text-[#4C00F7] underline">
+
+==================================================
+PAGINA: app\register\page.tsx
+LINEAS: 324
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useState } from "react";
+5: import { useRouter } from "next/navigation";
+6: 
+7: export default function RegisterPage() {
+8:   const router = useRouter();
+9: 
+10:   const [nombre, setNombre] = useState("");
+11:   const [correo, setCorreo] = useState("");
+12:   const [telefono, setTelefono] = useState("");
+13:   const [password, setPassword] = useState("");
+14:   const [confirmacion, setConfirmacion] = useState("");
+15:   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+16:   const [aceptaMarketing, setAceptaMarketing] = useState(false);
+17:   const [mostrarPassword, setMostrarPassword] = useState(false);
+18:   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+19:   const [loading, setLoading] = useState(false);
+20:   const [error, setError] = useState("");
+21:   const [warning, setWarning] = useState("");
+22:   const [mensaje, setMensaje] = useState("");
+23: 
+24:   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+25:     e.preventDefault();
+26:     setError("");
+27:     setWarning("");
+28:     setMensaje("");
+29: 
+30:     const nombreLimpio = nombre.trim();
+31:     const correoLimpio = correo.trim().toLowerCase();
+32:     const telefonoLimpio = telefono.trim();
+33: 
+34:     if (
+35:       !nombreLimpio ||
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+7: export default function RegisterPage() {
+66: const res = await fetch("/api/register", {
+117: router.push(
+136: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+155: <Link
+156: href="/registro"
+276: <Link
+277: href="/terminos"
+312: <Link
+313: href="/login"
+
+==================================================
+PAGINA: app\registro\page.tsx
+LINEAS: 475
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useState } from "react";
+4: import { useRouter } from "next/navigation";
+5: import Link from "next/link";
+6: 
+7: export default function RegistroPage() {
+8:   const router = useRouter();
+9: 
+10:   const [nombre, setNombre] = useState("");
+11:   const [correo, setCorreo] = useState("");
+12:   const [telefono, setTelefono] = useState("");
+13:   const [cargando, setCargando] = useState(false);
+14: 
+15:   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+16:   const [aceptaMarketing, setAceptaMarketing] = useState(false);
+17: 
+18:   const [errorRegistro, setErrorRegistro] = useState("");
+19:   const [mensajeRegistro, setMensajeRegistro] = useState("");
+20: 
+21:   const [registroExitoso, setRegistroExitoso] = useState(false);
+22:   const [correoPendiente, setCorreoPendiente] = useState("");
+23:   const [reenviando, setReenviando] = useState(false);
+24:   const [cooldown, setCooldown] = useState(0);
+25: 
+26:   const [correoRecuperacion, setCorreoRecuperacion] = useState("");
+27:   const [recuperandoTarjeta, setRecuperandoTarjeta] = useState(false);
+28:   const [mensajeRecuperacion, setMensajeRecuperacion] = useState("");
+29:   const [errorRecuperacion, setErrorRecuperacion] = useState("");
+30: 
+31:   const handleRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
+32:     e.preventDefault();
+33: 
+34:     setErrorRegistro("");
+35:     setMensajeRegistro("");
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+7: export default function RegistroPage() {
+56: const res = await fetch("/api/clientes/register-card", {
+131: const res = await fetch("/api/resend-verification", {
+190: const res = await fetch("/api/recover-card", {
+227: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+253: <h2 className="mt-2 text-3xl font-bold text-[#4c00f7]">
+339: <Link
+340: href="/terminos"
+405: <h3 className="mt-3 text-2xl font-bold text-[#4c00f7]">
+
+==================================================
+PAGINA: app\restablecer-contrasena\page.tsx
+LINEAS: 164
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useState } from "react";
+5: import { useRouter } from "next/navigation";
+6: import { supabase } from "../../lib/supabase";
+7: 
+8: export default function RestablecerContrasenaPage() {
+9:   const router = useRouter();
+10: 
+11:   const [password, setPassword] = useState("");
+12:   const [confirmacion, setConfirmacion] = useState("");
+13:   const [mostrarPassword, setMostrarPassword] = useState(false);
+14:   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+15:   const [loading, setLoading] = useState(false);
+16:   const [error, setError] = useState("");
+17:   const [mensaje, setMensaje] = useState("");
+18: 
+19:   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+20:     e.preventDefault();
+21: 
+22:     setError("");
+23:     setMensaje("");
+24:     setLoading(true);
+25: 
+26:     if (password.length < 6) {
+27:       setError("La contraseña debe tener al menos 6 caracteres.");
+28:       setLoading(false);
+29:       return;
+30:     }
+31: 
+32:     if (password !== confirmacion) {
+33:       setError("Las contraseñas no coinciden.");
+34:       setLoading(false);
+35:       return;
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: import { supabase } from "../../lib/supabase";
+8: export default function RestablecerContrasenaPage() {
+39: const { error } = await supabase.auth.updateUser({
+53: router.replace("/login");
+71: <h1 className="mt-2 text-3xl font-bold leading-tight text-white">
+155: <Link href="/login" className="font-semibold text-[#4C00F7] underline">
+
+==================================================
+PAGINA: app\suscripciones\page.tsx
+LINEAS: 1078
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import Link from "next/link";
+4: import { useEffect, useMemo, useState } from "react";
+5: import { useRouter } from "next/navigation";
+6: import { supabase } from "../../lib/supabase";
+7: 
+8: type Cliente = {
+9:   id: number;
+10:   nombre: string;
+11:   correo: string;
+12:   telefono: string | null;
+13: };
+14: 
+15: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+16: 
+17: const PERIODOS = [
+18:   { value: "mensual", label: "Mensual" },
+19:   { value: "trimestral", label: "Trimestral" },
+20:   { value: "semestral", label: "Semestral" },
+21:   { value: "anual", label: "Anual" },
+22: ] as const;
+23: 
+24: export default function SuscripcionesPage() {
+25:   const [clientes, setClientes] = useState<Cliente[]>([]);
+26:   const [asignaciones, setAsignaciones] = useState<any[]>([]);
+27:   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+28: 
+29:   const [clienteId, setClienteId] = useState("");
+30:   const [busquedaCliente, setBusquedaCliente] = useState("");
+31:   const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+32: 
+33:   const [mostrarActivas, setMostrarActivas] = useState(true);
+34:   const [mostrarAsignaciones, setMostrarAsignaciones] = useState(true);
+35:   const [mostrarCodigo, setMostrarCodigo] = useState(true);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: import { supabase } from "../../lib/supabase";
+24: export default function SuscripcionesPage() {
+71: const [cargandoRol, setCargandoRol] = useState(true);
+72: const [rol, setRol] = useState<string | null>(null);
+81: const cargarDatos = async () => {
+83: const res = await fetch("/api/subscriptions", {
+192: const res = await fetch("/api/subscriptions/create-assigned", {
+247: const res = await fetch("/api/subscriptions/create-code", {
+275: const cargarSesion = async () => {
+277: setCargandoRol(true);
+279: const res = await fetch("/api/session", {
+284: setRol(null);
+289: setRol(data.role || null);
+292: setRol(null);
+294: setCargandoRol(false);
+298: const eliminarAsignacion = async (claimId: number) => {
+310: const res = await fetch("/api/subscriptions/delete-claim", {
+331: const eliminarSuscripcion = async (subscriptionId: number) => {
+339: const res = await fetch("/api/subscriptions/delete", {
+373: await fetch("/api/logout", {
+376: router.push("/admin/login");
+406: <h2 className="text-sm font-semibold">Suscripciones activas</h2>
+474: {rol === "superadmin" && (
+527: {rol === "superadmin" && (
+555: <h2 className="text-sm font-semibold">
+715: <h2 className="text-sm font-semibold">Generar código genérico</h2>
+843: <h2 className="text-sm font-semibold">
+
+==================================================
+PAGINA: app\t\[id]\page.tsx
+LINEAS: 369
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: import Image from "next/image";
+2: import QRCode from "react-qr-code";
+3: import { supabaseAdmin } from "../../../lib/supabase-admin";
+4: 
+5: type Premio = {
+6:   id: number | string;
+7:   nombre: string;
+8:   descripcion?: string;
+9:   estado: "activo" | "usado" | "caducado";
+10:   vencimiento?: string;
+11:   tipo?: string;
+12:   campana_id?: number;
+13:   fecha_canje?: string;
+14: };
+15: 
+16: type Cliente = {
+17:   id: number;
+18:   nombre: string;
+19:   correo: string;
+20:   telefono: string;
+21:   sellos: number;
+22:   premios: Premio[] | null;
+23:   public_token: string;
+24:   tarjeta_activa?: boolean;
+25:   email_verificado?: boolean;
+26: };
+27: 
+28: type Props = {
+29:   params: Promise<{
+30:     id: string;
+31:   }>;
+32: };
+33: 
+34: const META_SELLOS = 7;
+35: 
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+3: import { supabaseAdmin } from "../../../lib/supabase-admin";
+36: function formatearFecha(fecha?: string) {
+54: function estaVencido(fecha?: string) {
+64: export default async function TarjetaPublicaPage({ params }: Props) {
+67: const { data, error } = await supabaseAdmin
+79: <h1 className="text-2xl font-bold text-[#4C00F7]">Tarjeta Nook</h1>
+92: <h1 className="text-2xl font-bold text-[#4C00F7]">
+161: <h1 className="text-3xl font-bold">Tarjeta Nook</h1>
+171: <h2 className="mt-1 text-3xl font-bold text-[#4C00F7]">
+
+==================================================
+PAGINA: app\tarjeta\page.tsx
+LINEAS: 206
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { useEffect, useState } from "react";
+4: import { supabase } from "../../lib/supabase";
+5: 
+6: type Premio = {
+7:   id: number;
+8:   nombre: string;
+9:   estado: "activo" | "usado";
+10:   vencimiento?: string;
+11: };
+12: 
+13: type Cliente = {
+14:   id: number;
+15:   nombre: string;
+16:   correo: string;
+17:   telefono: string;
+18:   sellos: number;
+19:   premios: Premio[] | null;
+20: };
+21: 
+22: export default function TarjetaPage() {
+23:   const [cliente, setCliente] = useState<Cliente | null>(null);
+24:   const [cargando, setCargando] = useState(true);
+25:   const [actualizando, setActualizando] = useState(false);
+26: 
+27:   const cargarCliente = async (esActualizacionManual = false) => {
+28:     try {
+29:       if (esActualizacionManual) {
+30:         setActualizando(true);
+31:       } else {
+32:         setCargando(true);
+33:       }
+34: 
+35:       const clienteId = localStorage.getItem("clienteId");
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+4: import { supabase } from "../../lib/supabase";
+22: export default function TarjetaPage() {
+27: const cargarCliente = async (esActualizacionManual = false) => {
+42: const { data, error } = await supabase
+70: <h1 className="text-2xl font-bold text-neutral-900">Mi tarjeta</h1>
+81: <h1 className="text-2xl font-bold text-neutral-900">Mi tarjeta</h1>
+105: <h1 className="text-2xl font-bold text-neutral-900">
+149: <h2 className="text-xl font-bold text-neutral-900">
+176: <h2 className="text-xl font-bold text-neutral-900">
+
+==================================================
+PAGINA: app\terminos\page.tsx
+LINEAS: 210
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: export default function TerminosPage() {
+2:   return (
+3:     <main className="min-h-screen bg-[#F4DCE8] px-4 py-8 md:px-6 md:py-10">
+4:       <div className="mx-auto max-w-2xl">
+5:         <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+6:           <div className="bg-gradient-to-r from-[#4c00f7] to-[#6a1bff] px-6 py-6 text-white">
+7:             <p className="text-xs uppercase tracking-[0.35em] text-white/80">
+8:               Nook
+9:             </p>
+10: 
+11:             <h1 className="mt-2 text-2xl font-bold">Términos y condiciones</h1>
+12: 
+13:             <p className="mt-2 text-sm text-white/85">
+14:               Programa de fidelización Fideli-NooK
+15:             </p>
+16:           </div>
+17: 
+18:           <div className="space-y-7 px-6 py-7 text-sm leading-6 text-[#444] md:px-8 md:py-8">
+19:             <div className="rounded-2xl border border-[#E3D2EA] bg-[#FCF8FF] p-4">
+20:               <p className="font-semibold text-[#4c00f7]">Versión 1.1</p>
+21: 
+22:               <p className="mt-1 text-xs text-[#666]">
+23:                 Vigente desde septiembre de 2026.
+24:               </p>
+25:             </div>
+26: 
+27:             <section>
+28:               <h2 className="text-base font-bold text-[#333]">
+29:                 1. Programa Fideli-NooK
+30:               </h2>
+31: 
+32:               <p className="mt-2">
+33:                 Fideli-NooK es el programa de fidelización de Nook Heladería. Al
+34:                 registrarte y participar en el programa puedes acumular sellos
+35:                 por tus compras presenciales y acceder a los beneficios
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+1: export default function TerminosPage() {
+11: <h1 className="mt-2 text-2xl font-bold">Términos y condiciones</h1>
+28: <h2 className="text-base font-bold text-[#333]">
+42: <h2 className="text-base font-bold text-[#333]">
+55: <h2 className="text-base font-bold text-[#333]">
+86: <h2 className="text-base font-bold text-[#333]">
+104: <h2 className="text-base font-bold text-[#333]">
+116: <h2 className="text-base font-bold text-[#333]">
+135: <h2 className="text-base font-bold text-[#333]">
+148: <h2 className="text-base font-bold text-[#333]">
+161: <h2 className="text-base font-bold text-[#333]">
+184: <h2 className="text-base font-bold text-[#333]">
+195: <h2 className="text-base font-bold text-[#333]">
+
+==================================================
+PAGINA: app\verificar\page.tsx
+LINEAS: 81
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { Suspense, useEffect, useState } from "react";
+4: import { useRouter, useSearchParams } from "next/navigation";
+5: 
+6: function VerificarContenido() {
+7:   const router = useRouter();
+8:   const searchParams = useSearchParams();
+9:   const token = searchParams.get("token");
+10: 
+11:   const [mensaje, setMensaje] = useState("Verificando tu correo...");
+12:   const [cargando, setCargando] = useState(true);
+13: 
+14:   useEffect(() => {
+15:     const verificarCorreo = async () => {
+16:       if (!token) {
+17:         setMensaje("No encontramos un token de verificación.");
+18:         setCargando(false);
+19:         return;
+20:       }
+21: 
+22:       try {
+23:         const response = await fetch(`/api/verify-email?token=${token}`);
+24:         const data = await response.json();
+25: 
+26:         if (!response.ok) {
+27:           setMensaje(data.error || "No se pudo verificar tu correo.");
+28:           setCargando(false);
+29:           return;
+30:         }
+31: 
+32:         setMensaje("Tu tarjeta ya está activa. Redirigiendo...");
+33: 
+34:         setTimeout(() => {
+35:           router.replace(`/t/${data.public_token}`);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: function VerificarContenido() {
+23: const response = await fetch(`/api/verify-email?token=${token}`);
+35: router.replace(`/t/${data.public_token}`);
+49: <h1 className="text-3xl font-bold text-[#4c00f7]">
+62: export default function VerificarPage() {
+68: <h1 className="text-3xl font-bold text-[#4c00f7]">
+
+==================================================
+PAGINA: app\verificar-registro\page.tsx
+LINEAS: 81
+==================================================
+--- ENCABEZADO (MAX 35 LINEAS) ---
+1: "use client";
+2: 
+3: import { Suspense, useEffect, useState } from "react";
+4: import { useRouter, useSearchParams } from "next/navigation";
+5: 
+6: function VerificarRegistroContenido() {
+7:   const router = useRouter();
+8:   const searchParams = useSearchParams();
+9:   const token = searchParams.get("token");
+10: 
+11:   const [mensaje, setMensaje] = useState("Verificando tu cuenta...");
+12:   const [cargando, setCargando] = useState(true);
+13: 
+14:   useEffect(() => {
+15:     const verificar = async () => {
+16:       if (!token) {
+17:         setMensaje("No encontramos un token de verificación.");
+18:         setCargando(false);
+19:         return;
+20:       }
+21: 
+22:       try {
+23:         const response = await fetch(`/api/register/verify?token=${token}`);
+24:         const data = await response.json();
+25: 
+26:         if (!response.ok) {
+27:           setMensaje(data.message || "No se pudo verificar tu cuenta.");
+28:           setCargando(false);
+29:           return;
+30:         }
+31: 
+32:         setMensaje("Cuenta verificada correctamente. Redirigiendo al acceso...");
+33: 
+34:         setTimeout(() => {
+35:           router.replace(`/login?verified=1&email=${encodeURIComponent(data.correo || "")}`);
+
+--- REFERENCIAS FUNCIONALES (MAX 100) ---
+6: function VerificarRegistroContenido() {
+23: const response = await fetch(`/api/register/verify?token=${token}`);
+35: router.replace(`/login?verified=1&email=${encodeURIComponent(data.correo || "")}`);
+49: <h1 className="text-3xl font-bold text-[#4c00f7]">
+62: export default function VerificarRegistroPage() {
+68: <h1 className="text-3xl font-bold text-[#4c00f7]">
+
+=== 2. ARCHIVOS CLAVE DE ARQUITECTURA ===
+
+==================================================
+ARCHIVO: components/platform/PlatformShell.tsx
+==================================================
+TOTAL LINEAS: 626
+4: import { usePathname, useRouter } from "next/navigation";
+13: import type { OperationRole } from "@/lib/operation-auth";
+14: import type { OperationPermission } from "@/lib/operation-rbac";
+16: getPlatformNavigation,
+17: getRoleLabel,
+19: type PlatformNavigationItem,
+20: type PlatformNavigationSection,
+21: } from "@/lib/platform-navigation";
+29: role?: OperationRole | null;
+31: permissions?: OperationPermission[];
+40: const SECTION_ORDER: PlatformNavigationSection[] = [
+46: function isOperationRole(value: unknown): value is OperationRole {
+47: return (
+55: function isActiveRoute(pathname: string, href: string): boolean {
+56: if (href === "/operacion/ventas") {
+57: return (
+58: pathname === "/operacion/ventas" ||
+59: (pathname.startsWith("/operacion/ventas/") &&
+60: !pathname.startsWith("/operacion/ventas/nueva") &&
+61: !pathname.includes("/imprimir") &&
+62: !pathname.includes("/ticket"))
+66: if (href === "/operacion/inventario") {
+67: return (
+68: pathname === "/operacion/inventario" ||
+69: pathname.startsWith("/operacion/inventario/stock") ||
+70: pathname.startsWith("/operacion/inventario/bachas") ||
+71: pathname.startsWith("/operacion/inventario/movimientos") ||
+72: pathname.startsWith("/operacion/inventario/ajustes")
+76: if (href === "/operacion/inventario/recepciones") {
+77: return pathname.startsWith("/operacion/inventario/recepciones");
+80: return pathname === href || pathname.startsWith(`${href}/`);
+83: function getBreadcrumbs(pathname: string): string[] {
+84: if (pathname === "/operacion") {
+85: return ["Operación"];
+88: if (pathname.startsWith("/operacion/ventas/nueva")) {
+89: return ["Operación", "POS"];
+92: if (pathname.startsWith("/operacion/cola")) {
+93: return ["Operación", "Preparación"];
+96: if (pathname.startsWith("/operacion/ventas")) {
+97: return ["Operación", "Historial"];
+100: if (pathname.startsWith("/operacion/caja")) {
+101: return ["Operación", "Caja"];
+104: if (pathname.startsWith("/operacion/inventario/recepciones")) {
+105: return ["Gestión", "Inventario", "Recepciones"];
+108: if (pathname.startsWith("/operacion/inventario/stock")) {
+109: return ["Operación", "Inventario", "Stock"];
+112: if (pathname.startsWith("/operacion/inventario/bachas")) {
+113: return ["Operación", "Inventario", "Bachas"];
+116: if (pathname.startsWith("/operacion/inventario/movimientos")) {
+117: return ["Operación", "Inventario", "Movimientos"];
+120: if (pathname.startsWith("/operacion/inventario/ajustes")) {
+121: return ["Operación", "Inventario", "Ajustes"];
+124: if (pathname.startsWith("/operacion/inventario")) {
+125: return ["Operación", "Inventario"];
+128: if (pathname.startsWith("/operacion/catalogo")) {
+129: return ["Gestión", "Catálogo"];
+132: if (pathname.startsWith("/dashboard")) {
+133: return ["Gestión", "Analytics"];
+136: if (pathname.startsWith("/clientes")) {
+137: return ["Gestión", "Clientes"];
+140: if (pathname.startsWith("/campanas/")) {
+141: return ["Gestión", "Campañas", "Detalle"];
+144: if (pathname.startsWith("/campanas")) {
+145: return ["Gestión", "Campañas"];
+148: if (pathname.startsWith("/suscripciones")) {
+149: return ["Gestión", "Suscripciones"];
+152: if (pathname.startsWith("/admin/usuarios")) {
+153: return ["Administración", "Usuarios"];
+156: return ["Plataforma Nook"];
+159: function Icon({
+163: name: PlatformNavigationItem["icon"] | "logout" | "user";
+165: const common = {
+178: return (
+186: return (
+194: return (
+202: return (
+210: return (
+219: return (
+226: return (
+235: return (
+242: return (
+250: return (
+258: return (
+266: return (
+273: return (
+282: export default function PlatformShell({ children }: PlatformShellProps) {
+283: const pathname = usePathname();
+284: const router = useRouter();
+286: const [session, setSession] = useState<ShellSession | null>(null);
+287: const [sessionLoading, setSessionLoading] = useState(true);
+288: const [sessionUnavailable, setSessionUnavailable] = useState(false);
+289: const [userMenuOpen, setUserMenuOpen] = useState(false);
+290: const [loggingOut, setLoggingOut] = useState(false);
+295: async function loadSession() {
+297: const response = await fetch("/api/session", {
+305: router.replace("/admin/login");
+318: const data = (await response.json()) as SessionPayload;
+320: if (!isOperationRole(data.role)) {
+321: router.replace("/admin/login");
+326: role: data.role,
+328: permissions: Array.isArray(data.permissions) ? data.permissions : [],
+345: return () => {
+350: const navigation = useMemo(
+351: () => (session ? getPlatformNavigation(session.role) : []),
+355: const breadcrumbs = useMemo(() => getBreadcrumbs(pathname), [pathname]);
+357: const initials = useMemo(() => {
+358: const name = session?.displayName?.trim();
+360: if (!name) return "N";
+362: const parts = name.split(/\s+/).filter(Boolean);
+364: return parts
+370: async function handleLogout() {
+376: const response = await fetch("/api/logout", {
+388: window.location.href = "/admin/login";
+392: const isPreparationStation =
+393: pathname.startsWith("/operacion/cola") && session?.role === "preparation";
+396: if (!session || session.role !== "preparation") return;
+397: if (pathname.startsWith("/operacion/cola")) return;
+399: router.replace("/operacion/cola");
+400: }, [pathname, router, session]);
+403: return (
+410: if (session?.role === "preparation" && !isPreparationStation) {
+411: return (
+419: return (
+429: return null;
+432: return (
+461: const items = navigation.filter(
+465: if (items.length === 0) return null;
+467: return (
+477: const active = isActiveRoute(pathname, item.href);
+479: return (
+482: href={item.href}
+570: {getRoleLabel(session.role)}
+576: onClick={() => setUserMenuOpen((current) => !current)}
+579: aria-expanded={userMenuOpen}
+584: {userMenuOpen && (
+597: {getRoleLabel(session.role)}
+
+==================================================
+ARCHIVO: lib/platform-navigation.ts
+==================================================
+TOTAL LINEAS: 174
+1: import type { OperationRole } from "@/lib/operation-auth";
+3: hasOperationPermission,
+4: type OperationPermission,
+7: export type PlatformNavigationSection =
+12: export type PlatformNavigationItem = {
+16: href: string;
+17: section: PlatformNavigationSection;
+18: permission: OperationPermission;
+33: export const PLATFORM_SECTION_LABELS: Record<
+34: PlatformNavigationSection,
+42: const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
+47: href: "/operacion/ventas/nueva",
+49: permission: "sales.operate",
+56: href: "/operacion/cola",
+58: permission: "orders.operate",
+65: href: "/operacion/ventas",
+67: permission: "sales.operate",
+74: href: "/operacion/inventario",
+76: permission: "inventory.stock.read",
+83: href: "/operacion/caja",
+85: permission: "cash.operate",
+93: href: "/dashboard",
+95: permission: "analytics.view",
+102: href: "/clientes",
+104: permission: "customers.operate",
+111: href: "/operacion/catalogo",
+113: permission: "catalog.manage",
+120: href: "/operacion/inventario/recepciones",
+122: permission: "inventory.receipts.manage",
+129: href: "/campanas",
+131: permission: "campaigns.manage",
+138: href: "/suscripciones",
+140: permission: "subscriptions.manage",
+148: href: "/admin/usuarios",
+150: permission: "users.manage",
+155: export function getPlatformNavigation(
+156: role: OperationRole,
+157: ): PlatformNavigationItem[] {
+158: return PLATFORM_NAVIGATION.filter((item) =>
+159: hasOperationPermission(role, item.permission),
+163: export function getRoleLabel(role: OperationRole): string {
+164: switch (role) {
+166: return "Cajer@";
+168: return "Admin";
+170: return "Superadmin";
+172: return "Preparación";
+
+==================================================
+ARCHIVO: lib/operation-rbac.ts
+==================================================
+TOTAL LINEAS: 112
+1: import type { OperationRole, OperationSession } from "@/lib/operation-auth";
+3: export type OperationPermission =
+24: const PREPARATION_PERMISSIONS: readonly OperationPermission[] = [
+28: const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+40: const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
+41: ...CASHIER_PERMISSIONS,
+52: const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+53: ...ADMIN_PERMISSIONS,
+58: export const ROLE_PERMISSIONS: Readonly<
+59: Record<OperationRole, readonly OperationPermission[]>
+61: cashier: CASHIER_PERMISSIONS,
+62: admin: ADMIN_PERMISSIONS,
+63: superadmin: SUPERADMIN_PERMISSIONS,
+64: preparation: PREPARATION_PERMISSIONS,
+67: export function hasOperationPermission(
+68: role: OperationRole,
+69: permission: OperationPermission,
+71: return ROLE_PERMISSIONS[role].includes(permission);
+74: export type OperationAuthorizationResult =
+86: export function authorizeOperationSession(
+88: permission: OperationPermission,
+91: return {
+99: if (!hasOperationPermission(session.role, permission)) {
+100: return {
+108: return {
+
+==================================================
+ARCHIVO: lib/operation-auth.ts
+==================================================
+TOTAL LINEAS: 161
+5: export type OperationRole = "cashier" | "admin" | "superadmin" | "preparation";
+7: export type OperationUser = {
+11: role: OperationRole;
+14: export type OperationSession =
+17: role: OperationRole;
+25: role: null;
+32: const OP_ACCESS_COOKIE = "nook_op_access_token";
+34: export class OperationAuthUnavailableError extends Error {
+41: function emptyOperationSession(): OperationSession {
+42: return {
+44: role: null,
+52: function isOperationRole(value: unknown): value is OperationRole {
+53: return (
+61: export async function getOperationalUserByAuthUserId(
+64: const normalizedAuthUserId = String(authUserId || "").trim();
+67: return null;
+70: const { data, error } = await supabaseAdmin
+72: .select("id, auth_user_id, display_name, role, is_active")
+86: return null;
+91: return null;
+94: if (!data.auth_user_id || !isOperationRole(data.role)) {
+96: return null;
+99: return {
+103: role: data.role,
+107: async function resolveSupabaseAuthUserId(): Promise<string | null> {
+108: const cookieStore = await cookies();
+109: const accessToken = cookieStore.get(OP_ACCESS_COOKIE)?.value;
+113: return null;
+116: const { data, error } = await supabaseAdmin.auth.getClaims(accessToken);
+123: return null;
+126: const authUserId = data?.claims?.sub;
+130: return null;
+133: return authUserId;
+136: async function getSupabaseOperationSession(): Promise<OperationSession> {
+137: const authUserId = await resolveSupabaseAuthUserId();
+140: return emptyOperationSession();
+143: const operationalUser = await getOperationalUserByAuthUserId(authUserId);
+146: return emptyOperationSession();
+149: return {
+151: role: operationalUser.role,
+159: export async function getOperationSession(): Promise<OperationSession> {
+160: return getSupabaseOperationSession();
+
+==================================================
+ARCHIVO: app/page.tsx
+==================================================
+TOTAL LINEAS: 110
+3: const modules = [
+8: href: "/operacion",
+18: href: "/clientes",
+28: href: "/suscripciones",
+38: href: "/dashboard",
+46: export default function HomePage() {
+47: return (
+87: href={module.href}
+
+==================================================
+ARCHIVO: app/operacion/page.tsx
+==================================================
+TOTAL LINEAS: 554
+27: const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+28: const META_SELLOS = 7;
+30: export default function OperacionPage() {
+31: const [clientes, setClientes] = useState<Cliente[]>([]);
+32: const [clienteSeleccionadoId, setClienteSeleccionadoId] =
+34: const [busqueda, setBusqueda] = useState("");
+35: const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+36: const [mensaje, setMensaje] = useState("");
+37: const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+40: const [cargando, setCargando] = useState(true);
+41: const [customerLoyalty, setCustomerLoyalty] =
+43: const [cargandoFidelizacion, setCargandoFidelizacion] = useState(false);
+44: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+45: const [cargandoRol, setCargandoRol] = useState(true);
+46: const [subscriptions, setSubscriptions] = useState<any[]>([]);
+47: const [subscriptionSeleccionada, setSubscriptionSeleccionada] =
+49: const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
+50: const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+65: const customerId = Number(clienteSeleccionadoId);
+71: async function cargarSuscripcionActiva(clienteId: number) {
+76: const res = await fetch(
+80: const data = await res.json();
+102: async function cargarFidelizacionCliente(clienteId: number) {
+107: const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+112: const data = await res.json();
+133: const cargarSesion = async () => {
+135: setCargandoRol(true);
+137: const res = await fetch("/api/session", {
+142: setRol(null);
+156: const data = await res.json();
+157: setRol(data.role || null);
+161: setCargandoRol(false);
+165: const cargarDatos = async (mantenerSeleccion = true) => {
+169: const res = await fetch("/api/operacion/clientes", {
+174: const data = await res.json();
+183: const listaClientes = (data.clientes || []) as Cliente[];
+192: const seleccionadoGuardado = localStorage.getItem(
+197: const existeSeleccionado = listaClientes.some(
+207: const primerId = String(listaClientes[0].id);
+219: const clientesFiltrados = useMemo(() => {
+224: const nombre = (cliente.nombre || "").trim().toLowerCase();
+225: return nombre.startsWith(letraActiva.toLowerCase());
+229: const texto = busqueda.trim().toLowerCase();
+230: if (!texto) return resultado;
+232: return resultado.filter((cliente) => {
+233: const nombre = (cliente.nombre || "").toLowerCase();
+234: const telefono = (cliente.telefono || "").toLowerCase();
+235: const correo = (cliente.correo || "").toLowerCase();
+237: return (
+245: const cambiarCliente = (id: string) => {
+251: const seleccionarLetra = (letra: string) => {
+256: const listaFiltrada =
+267: const primerId = String(listaFiltrada[0].id);
+273: const cliente =
+277: const premiosActivos = customerLoyalty?.activeRewards ?? [];
+279: const cerrarSesion = async () => {
+281: await fetch("/api/logout", {
+284: window.location.href = "/admin/login";
+292: return (
+299: href="/"
+312: {cargandoRol
+313: ? "Cargando rol..."
+314: : `ROL: ${rol ?? "sin sesión"}`}
+331: href="/operacion/ventas/nueva"
+342: href="/operacion/cola"
+355: href="/operacion/ventas"
+366: href="/operacion/catalogo"
+377: href="/operacion/inventario"
+388: href="/operacion/caja"
+520: rol={rol}
+
+==================================================
+ARCHIVO: app/dashboard/page.tsx
+==================================================
+TOTAL LINEAS: 702
+4: import { useRouter } from "next/navigation";
+74: function formatearFecha(fecha?: string | null) {
+75: if (!fecha) return "-";
+76: const d = new Date(fecha);
+77: if (Number.isNaN(d.getTime())) return "-";
+78: return d.toLocaleDateString("es-CL");
+81: function formatearFechaHora(fecha?: string | null) {
+82: if (!fecha) return "-";
+83: const d = new Date(fecha);
+84: if (Number.isNaN(d.getTime())) return "-";
+85: return d.toLocaleString("es-CL");
+88: function formatearMes(mes: string) {
+89: const [year, month] = mes.split("-");
+90: const d = new Date(Number(year), Number(month) - 1, 1);
+91: return d.toLocaleDateString("es-CL", {
+97: function KpiCard({ label, value }: { label: string; value: number | string }) {
+98: return (
+106: function EmptyState({ text }: { text: string }) {
+107: return (
+114: function SectionCard({
+123: return (
+136: function LineChart({
+145: const { points, maxValue } = useMemo(() => {
+146: const width = 680;
+147: const height = 220;
+148: const padding = 28;
+149: const max = Math.max(...values, 1);
+151: const pts = values.map((value, index) => {
+152: const x =
+158: const y =
+161: return `${x},${y}`;
+164: return {
+171: return <EmptyState text={`No hay datos para ${title.toLowerCase()}.`} />;
+174: return (
+208: const x =
+213: const y = 220 - 28 - ((220 - 56) * value) / Math.max(maxValue, 1);
+215: return (
+247: function DataTable({
+261: return <EmptyState text={emptyText} />;
+264: return (
+303: export default function DashboardPage() {
+304: const router = useRouter();
+306: const [data, setData] = useState<DashboardResponse | null>(null);
+307: const [cargando, setCargando] = useState(true);
+308: const [mensaje, setMensaje] = useState("");
+310: const [cargandoRol, setCargandoRol] = useState(true);
+311: const [rol, setRol] = useState<string | null>(null);
+313: const [campanasData, setCampanasData] = useState<any[]>([]);
+315: const clientesPorMesRows =
+322: const suscripcionesActivasRows =
+333: const consumoRecienteRows =
+345: async function cargarDashboard() {
+350: const res = await fetch("/api/dashboard/overview");
+351: const resCampanas = await fetch("/api/dashboard/campanas");
+352: const jsonCampanas = await resCampanas.json();
+357: const json = await res.json();
+375: const cargarSesion = async () => {
+377: setCargandoRol(true);
+379: const res = await fetch("/api/session", {
+384: setRol(null);
+388: const data = await res.json();
+391: setRol(data?.role ?? null);
+394: setRol(null);
+396: setCargandoRol(false);
+400: const cerrarSesion = async () => {
+403: router.push("/admin/login");
+414: return (
+
+=== 3. LAYOUTS FRONTEND ===
+
+LAYOUT: app\activar-cuenta\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Activar Cuenta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\admin\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Administración",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\admin\login\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Acceso Administración",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\admin\usuarios\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Usuarios",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\campanas\[id]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Detalle de Campaña",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\campanas\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Campañas",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\clientes\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Clientes",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\dashboard\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Analytics",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\layout.tsx
+1: import type { Metadata } from "next";
+2: import { Geist, Geist_Mono } from "next/font/google";
+3: import "./globals.css";
+4: 
+5: const geistSans = Geist({
+6:   variable: "--font-geist-sans",
+7:   subsets: ["latin"],
+8: });
+9: 
+10: const geistMono = Geist_Mono({
+11:   variable: "--font-geist-mono",
+12:   subsets: ["latin"],
+13: });
+14: 
+15: export const metadata: Metadata = {
+16:   title: {
+17:     default: "Nook",
+18:     template: "%s | Nook",
+19:   },
+20:   description: "Plataforma operacional Nook Heladería de Autora",
+21:   icons: {
+22:     icon: [{ url: "/isologo-nook.png" }],
+23:     apple: [{ url: "/isologo-nook.png" }],
+24:   },
+25: };
+26: 
+27: export default function RootLayout({
+28:   children,
+29: }: Readonly<{
+30:   children: React.ReactNode;
+31: }>) {
+32:   return (
+33:     <html
+34:       lang="es"
+35:       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+36:     >
+37:       <body className="min-h-full flex flex-col">{children}</body>
+38:     </html>
+39:   );
+40: }
+
+LAYOUT: app\login\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Iniciar Sesión",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\mi-cuenta\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Mi Cuenta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\mi-cuenta\perfil\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Mi Perfil",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\mi-cuenta\suscripciones\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Mis Suscripciones",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\mi-cuenta\tarjeta\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Mi Tarjeta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\caja\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Caja",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\catalogo\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Catálogo Maestro",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\cola\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Cola de Preparación",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\imprimir\mensaje\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Imprimir Mensaje",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\ajustes\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Ajustes de Inventario",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\bachas\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Bachas Abiertas",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Inventario",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\movimientos\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Movimientos de Inventario",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\recepciones\[transactionId]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Detalle de Recepción",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\recepciones\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Recepciones de Inventario",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\inventario\recepciones\nueva\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Nueva Recepción",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Operación",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\operacion\ventas\imprimir\[saleId]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Imprimir Venta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\ventas\imprimir-pack\[saleId]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Imprimir Pack",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\ventas\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Historial de Ventas",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\ventas\nueva\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Punto de Venta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\operacion\ventas\ticket\[saleId]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Ticket de Venta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\recuperar-contrasena\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Recuperar Contraseña",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\register\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Crear Cuenta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\registro\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Registro",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\restablecer-contrasena\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Restablecer Contraseña",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\suscripciones\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: import PlatformShell from "@/components/platform/PlatformShell";
+4: 
+5: export const metadata: Metadata = {
+6:   title: "Suscripciones",
+7: };
+8: 
+9: export default function Layout({
+10:   children,
+11: }: Readonly<{
+12:   children: React.ReactNode;
+13: }>) {
+14:   return <PlatformShell>{children}</PlatformShell>;
+15: }
+
+LAYOUT: app\t\[id]\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Tarjeta Digital",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\tarjeta\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Tarjeta de Fidelización",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\terminos\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Términos y Condiciones",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\verificar\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Verificar Cuenta",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+LAYOUT: app\verificar-registro\layout.tsx
+1: import type { Metadata } from "next";
+2: 
+3: export const metadata: Metadata = {
+4:   title: "Verificar Registro",
+5: };
+6: 
+7: export default function Layout({
+8:   children,
+9: }: Readonly<{
+10:   children: React.ReactNode;
+11: }>) {
+12:   return children;
+13: }
+
+=== FIN P0.01B ===

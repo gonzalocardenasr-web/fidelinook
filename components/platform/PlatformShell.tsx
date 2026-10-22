@@ -81,8 +81,8 @@ function isActiveRoute(pathname: string, href: string): boolean {
 }
 
 function getBreadcrumbs(pathname: string): string[] {
-  if (pathname === "/operacion") {
-    return ["Operación"];
+  if (pathname === "/operacion" || pathname.startsWith("/operacion/resumen")) {
+    return ["Operación", "Resumen Operativo"];
   }
 
   if (pathname.startsWith("/operacion/ventas/nueva")) {
@@ -174,6 +174,16 @@ function Icon({
   };
 
   switch (name) {
+    case "summary":
+      return (
+        <svg {...common}>
+          <rect x="3" y="3" width="8" height="8" rx="1" />
+          <rect x="13" y="3" width="8" height="5" rx="1" />
+          <rect x="13" y="10" width="8" height="11" rx="1" />
+          <rect x="3" y="13" width="8" height="8" rx="1" />
+        </svg>
+      );
+
     case "pos":
       return (
         <svg {...common}>

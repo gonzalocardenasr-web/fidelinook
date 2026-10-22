@@ -1,0 +1,374 @@
+﻿DEV-UX-ARCH-01.10 - P0 / AUDITORIA DE NAVEGACION Y DEPENDENCIAS
+Fecha local: 2026-10-22 11:07:57
+Solo lectura. No contiene variables de entorno ni contenidos completos de archivos.
+
+===== lib\platform-navigation.ts =====
+Lineas: 174
+7: export type PlatformNavigationSection =
+14: label: string;
+15: shortLabel: string;
+16: href: string;
+17: section: PlatformNavigationSection;
+18: permission: OperationPermission;
+34: PlatformNavigationSection,
+42: const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
+45: label: "POS",
+46: shortLabel: "POS",
+47: href: "/operacion/ventas/nueva",
+48: section: "operation",
+49: permission: "sales.operate",
+54: label: "PreparaciÃ³n",
+55: shortLabel: "Prep.",
+56: href: "/operacion/cola",
+57: section: "operation",
+58: permission: "orders.operate",
+63: label: "Historial",
+64: shortLabel: "Hist.",
+65: href: "/operacion/ventas",
+66: section: "operation",
+67: permission: "sales.operate",
+72: label: "Inventario",
+73: shortLabel: "Inv.",
+74: href: "/operacion/inventario",
+75: section: "operation",
+76: permission: "inventory.stock.read",
+81: label: "Caja",
+82: shortLabel: "Caja",
+83: href: "/operacion/caja",
+84: section: "operation",
+85: permission: "cash.operate",
+91: label: "Analytics",
+92: shortLabel: "Analyt.",
+93: href: "/dashboard",
+94: section: "management",
+95: permission: "analytics.view",
+100: label: "Clientes",
+101: shortLabel: "Clientes",
+102: href: "/clientes",
+103: section: "management",
+104: permission: "customers.operate",
+109: label: "CatÃ¡logo",
+110: shortLabel: "CatÃ¡logo",
+111: href: "/operacion/catalogo",
+112: section: "management",
+113: permission: "catalog.manage",
+118: label: "Inventario",
+119: shortLabel: "Inv.",
+120: href: "/operacion/inventario/recepciones",
+121: section: "management",
+122: permission: "inventory.receipts.manage",
+127: label: "CampaÃ±as",
+128: shortLabel: "Camp.",
+129: href: "/campanas",
+130: section: "management",
+131: permission: "campaigns.manage",
+136: label: "Suscripciones",
+137: shortLabel: "Suscrip.",
+138: href: "/suscripciones",
+139: section: "management",
+140: permission: "subscriptions.manage",
+146: label: "Usuarios",
+147: shortLabel: "Usuarios",
+148: href: "/admin/usuarios",
+149: section: "administration",
+150: permission: "users.manage",
+155: export function getPlatformNavigation(
+158: return PLATFORM_NAVIGATION.filter((item) =>
+
+===== lib\operation-rbac.ts =====
+Lineas: 112
+3: export type OperationPermission =
+24: const PREPARATION_PERMISSIONS: readonly OperationPermission[] = [
+28: const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+40: const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
+41: ...CASHIER_PERMISSIONS,
+52: const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+53: ...ADMIN_PERMISSIONS,
+58: export const ROLE_PERMISSIONS: Readonly<
+59: Record<OperationRole, readonly OperationPermission[]>
+61: cashier: CASHIER_PERMISSIONS,
+62: admin: ADMIN_PERMISSIONS,
+63: superadmin: SUPERADMIN_PERMISSIONS,
+64: preparation: PREPARATION_PERMISSIONS,
+67: export function hasOperationPermission(
+69: permission: OperationPermission,
+71: return ROLE_PERMISSIONS[role].includes(permission);
+86: export function authorizeOperationSession(
+88: permission: OperationPermission,
+99: if (!hasOperationPermission(session.role, permission)) {
+
+===== components\platform\PlatformShell.tsx =====
+Lineas: 626
+4: import { usePathname, useRouter } from "next/navigation";
+13: import type { OperationRole } from "@/lib/operation-auth";
+16: getPlatformNavigation,
+17: getRoleLabel,
+19: type PlatformNavigationItem,
+20: type PlatformNavigationSection,
+21: } from "@/lib/platform-navigation";
+24: PlatformSessionProvider,
+25: type PlatformSession,
+26: } from "@/components/platform/PlatformSessionContext";
+28: type SessionPayload = {
+29: role?: OperationRole | null;
+34: type ShellSession = PlatformSession;
+37: children: ReactNode;
+40: const SECTION_ORDER: PlatformNavigationSection[] = [
+46: function isOperationRole(value: unknown): value is OperationRole {
+51: value === "preparation"
+55: function isActiveRoute(pathname: string, href: string): boolean {
+58: pathname === "/operacion/ventas" ||
+59: (pathname.startsWith("/operacion/ventas/") &&
+60: !pathname.startsWith("/operacion/ventas/nueva") &&
+61: !pathname.includes("/imprimir") &&
+62: !pathname.includes("/ticket"))
+68: pathname === "/operacion/inventario" ||
+69: pathname.startsWith("/operacion/inventario/stock") ||
+70: pathname.startsWith("/operacion/inventario/bachas") ||
+71: pathname.startsWith("/operacion/inventario/movimientos") ||
+72: pathname.startsWith("/operacion/inventario/ajustes")
+77: return pathname.startsWith("/operacion/inventario/recepciones");
+80: return pathname === href || pathname.startsWith(`${href}/`);
+83: function getBreadcrumbs(pathname: string): string[] {
+84: if (pathname === "/operacion") {
+88: if (pathname.startsWith("/operacion/ventas/nueva")) {
+92: if (pathname.startsWith("/operacion/cola")) {
+96: if (pathname.startsWith("/operacion/ventas")) {
+100: if (pathname.startsWith("/operacion/caja")) {
+104: if (pathname.startsWith("/operacion/inventario/recepciones")) {
+108: if (pathname.startsWith("/operacion/inventario/stock")) {
+112: if (pathname.startsWith("/operacion/inventario/bachas")) {
+116: if (pathname.startsWith("/operacion/inventario/movimientos")) {
+120: if (pathname.startsWith("/operacion/inventario/ajustes")) {
+124: if (pathname.startsWith("/operacion/inventario")) {
+128: if (pathname.startsWith("/operacion/catalogo")) {
+132: if (pathname.startsWith("/dashboard")) {
+136: if (pathname.startsWith("/clientes")) {
+140: if (pathname.startsWith("/campanas/")) {
+144: if (pathname.startsWith("/campanas")) {
+148: if (pathname.startsWith("/suscripciones")) {
+152: if (pathname.startsWith("/admin/usuarios")) {
+163: name: PlatformNavigationItem["icon"] | "logout" | "user";
+185: case "preparation":
+282: export default function PlatformShell({ children }: PlatformShellProps) {
+283: const pathname = usePathname();
+286: const [session, setSession] = useState<ShellSession | null>(null);
+287: const [sessionLoading, setSessionLoading] = useState(true);
+288: const [sessionUnavailable, setSessionUnavailable] = useState(false);
+295: async function loadSession() {
+297: const response = await fetch("/api/session", {
+305: router.replace("/admin/login");
+310: console.error("PLATFORM_SHELL_SESSION_UNAVAILABLE", {
+314: setSessionUnavailable(true);
+318: const data = (await response.json()) as SessionPayload;
+320: if (!isOperationRole(data.role)) {
+321: router.replace("/admin/login");
+325: setSession({
+326: role: data.role,
+330: setSessionUnavailable(false);
+334: console.error("PLATFORM_SHELL_SESSION_ERROR", error);
+335: setSessionUnavailable(true);
+338: setSessionLoading(false);
+343: void loadSession();
+350: const navigation = useMemo(
+351: () => (session ? getPlatformNavigation(session.role) : []),
+352: [session],
+355: const breadcrumbs = useMemo(() => getBreadcrumbs(pathname), [pathname]);
+358: const name = session?.displayName?.trim();
+368: }, [session?.displayName]);
+392: const isPreparationStation =
+393: pathname.startsWith("/operacion/cola") && session?.role === "preparation";
+396: if (!session || session.role !== "preparation") return;
+397: if (pathname.startsWith("/operacion/cola")) return;
+399: router.replace("/operacion/cola");
+400: }, [pathname, router, session]);
+402: if (sessionLoading) {
+410: if (session?.role === "preparation" && !isPreparationStation) {
+418: if (isPreparationStation && session) {
+420: <PlatformSessionProvider session={session}>
+422: {children}
+424: </PlatformSessionProvider>
+428: if (!session) {
+433: <PlatformSessionProvider session={session}>
+459: <nav className="h-[calc(100vh-3.5rem)] overflow-y-auto overflow-x-hidden py-3">
+461: const items = navigation.filter(
+477: const active = isActiveRoute(pathname, item.href);
+482: href={item.href}
+[LIMITE DE COINCIDENCIAS]
+
+===== app\operacion\layout.tsx =====
+Lineas: 15
+3: import PlatformShell from "@/components/platform/PlatformShell";
+10: children,
+12: children: React.ReactNode;
+14: return <PlatformShell>{children}</PlatformShell>;
+
+===== app\operacion\page.tsx =====
+Lineas: 554
+3: import Link from "next/link";
+4: import { useEffect, useMemo, useState } from "react";
+5: import AdminClienteDetalle from "./components/AdminClienteDetalle";
+6: import UltimosMovimientosCard from "./components/UltimosMovimientosCard";
+7: import OperacionSuscripcionActiva from "./components/OperacionSuscripcionActiva";
+8: import UltimosMovimientos from "./components/UltimosMovimientos";
+9: import OperationSummary from "../../components/operations/OperationSummary";
+10: import type {
+30: export default function OperacionPage() {
+44: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+45: const [cargandoRol, setCargandoRol] = useState(true);
+49: const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
+50: const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
+60: setMensajeSuscripcion("");
+67: void cargarSuscripcionActiva(customerId);
+71: async function cargarSuscripcionActiva(clienteId: number) {
+73: setCargandoSuscripcion(true);
+74: setMensajeSuscripcion("");
+77: `/api/subscriptions/active-by-client?clienteId=${clienteId}`,
+98: setCargandoSuscripcion(false);
+102: async function cargarFidelizacionCliente(clienteId: number) {
+107: const res = await fetch(`/api/operacion/customers/${clienteId}/loyalty`, {
+135: setCargandoRol(true);
+137: const res = await fetch("/api/session", {
+142: setRol(null);
+157: setRol(data.role || null);
+161: setCargandoRol(false);
+169: const res = await fetch("/api/operacion/clientes", {
+281: await fetch("/api/logout", {
+299: href="/"
+308: Gestión operativa de clientes, fidelización y suscripciones
+312: {cargandoRol
+313: ? "Cargando rol..."
+314: : `ROL: ${rol ?? "sin sesión"}`}
+327: <OperationSummary />
+331: href="/operacion/ventas/nueva"
+342: href="/operacion/cola"
+355: href="/operacion/ventas"
+366: href="/operacion/catalogo"
+377: href="/operacion/inventario"
+388: href="/operacion/caja"
+399: <UltimosMovimientosCard clientes={clientes} />
+511: <AdminClienteDetalle
+520: rol={rol}
+526: <OperacionSuscripcionActiva
+530: cargando={cargandoSuscripcion}
+531: onRefresh={() => cargarSuscripcionActiva(cliente.id)}
+532: onMensaje={setMensajeSuscripcion}
+538: <UltimosMovimientos clienteId={cliente.id} />
+541: {mensajeSuscripcion && (
+543: {mensajeSuscripcion}
+
+===== components\operations\OperationSummary.tsx =====
+Lineas: 145
+3: import { useEffect, useState } from "react";
+21: export default function OperationSummary() {
+31: return () => window.clearInterval(interval);
+34: async function cargarResumen() {
+36: const res = await fetch("/api/operacion/summary");
+55: return (
+63: return (
+70: if (!summary) return null;
+105: return (
+113: <h2 className="mt-1 text-xl font-black text-neutral-900">Hoy</h2>
+
+===== app\page.tsx =====
+Lineas: 110
+1: import Link from "next/link";
+46: export default function HomePage() {
+87: href={module.href}
+
+===== app\admin\page.tsx =====
+Lineas: 5
+1: import { redirect } from "next/navigation";
+3: export default function AdminRedirect() {
+4: redirect("/operacion");
+
+===== app\admin\login\page.tsx =====
+Lineas: 151
+3: import { useState } from "react";
+5: export default function AdminLoginPage() {
+21: const res = await fetch("/api/login", {
+41: data.role === "preparation" ? "/operacion/cola" : "/admin";
+44: data.role === "preparation"
+
+===== app\api\session\route.ts =====
+Lineas: 52
+3: getOperationSession,
+6: import { ROLE_PERMISSIONS } from "@/lib/operation-rbac";
+8: export async function GET() {
+10: const session = await getOperationSession();
+12: if (!session.ok) {
+18: { status: 401 },
+24: role: session.role,
+25: userId: session.userId,
+26: authUserId: session.authUserId,
+27: displayName: session.displayName,
+28: authSource: session.source,
+29: permissions: ROLE_PERMISSIONS[session.role],
+38: { status: 503 },
+42: console.error("Unexpected operational session error:", error);
+49: { status: 500 },
+
+===== RUTAS Y REFERENCIAS A DESTINOS DE ENTRADA =====
+app\page.tsx:8: href: "/operacion",
+app\activar-acceso\page.tsx:226: router.replace("/admin/login");
+app\activar-acceso\page.tsx:363: href="/admin/login"
+app\activar-cuenta\ActivarCuentaForm.tsx:55: router.replace(next);
+app\admin\page.tsx:3: export default function AdminRedirect() {
+app\admin\page.tsx:4: redirect("/operacion");
+app\admin\login\page.tsx:41: data.role === "preparation" ? "/operacion/cola" : "/admin";
+app\admin\usuarios\page.tsx:35: href="/operacion"
+app\admin\usuarios\UsersManagementClient.tsx:297: href="/operacion"
+app\campanas\page.tsx:153: href="/operacion"
+app\clientes\page.tsx:332: window.location.href = "/admin/login";
+app\dashboard\page.tsx:403: router.push("/admin/login");
+app\login\LoginForm.tsx:41: router.replace(next);
+app\login\LoginForm.tsx:72: router.replace(next);
+app\mi-cuenta\page.tsx:29: router.replace("/login?next=/mi-cuenta");
+app\mi-cuenta\page.tsx:90: onClick={() => router.push("/mi-cuenta/perfil")}
+app\mi-cuenta\page.tsx:103: onClick={() => router.push("/mi-cuenta/tarjeta")}
+app\mi-cuenta\page.tsx:116: onClick={() => router.push("/mi-cuenta/suscripciones")}
+app\mi-cuenta\components\ClienteLogoutButton.tsx:24: router.replace("/login");
+app\mi-cuenta\perfil\page.tsx:46: router.replace("/login?next=/mi-cuenta/perfil");
+app\mi-cuenta\perfil\page.tsx:151: onClick={() => router.push("/mi-cuenta")}
+app\mi-cuenta\perfil\page.tsx:187: onClick={() => router.push("/mi-cuenta")}
+app\mi-cuenta\tarjeta\page.tsx:58: router.replace("/login?next=/mi-cuenta/tarjeta");
+app\mi-cuenta\tarjeta\page.tsx:141: onClick={() => router.push("/mi-cuenta")}
+app\mi-cuenta\tarjeta\page.tsx:176: onClick={() => router.push("/mi-cuenta")}
+app\operacion\page.tsx:284: window.location.href = "/admin/login";
+app\operacion\page.tsx:331: href="/operacion/ventas/nueva"
+app\operacion\page.tsx:342: href="/operacion/cola"
+app\operacion\page.tsx:355: href="/operacion/ventas"
+app\operacion\inventario\recepciones\nueva\page.tsx:92: router.push(`/operacion/inventario/recepciones/${transactionId}`);
+app\operacion\inventario\recepciones\[transactionId]\page.tsx:489: router.push("/operacion/inventario/recepciones");
+app\operacion\ventas\imprimir\[saleId]\page.tsx:189: href="/operacion/ventas"
+app\operacion\ventas\imprimir-pack\[saleId]\page.tsx:207: href="/operacion/ventas/nueva"
+app\operacion\ventas\ticket\[saleId]\page.tsx:188: href="/operacion/ventas"
+app\register\page.tsx:117: router.push(
+app\restablecer-contrasena\page.tsx:53: router.replace("/login");
+app\suscripciones\page.tsx:376: router.push("/admin/login");
+app\verificar\page.tsx:35: [LINEA OMITIDA: posible informacion sensible]
+app\verificar-registro\page.tsx:35: router.replace(`/login?verified=1&email=${encodeURIComponent(data.correo || "")}`);
+components\platform\PlatformShell.tsx:56: if (href === "/operacion/ventas") {
+components\platform\PlatformShell.tsx:58: pathname === "/operacion/ventas" ||
+components\platform\PlatformShell.tsx:60: !pathname.startsWith("/operacion/ventas/nueva") &&
+components\platform\PlatformShell.tsx:84: if (pathname === "/operacion") {
+components\platform\PlatformShell.tsx:88: if (pathname.startsWith("/operacion/ventas/nueva")) {
+components\platform\PlatformShell.tsx:92: if (pathname.startsWith("/operacion/cola")) {
+components\platform\PlatformShell.tsx:96: if (pathname.startsWith("/operacion/ventas")) {
+components\platform\PlatformShell.tsx:305: router.replace("/admin/login");
+components\platform\PlatformShell.tsx:321: router.replace("/admin/login");
+components\platform\PlatformShell.tsx:388: window.location.href = "/admin/login";
+components\platform\PlatformShell.tsx:393: pathname.startsWith("/operacion/cola") && session?.role === "preparation";
+components\platform\PlatformShell.tsx:397: if (pathname.startsWith("/operacion/cola")) return;
+components\platform\PlatformShell.tsx:399: router.replace("/operacion/cola");
+lib\platform-navigation.ts:47: href: "/operacion/ventas/nueva",
+lib\platform-navigation.ts:56: href: "/operacion/cola",
+lib\platform-navigation.ts:65: href: "/operacion/ventas",
+Coincidencias totales registradas: 55
+
+===== ARCHIVOS EXISTENTES DE DESTINO =====
+app\operacion\resumen\page.tsx: False
+app\operacion\pos\page.tsx: False
+app\operacion\preparacion\page.tsx: False
+docs\DEV-UX-ARCH-01.9_MASTER_PLAN.md: True
+docs\STATUS_PACK.md: True

@@ -1,0 +1,271 @@
+﻿DEV-UX-ARCH-01.9 - RADIOGRAFIA RESIDUAL
+Fecha: 2026-10-21 21:58:37
+
+=== 1. ESTADO GIT ===
+?? P0.25A_AUDITORIA_LIMPIEZA.txt
+
+=== 2. RUTAS FRONTEND ===
+app\activar-acceso\page.tsx
+app\activar-cuenta\page.tsx
+app\admin\login\page.tsx
+app\admin\page.tsx
+app\admin\usuarios\page.tsx
+app\campanas\[id]\page.tsx
+app\campanas\page.tsx
+app\clientes\page.tsx
+app\dashboard\page.tsx
+app\login\page.tsx
+app\mi-cuenta\page.tsx
+app\mi-cuenta\perfil\page.tsx
+app\mi-cuenta\suscripciones\page.tsx
+app\mi-cuenta\tarjeta\page.tsx
+app\operacion\caja\cierre\[sessionId]\imprimir\page.tsx
+app\operacion\caja\page.tsx
+app\operacion\catalogo\page.tsx
+app\operacion\cola\page.tsx
+app\operacion\imprimir\mensaje\page.tsx
+app\operacion\inventario\ajustes\page.tsx
+app\operacion\inventario\bachas\page.tsx
+app\operacion\inventario\movimientos\page.tsx
+app\operacion\inventario\page.tsx
+app\operacion\inventario\recepciones\[transactionId]\page.tsx
+app\operacion\inventario\recepciones\nueva\page.tsx
+app\operacion\inventario\recepciones\page.tsx
+app\operacion\inventario\stock\page.tsx
+app\operacion\page.tsx
+app\operacion\ventas\imprimir\[saleId]\page.tsx
+app\operacion\ventas\imprimir-pack\[saleId]\page.tsx
+app\operacion\ventas\nueva\page.tsx
+app\operacion\ventas\page.tsx
+app\operacion\ventas\ticket\[saleId]\page.tsx
+app\page.tsx
+app\recuperar-contrasena\page.tsx
+app\register\page.tsx
+app\registro\page.tsx
+app\restablecer-contrasena\page.tsx
+app\suscripciones\page.tsx
+app\t\[id]\page.tsx
+app\tarjeta\page.tsx
+app\terminos\page.tsx
+app\verificar\page.tsx
+app\verificar-registro\page.tsx
+
+=== 3. RUTAS API ===
+app\api\activar-cuenta\route.ts
+app\api\admin\campanas\cancelar\route.ts
+app\api\admin\campanas\ejecutar\route.ts
+app\api\admin\campanas\expirar\route.ts
+app\api\admin\campanas\lanzar\route.ts
+app\api\admin\campanas\programar-lanzamiento\route.ts
+app\api\admin\users\[id]\invite\route.ts
+app\api\admin\users\[id]\route.ts
+app\api\admin\users\route.ts
+app\api\catalogo\options\route.ts
+app\api\catalogo\products\channels\route.ts
+app\api\catalogo\products\inventory-consumption\route.ts
+app\api\catalogo\products\inventory-mappings\route.ts
+app\api\catalogo\products\inventory-variants\route.ts
+app\api\catalogo\products\manage\route.ts
+app\api\catalogo\products\option-prices\route.ts
+app\api\catalogo\products\prices\route.ts
+app\api\catalogo\products\route.ts
+app\api\catalogo\products\status\route.ts
+app\api\catalogo\products\structural-option\route.ts
+app\api\catalogo\route.ts
+app\api\clientes\register-card\route.ts
+app\api\clientes\search\route.ts
+app\api\cron\campanas\route.ts
+app\api\daily-crm\route.ts
+app\api\dashboard\campanas\route.ts
+app\api\dashboard\overview\route.ts
+app\api\email-dispatch\route.ts
+app\api\login\route.ts
+app\api\logout\route.ts
+app\api\mi-cuenta\loyalty\route.ts
+app\api\operacion\caja\cierre\preview\route.ts
+app\api\operacion\caja\cierre\route.ts
+app\api\operacion\caja\cierres\[id]\route.ts
+app\api\operacion\caja\cierres\route.ts
+app\api\operacion\caja\comprobante\route.ts
+app\api\operacion\caja\movimientos\route.ts
+app\api\operacion\caja\route.ts
+app\api\operacion\campanas\[id]\route.ts
+app\api\operacion\campanas\route.ts
+app\api\operacion\catalogo\route.ts
+app\api\operacion\clientes\route.ts
+app\api\operacion\customers\[customerId]\loyalty\route.ts
+app\api\operacion\inventario\ajustes\route.ts
+app\api\operacion\inventario\bachas\route.ts
+app\api\operacion\inventario\movimientos\route.ts
+app\api\operacion\inventario\recepciones\post\route.ts
+app\api\operacion\inventario\recepciones\route.ts
+app\api\operacion\inventario\stock\route.ts
+app\api\operacion\orders\route.ts
+app\api\operacion\orders\status\route.ts
+app\api\operacion\sales\[id]\route.ts
+app\api\operacion\sales\customer\route.ts
+app\api\operacion\sales\document\route.ts
+app\api\operacion\sales\export\route.ts
+app\api\operacion\sales\route.ts
+app\api\operacion\summary\route.ts
+app\api\password\recovery\route.ts
+app\api\recover-card\route.ts
+app\api\register\route.ts
+app\api\register\verify\route.ts
+app\api\reminder-expiring-rewards\route.ts
+app\api\resend-verification\route.ts
+app\api\send-campana-email\route.ts
+app\api\send-prize\route.ts
+app\api\send-reward-redeemed\route.ts
+app\api\send-stamp\route.ts
+app\api\send-verification\route.ts
+app\api\send-welcome\route.ts
+app\api\session\route.ts
+app\api\subscriptions\activate-assigned\route.ts
+app\api\subscriptions\active-by-client\route.ts
+app\api\subscriptions\consumptions-by-client\route.ts
+app\api\subscriptions\create-assigned\route.ts
+app\api\subscriptions\create-code\route.ts
+app\api\subscriptions\create-template\route.ts
+app\api\subscriptions\delete\route.ts
+app\api\subscriptions\delete-claim\route.ts
+app\api\subscriptions\redeem-code\route.ts
+app\api\subscriptions\register-consumption\route.ts
+app\api\subscriptions\route.ts
+app\api\verify-email\route.ts
+
+=== 4. COMPONENTES DE NAVEGACION Y RBAC ===
+--- PATRON: PlatformShell ---
+app\admin\usuarios\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\admin\usuarios\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+app\campanas\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\campanas\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+app\clientes\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\clientes\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+app\dashboard\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\dashboard\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+app\operacion\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\operacion\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+app\suscripciones\layout.tsx:3: import PlatformShell from "@/components/platform/PlatformShell";
+app\suscripciones\layout.tsx:14: return <PlatformShell>{children}</PlatformShell>;
+components\platform\PlatformShell.tsx:36: type PlatformShellProps = {
+components\platform\PlatformShell.tsx:282: export default function PlatformShell({ children }: PlatformShellProps) {
+
+--- PATRON: campaigns.manage ---
+app\api\admin\campanas\cancelar\route.ts:12: "campaigns.manage",
+app\api\admin\campanas\ejecutar\route.ts:23: "campaigns.manage",
+app\api\admin\campanas\lanzar\route.ts:12: "campaigns.manage",
+app\api\admin\campanas\programar-lanzamiento\route.ts:12: "campaigns.manage",
+app\api\dashboard\campanas\route.ts:12: "campaigns.manage",
+app\api\operacion\campanas\route.ts:13: "campaigns.manage",
+app\api\operacion\campanas\[id]\route.ts:12: "campaigns.manage",
+lib\operation-rbac.ts:17: | "campaigns.manage"
+lib\operation-rbac.ts:46: "campaigns.manage",
+lib\platform-navigation.ts:131: permission: "campaigns.manage",
+
+--- PATRON: analytics.view ---
+app\api\dashboard\overview\route.ts:92: const authorization = authorizeOperationSession(session, "analytics.view");
+lib\operation-rbac.ts:21: | "analytics.view"
+lib\operation-rbac.ts:48: "analytics.view",
+lib\platform-navigation.ts:95: permission: "analytics.view",
+
+--- PATRON: customers.manage ---
+
+--- PATRON: subscriptions.manage ---
+app\api\subscriptions\route.ts:12: "subscriptions.manage",
+app\api\subscriptions\create-assigned\route.ts:114: "subscriptions.manage",
+app\api\subscriptions\create-code\route.ts:119: "subscriptions.manage",
+app\api\subscriptions\create-template\route.ts:11: "subscriptions.manage",
+lib\operation-rbac.ts:19: | "subscriptions.manage"
+lib\operation-rbac.ts:47: "subscriptions.manage",
+lib\platform-navigation.ts:140: permission: "subscriptions.manage",
+
+--- PATRON: superadmin ---
+app\activar-acceso\page.tsx:357: Pide a un superadministrador que reenvíe tu invitación desde Gestión de Usuarios.
+app\admin\usuarios\UsersManagementClient.tsx:6: type Role = "cashier" | "admin" | "superadmin" | "preparation";
+app\admin\usuarios\UsersManagementClient.tsx:35: superadmin: "Superadmin",
+app\admin\usuarios\UsersManagementClient.tsx:277: Superadmin
+app\admin\usuarios\UsersManagementClient.tsx:402: <option value="superadmin">Superadmin</option>
+app\admin\usuarios\UsersManagementClient.tsx:513: <option value="superadmin">Superadmin</option>
+app\api\admin\campanas\expirar\route.ts:83: if (operationalUser.role !== "superadmin") {
+app\api\admin\campanas\lanzar\route.ts:164: creado_por: creadoPor || "superadmin",
+app\api\admin\users\route.ts:8: const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
+app\api\admin\users\[id]\route.ts:7: const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
+app\api\admin\users\[id]\route.ts:87: if (isSelf && role !== "superadmin") {
+app\api\admin\users\[id]\route.ts:91: message: "No puedes quitarte a ti mismo el rol superadmin.",
+app\api\admin\users\[id]\route.ts:107: if (target.role === "superadmin" && (role !== "superadmin" || !isActive)) {
+app\api\admin\users\[id]\route.ts:111: .eq("role", "superadmin")
+app\api\admin\users\[id]\route.ts:115: console.error("Error counting superadmins:", countError);
+app\api\admin\users\[id]\route.ts:118: { ok: false, message: "No se pudo validar la regla de superadmin." },
+app\api\admin\users\[id]\route.ts:128: "Debe existir al menos un superadmin activo en la plataforma.",
+app\api\login\route.ts:43: role: "cashier" | "admin" | "superadmin" | "preparation";
+app\api\subscriptions\create-assigned\route.ts:246: created_by_admin: "superadmin",
+app\api\subscriptions\create-code\route.ts:251: created_by_admin: "superadmin",
+app\api\subscriptions\create-template\route.ts:62: operationalUser.role !== "superadmin"
+app\api\subscriptions\delete\route.ts:92: if (operationalUser.role !== "superadmin") {
+app\api\subscriptions\delete\route.ts:96: message: "Solo el superadmin puede eliminar suscripciones.",
+app\api\subscriptions\delete-claim\route.ts:92: if (operationalUser.role !== "superadmin") {
+app\api\subscriptions\delete-claim\route.ts:96: message: "Solo el superadmin puede eliminar claims.",
+app\campanas\page.tsx:51: if (rol !== "admin" && rol !== "superadmin") {
+app\campanas\page.tsx:91: creadoPor: "superadmin",
+app\campanas\page.tsx:130: if (rol !== "admin" && rol !== "superadmin") {
+app\clientes\page.tsx:47: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+app\operacion\page.tsx:44: const [rol, setRol] = useState<"admin" | "superadmin" | null>(null);
+app\operacion\components\AdminClienteDetalle.tsx:27: rol: "admin" | "superadmin" | null;
+app\operacion\components\AdminClienteDetalle.tsx:260: {mostrarAccionesAdministrativas && rol === "superadmin" && (
+app\suscripciones\page.tsx:474: {rol === "superadmin" && (
+app\suscripciones\page.tsx:527: {rol === "superadmin" && (
+components\documents\CashClosingReceipt80mm.tsx:38: if (role === "superadmin") {
+components\documents\CashClosingReceipt80mm.tsx:39: return "Superadmin";
+components\inventory\InventoryMovementHistory.tsx:60: * Un rol como admin/superadmin se muestra completo.
+components\platform\PlatformShell.tsx:50: value === "superadmin" ||
+lib\operation-auth.ts:5: export type OperationRole = "cashier" | "admin" | "superadmin" | "preparation";
+lib\operation-auth.ts:56: value === "superadmin" ||
+lib\operation-rbac.ts:52: const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+lib\operation-rbac.ts:63: superadmin: SUPERADMIN_PERMISSIONS,
+lib\platform-navigation.ts:169: case "superadmin":
+lib\platform-navigation.ts:170: return "Superadmin";
+
+--- PATRON: cashier ---
+app\admin\usuarios\UsersManagementClient.tsx:6: type Role = "cashier" | "admin" | "superadmin" | "preparation";
+app\admin\usuarios\UsersManagementClient.tsx:33: cashier: "Cashier",
+app\admin\usuarios\UsersManagementClient.tsx:64: const [role, setRole] = useState<Role>("cashier");
+app\admin\usuarios\UsersManagementClient.tsx:114: setRole("cashier");
+app\admin\usuarios\UsersManagementClient.tsx:400: <option value="cashier">Cajer@</option>
+app\admin\usuarios\UsersManagementClient.tsx:511: <option value="cashier">Cajer@</option>
+app\api\admin\users\route.ts:8: const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
+app\api\admin\users\[id]\route.ts:7: const VALID_ROLES = new Set(["cashier", "admin", "superadmin", "preparation"]);
+app\api\login\route.ts:43: role: "cashier" | "admin" | "superadmin" | "preparation";
+components\documents\CashClosingReceipt80mm.tsx:46: if (role === "cashier") {
+components\platform\PlatformShell.tsx:48: value === "cashier" ||
+lib\operation-auth.ts:5: export type OperationRole = "cashier" | "admin" | "superadmin" | "preparation";
+lib\operation-auth.ts:54: value === "cashier" ||
+lib\operation-rbac.ts:28: const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+lib\operation-rbac.ts:41: ...CASHIER_PERMISSIONS,
+lib\operation-rbac.ts:61: cashier: CASHIER_PERMISSIONS,
+lib\platform-navigation.ts:165: case "cashier":
+
+=== 5. ANALYTICS: ARCHIVOS Y REFERENCIAS ===
+app\api\dashboard\campanas\route.ts
+app\api\dashboard\overview\route.ts
+app\dashboard\layout.tsx
+app\dashboard\page.tsx
+
+=== 6. REFERENCIAS A RUTAS HEREDADAS ===
+--- "/operacion" ---
+app\page.tsx:8: href: "/operacion",
+app\admin\page.tsx:4: redirect("/operacion");
+app\admin\usuarios\page.tsx:35: href="/operacion"
+app\admin\usuarios\UsersManagementClient.tsx:297: href="/operacion"
+app\campanas\page.tsx:153: href="/operacion"
+components\platform\PlatformShell.tsx:84: if (pathname === "/operacion") {
+
+--- "/operacion/clientes" ---
+
+--- "/operacion/campanas" ---
+
+--- "/operacion/suscripciones" ---
+
+--- "/nueva-venta" ---
+
+=== FIN DE RADIOGRAFIA ===

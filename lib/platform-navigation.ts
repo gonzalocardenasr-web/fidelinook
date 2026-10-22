@@ -17,6 +17,7 @@ export type PlatformNavigationItem = {
   section: PlatformNavigationSection;
   permission: OperationPermission;
   icon:
+    | "summary"
     | "pos"
     | "preparation"
     | "history"
@@ -40,6 +41,15 @@ export const PLATFORM_SECTION_LABELS: Record<
 };
 
 const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
+  {
+    id: "operation-summary",
+    label: "Resumen Operativo",
+    shortLabel: "Resumen",
+    href: "/operacion/resumen",
+    section: "operation",
+    permission: "operation.summary.view",
+    icon: "summary",
+  },
   {
     id: "pos",
     label: "POS",
