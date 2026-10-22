@@ -108,8 +108,10 @@ export async function GET() {
   let newCustomers: number;
   let stampsIssued: number;
   let expiringRewards: number;
+  let rewardsIssued: number;
+  let rewardsRedeemed: number;
   try {
-    const [customersToday, positiveMovements, rewardsSoon] = await Promise.all([
+    const [customersToday, positiveMovements, rewardsSoon, issuedToday, redeemedToday] = await Promise.all([
       fetchAllRows<{ id: number }>((from, to) =>
         supabaseAdmin.from("clientes").select("id")
           .gte("created_At", startOfDay).lt("created_At", startOfTomorrow)
@@ -126,10 +128,21 @@ export async function GET() {
           .gte("expires_at", new Date().toISOString())
           .lt("expires_at", new Date(Date.now() + 6 * 86400000).toISOString())
           .order("expires_at", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .gte("issued_at", startOfDay).lt("issued_at", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .eq("status", "redeemed")
+          .gte("redeemed_at", startOfDay).lt("redeemed_at", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
     ]);
     newCustomers = customersToday.length;
     stampsIssued = positiveMovements.reduce((sum, movement) => sum + Number(movement.stamp_delta || 0), 0);
     expiringRewards = rewardsSoon.length;
+    rewardsIssued = issuedToday.length;
+    rewardsRedeemed = redeemedToday.length;
   } catch (error) {
     console.error("OPERATION_SUMMARY_LOYALTY_METRICS_ERROR", error);
     return NextResponse.json({ ok: false, message: "No se pudieron calcular los indicadores de fidelización." }, { status: 500 });
@@ -166,6 +179,8 @@ export async function GET() {
       newCustomers,
       stampsIssued,
       expiringRewards,
+      rewardsIssued,
+      rewardsRedeemed,
       pendingOrders,
       preparingOrders,
       readyOrders,

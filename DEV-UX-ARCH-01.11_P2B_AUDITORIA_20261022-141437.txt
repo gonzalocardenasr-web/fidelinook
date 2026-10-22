@@ -1,0 +1,4047 @@
+DEV-UX-ARCH-01.11 P2B - AUDITORIA SOLO LECTURA
+Fecha: 2026-10-22 14:14:37
+No exporta datos de clientes ni variables de entorno.
+
+===== app\api\admin\campanas\expirar\route.ts (148 lineas; 1 coincidencias) =====
+--- coincidencia en linea 115 ---
+112:       );
+113:     }
+114: 
+115:     const { data, error } = await supabaseAdmin.rpc("expire_customer_rewards", {
+116:       p_customer_id: null,
+117:       p_actor_role: session.role,
+118:       p_actor_identifier: String(session.userId),
+119:     });
+120: 
+
+===== app\api\daily-crm\route.ts (505 lineas; 8 coincidencias) =====
+--- coincidencia en linea 30 ---
+27: 
+28: type PositiveMovementRow = {
+29:   customer_id: number;
+30:   stamp_delta: number;
+31:   occurred_at: string;
+32: };
+33: 
+34: const META_SELLOS = 7;
+35: const VENTANA_PREMIO_DIAS = 6;
+--- coincidencia en linea 188 ---
+185:      * más abajo se filtran exclusivamente los hitos T-5 y T-1.
+186:      */
+187:     const { data: rewardsData, error: rewardsError } = await supabaseAdmin
+188:       .from("customer_rewards")
+189:       .select("id, customer_id, name, status, expires_at")
+190:       .eq("status", "active")
+191:       .not("expires_at", "is", null)
+192:       .gte("expires_at", ahora.toISOString())
+193:       .lte("expires_at", limitePremios.toISOString())
+--- coincidencia en linea 214 ---
+211:     /*
+212:      * Último movimiento que realmente aumentó el saldo.
+213:      *
+214:      * stamp_delta > 0 cubre:
+215:      * - sale_credit
+216:      * - promotion_credit
+217:      * - manual_credit
+218:      * - opening_balance
+219:      * - otros créditos canónicos positivos
+--- coincidencia en linea 225 ---
+222:      * a una reversa, conversión, débito o cualquier otro movimiento.
+223:      */
+224:     const { data: movementsData, error: movementsError } = await supabaseAdmin
+225:       .from("loyalty_movements")
+226:       .select("customer_id, stamp_delta, occurred_at")
+227:       .gt("stamp_delta", 0)
+228:       .order("occurred_at", { ascending: false });
+229: 
+230:     if (movementsError) {
+--- coincidencia en linea 226 ---
+223:      */
+224:     const { data: movementsData, error: movementsError } = await supabaseAdmin
+225:       .from("loyalty_movements")
+226:       .select("customer_id, stamp_delta, occurred_at")
+227:       .gt("stamp_delta", 0)
+228:       .order("occurred_at", { ascending: false });
+229: 
+230:     if (movementsError) {
+231:       console.error(
+--- coincidencia en linea 227 ---
+224:     const { data: movementsData, error: movementsError } = await supabaseAdmin
+225:       .from("loyalty_movements")
+226:       .select("customer_id, stamp_delta, occurred_at")
+227:       .gt("stamp_delta", 0)
+228:       .order("occurred_at", { ascending: false });
+229: 
+230:     if (movementsError) {
+231:       console.error(
+232:         "Error cargando movimientos positivos para Daily CRM:",
+--- coincidencia en linea 480 ---
+477:       dryRun,
+478:       sourceOfTruth: {
+479:         balances: "loyalty_accounts",
+480:         rewards: "customer_rewards",
+481:         lastStampCredit: "loyalty_movements",
+482:         reminderControl: "clientes.fecha_ultimo_recordatorio_inactividad",
+483:       },
+484:       resumen: {
+485:         clientesEvaluados: customers.length,
+--- coincidencia en linea 481 ---
+478:       sourceOfTruth: {
+479:         balances: "loyalty_accounts",
+480:         rewards: "customer_rewards",
+481:         lastStampCredit: "loyalty_movements",
+482:         reminderControl: "clientes.fecha_ultimo_recordatorio_inactividad",
+483:       },
+484:       resumen: {
+485:         clientesEvaluados: customers.length,
+486:         premiosPorVencerEncolados: premiosEncolados.length,
+
+===== app\api\operacion\orders\status\route.ts (867 lineas; 1 coincidencias) =====
+--- coincidencia en linea 585 ---
+582:                   } else {
+583:                     const { data: issuedRewards, error: rewardsError } =
+584:                       await supabaseAdmin
+585:                         .from("customer_rewards")
+586:                         .select(
+587:                           `
+588:                           id,
+589:                           name,
+590:                           expires_at
+
+===== app\api\operacion\sales\customer\route.ts (572 lineas; 5 coincidencias) =====
+--- coincidencia en linea 19 ---
+16: type LoyaltyConversionResult = {
+17:   converted?: boolean;
+18:   rewards_issued?: number;
+19:   reward_ids?: number[];
+20:   balance_after?: number;
+21:   reason?: string | null;
+22: };
+23: 
+24: type AssignCustomerWithLoyaltyResult = {
+--- coincidencia en linea 118 ---
+115:      * - recalcular cliente nuevo;
+116:      * - materializar crédito si corresponde;
+117:      * - convertir sellos en premios;
+118:      * - verificar pending_stamp_delta = 0.
+119:      *
+120:      * Si algo falla, PostgreSQL revierte TODO.
+121:      * =========================================================
+122:      */
+123: 
+--- coincidencia en linea 246 ---
+243: 
+244:       const rewardsIssued = Number(conversion?.rewards_issued ?? 0);
+245: 
+246:       const rewardIds = Array.isArray(conversion?.reward_ids)
+247:         ? conversion.reward_ids
+248:             .map((value) => Number(value))
+249:             .filter((value) => Number.isInteger(value) && value > 0)
+250:         : [];
+251: 
+--- coincidencia en linea 247 ---
+244:       const rewardsIssued = Number(conversion?.rewards_issued ?? 0);
+245: 
+246:       const rewardIds = Array.isArray(conversion?.reward_ids)
+247:         ? conversion.reward_ids
+248:             .map((value) => Number(value))
+249:             .filter((value) => Number.isInteger(value) && value > 0)
+250:         : [];
+251: 
+252:       const rewardWasIssued =
+--- coincidencia en linea 291 ---
+288:           } else {
+289:             const { data: issuedRewards, error: rewardsError } =
+290:               await supabaseAdmin
+291:                 .from("customer_rewards")
+292:                 .select(
+293:                   `
+294:                   id,
+295:                   name,
+296:                   expires_at
+
+===== app\api\operacion\sales\route.ts (1605 lineas; 1 coincidencias) =====
+--- coincidencia en linea 1396 ---
+1393:         p_manual_discount_value: manualDiscountValue,
+1394:         p_manual_discount_reason: manualDiscountReason,
+1395:         p_manual_discount_notes: manualDiscountNotes,
+1396:         p_reward_id: rewardId,
+1397:         p_actor_identifier: null,
+1398:       },
+1399:     );
+1400: 
+1401:     const rpcDurationMs = performance.now() - rpcStartedAt;
+
+===== app\api\operacion\summary\route.ts (175 lineas; 5 coincidencias) =====
+--- coincidencia en linea 117 ---
+114:         supabaseAdmin.from("clientes").select("id")
+115:           .gte("created_At", startOfDay).lt("created_At", startOfTomorrow)
+116:           .order("id", { ascending: true }).range(from, to)),
+117:       fetchAllRows<{ stamp_delta: number }>((from, to) =>
+118:         supabaseAdmin.from("loyalty_movements").select("stamp_delta")
+119:           .gt("stamp_delta", 0)
+120:           .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+121:           .order("occurred_at", { ascending: true }).range(from, to)),
+122:       fetchAllRows<{ id: number }>((from, to) =>
+--- coincidencia en linea 118 ---
+115:           .gte("created_At", startOfDay).lt("created_At", startOfTomorrow)
+116:           .order("id", { ascending: true }).range(from, to)),
+117:       fetchAllRows<{ stamp_delta: number }>((from, to) =>
+118:         supabaseAdmin.from("loyalty_movements").select("stamp_delta")
+119:           .gt("stamp_delta", 0)
+120:           .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+121:           .order("occurred_at", { ascending: true }).range(from, to)),
+122:       fetchAllRows<{ id: number }>((from, to) =>
+123:         supabaseAdmin.from("customer_rewards").select("id")
+--- coincidencia en linea 119 ---
+116:           .order("id", { ascending: true }).range(from, to)),
+117:       fetchAllRows<{ stamp_delta: number }>((from, to) =>
+118:         supabaseAdmin.from("loyalty_movements").select("stamp_delta")
+119:           .gt("stamp_delta", 0)
+120:           .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+121:           .order("occurred_at", { ascending: true }).range(from, to)),
+122:       fetchAllRows<{ id: number }>((from, to) =>
+123:         supabaseAdmin.from("customer_rewards").select("id")
+124:           .eq("status", "active")
+--- coincidencia en linea 123 ---
+120:           .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+121:           .order("occurred_at", { ascending: true }).range(from, to)),
+122:       fetchAllRows<{ id: number }>((from, to) =>
+123:         supabaseAdmin.from("customer_rewards").select("id")
+124:           .eq("status", "active")
+125:           .not("expires_at", "is", null)
+126:           .gte("expires_at", new Date().toISOString())
+127:           .lt("expires_at", new Date(Date.now() + 6 * 86400000).toISOString())
+128:           .order("expires_at", { ascending: true }).range(from, to)),
+--- coincidencia en linea 131 ---
+128:           .order("expires_at", { ascending: true }).range(from, to)),
+129:     ]);
+130:     newCustomers = customersToday.length;
+131:     stampsIssued = positiveMovements.reduce((sum, movement) => sum + Number(movement.stamp_delta || 0), 0);
+132:     expiringRewards = rewardsSoon.length;
+133:   } catch (error) {
+134:     console.error("OPERATION_SUMMARY_LOYALTY_METRICS_ERROR", error);
+135:     return NextResponse.json({ ok: false, message: "No se pudieron calcular los indicadores de fidelización." }, { status: 500 });
+136:   }
+
+===== app\api\send-reward-redeemed\route.ts (136 lineas; 3 coincidencias) =====
+--- coincidencia en linea 101 ---
+98: 
+99:     const queuedEmail = await enqueueEmail({
+100:       recipientEmail: email,
+101:       emailType: "REWARD_REDEEMED",
+102:       priority: 1,
+103:       idempotencyKey,
+104:       payload: {
+105:         nombre,
+106:         premioNombre,
+--- coincidencia en linea 113 ---
+110:         Number.isInteger(Number(customerId)) && Number(customerId) > 0
+111:           ? Number(customerId)
+112:           : null,
+113:       sourceType: "reward_redeemed",
+114:       sourceReference: sourceReference != null ? String(sourceReference) : null,
+115:       maxAttempts: 5,
+116:     });
+117: 
+118:     const dispatchResult = await dispatchQueuedEmailById(queuedEmail.id);
+--- coincidencia en linea 127 ---
+124:       queueId: queuedEmail.id,
+125:     });
+126:   } catch (error) {
+127:     console.error("Error en /api/send-reward-redeemed:", error);
+128: 
+129:     return NextResponse.json(
+130:       {
+131:         error: "No se pudo registrar el correo de canje.",
+132:       },
+
+===== app\mi-cuenta\tarjeta\page.tsx (401 lineas; 2 coincidencias) =====
+--- coincidencia en linea 107 ---
+104: 
+105:   const premiosActivos = cliente?.loyalty?.activeRewards ?? [];
+106: 
+107:   const premiosUsados = cliente?.loyalty?.redeemedRewards ?? [];
+108: 
+109:   const premiosCaducados = cliente?.loyalty?.expiredRewards ?? [];
+110: 
+111:   const sellos = cliente?.loyalty?.currentStampBalance ?? 0;
+112:   const faltantes = Math.max(META_SELLOS - sellos, 0);
+--- coincidencia en linea 345 ---
+342:                         </p>
+343:                         <p className="text-sm text-neutral-600">
+344:                           Canjeado:{" "}
+345:                           {formatearFecha(premio.redeemedAt ?? undefined)}
+346:                         </p>
+347:                       </div>
+348:                     ))}
+349:                   </div>
+350:                 )}
+
+===== app\operacion\components\AdminClienteDetalle.tsx (285 lineas; 6 coincidencias) =====
+--- coincidencia en linea 49 ---
+46:   if (!cliente) return null;
+47: 
+48:   const sellos = loyalty?.currentStampBalance ?? 0;
+49:   const premiosUsados = loyalty?.redeemedRewards.length ?? 0;
+50: 
+51:   const ultimoCanje = loyalty?.redeemedRewards.reduce<string | null>(
+52:     (fechaMasReciente, premio) => {
+53:       if (!premio.redeemedAt) return fechaMasReciente;
+54: 
+--- coincidencia en linea 51 ---
+48:   const sellos = loyalty?.currentStampBalance ?? 0;
+49:   const premiosUsados = loyalty?.redeemedRewards.length ?? 0;
+50: 
+51:   const ultimoCanje = loyalty?.redeemedRewards.reduce<string | null>(
+52:     (fechaMasReciente, premio) => {
+53:       if (!premio.redeemedAt) return fechaMasReciente;
+54: 
+55:       if (!fechaMasReciente) return premio.redeemedAt;
+56: 
+--- coincidencia en linea 53 ---
+50: 
+51:   const ultimoCanje = loyalty?.redeemedRewards.reduce<string | null>(
+52:     (fechaMasReciente, premio) => {
+53:       if (!premio.redeemedAt) return fechaMasReciente;
+54: 
+55:       if (!fechaMasReciente) return premio.redeemedAt;
+56: 
+57:       return new Date(premio.redeemedAt).getTime() >
+58:         new Date(fechaMasReciente).getTime()
+--- coincidencia en linea 55 ---
+52:     (fechaMasReciente, premio) => {
+53:       if (!premio.redeemedAt) return fechaMasReciente;
+54: 
+55:       if (!fechaMasReciente) return premio.redeemedAt;
+56: 
+57:       return new Date(premio.redeemedAt).getTime() >
+58:         new Date(fechaMasReciente).getTime()
+59:         ? premio.redeemedAt
+60:         : fechaMasReciente;
+--- coincidencia en linea 57 ---
+54: 
+55:       if (!fechaMasReciente) return premio.redeemedAt;
+56: 
+57:       return new Date(premio.redeemedAt).getTime() >
+58:         new Date(fechaMasReciente).getTime()
+59:         ? premio.redeemedAt
+60:         : fechaMasReciente;
+61:     },
+62:     null,
+--- coincidencia en linea 59 ---
+56: 
+57:       return new Date(premio.redeemedAt).getTime() >
+58:         new Date(fechaMasReciente).getTime()
+59:         ? premio.redeemedAt
+60:         : fechaMasReciente;
+61:     },
+62:     null,
+63:   );
+64: 
+
+===== components\client\ClienteSelector.tsx (222 lineas; 2 coincidencias) =====
+--- coincidencia en linea 11 ---
+8:   rewardType: string;
+9:   name: string;
+10:   description: string | null;
+11:   status: "active" | "redeemed" | "expired" | "cancelled";
+12:   issuedAt: string;
+13:   expiresAt: string | null;
+14:   redeemedAt: string | null;
+15:   cancelledAt: string | null;
+16:   campaignId: number | null;
+--- coincidencia en linea 14 ---
+11:   status: "active" | "redeemed" | "expired" | "cancelled";
+12:   issuedAt: string;
+13:   expiresAt: string | null;
+14:   redeemedAt: string | null;
+15:   cancelledAt: string | null;
+16:   campaignId: number | null;
+17:   rewardProductId: number | null;
+18:   source: string;
+19:   sourceReference: string | null;
+
+===== database\healthchecks\loyalty_integrity_audit.sql (291 lineas; 14 coincidencias) =====
+--- coincidencia en linea 8 ---
+5: ledger AS (
+6:   SELECT
+7:     customer_id,
+8:     COALESCE(SUM(stamp_delta), 0)::integer AS ledger_balance,
+9:     COALESCE(
+10:       SUM(CASE WHEN stamp_delta > 0 THEN stamp_delta ELSE 0 END),
+11:       0
+12:     )::integer AS ledger_earned,
+13:     ABS(
+--- coincidencia en linea 10 ---
+7:     customer_id,
+8:     COALESCE(SUM(stamp_delta), 0)::integer AS ledger_balance,
+9:     COALESCE(
+10:       SUM(CASE WHEN stamp_delta > 0 THEN stamp_delta ELSE 0 END),
+11:       0
+12:     )::integer AS ledger_earned,
+13:     ABS(
+14:       COALESCE(
+15:         SUM(CASE WHEN stamp_delta < 0 THEN stamp_delta ELSE 0 END),
+--- coincidencia en linea 15 ---
+12:     )::integer AS ledger_earned,
+13:     ABS(
+14:       COALESCE(
+15:         SUM(CASE WHEN stamp_delta < 0 THEN stamp_delta ELSE 0 END),
+16:         0
+17:       )
+18:     )::integer AS ledger_reversed
+19:   FROM public.loyalty_movements
+20:   GROUP BY customer_id
+--- coincidencia en linea 19 ---
+16:         0
+17:       )
+18:     )::integer AS ledger_reversed
+19:   FROM public.loyalty_movements
+20:   GROUP BY customer_id
+21: ),
+22: 
+23: -- ============================================================
+24: -- 2. CUENTAS VS LEDGER VS LEGACY
+--- coincidencia en linea 61 ---
+58:     )::integer AS active_rewards,
+59: 
+60:     COUNT(*) FILTER (
+61:       WHERE status = 'redeemed'
+62:     )::integer AS redeemed_rewards
+63: 
+64:   FROM public.customer_rewards
+65:   GROUP BY customer_id
+66: ),
+--- coincidencia en linea 62 ---
+59: 
+60:     COUNT(*) FILTER (
+61:       WHERE status = 'redeemed'
+62:     )::integer AS redeemed_rewards
+63: 
+64:   FROM public.customer_rewards
+65:   GROUP BY customer_id
+66: ),
+67: 
+--- coincidencia en linea 64 ---
+61:       WHERE status = 'redeemed'
+62:     )::integer AS redeemed_rewards
+63: 
+64:   FROM public.customer_rewards
+65:   GROUP BY customer_id
+66: ),
+67: 
+68: reward_audit AS (
+69:   SELECT
+--- coincidencia en linea 90 ---
+87:     business_date,
+88:     expected_stamps,
+89:     applied_stamps,
+90:     pending_stamp_delta,
+91:     projection_status
+92: 
+93:   FROM public.customer_daily_loyalty
+94: ),
+95: 
+--- coincidencia en linea 149 ---
+146:   SELECT
+147:     (
+148:       SELECT COUNT(*)
+149:       FROM public.loyalty_movements lm
+150:       LEFT JOIN public.clientes c
+151:         ON c.id = lm.customer_id
+152:       WHERE c.id IS NULL
+153:     )::integer AS movements_without_customer,
+154: 
+--- coincidencia en linea 157 ---
+154: 
+155:     (
+156:       SELECT COUNT(*)
+157:       FROM public.customer_rewards cr
+158:       LEFT JOIN public.clientes c
+159:         ON c.id = cr.customer_id
+160:       WHERE c.id IS NULL
+161:     )::integer AS rewards_without_customer,
+162: 
+--- coincidencia en linea 179 ---
+176:   (SELECT COUNT(*) FROM public.loyalty_accounts)
+177:     AS accounts,
+178: 
+179:   (SELECT COUNT(*) FROM public.loyalty_movements)
+180:     AS loyalty_movements,
+181: 
+182:   (SELECT COUNT(*) FROM public.customer_rewards)
+183:     AS rewards,
+184: 
+--- coincidencia en linea 180 ---
+177:     AS accounts,
+178: 
+179:   (SELECT COUNT(*) FROM public.loyalty_movements)
+180:     AS loyalty_movements,
+181: 
+182:   (SELECT COUNT(*) FROM public.customer_rewards)
+183:     AS rewards,
+184: 
+185:   (SELECT COUNT(*) FROM public.customer_daily_loyalty)
+--- coincidencia en linea 182 ---
+179:   (SELECT COUNT(*) FROM public.loyalty_movements)
+180:     AS loyalty_movements,
+181: 
+182:   (SELECT COUNT(*) FROM public.customer_rewards)
+183:     AS rewards,
+184: 
+185:   (SELECT COUNT(*) FROM public.customer_daily_loyalty)
+186:     AS daily_projections,
+187: 
+--- coincidencia en linea 245 ---
+242:   (
+243:     SELECT COUNT(*)
+244:     FROM daily_audit
+245:     WHERE COALESCE(pending_stamp_delta, 0) <> 0
+246:   ) AS daily_pending_mismatches,
+247: 
+248:   (
+249:     SELECT COUNT(*)
+250:     FROM daily_audit
+
+===== database\migrations\20260808_02_atomic_sale_customer_loyalty.sql (1451 lineas; 9 coincidencias) =====
+--- coincidencia en linea 204 ---
+201:       'previously_applied_stamps',
+202:       v_projection.applied_stamps,
+203: 
+204:       'pending_stamp_delta',
+205:       0,
+206: 
+207:       'applied_delta',
+208:       0,
+209: 
+--- coincidencia en linea 325 ---
+322:     p_movement_type :=
+323:       v_movement_type,
+324: 
+325:     p_stamp_delta :=
+326:       v_pending_delta,
+327: 
+328:     p_source :=
+329:       'daily_loyalty',
+330: 
+--- coincidencia en linea 337 ---
+334:     p_sale_id :=
+335:       v_effective_sale_id,
+336: 
+337:     p_reward_id :=
+338:       null,
+339: 
+340:     p_reason :=
+341:       coalesce(
+342:         nullif(
+--- coincidencia en linea 488 ---
+485:     p_sale_id :=
+486:       v_effective_sale_id,
+487: 
+488:     p_reward_id :=
+489:       null,
+490: 
+491:     p_loyalty_movement_id :=
+492:       v_movement_id,
+493: 
+--- coincidencia en linea 560 ---
+557:   --
+558:   -- applied_stamps se calcula algebraicamente desde:
+559:   --
+560:   -- loyalty_movements
+561:   -- WHERE source = 'daily_loyalty'
+562:   -- AND source_reference = ...
+563:   --
+564:   -- Por tanto:
+565:   --   credits + reversals = applied_stamps real.
+--- coincidencia en linea 590 ---
+587:   -- ==========================================================
+588: 
+589:   if coalesce(
+590:        (v_final_projection->>'pending_stamp_delta')::integer,
+591:        0
+592:      ) <> 0
+593:   then
+594:     raise exception
+595:       'La reconciliación diaria no terminó en delta cero para daily_loyalty_id %.',
+--- coincidencia en linea 935 ---
+932:     p_sale_id :=
+933:       p_sale_id,
+934: 
+935:     p_reward_id :=
+936:       null,
+937: 
+938:     p_loyalty_movement_id :=
+939:       null,
+940: 
+--- coincidencia en linea 1366 ---
+1363:           v_previous_projection
+1364:             ->> 'daily_loyalty_id'
+1365:         )::bigint
+1366:         and pending_stamp_delta <> 0
+1367:     ) then
+1368: 
+1369:       raise exception
+1370:         'La fidelización del cliente anterior quedó sin reconciliar.';
+1371: 
+--- coincidencia en linea 1385 ---
+1382:         v_new_projection
+1383:           ->> 'daily_loyalty_id'
+1384:       )::bigint
+1385:       and pending_stamp_delta <> 0
+1386:   ) then
+1387: 
+1388:     raise exception
+1389:       'La fidelización del cliente nuevo quedó sin reconciliar.';
+1390: 
+
+===== database\migrations\20260808_03_loyalty_eligible_total_source.sql (1171 lineas; 11 coincidencias) =====
+--- coincidencia en linea 76 ---
+73: 
+74:   v_expected_stamps integer := 0;
+75:   v_applied_stamps integer := 0;
+76:   v_pending_stamp_delta integer := 0;
+77: 
+78:   v_current_account_balance integer := 0;
+79:   v_rewards_expected integer := 0;
+80:   v_rewards_issued integer := 0;
+81: 
+--- coincidencia en linea 838 ---
+835: 
+836:   select
+837:     coalesce(
+838:       sum(stamp_delta),
+839:       0
+840:     )::integer,
+841: 
+842:     max(id)
+843: 
+--- coincidencia en linea 848 ---
+845:     v_applied_stamps,
+846:     v_last_loyalty_movement_id
+847: 
+848:   from loyalty_movements
+849: 
+850:   where customer_id =
+851:         p_customer_id
+852: 
+853:     and source =
+--- coincidencia en linea 860 ---
+857:         v_source_reference;
+858: 
+859: 
+860:   v_pending_stamp_delta :=
+861:     v_expected_stamps
+862:     - v_applied_stamps;
+863: 
+864: 
+865:   -- ==========================================================
+--- coincidencia en linea 927 ---
+924:       floor(
+925:         greatest(
+926:           v_current_account_balance
+927:           + v_pending_stamp_delta,
+928:           0
+929:         )::numeric
+930:         / v_reward_threshold
+931:       )::integer,
+932:       0
+--- coincidencia en linea 942 ---
+939:   into
+940:     v_rewards_issued
+941: 
+942:   from customer_rewards
+943: 
+944:   where customer_id =
+945:         p_customer_id
+946: 
+947:     and source_reference =
+--- coincidencia en linea 958 ---
+955:   v_projection_status :=
+956:     case
+957: 
+958:       when v_pending_stamp_delta = 0
+959:         then 'reconciled'
+960: 
+961:       else 'calculated'
+962: 
+963:     end;
+--- coincidencia en linea 1015 ---
+1012:     applied_stamps =
+1013:       v_applied_stamps,
+1014: 
+1015:     pending_stamp_delta =
+1016:       v_pending_stamp_delta,
+1017: 
+1018:     rewards_expected =
+1019:       v_rewards_expected,
+1020: 
+--- coincidencia en linea 1016 ---
+1013:       v_applied_stamps,
+1014: 
+1015:     pending_stamp_delta =
+1016:       v_pending_stamp_delta,
+1017: 
+1018:     rewards_expected =
+1019:       v_rewards_expected,
+1020: 
+1021:     rewards_issued =
+--- coincidencia en linea 1150 ---
+1147:     'applied_stamps',
+1148:     v_applied_stamps,
+1149: 
+1150:     'pending_stamp_delta',
+1151:     v_pending_stamp_delta,
+1152: 
+1153:     'rewards_expected',
+1154:     v_rewards_expected,
+1155: 
+--- coincidencia en linea 1151 ---
+1148:     v_applied_stamps,
+1149: 
+1150:     'pending_stamp_delta',
+1151:     v_pending_stamp_delta,
+1152: 
+1153:     'rewards_expected',
+1154:     v_rewards_expected,
+1155: 
+1156:     'rewards_issued',
+
+===== database\migrations\20260812_05_reconcile_historical_daily_loyalty_183.sql (73 lineas; 5 coincidencias) =====
+--- coincidencia en linea 12 ---
+9: -- La proyección diaria 183 quedó históricamente:
+10: --   expected_stamps = 2
+11: --   applied_stamps = 0
+12: --   pending_stamp_delta = 2
+13: --
+14: -- Sin embargo, esos 2 sellos ya están representados patrimonialmente
+15: -- mediante el movimiento histórico:
+16: --
+17: --   loyalty_movements.id = 846
+--- coincidencia en linea 17 ---
+14: -- Sin embargo, esos 2 sellos ya están representados patrimonialmente
+15: -- mediante el movimiento histórico:
+16: --
+17: --   loyalty_movements.id = 846
+18: --   source = go_live_ledger_completion
+19: --
+20: -- Por lo tanto, NO corresponde generar nuevos sellos.
+21: -- Esta migración sólo deja reproducible el saneamiento semántico.
+22: --
+--- coincidencia en linea 29 ---
+26: UPDATE public.customer_daily_loyalty
+27: SET
+28:   applied_stamps = expected_stamps,
+29:   pending_stamp_delta = 0,
+30:   projection_status = 'reconciled',
+31:   reconciled_at = COALESCE(reconciled_at, now()),
+32:   recalculation_reason = 'historical_baseline_reconciliation',
+33:   metadata =
+34:     COALESCE(metadata, '{}'::jsonb)
+--- coincidencia en linea 49 ---
+46:   AND business_date = DATE '2026-08-06'
+47:   AND expected_stamps = 2
+48:   AND applied_stamps = 0
+49:   AND pending_stamp_delta = 2
+50:   AND projection_status = 'calculated';
+51: 
+52: 
+53: DO $$
+54: DECLARE
+--- coincidencia en linea 65 ---
+62:     AND business_date = DATE '2026-08-06'
+63:     AND expected_stamps = 2
+64:     AND applied_stamps = 2
+65:     AND pending_stamp_delta = 0
+66:     AND projection_status = 'reconciled'
+67:     AND metadata->>'historicalBaselineReconciliation' = 'true';
+68: 
+69:   IF v_count <> 1 THEN
+70:     RAISE EXCEPTION
+
+===== database\migrations\20260901_01_email_queue.sql (277 lineas; 1 coincidencias) =====
+--- coincidencia en linea 74 ---
+71:   --
+72:   -- Ejemplos futuros:
+73:   -- register-verification:<customer_id>:<token>
+74:   -- reward-expiring:<reward_id>
+75:   -- ----------------------------------------------------------
+76: 
+77:   idempotency_key text NOT NULL,
+78: 
+79: 
+
+===== database\migrations\20260910_01_expire_customer_rewards.sql (112 lineas; 12 coincidencias) =====
+--- coincidencia en linea 1 ---
+1: create or replace function public.expire_customer_rewards(
+2:   p_customer_id bigint default null,
+3:   p_actor_role text default 'system',
+4:   p_actor_identifier text default 'expire_customer_rewards'
+5: )
+6: returns integer
+--- coincidencia en linea 4 ---
+1: create or replace function public.expire_customer_rewards(
+2:   p_customer_id bigint default null,
+3:   p_actor_role text default 'system',
+4:   p_actor_identifier text default 'expire_customer_rewards'
+5: )
+6: returns integer
+7: language plpgsql
+8: security definer
+9: set search_path = public
+--- coincidencia en linea 26 ---
+23:       cr.id,
+24:       cr.customer_id,
+25:       cr.expires_at
+26:     from public.customer_rewards cr
+27:     where cr.status = 'active'
+28:       and cr.expires_at is not null
+29:       and cr.expires_at < now()
+30:       and (
+31:         p_customer_id is null
+--- coincidencia en linea 37 ---
+34:     order by cr.id
+35:     for update
+36:   loop
+37:     update public.customer_rewards
+38:     set status = 'expired'
+39:     where id = v_reward.id
+40:       and status = 'active';
+41: 
+42:     if found then
+--- coincidencia en linea 46 ---
+43:   if not exists (
+44:     select 1
+45:     from public.customer_events ce
+46:     where ce.reward_id = v_reward.id
+47:       and ce.event_type = 'loyalty.reward_expired'
+48:   ) then
+49:     perform public.record_customer_event(
+50:       p_customer_id := v_reward.customer_id,
+51:       p_event_type := 'loyalty.reward_expired',
+--- coincidencia en linea 56 ---
+53:       p_source_entity_type := 'customer_reward',
+54:       p_source_entity_id := v_reward.id::text,
+55:       p_sale_id := null,
+56:       p_reward_id := v_reward.id,
+57:       p_loyalty_movement_id := null,
+58:       p_actor_role := p_actor_role,
+59:       p_actor_identifier := p_actor_identifier,
+60:       p_occurred_at := v_reward.expires_at,
+61:       p_idempotency_key := 'loyalty-reward-expired:' || v_reward.id,
+--- coincidencia en linea 82 ---
+79:     from unnest(v_affected_customer_ids) as affected(customer_id)
+80:   loop
+81:     perform public.rebuild_loyalty_account(v_customer_id);
+82:     perform public.sync_legacy_customer_rewards(v_customer_id);
+83:   end loop;
+84: 
+85:   return v_expired_count;
+86: end;
+87: $$;
+--- coincidencia en linea 90 ---
+87: $$;
+88: 
+89: revoke all
+90: on function public.expire_customer_rewards(bigint, text, text)
+91: from public;
+92: 
+93: revoke all
+94: on function public.expire_customer_rewards(bigint, text, text)
+95: from anon;
+--- coincidencia en linea 94 ---
+91: from public;
+92: 
+93: revoke all
+94: on function public.expire_customer_rewards(bigint, text, text)
+95: from anon;
+96: 
+97: revoke all
+98: on function public.expire_customer_rewards(bigint, text, text)
+99: from authenticated;
+--- coincidencia en linea 98 ---
+95: from anon;
+96: 
+97: revoke all
+98: on function public.expire_customer_rewards(bigint, text, text)
+99: from authenticated;
+100: 
+101: grant execute
+102: on function public.expire_customer_rewards(bigint, text, text)
+103: to service_role;
+--- coincidencia en linea 102 ---
+99: from authenticated;
+100: 
+101: grant execute
+102: on function public.expire_customer_rewards(bigint, text, text)
+103: to service_role;
+104: 
+105: -- Regularización inicial:
+106: -- expira todos los rewards que todavía estén activos
+107: -- aunque su fecha de vencimiento ya haya pasado.
+--- coincidencia en linea 108 ---
+105: -- Regularización inicial:
+106: -- expira todos los rewards que todavía estén activos
+107: -- aunque su fecha de vencimiento ya haya pasado.
+108: select public.expire_customer_rewards(
+109:   null,
+110:   'system',
+111:   'DEV-LOY-EXP-01:migration'
+112: );
+
+===== database\migrations\20260914_01_reward_product_and_sale_link.sql (89 lineas; 21 coincidencias) =====
+--- coincidencia en linea 12 ---
+9: -- 1. Producto asociado al premio
+10: -- ------------------------------------------------------------
+11: 
+12: alter table public.customer_rewards
+13: add column if not exists reward_product_id bigint;
+14: 
+15: alter table public.customer_rewards
+16: drop constraint if exists customer_rewards_reward_product_id_fkey;
+17: 
+--- coincidencia en linea 15 ---
+12: alter table public.customer_rewards
+13: add column if not exists reward_product_id bigint;
+14: 
+15: alter table public.customer_rewards
+16: drop constraint if exists customer_rewards_reward_product_id_fkey;
+17: 
+18: alter table public.customer_rewards
+19: add constraint customer_rewards_reward_product_id_fkey
+20: foreign key (reward_product_id)
+--- coincidencia en linea 16 ---
+13: add column if not exists reward_product_id bigint;
+14: 
+15: alter table public.customer_rewards
+16: drop constraint if exists customer_rewards_reward_product_id_fkey;
+17: 
+18: alter table public.customer_rewards
+19: add constraint customer_rewards_reward_product_id_fkey
+20: foreign key (reward_product_id)
+21: references public.products(id);
+--- coincidencia en linea 18 ---
+15: alter table public.customer_rewards
+16: drop constraint if exists customer_rewards_reward_product_id_fkey;
+17: 
+18: alter table public.customer_rewards
+19: add constraint customer_rewards_reward_product_id_fkey
+20: foreign key (reward_product_id)
+21: references public.products(id);
+22: 
+23: 
+--- coincidencia en linea 19 ---
+16: drop constraint if exists customer_rewards_reward_product_id_fkey;
+17: 
+18: alter table public.customer_rewards
+19: add constraint customer_rewards_reward_product_id_fkey
+20: foreign key (reward_product_id)
+21: references public.products(id);
+22: 
+23: 
+24: -- ------------------------------------------------------------
+--- coincidencia en linea 28 ---
+25: -- 2. Venta donde se utilizó el premio
+26: -- ------------------------------------------------------------
+27: 
+28: alter table public.customer_rewards
+29: add column if not exists redeemed_sale_id bigint;
+30: 
+31: alter table public.customer_rewards
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+--- coincidencia en linea 29 ---
+26: -- ------------------------------------------------------------
+27: 
+28: alter table public.customer_rewards
+29: add column if not exists redeemed_sale_id bigint;
+30: 
+31: alter table public.customer_rewards
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+34: alter table public.customer_rewards
+--- coincidencia en linea 31 ---
+28: alter table public.customer_rewards
+29: add column if not exists redeemed_sale_id bigint;
+30: 
+31: alter table public.customer_rewards
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+34: alter table public.customer_rewards
+35: add constraint customer_rewards_redeemed_sale_id_fkey
+36: foreign key (redeemed_sale_id)
+--- coincidencia en linea 32 ---
+29: add column if not exists redeemed_sale_id bigint;
+30: 
+31: alter table public.customer_rewards
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+34: alter table public.customer_rewards
+35: add constraint customer_rewards_redeemed_sale_id_fkey
+36: foreign key (redeemed_sale_id)
+37: references public.sales(id);
+--- coincidencia en linea 34 ---
+31: alter table public.customer_rewards
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+34: alter table public.customer_rewards
+35: add constraint customer_rewards_redeemed_sale_id_fkey
+36: foreign key (redeemed_sale_id)
+37: references public.sales(id);
+38: 
+39: 
+--- coincidencia en linea 35 ---
+32: drop constraint if exists customer_rewards_redeemed_sale_id_fkey;
+33: 
+34: alter table public.customer_rewards
+35: add constraint customer_rewards_redeemed_sale_id_fkey
+36: foreign key (redeemed_sale_id)
+37: references public.sales(id);
+38: 
+39: 
+40: -- ------------------------------------------------------------
+--- coincidencia en linea 36 ---
+33: 
+34: alter table public.customer_rewards
+35: add constraint customer_rewards_redeemed_sale_id_fkey
+36: foreign key (redeemed_sale_id)
+37: references public.sales(id);
+38: 
+39: 
+40: -- ------------------------------------------------------------
+41: -- 3. Backfill seguro
+--- coincidencia en linea 50 ---
+47: -- permitían elegir entre topping y baño de chocolate.
+48: -- ------------------------------------------------------------
+49: 
+50: update public.customer_rewards cr
+51: set reward_product_id = p.id
+52: from public.products p
+53: where p.sku = 'HEL-SIMPLE'
+54:   and cr.reward_type = 'loyalty'
+55:   and lower(trim(cr.name)) = 'helado simple gratis'
+--- coincidencia en linea 62 ---
+59: -- Compatibilidad con rewards legacy normalizados bajo demanda
+60: -- que corresponden inequívocamente al premio histórico
+61: -- "Helado simple gratis".
+62: update public.customer_rewards cr
+63: set reward_product_id = p.id
+64: from public.products p
+65: where p.sku = 'HEL-SIMPLE'
+66:   and cr.reward_type = 'legacy'
+67:   and lower(trim(cr.name)) = 'helado simple gratis'
+--- coincidencia en linea 75 ---
+72: -- 4. Índices de trazabilidad
+73: -- ------------------------------------------------------------
+74: 
+75: create index if not exists idx_customer_rewards_reward_product_id
+76: on public.customer_rewards(reward_product_id);
+77: 
+78: create index if not exists idx_customer_rewards_redeemed_sale_id
+79: on public.customer_rewards(redeemed_sale_id)
+80: where redeemed_sale_id is not null;
+--- coincidencia en linea 76 ---
+73: -- ------------------------------------------------------------
+74: 
+75: create index if not exists idx_customer_rewards_reward_product_id
+76: on public.customer_rewards(reward_product_id);
+77: 
+78: create index if not exists idx_customer_rewards_redeemed_sale_id
+79: on public.customer_rewards(redeemed_sale_id)
+80: where redeemed_sale_id is not null;
+81: 
+--- coincidencia en linea 78 ---
+75: create index if not exists idx_customer_rewards_reward_product_id
+76: on public.customer_rewards(reward_product_id);
+77: 
+78: create index if not exists idx_customer_rewards_redeemed_sale_id
+79: on public.customer_rewards(redeemed_sale_id)
+80: where redeemed_sale_id is not null;
+81: 
+82: 
+83: -- Un reward solamente puede quedar asociado a una venta.
+--- coincidencia en linea 79 ---
+76: on public.customer_rewards(reward_product_id);
+77: 
+78: create index if not exists idx_customer_rewards_redeemed_sale_id
+79: on public.customer_rewards(redeemed_sale_id)
+80: where redeemed_sale_id is not null;
+81: 
+82: 
+83: -- Un reward solamente puede quedar asociado a una venta.
+84: -- La propia PK del reward ya garantiza un único redeemed_sale_id.
+--- coincidencia en linea 80 ---
+77: 
+78: create index if not exists idx_customer_rewards_redeemed_sale_id
+79: on public.customer_rewards(redeemed_sale_id)
+80: where redeemed_sale_id is not null;
+81: 
+82: 
+83: -- Un reward solamente puede quedar asociado a una venta.
+84: -- La propia PK del reward ya garantiza un único redeemed_sale_id.
+85: -- No imponemos UNIQUE sobre redeemed_sale_id porque dejamos
+--- coincidencia en linea 84 ---
+81: 
+82: 
+83: -- Un reward solamente puede quedar asociado a una venta.
+84: -- La propia PK del reward ya garantiza un único redeemed_sale_id.
+85: -- No imponemos UNIQUE sobre redeemed_sale_id porque dejamos
+86: -- abierta la posibilidad futura de más de un reward por venta.
+87: -- ------------------------------------------------------------
+88: 
+89: commit;
+--- coincidencia en linea 85 ---
+82: 
+83: -- Un reward solamente puede quedar asociado a una venta.
+84: -- La propia PK del reward ya garantiza un único redeemed_sale_id.
+85: -- No imponemos UNIQUE sobre redeemed_sale_id porque dejamos
+86: -- abierta la posibilidad futura de más de un reward por venta.
+87: -- ------------------------------------------------------------
+88: 
+89: commit;
+
+===== database\migrations\20260914_02_transactional_reward_redemption.sql (1904 lineas; 31 coincidencias) =====
+--- coincidencia en linea 6 ---
+3: -- Canje transaccional de rewards integrado a la venta
+4: --
+5: -- Nueva versión de la RPC de venta que incorpora:
+6: --   p_reward_id
+7: --   p_actor_identifier
+8: --
+9: -- La RPC productiva anterior se mantiene temporalmente para permitir
+10: -- un cutover sin downtime. Se retirará después de validar V2.
+11: -- ================================================================
+--- coincidencia en linea 28 ---
+25:     p_manual_discount_value integer DEFAULT NULL::integer,
+26:     p_manual_discount_reason text DEFAULT NULL::text,
+27:     p_manual_discount_notes text DEFAULT NULL::text,
+28:     p_reward_id bigint DEFAULT NULL::bigint,
+29:     p_actor_identifier text DEFAULT NULL::text
+30: )
+31: RETURNS jsonb
+32: LANGUAGE plpgsql
+33: AS $function$
+--- coincidencia en linea 61 ---
+58:     v_gift_discount_total integer := 0;
+59: 
+60:     -- Reward aplicado a la venta.
+61:     v_reward public.customer_rewards%rowtype;
+62:     v_reward_product_id bigint;
+63:     v_reward_discount_total integer := 0;
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+--- coincidencia en linea 67 ---
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+67:     v_redeemed_at timestamptz;
+68: 
+69:     -- Se conserva para compatibilidad/auditorÃa del resultado.
+70:     v_custom_payable_subtotal integer := 0;
+71: 
+72:     -- Suma de total_price de todas las lÃ­neas cuyo snapshot
+--- coincidencia en linea 258 ---
+255:     -- 4. REWARD
+256:     -- ================================================================
+257: 
+258:     if p_reward_id is not null then
+259: 
+260:         if p_customer_id is null then
+261:             raise exception
+262:                 'El canje de premio requiere un cliente.';
+263:         end if;
+--- coincidencia en linea 282 ---
+279: 
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+--- coincidencia en linea 283 ---
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+288:         if not found then
+--- coincidencia en linea 1025 ---
+1022:             v_line_discount :=
+1023:                 v_gross_line_total;
+1024: 
+1025:         elsif p_reward_id is not null
+1026:               and not v_reward_applied
+1027:               and v_product.id = v_reward_product_id
+1028:         then
+1029: 
+1030:             v_line_discount :=
+--- coincidencia en linea 1582 ---
+1579:     -- 20. CANJE TRANSACCIONAL DE REWARD
+1580:     -- ================================================================
+1581: 
+1582:     if p_reward_id is not null then
+1583: 
+1584:         -- El reward fue validado al inicio, pero además debe haberse
+1585:         -- materializado efectivamente sobre una línea de la venta.
+1586:         if not v_reward_applied
+1587:            or v_reward_sale_item_id is null
+--- coincidencia en linea 1594 ---
+1591:         end if;
+1592: 
+1593: 
+1594:         v_redeemed_at := now();
+1595: 
+1596: 
+1597:         update public.customer_rewards
+1598:         set
+1599:             status = 'redeemed',
+--- coincidencia en linea 1597 ---
+1594:         v_redeemed_at := now();
+1595: 
+1596: 
+1597:         update public.customer_rewards
+1598:         set
+1599:             status = 'redeemed',
+1600:             redeemed_at = v_redeemed_at,
+1601:             redeemed_sale_id = v_sale_id
+1602:         where id = p_reward_id
+--- coincidencia en linea 1599 ---
+1596: 
+1597:         update public.customer_rewards
+1598:         set
+1599:             status = 'redeemed',
+1600:             redeemed_at = v_redeemed_at,
+1601:             redeemed_sale_id = v_sale_id
+1602:         where id = p_reward_id
+1603:           and customer_id = p_customer_id
+1604:           and status = 'active';
+--- coincidencia en linea 1600 ---
+1597:         update public.customer_rewards
+1598:         set
+1599:             status = 'redeemed',
+1600:             redeemed_at = v_redeemed_at,
+1601:             redeemed_sale_id = v_sale_id
+1602:         where id = p_reward_id
+1603:           and customer_id = p_customer_id
+1604:           and status = 'active';
+1605: 
+--- coincidencia en linea 1601 ---
+1598:         set
+1599:             status = 'redeemed',
+1600:             redeemed_at = v_redeemed_at,
+1601:             redeemed_sale_id = v_sale_id
+1602:         where id = p_reward_id
+1603:           and customer_id = p_customer_id
+1604:           and status = 'active';
+1605: 
+1606:         if not found then
+--- coincidencia en linea 1602 ---
+1599:             status = 'redeemed',
+1600:             redeemed_at = v_redeemed_at,
+1601:             redeemed_sale_id = v_sale_id
+1602:         where id = p_reward_id
+1603:           and customer_id = p_customer_id
+1604:           and status = 'active';
+1605: 
+1606:         if not found then
+1607:             raise exception
+--- coincidencia en linea 1613 ---
+1610: 
+1611: 
+1612:         -- Mantener compatibilidad con campañas históricas/futuras
+1613:         -- que utilicen customer_rewards.
+1614:         if v_reward.campaign_id is not null then
+1615: 
+1616:             update public.campana_clientes
+1617:             set
+1618:                 estado = 'canjeado',
+--- coincidencia en linea 1619 ---
+1616:             update public.campana_clientes
+1617:             set
+1618:                 estado = 'canjeado',
+1619:                 canjeado_at = v_redeemed_at
+1620:             where cliente_id = p_customer_id
+1621:               and campana_id = v_reward.campaign_id
+1622:               and (
+1623:                     premio_id = v_reward.legacy_reward_id
+1624:                     or premio_id = v_reward.id
+--- coincidencia en linea 1623 ---
+1620:             where cliente_id = p_customer_id
+1621:               and campana_id = v_reward.campaign_id
+1622:               and (
+1623:                     premio_id = v_reward.legacy_reward_id
+1624:                     or premio_id = v_reward.id
+1625:               );
+1626: 
+1627:         end if;
+1628: 
+--- coincidencia en linea 1632 ---
+1629: 
+1630:         perform public.record_customer_event(
+1631:             p_customer_id := p_customer_id,
+1632:             p_event_type := 'loyalty.reward_redeemed',
+1633:             p_source_module := 'loyalty',
+1634:             p_source_entity_type := 'customer_reward',
+1635:             p_source_entity_id := p_reward_id::text,
+1636:             p_sale_id := v_sale_id,
+1637:             p_reward_id := p_reward_id,
+--- coincidencia en linea 1635 ---
+1632:             p_event_type := 'loyalty.reward_redeemed',
+1633:             p_source_module := 'loyalty',
+1634:             p_source_entity_type := 'customer_reward',
+1635:             p_source_entity_id := p_reward_id::text,
+1636:             p_sale_id := v_sale_id,
+1637:             p_reward_id := p_reward_id,
+1638:             p_loyalty_movement_id := null,
+1639:             p_actor_role := nullif(
+1640:                 trim(coalesce(p_actor_role, '')),
+--- coincidencia en linea 1637 ---
+1634:             p_source_entity_type := 'customer_reward',
+1635:             p_source_entity_id := p_reward_id::text,
+1636:             p_sale_id := v_sale_id,
+1637:             p_reward_id := p_reward_id,
+1638:             p_loyalty_movement_id := null,
+1639:             p_actor_role := nullif(
+1640:                 trim(coalesce(p_actor_role, '')),
+1641:                 ''
+1642:             ),
+--- coincidencia en linea 1647 ---
+1644:                 trim(coalesce(p_actor_identifier, '')),
+1645:                 ''
+1646:             ),
+1647:             p_occurred_at := v_redeemed_at,
+1648:             p_idempotency_key :=
+1649:                 'loyalty-reward-redeemed:' || p_reward_id,
+1650:             p_metadata := jsonb_build_object(
+1651:                 'rewardName', v_reward.name,
+1652:                 'rewardType', v_reward.reward_type,
+--- coincidencia en linea 1649 ---
+1646:             ),
+1647:             p_occurred_at := v_redeemed_at,
+1648:             p_idempotency_key :=
+1649:                 'loyalty-reward-redeemed:' || p_reward_id,
+1650:             p_metadata := jsonb_build_object(
+1651:                 'rewardName', v_reward.name,
+1652:                 'rewardType', v_reward.reward_type,
+1653:                 'rewardProductId', v_reward_product_id,
+1654:                 'saleItemId', v_reward_sale_item_id,
+--- coincidencia en linea 1657 ---
+1654:                 'saleItemId', v_reward_sale_item_id,
+1655:                 'rewardDiscountTotal', v_reward_discount_total,
+1656:                 'campaignId', v_reward.campaign_id,
+1657:                 'legacyRewardId', v_reward.legacy_reward_id,
+1658:                 'expiresAt', v_reward.expires_at
+1659:             )
+1660:         );
+1661: 
+1662: 
+--- coincidencia en linea 1667 ---
+1664:         set fecha_ultimo_canje =
+1665:             case
+1666:                 when fecha_ultimo_canje is null
+1667:                     then v_redeemed_at
+1668:                 else greatest(
+1669:                     fecha_ultimo_canje,
+1670:                     v_redeemed_at
+1671:                 )
+1672:             end
+--- coincidencia en linea 1670 ---
+1667:                     then v_redeemed_at
+1668:                 else greatest(
+1669:                     fecha_ultimo_canje,
+1670:                     v_redeemed_at
+1671:                 )
+1672:             end
+1673:         where id = p_customer_id;
+1674: 
+1675: 
+--- coincidencia en linea 1680 ---
+1677:             p_customer_id
+1678:         );
+1679: 
+1680:         perform public.sync_legacy_customer_rewards(
+1681:             p_customer_id
+1682:         );
+1683: 
+1684:     end if;
+1685: 
+--- coincidencia en linea 1766 ---
+1763:         'gift_discount_total',
+1764:         v_gift_discount_total,
+1765: 
+1766:         'reward_id',
+1767:         p_reward_id,
+1768: 
+1769:         'reward_product_id',
+1770:         v_reward_product_id,
+1771: 
+--- coincidencia en linea 1767 ---
+1764:         v_gift_discount_total,
+1765: 
+1766:         'reward_id',
+1767:         p_reward_id,
+1768: 
+1769:         'reward_product_id',
+1770:         v_reward_product_id,
+1771: 
+1772:         'reward_sale_item_id',
+--- coincidencia en linea 1778 ---
+1775:         'reward_discount_total',
+1776:         v_reward_discount_total,
+1777: 
+1778:         'reward_redeemed_at',
+1779:         v_redeemed_at,
+1780: 
+1781:         'total_before_manual_discount',
+1782:         v_total_before_manual_discount,
+1783: 
+--- coincidencia en linea 1779 ---
+1776:         v_reward_discount_total,
+1777: 
+1778:         'reward_redeemed_at',
+1779:         v_redeemed_at,
+1780: 
+1781:         'total_before_manual_discount',
+1782:         v_total_before_manual_discount,
+1783: 
+1784:         'manual_discount_type',
+
+===== database\migrations\20260915_01_reward_product_on_issuance.sql (566 lineas; 29 coincidencias) =====
+--- coincidencia en linea 39 ---
+36:   v_rewards_to_issue integer := 0;
+37:   v_reward_index integer;
+38: 
+39:   v_reward_id bigint;
+40:   v_legacy_reward_id text;
+41: 
+42:   v_conversion_movement jsonb;
+43:   v_conversion_movement_id bigint;
+44: 
+--- coincidencia en linea 40 ---
+37:   v_reward_index integer;
+38: 
+39:   v_reward_id bigint;
+40:   v_legacy_reward_id text;
+41: 
+42:   v_conversion_movement jsonb;
+43:   v_conversion_movement_id bigint;
+44: 
+45:   v_reward_event jsonb;
+--- coincidencia en linea 47 ---
+44: 
+45:   v_reward_event jsonb;
+46: 
+47:   v_issued_reward_ids bigint[] := '{}';
+48:   v_final_account jsonb;
+49: begin
+50:   -- ==========================================================
+51:   -- 1. VALIDACIONES Y BLOQUEO DE CUENTA
+52:   -- ==========================================================
+--- coincidencia en linea 188 ---
+185:       p_customer_id
+186:     );
+187: 
+188:     perform sync_legacy_customer_rewards(
+189:       p_customer_id
+190:     );
+191: 
+192:     return jsonb_build_object(
+193:       'customer_id', p_customer_id,
+--- coincidencia en linea 216 ---
+213:     p_movement_type :=
+214:       'reward_conversion',
+215: 
+216:     p_stamp_delta :=
+217:       -(v_rewards_to_issue * v_threshold),
+218: 
+219:     p_source :=
+220:       'loyalty_reward_conversion',
+221: 
+--- coincidencia en linea 236 ---
+233:     p_sale_id :=
+234:       null,
+235: 
+236:     p_reward_id :=
+237:       null,
+238: 
+239:     p_reason :=
+240:       coalesce(
+241:         nullif(trim(coalesce(p_reason, '')), ''),
+--- coincidencia en linea 322 ---
+319:   for v_reward_index in
+320:     1..v_rewards_to_issue
+321:   loop
+322:     v_legacy_reward_id :=
+323:       gen_random_uuid()::text;
+324: 
+325:     insert into customer_rewards (
+326:       customer_id,
+327:       reward_type,
+--- coincidencia en linea 325 ---
+322:     v_legacy_reward_id :=
+323:       gen_random_uuid()::text;
+324: 
+325:     insert into customer_rewards (
+326:       customer_id,
+327:       reward_type,
+328:       name,
+329:       description,
+330:       status,
+--- coincidencia en linea 333 ---
+330:       status,
+331:       issued_at,
+332:       expires_at,
+333:       redeemed_at,
+334:       campaign_id,
+335:       legacy_reward_id,
+336:       source,
+337:       source_reference,
+338:       reward_product_id,
+--- coincidencia en linea 335 ---
+332:       expires_at,
+333:       redeemed_at,
+334:       campaign_id,
+335:       legacy_reward_id,
+336:       source,
+337:       source_reference,
+338:       reward_product_id,
+339:       metadata
+340:     )
+--- coincidencia en linea 352 ---
+349:         + make_interval(days => v_validity_days),
+350:       null,
+351:       null,
+352:       v_legacy_reward_id,
+353:       'loyalty_engine',
+354:       'reward-conversion-movement:'
+355:         || v_conversion_movement_id
+356:         || ':reward:'
+357:         || v_reward_index,
+--- coincidencia en linea 384 ---
+381:     )
+382:     on conflict (
+383:       customer_id,
+384:       legacy_reward_id
+385:     )
+386:     where legacy_reward_id is not null
+387:     do nothing
+388:     returning id into v_reward_id;
+389: 
+--- coincidencia en linea 386 ---
+383:       customer_id,
+384:       legacy_reward_id
+385:     )
+386:     where legacy_reward_id is not null
+387:     do nothing
+388:     returning id into v_reward_id;
+389: 
+390:     if v_reward_id is null then
+391:       select id
+--- coincidencia en linea 388 ---
+385:     )
+386:     where legacy_reward_id is not null
+387:     do nothing
+388:     returning id into v_reward_id;
+389: 
+390:     if v_reward_id is null then
+391:       select id
+392:       into v_reward_id
+393:       from customer_rewards
+--- coincidencia en linea 390 ---
+387:     do nothing
+388:     returning id into v_reward_id;
+389: 
+390:     if v_reward_id is null then
+391:       select id
+392:       into v_reward_id
+393:       from customer_rewards
+394:       where customer_id = p_customer_id
+395:         and source_reference =
+--- coincidencia en linea 392 ---
+389: 
+390:     if v_reward_id is null then
+391:       select id
+392:       into v_reward_id
+393:       from customer_rewards
+394:       where customer_id = p_customer_id
+395:         and source_reference =
+396:           'reward-conversion-movement:'
+397:           || v_conversion_movement_id
+--- coincidencia en linea 393 ---
+390:     if v_reward_id is null then
+391:       select id
+392:       into v_reward_id
+393:       from customer_rewards
+394:       where customer_id = p_customer_id
+395:         and source_reference =
+396:           'reward-conversion-movement:'
+397:           || v_conversion_movement_id
+398:           || ':reward:'
+--- coincidencia en linea 403 ---
+400:       limit 1;
+401:     end if;
+402: 
+403:     if v_reward_id is null or v_reward_id <= 0 then
+404:       raise exception
+405:         'No se pudo identificar el premio emitido.';
+406:     end if;
+407: 
+408:     v_issued_reward_ids :=
+--- coincidencia en linea 408 ---
+405:         'No se pudo identificar el premio emitido.';
+406:     end if;
+407: 
+408:     v_issued_reward_ids :=
+409:       array_append(
+410:         v_issued_reward_ids,
+411:         v_reward_id
+412:       );
+413: 
+--- coincidencia en linea 410 ---
+407: 
+408:     v_issued_reward_ids :=
+409:       array_append(
+410:         v_issued_reward_ids,
+411:         v_reward_id
+412:       );
+413: 
+414:     select record_customer_event(
+415:       p_customer_id :=
+--- coincidencia en linea 411 ---
+408:     v_issued_reward_ids :=
+409:       array_append(
+410:         v_issued_reward_ids,
+411:         v_reward_id
+412:       );
+413: 
+414:     select record_customer_event(
+415:       p_customer_id :=
+416:         p_customer_id,
+--- coincidencia en linea 428 ---
+425:         'customer_reward',
+426: 
+427:       p_source_entity_id :=
+428:         v_reward_id::text,
+429: 
+430:       p_sale_id :=
+431:         null,
+432: 
+433:       p_reward_id :=
+--- coincidencia en linea 433 ---
+430:       p_sale_id :=
+431:         null,
+432: 
+433:       p_reward_id :=
+434:         v_reward_id,
+435: 
+436:       p_loyalty_movement_id :=
+437:         v_conversion_movement_id,
+438: 
+--- coincidencia en linea 434 ---
+431:         null,
+432: 
+433:       p_reward_id :=
+434:         v_reward_id,
+435: 
+436:       p_loyalty_movement_id :=
+437:         v_conversion_movement_id,
+438: 
+439:       p_actor_role :=
+--- coincidencia en linea 453 ---
+450: 
+451:       p_idempotency_key :=
+452:         'loyalty-reward-issued:'
+453:         || v_reward_id,
+454: 
+455:       p_metadata :=
+456:         jsonb_build_object(
+457:           'rewardCode',
+458:             v_reward_code,
+--- coincidencia en linea 492 ---
+489:     p_customer_id
+490:   );
+491: 
+492:   perform sync_legacy_customer_rewards(
+493:     p_customer_id
+494:   );
+495: 
+496:   -- ==========================================================
+497:   -- 7. RESPUESTA
+--- coincidencia en linea 510 ---
+507:     'rewards_issued',
+508:       v_rewards_to_issue,
+509: 
+510:     'reward_ids',
+511:       v_issued_reward_ids,
+512: 
+513:     'stamps_consumed',
+514:       v_rewards_to_issue * v_threshold,
+515: 
+--- coincidencia en linea 511 ---
+508:       v_rewards_to_issue,
+509: 
+510:     'reward_ids',
+511:       v_issued_reward_ids,
+512: 
+513:     'stamps_consumed',
+514:       v_rewards_to_issue * v_threshold,
+515: 
+516:     'conversion_movement_id',
+--- coincidencia en linea 555 ---
+552:       'No existe un producto activo HEL-SIMPLE para regularizar premios FREE_SIMPLE_ICE_CREAM.';
+553:   end if;
+554: 
+555:   update public.customer_rewards cr
+556:   set reward_product_id = v_hel_simple_product_id
+557:   where cr.reward_product_id is null
+558:     and (
+559:       cr.metadata->>'rewardCode' = 'FREE_SIMPLE_ICE_CREAM'
+560:       or (
+
+===== database\migrations\20260915_02_reverse_reward_on_sale_cancellation.sql (425 lineas; 30 coincidencias) =====
+--- coincidencia en linea 9 ---
+6: --   pedido
+7: --   venta/pago
+8: --   inventario
+9: --   customer_rewards
+10: --   customer_events
+11: --   loyalty account / legacy projections
+12: --   clientes.fecha_ultimo_canje
+13: -- ============================================================
+14: 
+--- coincidencia en linea 32 ---
+29:   v_inventory_result jsonb;
+30:   v_event_notes text;
+31: 
+32:   v_reward public.customer_rewards%rowtype;
+33:   v_reward_new_status text;
+34:   v_rewards_reversed integer := 0;
+35: begin
+36:   -- ==========================================================
+37:   -- 1. VALIDAR IDENTIFICADOR
+--- coincidencia en linea 108 ---
+105:     -- canjeado contra esta venta.
+106:     for v_reward in
+107:       select cr.*
+108:       from public.customer_rewards cr
+109:       where cr.redeemed_sale_id = v_sale.id
+110:         and cr.status = 'redeemed'
+111:       order by cr.id
+112:       for update
+113:     loop
+--- coincidencia en linea 109 ---
+106:     for v_reward in
+107:       select cr.*
+108:       from public.customer_rewards cr
+109:       where cr.redeemed_sale_id = v_sale.id
+110:         and cr.status = 'redeemed'
+111:       order by cr.id
+112:       for update
+113:     loop
+114:       v_reward_new_status :=
+--- coincidencia en linea 110 ---
+107:       select cr.*
+108:       from public.customer_rewards cr
+109:       where cr.redeemed_sale_id = v_sale.id
+110:         and cr.status = 'redeemed'
+111:       order by cr.id
+112:       for update
+113:     loop
+114:       v_reward_new_status :=
+115:         case
+--- coincidencia en linea 122 ---
+119:           else 'active'
+120:         end;
+121: 
+122:       update public.customer_rewards
+123:       set
+124:         status = v_reward_new_status,
+125:         redeemed_at = null,
+126:         redeemed_sale_id = null
+127:       where id = v_reward.id;
+--- coincidencia en linea 125 ---
+122:       update public.customer_rewards
+123:       set
+124:         status = v_reward_new_status,
+125:         redeemed_at = null,
+126:         redeemed_sale_id = null
+127:       where id = v_reward.id;
+128: 
+129:       perform public.record_customer_event(
+130:         p_customer_id := v_reward.customer_id,
+--- coincidencia en linea 126 ---
+123:       set
+124:         status = v_reward_new_status,
+125:         redeemed_at = null,
+126:         redeemed_sale_id = null
+127:       where id = v_reward.id;
+128: 
+129:       perform public.record_customer_event(
+130:         p_customer_id := v_reward.customer_id,
+131:         p_event_type := 'loyalty.reward_redemption_reversed',
+--- coincidencia en linea 136 ---
+133:         p_source_entity_type := 'customer_reward',
+134:         p_source_entity_id := v_reward.id::text,
+135:         p_sale_id := v_sale.id,
+136:         p_reward_id := v_reward.id,
+137:         p_loyalty_movement_id := null,
+138:         p_actor_role := nullif(btrim(coalesce(p_actor_role, '')), ''),
+139:         p_actor_identifier := null,
+140:         p_occurred_at := now(),
+141:         p_idempotency_key :=
+--- coincidencia en linea 151 ---
+148:             'reason', 'sale_cancelled',
+149:             'previousStatus', v_reward.status,
+150:             'newStatus', v_reward_new_status,
+151:             'originalRedeemedAt', v_reward.redeemed_at,
+152:             'saleId', v_sale.id,
+153:             'orderId', v_order.id
+154:           )
+155:       );
+156: 
+--- coincidencia en linea 161 ---
+158:         v_reward.customer_id
+159:       );
+160: 
+161:       perform public.sync_legacy_customer_rewards(
+162:         v_reward.customer_id
+163:       );
+164: 
+165:       update public.clientes c
+166:       set fecha_ultimo_canje = (
+--- coincidencia en linea 167 ---
+164: 
+165:       update public.clientes c
+166:       set fecha_ultimo_canje = (
+167:         select max(cr.redeemed_at)
+168:         from public.customer_rewards cr
+169:         where cr.customer_id = v_reward.customer_id
+170:           and cr.status = 'redeemed'
+171:           and cr.redeemed_at is not null
+172:       )
+--- coincidencia en linea 168 ---
+165:       update public.clientes c
+166:       set fecha_ultimo_canje = (
+167:         select max(cr.redeemed_at)
+168:         from public.customer_rewards cr
+169:         where cr.customer_id = v_reward.customer_id
+170:           and cr.status = 'redeemed'
+171:           and cr.redeemed_at is not null
+172:       )
+173:       where c.id = v_reward.customer_id;
+--- coincidencia en linea 170 ---
+167:         select max(cr.redeemed_at)
+168:         from public.customer_rewards cr
+169:         where cr.customer_id = v_reward.customer_id
+170:           and cr.status = 'redeemed'
+171:           and cr.redeemed_at is not null
+172:       )
+173:       where c.id = v_reward.customer_id;
+174: 
+175:       v_rewards_reversed :=
+--- coincidencia en linea 171 ---
+168:         from public.customer_rewards cr
+169:         where cr.customer_id = v_reward.customer_id
+170:           and cr.status = 'redeemed'
+171:           and cr.redeemed_at is not null
+172:       )
+173:       where c.id = v_reward.customer_id;
+174: 
+175:       v_rewards_reversed :=
+176:         v_rewards_reversed + 1;
+--- coincidencia en linea 243 ---
+240:   -- Un premio vigente vuelve a active.
+241:   -- Un premio cuya vigencia original ya terminó queda expired.
+242:   --
+243:   -- No se borra loyalty.reward_redeemed:
+244:   -- se registra un nuevo evento que representa la reversa.
+245:   -- ==========================================================
+246: 
+247:   for v_reward in
+248:     select cr.*
+--- coincidencia en linea 249 ---
+246: 
+247:   for v_reward in
+248:     select cr.*
+249:     from public.customer_rewards cr
+250:     where cr.redeemed_sale_id = v_sale.id
+251:       and cr.status = 'redeemed'
+252:     order by cr.id
+253:     for update
+254:   loop
+--- coincidencia en linea 250 ---
+247:   for v_reward in
+248:     select cr.*
+249:     from public.customer_rewards cr
+250:     where cr.redeemed_sale_id = v_sale.id
+251:       and cr.status = 'redeemed'
+252:     order by cr.id
+253:     for update
+254:   loop
+255:     v_reward_new_status :=
+--- coincidencia en linea 251 ---
+248:     select cr.*
+249:     from public.customer_rewards cr
+250:     where cr.redeemed_sale_id = v_sale.id
+251:       and cr.status = 'redeemed'
+252:     order by cr.id
+253:     for update
+254:   loop
+255:     v_reward_new_status :=
+256:       case
+--- coincidencia en linea 263 ---
+260:         else 'active'
+261:       end;
+262: 
+263:     update public.customer_rewards
+264:     set
+265:       status = v_reward_new_status,
+266:       redeemed_at = null,
+267:       redeemed_sale_id = null
+268:     where id = v_reward.id;
+--- coincidencia en linea 266 ---
+263:     update public.customer_rewards
+264:     set
+265:       status = v_reward_new_status,
+266:       redeemed_at = null,
+267:       redeemed_sale_id = null
+268:     where id = v_reward.id;
+269: 
+270:     perform public.record_customer_event(
+271:       p_customer_id :=
+--- coincidencia en linea 267 ---
+264:     set
+265:       status = v_reward_new_status,
+266:       redeemed_at = null,
+267:       redeemed_sale_id = null
+268:     where id = v_reward.id;
+269: 
+270:     perform public.record_customer_event(
+271:       p_customer_id :=
+272:         v_reward.customer_id,
+--- coincidencia en linea 289 ---
+286:       p_sale_id :=
+287:         v_sale.id,
+288: 
+289:       p_reward_id :=
+290:         v_reward.id,
+291: 
+292:       p_loyalty_movement_id :=
+293:         null,
+294: 
+--- coincidencia en linea 321 ---
+318:           'newStatus',
+319:             v_reward_new_status,
+320: 
+321:           'originalRedeemedAt',
+322:             v_reward.redeemed_at,
+323: 
+324:           'saleId',
+325:             v_sale.id,
+326: 
+--- coincidencia en linea 322 ---
+319:             v_reward_new_status,
+320: 
+321:           'originalRedeemedAt',
+322:             v_reward.redeemed_at,
+323: 
+324:           'saleId',
+325:             v_sale.id,
+326: 
+327:           'orderId',
+--- coincidencia en linea 336 ---
+333:       v_reward.customer_id
+334:     );
+335: 
+336:     perform public.sync_legacy_customer_rewards(
+337:       v_reward.customer_id
+338:     );
+339: 
+340:     update public.clientes c
+341:     set fecha_ultimo_canje = (
+--- coincidencia en linea 342 ---
+339: 
+340:     update public.clientes c
+341:     set fecha_ultimo_canje = (
+342:       select max(cr.redeemed_at)
+343:       from public.customer_rewards cr
+344:       where cr.customer_id = v_reward.customer_id
+345:         and cr.status = 'redeemed'
+346:         and cr.redeemed_at is not null
+347:     )
+--- coincidencia en linea 343 ---
+340:     update public.clientes c
+341:     set fecha_ultimo_canje = (
+342:       select max(cr.redeemed_at)
+343:       from public.customer_rewards cr
+344:       where cr.customer_id = v_reward.customer_id
+345:         and cr.status = 'redeemed'
+346:         and cr.redeemed_at is not null
+347:     )
+348:     where c.id = v_reward.customer_id;
+--- coincidencia en linea 345 ---
+342:       select max(cr.redeemed_at)
+343:       from public.customer_rewards cr
+344:       where cr.customer_id = v_reward.customer_id
+345:         and cr.status = 'redeemed'
+346:         and cr.redeemed_at is not null
+347:     )
+348:     where c.id = v_reward.customer_id;
+349: 
+350:     v_rewards_reversed :=
+--- coincidencia en linea 346 ---
+343:       from public.customer_rewards cr
+344:       where cr.customer_id = v_reward.customer_id
+345:         and cr.status = 'redeemed'
+346:         and cr.redeemed_at is not null
+347:     )
+348:     where c.id = v_reward.customer_id;
+349: 
+350:     v_rewards_reversed :=
+351:       v_rewards_reversed + 1;
+
+===== database\migrations\20260915_04_fix_product_loyalty_eligibility.sql (1901 lineas; 30 coincidencias) =====
+--- coincidencia en linea 28 ---
+25:     p_manual_discount_value integer DEFAULT NULL::integer,
+26:     p_manual_discount_reason text DEFAULT NULL::text,
+27:     p_manual_discount_notes text DEFAULT NULL::text,
+28:     p_reward_id bigint DEFAULT NULL::bigint,
+29:     p_actor_identifier text DEFAULT NULL::text
+30: )
+31: RETURNS jsonb
+32: LANGUAGE plpgsql
+33: AS $function$
+--- coincidencia en linea 61 ---
+58:     v_gift_discount_total integer := 0;
+59: 
+60:     -- Reward aplicado a la venta.
+61:     v_reward public.customer_rewards%rowtype;
+62:     v_reward_product_id bigint;
+63:     v_reward_discount_total integer := 0;
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+--- coincidencia en linea 67 ---
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+67:     v_redeemed_at timestamptz;
+68: 
+69:     -- Se conserva para compatibilidad/auditorÃa del resultado.
+70:     v_custom_payable_subtotal integer := 0;
+71: 
+72:     -- Suma de total_price de todas las lÃ­neas cuyo snapshot
+--- coincidencia en linea 258 ---
+255:     -- 4. REWARD
+256:     -- ================================================================
+257: 
+258:     if p_reward_id is not null then
+259: 
+260:         if p_customer_id is null then
+261:             raise exception
+262:                 'El canje de premio requiere un cliente.';
+263:         end if;
+--- coincidencia en linea 282 ---
+279: 
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+--- coincidencia en linea 283 ---
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+288:         if not found then
+--- coincidencia en linea 1022 ---
+1019:             v_line_discount :=
+1020:                 v_gross_line_total;
+1021: 
+1022:         elsif p_reward_id is not null
+1023:               and not v_reward_applied
+1024:               and v_product.id = v_reward_product_id
+1025:         then
+1026: 
+1027:             v_line_discount :=
+--- coincidencia en linea 1579 ---
+1576:     -- 20. CANJE TRANSACCIONAL DE REWARD
+1577:     -- ================================================================
+1578: 
+1579:     if p_reward_id is not null then
+1580: 
+1581:         -- El reward fue validado al inicio, pero además debe haberse
+1582:         -- materializado efectivamente sobre una línea de la venta.
+1583:         if not v_reward_applied
+1584:            or v_reward_sale_item_id is null
+--- coincidencia en linea 1591 ---
+1588:         end if;
+1589: 
+1590: 
+1591:         v_redeemed_at := now();
+1592: 
+1593: 
+1594:         update public.customer_rewards
+1595:         set
+1596:             status = 'redeemed',
+--- coincidencia en linea 1594 ---
+1591:         v_redeemed_at := now();
+1592: 
+1593: 
+1594:         update public.customer_rewards
+1595:         set
+1596:             status = 'redeemed',
+1597:             redeemed_at = v_redeemed_at,
+1598:             redeemed_sale_id = v_sale_id
+1599:         where id = p_reward_id
+--- coincidencia en linea 1596 ---
+1593: 
+1594:         update public.customer_rewards
+1595:         set
+1596:             status = 'redeemed',
+1597:             redeemed_at = v_redeemed_at,
+1598:             redeemed_sale_id = v_sale_id
+1599:         where id = p_reward_id
+1600:           and customer_id = p_customer_id
+1601:           and status = 'active';
+--- coincidencia en linea 1597 ---
+1594:         update public.customer_rewards
+1595:         set
+1596:             status = 'redeemed',
+1597:             redeemed_at = v_redeemed_at,
+1598:             redeemed_sale_id = v_sale_id
+1599:         where id = p_reward_id
+1600:           and customer_id = p_customer_id
+1601:           and status = 'active';
+1602: 
+--- coincidencia en linea 1598 ---
+1595:         set
+1596:             status = 'redeemed',
+1597:             redeemed_at = v_redeemed_at,
+1598:             redeemed_sale_id = v_sale_id
+1599:         where id = p_reward_id
+1600:           and customer_id = p_customer_id
+1601:           and status = 'active';
+1602: 
+1603:         if not found then
+--- coincidencia en linea 1599 ---
+1596:             status = 'redeemed',
+1597:             redeemed_at = v_redeemed_at,
+1598:             redeemed_sale_id = v_sale_id
+1599:         where id = p_reward_id
+1600:           and customer_id = p_customer_id
+1601:           and status = 'active';
+1602: 
+1603:         if not found then
+1604:             raise exception
+--- coincidencia en linea 1610 ---
+1607: 
+1608: 
+1609:         -- Mantener compatibilidad con campañas históricas/futuras
+1610:         -- que utilicen customer_rewards.
+1611:         if v_reward.campaign_id is not null then
+1612: 
+1613:             update public.campana_clientes
+1614:             set
+1615:                 estado = 'canjeado',
+--- coincidencia en linea 1616 ---
+1613:             update public.campana_clientes
+1614:             set
+1615:                 estado = 'canjeado',
+1616:                 canjeado_at = v_redeemed_at
+1617:             where cliente_id = p_customer_id
+1618:               and campana_id = v_reward.campaign_id
+1619:               and (
+1620:                     premio_id = v_reward.legacy_reward_id
+1621:                     or premio_id = v_reward.id
+--- coincidencia en linea 1620 ---
+1617:             where cliente_id = p_customer_id
+1618:               and campana_id = v_reward.campaign_id
+1619:               and (
+1620:                     premio_id = v_reward.legacy_reward_id
+1621:                     or premio_id = v_reward.id
+1622:               );
+1623: 
+1624:         end if;
+1625: 
+--- coincidencia en linea 1629 ---
+1626: 
+1627:         perform public.record_customer_event(
+1628:             p_customer_id := p_customer_id,
+1629:             p_event_type := 'loyalty.reward_redeemed',
+1630:             p_source_module := 'loyalty',
+1631:             p_source_entity_type := 'customer_reward',
+1632:             p_source_entity_id := p_reward_id::text,
+1633:             p_sale_id := v_sale_id,
+1634:             p_reward_id := p_reward_id,
+--- coincidencia en linea 1632 ---
+1629:             p_event_type := 'loyalty.reward_redeemed',
+1630:             p_source_module := 'loyalty',
+1631:             p_source_entity_type := 'customer_reward',
+1632:             p_source_entity_id := p_reward_id::text,
+1633:             p_sale_id := v_sale_id,
+1634:             p_reward_id := p_reward_id,
+1635:             p_loyalty_movement_id := null,
+1636:             p_actor_role := nullif(
+1637:                 trim(coalesce(p_actor_role, '')),
+--- coincidencia en linea 1634 ---
+1631:             p_source_entity_type := 'customer_reward',
+1632:             p_source_entity_id := p_reward_id::text,
+1633:             p_sale_id := v_sale_id,
+1634:             p_reward_id := p_reward_id,
+1635:             p_loyalty_movement_id := null,
+1636:             p_actor_role := nullif(
+1637:                 trim(coalesce(p_actor_role, '')),
+1638:                 ''
+1639:             ),
+--- coincidencia en linea 1644 ---
+1641:                 trim(coalesce(p_actor_identifier, '')),
+1642:                 ''
+1643:             ),
+1644:             p_occurred_at := v_redeemed_at,
+1645:             p_idempotency_key :=
+1646:                 'loyalty-reward-redeemed:' || p_reward_id,
+1647:             p_metadata := jsonb_build_object(
+1648:                 'rewardName', v_reward.name,
+1649:                 'rewardType', v_reward.reward_type,
+--- coincidencia en linea 1646 ---
+1643:             ),
+1644:             p_occurred_at := v_redeemed_at,
+1645:             p_idempotency_key :=
+1646:                 'loyalty-reward-redeemed:' || p_reward_id,
+1647:             p_metadata := jsonb_build_object(
+1648:                 'rewardName', v_reward.name,
+1649:                 'rewardType', v_reward.reward_type,
+1650:                 'rewardProductId', v_reward_product_id,
+1651:                 'saleItemId', v_reward_sale_item_id,
+--- coincidencia en linea 1654 ---
+1651:                 'saleItemId', v_reward_sale_item_id,
+1652:                 'rewardDiscountTotal', v_reward_discount_total,
+1653:                 'campaignId', v_reward.campaign_id,
+1654:                 'legacyRewardId', v_reward.legacy_reward_id,
+1655:                 'expiresAt', v_reward.expires_at
+1656:             )
+1657:         );
+1658: 
+1659: 
+--- coincidencia en linea 1664 ---
+1661:         set fecha_ultimo_canje =
+1662:             case
+1663:                 when fecha_ultimo_canje is null
+1664:                     then v_redeemed_at
+1665:                 else greatest(
+1666:                     fecha_ultimo_canje,
+1667:                     v_redeemed_at
+1668:                 )
+1669:             end
+--- coincidencia en linea 1667 ---
+1664:                     then v_redeemed_at
+1665:                 else greatest(
+1666:                     fecha_ultimo_canje,
+1667:                     v_redeemed_at
+1668:                 )
+1669:             end
+1670:         where id = p_customer_id;
+1671: 
+1672: 
+--- coincidencia en linea 1677 ---
+1674:             p_customer_id
+1675:         );
+1676: 
+1677:         perform public.sync_legacy_customer_rewards(
+1678:             p_customer_id
+1679:         );
+1680: 
+1681:     end if;
+1682: 
+--- coincidencia en linea 1763 ---
+1760:         'gift_discount_total',
+1761:         v_gift_discount_total,
+1762: 
+1763:         'reward_id',
+1764:         p_reward_id,
+1765: 
+1766:         'reward_product_id',
+1767:         v_reward_product_id,
+1768: 
+--- coincidencia en linea 1764 ---
+1761:         v_gift_discount_total,
+1762: 
+1763:         'reward_id',
+1764:         p_reward_id,
+1765: 
+1766:         'reward_product_id',
+1767:         v_reward_product_id,
+1768: 
+1769:         'reward_sale_item_id',
+--- coincidencia en linea 1775 ---
+1772:         'reward_discount_total',
+1773:         v_reward_discount_total,
+1774: 
+1775:         'reward_redeemed_at',
+1776:         v_redeemed_at,
+1777: 
+1778:         'total_before_manual_discount',
+1779:         v_total_before_manual_discount,
+1780: 
+--- coincidencia en linea 1776 ---
+1773:         v_reward_discount_total,
+1774: 
+1775:         'reward_redeemed_at',
+1776:         v_redeemed_at,
+1777: 
+1778:         'total_before_manual_discount',
+1779:         v_total_before_manual_discount,
+1780: 
+1781:         'manual_discount_type',
+
+===== database\migrations\20260915_05_regularize_loyalty_inc_02.sql (287 lineas; 8 coincidencias) =====
+--- coincidencia en linea 118 ---
+115:                 (726::bigint, 1, 'CUSTOM',  'sale:1629')
+116:         ) as x(
+117:             customer_id,
+118:             stamp_delta,
+119:             correction_scope,
+120:             affected_sales
+121:         )
+122:     loop
+123: 
+--- coincidencia en linea 131 ---
+128:             p_movement_type :=
+129:                 'incident_correction',
+130: 
+131:             p_stamp_delta :=
+132:                 v_case.stamp_delta,
+133: 
+134:             p_source :=
+135:                 'loyalty_incident_correction',
+136: 
+--- coincidencia en linea 132 ---
+129:                 'incident_correction',
+130: 
+131:             p_stamp_delta :=
+132:                 v_case.stamp_delta,
+133: 
+134:             p_source :=
+135:                 'loyalty_incident_correction',
+136: 
+137:             p_source_reference :=
+--- coincidencia en linea 143 ---
+140:             p_sale_id :=
+141:                 null,
+142: 
+143:             p_reward_id :=
+144:                 null,
+145: 
+146:             p_reason :=
+147:                 'Regularización INC-LOY-02 por sellos omitidos durante cálculo histórico de fidelización.',
+148: 
+--- coincidencia en linea 177 ---
+174:                         v_case.affected_sales,
+175: 
+176:                     'stampDelta',
+177:                         v_case.stamp_delta,
+178: 
+179:                     'reason',
+180:                         case
+181:                             when v_case.correction_scope = 'PRODUCT'
+182:                             then
+--- coincidencia en linea 255 ---
+252: 
+253:     if (
+254:         select count(*)
+255:         from public.loyalty_movements
+256:         where idempotency_key in (
+257:             'INC-LOY-02:stamp-compensation:228',
+258:             'INC-LOY-02:stamp-compensation:508',
+259:             'INC-LOY-02:stamp-compensation:514',
+260:             'INC-LOY-02:stamp-compensation:668',
+--- coincidencia en linea 271 ---
+268: 
+269: 
+270:     if (
+271:         select coalesce(sum(stamp_delta), 0)
+272:         from public.loyalty_movements
+273:         where idempotency_key in (
+274:             'INC-LOY-02:stamp-compensation:228',
+275:             'INC-LOY-02:stamp-compensation:508',
+276:             'INC-LOY-02:stamp-compensation:514',
+--- coincidencia en linea 272 ---
+269: 
+270:     if (
+271:         select coalesce(sum(stamp_delta), 0)
+272:         from public.loyalty_movements
+273:         where idempotency_key in (
+274:             'INC-LOY-02:stamp-compensation:228',
+275:             'INC-LOY-02:stamp-compensation:508',
+276:             'INC-LOY-02:stamp-compensation:514',
+277:             'INC-LOY-02:stamp-compensation:668',
+
+===== database\migrations\20260920_03_catalog_inventory_consumption_engine.sql (1937 lineas; 30 coincidencias) =====
+--- coincidencia en linea 28 ---
+25:     p_manual_discount_value integer DEFAULT NULL::integer,
+26:     p_manual_discount_reason text DEFAULT NULL::text,
+27:     p_manual_discount_notes text DEFAULT NULL::text,
+28:     p_reward_id bigint DEFAULT NULL::bigint,
+29:     p_actor_identifier text DEFAULT NULL::text
+30: )
+31: RETURNS jsonb
+32: LANGUAGE plpgsql
+33: AS $function$
+--- coincidencia en linea 61 ---
+58:     v_gift_discount_total integer := 0;
+59: 
+60:     -- Reward aplicado a la venta.
+61:     v_reward public.customer_rewards%rowtype;
+62:     v_reward_product_id bigint;
+63:     v_reward_discount_total integer := 0;
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+--- coincidencia en linea 67 ---
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+67:     v_redeemed_at timestamptz;
+68: 
+69:     -- Se conserva para compatibilidad/auditorÃa del resultado.
+70:     v_custom_payable_subtotal integer := 0;
+71: 
+72:     -- Suma de total_price de todas las lÃ­neas cuyo snapshot
+--- coincidencia en linea 258 ---
+255:     -- 4. REWARD
+256:     -- ================================================================
+257: 
+258:     if p_reward_id is not null then
+259: 
+260:         if p_customer_id is null then
+261:             raise exception
+262:                 'El canje de premio requiere un cliente.';
+263:         end if;
+--- coincidencia en linea 282 ---
+279: 
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+--- coincidencia en linea 283 ---
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+288:         if not found then
+--- coincidencia en linea 1058 ---
+1055:             v_line_discount :=
+1056:                 v_gross_line_total;
+1057: 
+1058:         elsif p_reward_id is not null
+1059:               and not v_reward_applied
+1060:               and v_product.id = v_reward_product_id
+1061:         then
+1062: 
+1063:             v_line_discount :=
+--- coincidencia en linea 1615 ---
+1612:     -- 20. CANJE TRANSACCIONAL DE REWARD
+1613:     -- ================================================================
+1614: 
+1615:     if p_reward_id is not null then
+1616: 
+1617:         -- El reward fue validado al inicio, pero además debe haberse
+1618:         -- materializado efectivamente sobre una línea de la venta.
+1619:         if not v_reward_applied
+1620:            or v_reward_sale_item_id is null
+--- coincidencia en linea 1627 ---
+1624:         end if;
+1625: 
+1626: 
+1627:         v_redeemed_at := now();
+1628: 
+1629: 
+1630:         update public.customer_rewards
+1631:         set
+1632:             status = 'redeemed',
+--- coincidencia en linea 1630 ---
+1627:         v_redeemed_at := now();
+1628: 
+1629: 
+1630:         update public.customer_rewards
+1631:         set
+1632:             status = 'redeemed',
+1633:             redeemed_at = v_redeemed_at,
+1634:             redeemed_sale_id = v_sale_id
+1635:         where id = p_reward_id
+--- coincidencia en linea 1632 ---
+1629: 
+1630:         update public.customer_rewards
+1631:         set
+1632:             status = 'redeemed',
+1633:             redeemed_at = v_redeemed_at,
+1634:             redeemed_sale_id = v_sale_id
+1635:         where id = p_reward_id
+1636:           and customer_id = p_customer_id
+1637:           and status = 'active';
+--- coincidencia en linea 1633 ---
+1630:         update public.customer_rewards
+1631:         set
+1632:             status = 'redeemed',
+1633:             redeemed_at = v_redeemed_at,
+1634:             redeemed_sale_id = v_sale_id
+1635:         where id = p_reward_id
+1636:           and customer_id = p_customer_id
+1637:           and status = 'active';
+1638: 
+--- coincidencia en linea 1634 ---
+1631:         set
+1632:             status = 'redeemed',
+1633:             redeemed_at = v_redeemed_at,
+1634:             redeemed_sale_id = v_sale_id
+1635:         where id = p_reward_id
+1636:           and customer_id = p_customer_id
+1637:           and status = 'active';
+1638: 
+1639:         if not found then
+--- coincidencia en linea 1635 ---
+1632:             status = 'redeemed',
+1633:             redeemed_at = v_redeemed_at,
+1634:             redeemed_sale_id = v_sale_id
+1635:         where id = p_reward_id
+1636:           and customer_id = p_customer_id
+1637:           and status = 'active';
+1638: 
+1639:         if not found then
+1640:             raise exception
+--- coincidencia en linea 1646 ---
+1643: 
+1644: 
+1645:         -- Mantener compatibilidad con campañas históricas/futuras
+1646:         -- que utilicen customer_rewards.
+1647:         if v_reward.campaign_id is not null then
+1648: 
+1649:             update public.campana_clientes
+1650:             set
+1651:                 estado = 'canjeado',
+--- coincidencia en linea 1652 ---
+1649:             update public.campana_clientes
+1650:             set
+1651:                 estado = 'canjeado',
+1652:                 canjeado_at = v_redeemed_at
+1653:             where cliente_id = p_customer_id
+1654:               and campana_id = v_reward.campaign_id
+1655:               and (
+1656:                     premio_id = v_reward.legacy_reward_id
+1657:                     or premio_id = v_reward.id
+--- coincidencia en linea 1656 ---
+1653:             where cliente_id = p_customer_id
+1654:               and campana_id = v_reward.campaign_id
+1655:               and (
+1656:                     premio_id = v_reward.legacy_reward_id
+1657:                     or premio_id = v_reward.id
+1658:               );
+1659: 
+1660:         end if;
+1661: 
+--- coincidencia en linea 1665 ---
+1662: 
+1663:         perform public.record_customer_event(
+1664:             p_customer_id := p_customer_id,
+1665:             p_event_type := 'loyalty.reward_redeemed',
+1666:             p_source_module := 'loyalty',
+1667:             p_source_entity_type := 'customer_reward',
+1668:             p_source_entity_id := p_reward_id::text,
+1669:             p_sale_id := v_sale_id,
+1670:             p_reward_id := p_reward_id,
+--- coincidencia en linea 1668 ---
+1665:             p_event_type := 'loyalty.reward_redeemed',
+1666:             p_source_module := 'loyalty',
+1667:             p_source_entity_type := 'customer_reward',
+1668:             p_source_entity_id := p_reward_id::text,
+1669:             p_sale_id := v_sale_id,
+1670:             p_reward_id := p_reward_id,
+1671:             p_loyalty_movement_id := null,
+1672:             p_actor_role := nullif(
+1673:                 trim(coalesce(p_actor_role, '')),
+--- coincidencia en linea 1670 ---
+1667:             p_source_entity_type := 'customer_reward',
+1668:             p_source_entity_id := p_reward_id::text,
+1669:             p_sale_id := v_sale_id,
+1670:             p_reward_id := p_reward_id,
+1671:             p_loyalty_movement_id := null,
+1672:             p_actor_role := nullif(
+1673:                 trim(coalesce(p_actor_role, '')),
+1674:                 ''
+1675:             ),
+--- coincidencia en linea 1680 ---
+1677:                 trim(coalesce(p_actor_identifier, '')),
+1678:                 ''
+1679:             ),
+1680:             p_occurred_at := v_redeemed_at,
+1681:             p_idempotency_key :=
+1682:                 'loyalty-reward-redeemed:' || p_reward_id,
+1683:             p_metadata := jsonb_build_object(
+1684:                 'rewardName', v_reward.name,
+1685:                 'rewardType', v_reward.reward_type,
+--- coincidencia en linea 1682 ---
+1679:             ),
+1680:             p_occurred_at := v_redeemed_at,
+1681:             p_idempotency_key :=
+1682:                 'loyalty-reward-redeemed:' || p_reward_id,
+1683:             p_metadata := jsonb_build_object(
+1684:                 'rewardName', v_reward.name,
+1685:                 'rewardType', v_reward.reward_type,
+1686:                 'rewardProductId', v_reward_product_id,
+1687:                 'saleItemId', v_reward_sale_item_id,
+--- coincidencia en linea 1690 ---
+1687:                 'saleItemId', v_reward_sale_item_id,
+1688:                 'rewardDiscountTotal', v_reward_discount_total,
+1689:                 'campaignId', v_reward.campaign_id,
+1690:                 'legacyRewardId', v_reward.legacy_reward_id,
+1691:                 'expiresAt', v_reward.expires_at
+1692:             )
+1693:         );
+1694: 
+1695: 
+--- coincidencia en linea 1700 ---
+1697:         set fecha_ultimo_canje =
+1698:             case
+1699:                 when fecha_ultimo_canje is null
+1700:                     then v_redeemed_at
+1701:                 else greatest(
+1702:                     fecha_ultimo_canje,
+1703:                     v_redeemed_at
+1704:                 )
+1705:             end
+--- coincidencia en linea 1703 ---
+1700:                     then v_redeemed_at
+1701:                 else greatest(
+1702:                     fecha_ultimo_canje,
+1703:                     v_redeemed_at
+1704:                 )
+1705:             end
+1706:         where id = p_customer_id;
+1707: 
+1708: 
+--- coincidencia en linea 1713 ---
+1710:             p_customer_id
+1711:         );
+1712: 
+1713:         perform public.sync_legacy_customer_rewards(
+1714:             p_customer_id
+1715:         );
+1716: 
+1717:     end if;
+1718: 
+--- coincidencia en linea 1799 ---
+1796:         'gift_discount_total',
+1797:         v_gift_discount_total,
+1798: 
+1799:         'reward_id',
+1800:         p_reward_id,
+1801: 
+1802:         'reward_product_id',
+1803:         v_reward_product_id,
+1804: 
+--- coincidencia en linea 1800 ---
+1797:         v_gift_discount_total,
+1798: 
+1799:         'reward_id',
+1800:         p_reward_id,
+1801: 
+1802:         'reward_product_id',
+1803:         v_reward_product_id,
+1804: 
+1805:         'reward_sale_item_id',
+--- coincidencia en linea 1811 ---
+1808:         'reward_discount_total',
+1809:         v_reward_discount_total,
+1810: 
+1811:         'reward_redeemed_at',
+1812:         v_redeemed_at,
+1813: 
+1814:         'total_before_manual_discount',
+1815:         v_total_before_manual_discount,
+1816: 
+--- coincidencia en linea 1812 ---
+1809:         v_reward_discount_total,
+1810: 
+1811:         'reward_redeemed_at',
+1812:         v_redeemed_at,
+1813: 
+1814:         'total_before_manual_discount',
+1815:         v_total_before_manual_discount,
+1816: 
+1817:         'manual_discount_type',
+
+===== database\migrations\20260920_07_catalog_multichannel_sales_enforcement.sql (1977 lineas; 30 coincidencias) =====
+--- coincidencia en linea 28 ---
+25:     p_manual_discount_value integer DEFAULT NULL::integer,
+26:     p_manual_discount_reason text DEFAULT NULL::text,
+27:     p_manual_discount_notes text DEFAULT NULL::text,
+28:     p_reward_id bigint DEFAULT NULL::bigint,
+29:     p_actor_identifier text DEFAULT NULL::text
+30: )
+31: RETURNS jsonb
+32: LANGUAGE plpgsql
+33: AS $function$
+--- coincidencia en linea 61 ---
+58:     v_gift_discount_total integer := 0;
+59: 
+60:     -- Reward aplicado a la venta.
+61:     v_reward public.customer_rewards%rowtype;
+62:     v_reward_product_id bigint;
+63:     v_reward_discount_total integer := 0;
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+--- coincidencia en linea 67 ---
+64:     v_reward_applied boolean := false;
+65:     v_reward_applied_to_line boolean := false;
+66:     v_reward_sale_item_id bigint;
+67:     v_redeemed_at timestamptz;
+68: 
+69:     -- Se conserva para compatibilidad/auditoría del resultado.
+70:     v_custom_payable_subtotal integer := 0;
+71: 
+72:     -- Suma de total_price de todas las lí­neas cuyo snapshot
+--- coincidencia en linea 258 ---
+255:     -- 4. REWARD
+256:     -- ================================================================
+257: 
+258:     if p_reward_id is not null then
+259: 
+260:         if p_customer_id is null then
+261:             raise exception
+262:                 'El canje de premio requiere un cliente.';
+263:         end if;
+--- coincidencia en linea 282 ---
+279: 
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+--- coincidencia en linea 283 ---
+280:         select *
+281:         into v_reward
+282:         from public.customer_rewards
+283:         where id = p_reward_id
+284:           and customer_id = p_customer_id
+285:         for update;
+286: 
+287: 
+288:         if not found then
+--- coincidencia en linea 1098 ---
+1095:             v_line_discount :=
+1096:                 v_gross_line_total;
+1097: 
+1098:         elsif p_reward_id is not null
+1099:               and not v_reward_applied
+1100:               and v_product.id = v_reward_product_id
+1101:         then
+1102: 
+1103:             v_line_discount :=
+--- coincidencia en linea 1655 ---
+1652:     -- 20. CANJE TRANSACCIONAL DE REWARD
+1653:     -- ================================================================
+1654: 
+1655:     if p_reward_id is not null then
+1656: 
+1657:         -- El reward fue validado al inicio, pero además debe haberse
+1658:         -- materializado efectivamente sobre una línea de la venta.
+1659:         if not v_reward_applied
+1660:            or v_reward_sale_item_id is null
+--- coincidencia en linea 1667 ---
+1664:         end if;
+1665: 
+1666: 
+1667:         v_redeemed_at := now();
+1668: 
+1669: 
+1670:         update public.customer_rewards
+1671:         set
+1672:             status = 'redeemed',
+--- coincidencia en linea 1670 ---
+1667:         v_redeemed_at := now();
+1668: 
+1669: 
+1670:         update public.customer_rewards
+1671:         set
+1672:             status = 'redeemed',
+1673:             redeemed_at = v_redeemed_at,
+1674:             redeemed_sale_id = v_sale_id
+1675:         where id = p_reward_id
+--- coincidencia en linea 1672 ---
+1669: 
+1670:         update public.customer_rewards
+1671:         set
+1672:             status = 'redeemed',
+1673:             redeemed_at = v_redeemed_at,
+1674:             redeemed_sale_id = v_sale_id
+1675:         where id = p_reward_id
+1676:           and customer_id = p_customer_id
+1677:           and status = 'active';
+--- coincidencia en linea 1673 ---
+1670:         update public.customer_rewards
+1671:         set
+1672:             status = 'redeemed',
+1673:             redeemed_at = v_redeemed_at,
+1674:             redeemed_sale_id = v_sale_id
+1675:         where id = p_reward_id
+1676:           and customer_id = p_customer_id
+1677:           and status = 'active';
+1678: 
+--- coincidencia en linea 1674 ---
+1671:         set
+1672:             status = 'redeemed',
+1673:             redeemed_at = v_redeemed_at,
+1674:             redeemed_sale_id = v_sale_id
+1675:         where id = p_reward_id
+1676:           and customer_id = p_customer_id
+1677:           and status = 'active';
+1678: 
+1679:         if not found then
+--- coincidencia en linea 1675 ---
+1672:             status = 'redeemed',
+1673:             redeemed_at = v_redeemed_at,
+1674:             redeemed_sale_id = v_sale_id
+1675:         where id = p_reward_id
+1676:           and customer_id = p_customer_id
+1677:           and status = 'active';
+1678: 
+1679:         if not found then
+1680:             raise exception
+--- coincidencia en linea 1686 ---
+1683: 
+1684: 
+1685:         -- Mantener compatibilidad con campañas históricas/futuras
+1686:         -- que utilicen customer_rewards.
+1687:         if v_reward.campaign_id is not null then
+1688: 
+1689:             update public.campana_clientes
+1690:             set
+1691:                 estado = 'canjeado',
+--- coincidencia en linea 1692 ---
+1689:             update public.campana_clientes
+1690:             set
+1691:                 estado = 'canjeado',
+1692:                 canjeado_at = v_redeemed_at
+1693:             where cliente_id = p_customer_id
+1694:               and campana_id = v_reward.campaign_id
+1695:               and (
+1696:                     premio_id = v_reward.legacy_reward_id
+1697:                     or premio_id = v_reward.id
+--- coincidencia en linea 1696 ---
+1693:             where cliente_id = p_customer_id
+1694:               and campana_id = v_reward.campaign_id
+1695:               and (
+1696:                     premio_id = v_reward.legacy_reward_id
+1697:                     or premio_id = v_reward.id
+1698:               );
+1699: 
+1700:         end if;
+1701: 
+--- coincidencia en linea 1705 ---
+1702: 
+1703:         perform public.record_customer_event(
+1704:             p_customer_id := p_customer_id,
+1705:             p_event_type := 'loyalty.reward_redeemed',
+1706:             p_source_module := 'loyalty',
+1707:             p_source_entity_type := 'customer_reward',
+1708:             p_source_entity_id := p_reward_id::text,
+1709:             p_sale_id := v_sale_id,
+1710:             p_reward_id := p_reward_id,
+--- coincidencia en linea 1708 ---
+1705:             p_event_type := 'loyalty.reward_redeemed',
+1706:             p_source_module := 'loyalty',
+1707:             p_source_entity_type := 'customer_reward',
+1708:             p_source_entity_id := p_reward_id::text,
+1709:             p_sale_id := v_sale_id,
+1710:             p_reward_id := p_reward_id,
+1711:             p_loyalty_movement_id := null,
+1712:             p_actor_role := nullif(
+1713:                 trim(coalesce(p_actor_role, '')),
+--- coincidencia en linea 1710 ---
+1707:             p_source_entity_type := 'customer_reward',
+1708:             p_source_entity_id := p_reward_id::text,
+1709:             p_sale_id := v_sale_id,
+1710:             p_reward_id := p_reward_id,
+1711:             p_loyalty_movement_id := null,
+1712:             p_actor_role := nullif(
+1713:                 trim(coalesce(p_actor_role, '')),
+1714:                 ''
+1715:             ),
+--- coincidencia en linea 1720 ---
+1717:                 trim(coalesce(p_actor_identifier, '')),
+1718:                 ''
+1719:             ),
+1720:             p_occurred_at := v_redeemed_at,
+1721:             p_idempotency_key :=
+1722:                 'loyalty-reward-redeemed:' || p_reward_id,
+1723:             p_metadata := jsonb_build_object(
+1724:                 'rewardName', v_reward.name,
+1725:                 'rewardType', v_reward.reward_type,
+--- coincidencia en linea 1722 ---
+1719:             ),
+1720:             p_occurred_at := v_redeemed_at,
+1721:             p_idempotency_key :=
+1722:                 'loyalty-reward-redeemed:' || p_reward_id,
+1723:             p_metadata := jsonb_build_object(
+1724:                 'rewardName', v_reward.name,
+1725:                 'rewardType', v_reward.reward_type,
+1726:                 'rewardProductId', v_reward_product_id,
+1727:                 'saleItemId', v_reward_sale_item_id,
+--- coincidencia en linea 1730 ---
+1727:                 'saleItemId', v_reward_sale_item_id,
+1728:                 'rewardDiscountTotal', v_reward_discount_total,
+1729:                 'campaignId', v_reward.campaign_id,
+1730:                 'legacyRewardId', v_reward.legacy_reward_id,
+1731:                 'expiresAt', v_reward.expires_at
+1732:             )
+1733:         );
+1734: 
+1735: 
+--- coincidencia en linea 1740 ---
+1737:         set fecha_ultimo_canje =
+1738:             case
+1739:                 when fecha_ultimo_canje is null
+1740:                     then v_redeemed_at
+1741:                 else greatest(
+1742:                     fecha_ultimo_canje,
+1743:                     v_redeemed_at
+1744:                 )
+1745:             end
+--- coincidencia en linea 1743 ---
+1740:                     then v_redeemed_at
+1741:                 else greatest(
+1742:                     fecha_ultimo_canje,
+1743:                     v_redeemed_at
+1744:                 )
+1745:             end
+1746:         where id = p_customer_id;
+1747: 
+1748: 
+--- coincidencia en linea 1753 ---
+1750:             p_customer_id
+1751:         );
+1752: 
+1753:         perform public.sync_legacy_customer_rewards(
+1754:             p_customer_id
+1755:         );
+1756: 
+1757:     end if;
+1758: 
+--- coincidencia en linea 1839 ---
+1836:         'gift_discount_total',
+1837:         v_gift_discount_total,
+1838: 
+1839:         'reward_id',
+1840:         p_reward_id,
+1841: 
+1842:         'reward_product_id',
+1843:         v_reward_product_id,
+1844: 
+--- coincidencia en linea 1840 ---
+1837:         v_gift_discount_total,
+1838: 
+1839:         'reward_id',
+1840:         p_reward_id,
+1841: 
+1842:         'reward_product_id',
+1843:         v_reward_product_id,
+1844: 
+1845:         'reward_sale_item_id',
+--- coincidencia en linea 1851 ---
+1848:         'reward_discount_total',
+1849:         v_reward_discount_total,
+1850: 
+1851:         'reward_redeemed_at',
+1852:         v_redeemed_at,
+1853: 
+1854:         'total_before_manual_discount',
+1855:         v_total_before_manual_discount,
+1856: 
+--- coincidencia en linea 1852 ---
+1849:         v_reward_discount_total,
+1850: 
+1851:         'reward_redeemed_at',
+1852:         v_redeemed_at,
+1853: 
+1854:         'total_before_manual_discount',
+1855:         v_total_before_manual_discount,
+1856: 
+1857:         'manual_discount_type',
+
+===== database\migrations\20260921_01_catalog_channel_promotions.sql (2089 lineas; 30 coincidencias) =====
+--- coincidencia en linea 28 ---
+25:     p_manual_discount_value integer DEFAULT NULL::integer,
+26:     p_manual_discount_reason text DEFAULT NULL::text,
+27:     p_manual_discount_notes text DEFAULT NULL::text,
+28:     p_reward_id bigint DEFAULT NULL::bigint,
+29:     p_actor_identifier text DEFAULT NULL::text
+30: )
+31: RETURNS jsonb
+32: LANGUAGE plpgsql
+33: AS $function$
+--- coincidencia en linea 69 ---
+66:     v_pot_discount_base integer := 0;
+67: 
+68:     -- Reward aplicado a la venta.
+69:     v_reward public.customer_rewards%rowtype;
+70:     v_reward_product_id bigint;
+71:     v_reward_discount_total integer := 0;
+72:     v_reward_applied boolean := false;
+73:     v_reward_applied_to_line boolean := false;
+74:     v_reward_sale_item_id bigint;
+--- coincidencia en linea 75 ---
+72:     v_reward_applied boolean := false;
+73:     v_reward_applied_to_line boolean := false;
+74:     v_reward_sale_item_id bigint;
+75:     v_redeemed_at timestamptz;
+76: 
+77:     -- Se conserva para compatibilidad/auditoría del resultado.
+78:     v_custom_payable_subtotal integer := 0;
+79: 
+80:     -- Suma de total_price de todas las lí­neas cuyo snapshot
+--- coincidencia en linea 266 ---
+263:     -- 4. REWARD
+264:     -- ================================================================
+265: 
+266:     if p_reward_id is not null then
+267: 
+268:         if p_customer_id is null then
+269:             raise exception
+270:                 'El canje de premio requiere un cliente.';
+271:         end if;
+--- coincidencia en linea 290 ---
+287: 
+288:         select *
+289:         into v_reward
+290:         from public.customer_rewards
+291:         where id = p_reward_id
+292:           and customer_id = p_customer_id
+293:         for update;
+294: 
+295: 
+--- coincidencia en linea 291 ---
+288:         select *
+289:         into v_reward
+290:         from public.customer_rewards
+291:         where id = p_reward_id
+292:           and customer_id = p_customer_id
+293:         for update;
+294: 
+295: 
+296:         if not found then
+--- coincidencia en linea 1105 ---
+1102:             v_line_discount :=
+1103:                 v_gross_line_total;
+1104: 
+1105:         elsif p_reward_id is not null
+1106:               and not v_reward_applied
+1107:               and v_product.id = v_reward_product_id
+1108:         then
+1109: 
+1110:             v_line_discount :=
+--- coincidencia en linea 1764 ---
+1761:     -- 20. CANJE TRANSACCIONAL DE REWARD
+1762:     -- ================================================================
+1763: 
+1764:     if p_reward_id is not null then
+1765: 
+1766:         -- El reward fue validado al inicio, pero además debe haberse
+1767:         -- materializado efectivamente sobre una línea de la venta.
+1768:         if not v_reward_applied
+1769:            or v_reward_sale_item_id is null
+--- coincidencia en linea 1776 ---
+1773:         end if;
+1774: 
+1775: 
+1776:         v_redeemed_at := now();
+1777: 
+1778: 
+1779:         update public.customer_rewards
+1780:         set
+1781:             status = 'redeemed',
+--- coincidencia en linea 1779 ---
+1776:         v_redeemed_at := now();
+1777: 
+1778: 
+1779:         update public.customer_rewards
+1780:         set
+1781:             status = 'redeemed',
+1782:             redeemed_at = v_redeemed_at,
+1783:             redeemed_sale_id = v_sale_id
+1784:         where id = p_reward_id
+--- coincidencia en linea 1781 ---
+1778: 
+1779:         update public.customer_rewards
+1780:         set
+1781:             status = 'redeemed',
+1782:             redeemed_at = v_redeemed_at,
+1783:             redeemed_sale_id = v_sale_id
+1784:         where id = p_reward_id
+1785:           and customer_id = p_customer_id
+1786:           and status = 'active';
+--- coincidencia en linea 1782 ---
+1779:         update public.customer_rewards
+1780:         set
+1781:             status = 'redeemed',
+1782:             redeemed_at = v_redeemed_at,
+1783:             redeemed_sale_id = v_sale_id
+1784:         where id = p_reward_id
+1785:           and customer_id = p_customer_id
+1786:           and status = 'active';
+1787: 
+--- coincidencia en linea 1783 ---
+1780:         set
+1781:             status = 'redeemed',
+1782:             redeemed_at = v_redeemed_at,
+1783:             redeemed_sale_id = v_sale_id
+1784:         where id = p_reward_id
+1785:           and customer_id = p_customer_id
+1786:           and status = 'active';
+1787: 
+1788:         if not found then
+--- coincidencia en linea 1784 ---
+1781:             status = 'redeemed',
+1782:             redeemed_at = v_redeemed_at,
+1783:             redeemed_sale_id = v_sale_id
+1784:         where id = p_reward_id
+1785:           and customer_id = p_customer_id
+1786:           and status = 'active';
+1787: 
+1788:         if not found then
+1789:             raise exception
+--- coincidencia en linea 1795 ---
+1792: 
+1793: 
+1794:         -- Mantener compatibilidad con campañas históricas/futuras
+1795:         -- que utilicen customer_rewards.
+1796:         if v_reward.campaign_id is not null then
+1797: 
+1798:             update public.campana_clientes
+1799:             set
+1800:                 estado = 'canjeado',
+--- coincidencia en linea 1801 ---
+1798:             update public.campana_clientes
+1799:             set
+1800:                 estado = 'canjeado',
+1801:                 canjeado_at = v_redeemed_at
+1802:             where cliente_id = p_customer_id
+1803:               and campana_id = v_reward.campaign_id
+1804:               and (
+1805:                     premio_id = v_reward.legacy_reward_id
+1806:                     or premio_id = v_reward.id
+--- coincidencia en linea 1805 ---
+1802:             where cliente_id = p_customer_id
+1803:               and campana_id = v_reward.campaign_id
+1804:               and (
+1805:                     premio_id = v_reward.legacy_reward_id
+1806:                     or premio_id = v_reward.id
+1807:               );
+1808: 
+1809:         end if;
+1810: 
+--- coincidencia en linea 1814 ---
+1811: 
+1812:         perform public.record_customer_event(
+1813:             p_customer_id := p_customer_id,
+1814:             p_event_type := 'loyalty.reward_redeemed',
+1815:             p_source_module := 'loyalty',
+1816:             p_source_entity_type := 'customer_reward',
+1817:             p_source_entity_id := p_reward_id::text,
+1818:             p_sale_id := v_sale_id,
+1819:             p_reward_id := p_reward_id,
+--- coincidencia en linea 1817 ---
+1814:             p_event_type := 'loyalty.reward_redeemed',
+1815:             p_source_module := 'loyalty',
+1816:             p_source_entity_type := 'customer_reward',
+1817:             p_source_entity_id := p_reward_id::text,
+1818:             p_sale_id := v_sale_id,
+1819:             p_reward_id := p_reward_id,
+1820:             p_loyalty_movement_id := null,
+1821:             p_actor_role := nullif(
+1822:                 trim(coalesce(p_actor_role, '')),
+--- coincidencia en linea 1819 ---
+1816:             p_source_entity_type := 'customer_reward',
+1817:             p_source_entity_id := p_reward_id::text,
+1818:             p_sale_id := v_sale_id,
+1819:             p_reward_id := p_reward_id,
+1820:             p_loyalty_movement_id := null,
+1821:             p_actor_role := nullif(
+1822:                 trim(coalesce(p_actor_role, '')),
+1823:                 ''
+1824:             ),
+--- coincidencia en linea 1829 ---
+1826:                 trim(coalesce(p_actor_identifier, '')),
+1827:                 ''
+1828:             ),
+1829:             p_occurred_at := v_redeemed_at,
+1830:             p_idempotency_key :=
+1831:                 'loyalty-reward-redeemed:' || p_reward_id,
+1832:             p_metadata := jsonb_build_object(
+1833:                 'rewardName', v_reward.name,
+1834:                 'rewardType', v_reward.reward_type,
+--- coincidencia en linea 1831 ---
+1828:             ),
+1829:             p_occurred_at := v_redeemed_at,
+1830:             p_idempotency_key :=
+1831:                 'loyalty-reward-redeemed:' || p_reward_id,
+1832:             p_metadata := jsonb_build_object(
+1833:                 'rewardName', v_reward.name,
+1834:                 'rewardType', v_reward.reward_type,
+1835:                 'rewardProductId', v_reward_product_id,
+1836:                 'saleItemId', v_reward_sale_item_id,
+--- coincidencia en linea 1839 ---
+1836:                 'saleItemId', v_reward_sale_item_id,
+1837:                 'rewardDiscountTotal', v_reward_discount_total,
+1838:                 'campaignId', v_reward.campaign_id,
+1839:                 'legacyRewardId', v_reward.legacy_reward_id,
+1840:                 'expiresAt', v_reward.expires_at
+1841:             )
+1842:         );
+1843: 
+1844: 
+--- coincidencia en linea 1849 ---
+1846:         set fecha_ultimo_canje =
+1847:             case
+1848:                 when fecha_ultimo_canje is null
+1849:                     then v_redeemed_at
+1850:                 else greatest(
+1851:                     fecha_ultimo_canje,
+1852:                     v_redeemed_at
+1853:                 )
+1854:             end
+--- coincidencia en linea 1852 ---
+1849:                     then v_redeemed_at
+1850:                 else greatest(
+1851:                     fecha_ultimo_canje,
+1852:                     v_redeemed_at
+1853:                 )
+1854:             end
+1855:         where id = p_customer_id;
+1856: 
+1857: 
+--- coincidencia en linea 1862 ---
+1859:             p_customer_id
+1860:         );
+1861: 
+1862:         perform public.sync_legacy_customer_rewards(
+1863:             p_customer_id
+1864:         );
+1865: 
+1866:     end if;
+1867: 
+--- coincidencia en linea 1951 ---
+1948:         'mystery_reward_discount_total',
+1949:         v_mystery_reward_discount_total,
+1950: 
+1951:         'reward_id',
+1952:         p_reward_id,
+1953: 
+1954:         'reward_product_id',
+1955:         v_reward_product_id,
+1956: 
+--- coincidencia en linea 1952 ---
+1949:         v_mystery_reward_discount_total,
+1950: 
+1951:         'reward_id',
+1952:         p_reward_id,
+1953: 
+1954:         'reward_product_id',
+1955:         v_reward_product_id,
+1956: 
+1957:         'reward_sale_item_id',
+--- coincidencia en linea 1963 ---
+1960:         'reward_discount_total',
+1961:         v_reward_discount_total,
+1962: 
+1963:         'reward_redeemed_at',
+1964:         v_redeemed_at,
+1965: 
+1966:         'total_before_manual_discount',
+1967:         v_total_before_manual_discount,
+1968: 
+--- coincidencia en linea 1964 ---
+1961:         v_reward_discount_total,
+1962: 
+1963:         'reward_redeemed_at',
+1964:         v_redeemed_at,
+1965: 
+1966:         'total_before_manual_discount',
+1967:         v_total_before_manual_discount,
+1968: 
+1969:         'manual_discount_type',
+
+===== database\migrations\20260926_02_analytics_extended_foundation.sql (413 lineas; 3 coincidencias) =====
+--- coincidencia en linea 207 ---
+204: -- orgánica.
+205: -- ============================================================
+206: 
+207: CREATE OR REPLACE VIEW analytics.v_loyalty_movements
+208: WITH (security_invoker = true)
+209: AS
+210: SELECT
+211:     lm.*,
+212: 
+--- coincidencia en linea 244 ---
+241:         )
+242:     ) AS is_organic_program_activity
+243: 
+244: FROM public.loyalty_movements lm;
+245: 
+246: 
+247: -- ============================================================
+248: -- 4. REWARDS
+249: --
+--- coincidencia en linea 268 ---
+265:         ELSE 'legacy_or_other'
+266:     END AS analytics_reward_group
+267: 
+268: FROM public.customer_rewards cr;
+269: 
+270: 
+271: -- ============================================================
+272: -- 5. INVENTARIO — STOCK ACTUAL
+273: --
+
+===== database\migrations\20260926_06_analytics_operations_layer.sql (582 lineas; 11 coincidencias) =====
+--- coincidencia en linea 29 ---
+26:             WHERE movement_type = 'sale_credit'
+27:         ) AS customers_earning_stamps,
+28: 
+29:         COALESCE(SUM(stamp_delta) FILTER (
+30:             WHERE movement_type = 'sale_credit'
+31:         ), 0) AS stamps_earned_from_sales,
+32: 
+33:         COUNT(*) FILTER (
+34:             WHERE movement_type = 'sale_reversal'
+--- coincidencia en linea 37 ---
+34:             WHERE movement_type = 'sale_reversal'
+35:         ) AS sale_reversal_movements,
+36: 
+37:         COALESCE(SUM(stamp_delta) FILTER (
+38:             WHERE movement_type = 'sale_reversal'
+39:         ), 0) AS stamps_reversed,
+40: 
+41:         COUNT(*) FILTER (
+42:             WHERE movement_type = 'reward_conversion'
+--- coincidencia en linea 49 ---
+46:             WHERE movement_type = 'reward_conversion'
+47:         ) AS customers_converting_rewards,
+48: 
+49:         COALESCE(SUM(ABS(stamp_delta)) FILTER (
+50:             WHERE movement_type = 'reward_conversion'
+51:         ), 0) AS stamps_converted_to_rewards
+52: 
+53:     FROM analytics.v_loyalty_movements
+54:     WHERE is_organic_program_activity
+--- coincidencia en linea 53 ---
+50:             WHERE movement_type = 'reward_conversion'
+51:         ), 0) AS stamps_converted_to_rewards
+52: 
+53:     FROM analytics.v_loyalty_movements
+54:     WHERE is_organic_program_activity
+55: ),
+56: rewards AS (
+57:     SELECT
+58:         COUNT(*) AS current_engine_rewards,
+--- coincidencia en linea 65 ---
+62:         ) AS active_rewards,
+63: 
+64:         COUNT(*) FILTER (
+65:             WHERE status = 'redeemed'
+66:         ) AS redeemed_rewards,
+67: 
+68:         COUNT(*) FILTER (
+69:             WHERE status = 'expired'
+70:         ) AS expired_rewards,
+--- coincidencia en linea 66 ---
+63: 
+64:         COUNT(*) FILTER (
+65:             WHERE status = 'redeemed'
+66:         ) AS redeemed_rewards,
+67: 
+68:         COUNT(*) FILTER (
+69:             WHERE status = 'expired'
+70:         ) AS expired_rewards,
+71: 
+--- coincidencia en linea 73 ---
+70:         ) AS expired_rewards,
+71: 
+72:         COUNT(DISTINCT customer_id) FILTER (
+73:             WHERE status = 'redeemed'
+74:         ) AS customers_redeeming_rewards
+75: 
+76:     FROM analytics.v_rewards
+77:     WHERE analytics_reward_group = 'current_engine'
+78: )
+--- coincidencia en linea 93 ---
+90: 
+91:     r.current_engine_rewards,
+92:     r.active_rewards,
+93:     r.redeemed_rewards,
+94:     r.expired_rewards,
+95:     r.customers_redeeming_rewards
+96: 
+97: FROM movements m
+98: CROSS JOIN rewards r;
+--- coincidencia en linea 126 ---
+123: 
+124:     COUNT(*) AS movement_count,
+125:     COUNT(DISTINCT lm.customer_id) AS customers,
+126:     SUM(lm.stamp_delta) AS net_stamp_delta,
+127:     SUM(ABS(lm.stamp_delta)) AS absolute_stamp_movement
+128: 
+129: FROM analytics.v_loyalty_movements lm
+130: LEFT JOIN analytics.calendar c
+131:     ON c.calendar_date =
+--- coincidencia en linea 127 ---
+124:     COUNT(*) AS movement_count,
+125:     COUNT(DISTINCT lm.customer_id) AS customers,
+126:     SUM(lm.stamp_delta) AS net_stamp_delta,
+127:     SUM(ABS(lm.stamp_delta)) AS absolute_stamp_movement
+128: 
+129: FROM analytics.v_loyalty_movements lm
+130: LEFT JOIN analytics.calendar c
+131:     ON c.calendar_date =
+132:        (lm.occurred_at AT TIME ZONE 'America/Santiago')::date
+--- coincidencia en linea 129 ---
+126:     SUM(lm.stamp_delta) AS net_stamp_delta,
+127:     SUM(ABS(lm.stamp_delta)) AS absolute_stamp_movement
+128: 
+129: FROM analytics.v_loyalty_movements lm
+130: LEFT JOIN analytics.calendar c
+131:     ON c.calendar_date =
+132:        (lm.occurred_at AT TIME ZONE 'America/Santiago')::date
+133: 
+134: GROUP BY
+
+===== lib\customer-events.ts (173 lineas; 2 coincidencias) =====
+--- coincidencia en linea 15 ---
+12:   | "loyalty.stamps_credited"
+13:   | "loyalty.stamps_reversed"
+14:   | "loyalty.reward_issued"
+15:   | "loyalty.reward_redeemed"
+16:   | "loyalty.reward_redemption_reversed"
+17:   | "loyalty.reward_expired"
+18:   | "loyalty.adjusted"
+19:   | "campaign.reward_assigned";
+20: 
+--- coincidencia en linea 145 ---
+142:     p_source_entity_type: normalizeOptionalText(input.sourceEntityType),
+143:     p_source_entity_id: normalizeOptionalText(input.sourceEntityId),
+144:     p_sale_id: saleId,
+145:     p_reward_id: rewardId,
+146:     p_loyalty_movement_id: loyaltyMovementId,
+147:     p_actor_role: normalizeOptionalText(input.actorRole),
+148:     p_actor_identifier: normalizeOptionalText(input.actorIdentifier),
+149:     p_occurred_at: normalizeOccurredAt(input.occurredAt),
+150:     p_idempotency_key: idempotencyKey,
+
+===== lib\customer-registration.ts (450 lineas; 1 coincidencias) =====
+--- coincidencia en linea 281 ---
+278:       lifetime_stamps_earned: 0,
+279:       lifetime_stamps_reversed: 0,
+280:       lifetime_rewards_issued: 0,
+281:       lifetime_rewards_redeemed: 0,
+282:       active_rewards_count: 0,
+283:       last_movement_id: null,
+284:       last_movement_at: null,
+285:       projection_version: 1,
+286:     });
+
+===== lib\daily-loyalty.ts (382 lineas; 2 coincidencias) =====
+--- coincidencia en linea 73 ---
+70: 
+71:   expected_stamps?: unknown;
+72:   applied_stamps?: unknown;
+73:   pending_stamp_delta?: unknown;
+74: 
+75:   rewards_expected?: unknown;
+76:   rewards_issued?: unknown;
+77: 
+78:   projection_status?: unknown;
+--- coincidencia en linea 331 ---
+328:   );
+329: 
+330:   const pendingStampDelta = normalizeInteger(
+331:     result.pending_stamp_delta,
+332:     "La diferencia pendiente",
+333:   );
+334: 
+335:   const rewardsExpected = normalizeNonNegativeInteger(
+336:     result.rewards_expected,
+
+===== lib\daily-loyalty-application.ts (192 lineas; 2 coincidencias) =====
+--- coincidencia en linea 37 ---
+34:   expected_stamps?: unknown;
+35:   previously_applied_stamps?: unknown;
+36:   applied_stamps?: unknown;
+37:   pending_stamp_delta?: unknown;
+38:   applied_delta?: unknown;
+39: 
+40:   movement_id?: unknown;
+41:   movement_created?: unknown;
+42: 
+--- coincidencia en linea 157 ---
+154:   );
+155: 
+156:   const appliedDelta = Number(
+157:     result.applied_delta ?? result.pending_stamp_delta ?? 0,
+158:   );
+159: 
+160:   if (!Number.isInteger(appliedDelta)) {
+161:     throw new Error("La diferencia aplicada no es válida.");
+162:   }
+
+===== lib\documents\sales\build-sale-document.ts (346 lineas; 4 coincidencias) =====
+--- coincidencia en linea 230 ---
+227:   if (sale.customer_id) {
+228:     const [movementsResult, rewardsResult, accountResult] = await Promise.all([
+229:       supabaseAdmin
+230:         .from("loyalty_movements")
+231:         .select("stamp_delta")
+232:         .eq("customer_id", sale.customer_id)
+233:         .eq("source", "daily_loyalty")
+234:         .eq("source_reference", sourceReference),
+235: 
+--- coincidencia en linea 231 ---
+228:     const [movementsResult, rewardsResult, accountResult] = await Promise.all([
+229:       supabaseAdmin
+230:         .from("loyalty_movements")
+231:         .select("stamp_delta")
+232:         .eq("customer_id", sale.customer_id)
+233:         .eq("source", "daily_loyalty")
+234:         .eq("source_reference", sourceReference),
+235: 
+236:       supabaseAdmin
+--- coincidencia en linea 237 ---
+234:         .eq("source_reference", sourceReference),
+235: 
+236:       supabaseAdmin
+237:         .from("customer_rewards")
+238:         .select("id", { count: "exact", head: true })
+239:         .eq("customer_id", sale.customer_id)
+240:         .eq("source", "loyalty_engine")
+241:         .gte("issued_at", `${order.business_date}T00:00:00`),
+242: 
+--- coincidencia en linea 253 ---
+250:     if (!movementsResult.error) {
+251:       stampsEarned = (movementsResult.data || []).reduce(
+252:         (total, movement) =>
+253:           total + Math.max(Number(movement.stamp_delta || 0), 0),
+254:         0,
+255:       );
+256:     }
+257: 
+258:     if (!rewardsResult.error) {
+
+===== lib\email\emailDispatcher.ts (675 lineas; 8 coincidencias) =====
+--- coincidencia en linea 14 ---
+11: import { sendOperatorInvitationEmail } from "./sendOperatorInvitationEmail";
+12: import { sendCampaignRewardAssignedEmail } from "./sendCampaignRewardAssignedEmail";
+13: import { sendPrizeEmail } from "./sendPrizeEmail";
+14: import { sendRewardRedeemedEmail } from "./sendRewardRedeemedEmail";
+15: import { sendStampEmail } from "./sendStampEmail";
+16: 
+17: const FROM_EMAIL =
+18:   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
+19: 
+--- coincidencia en linea 246 ---
+243:     case "PRIZE_GENERATED":
+244:       return sendQueuedPrizeGenerated(email);
+245: 
+246:     case "REWARD_REDEEMED":
+247:       return sendQueuedRewardRedeemed(email);
+248: 
+249:     case "STAMP_EARNED":
+250:       return sendQueuedStampEarned(email);
+251: 
+--- coincidencia en linea 247 ---
+244:       return sendQueuedPrizeGenerated(email);
+245: 
+246:     case "REWARD_REDEEMED":
+247:       return sendQueuedRewardRedeemed(email);
+248: 
+249:     case "STAMP_EARNED":
+250:       return sendQueuedStampEarned(email);
+251: 
+252:     default:
+--- coincidencia en linea 506 ---
+503:   return result.data?.id ?? null;
+504: }
+505: 
+506: async function sendQueuedRewardRedeemed(
+507:   email: EmailQueueRow,
+508: ): Promise<string | null> {
+509:   const nombre = email.payload?.nombre;
+510:   const premioNombre = email.payload?.premioNombre;
+511: [LINEA OMITIDA: posible secreto]
+--- coincidencia en linea 514 ---
+511: [LINEA OMITIDA: posible secreto]
+512: 
+513:   if (typeof nombre !== "string" || !nombre.trim()) {
+514:     throw new Error("REWARD_REDEEMED payload requires nombre");
+515:   }
+516: 
+517:   if (typeof premioNombre !== "string" || !premioNombre.trim()) {
+518:     throw new Error("REWARD_REDEEMED payload requires premioNombre");
+519:   }
+--- coincidencia en linea 518 ---
+515:   }
+516: 
+517:   if (typeof premioNombre !== "string" || !premioNombre.trim()) {
+518:     throw new Error("REWARD_REDEEMED payload requires premioNombre");
+519:   }
+520: 
+521:   if (typeof publicToken !== "string" || !publicToken.trim()) {
+522:     throw new Error("REWARD_REDEEMED payload requires publicToken");
+523:   }
+--- coincidencia en linea 522 ---
+519:   }
+520: 
+521:   if (typeof publicToken !== "string" || !publicToken.trim()) {
+522:     throw new Error("REWARD_REDEEMED payload requires publicToken");
+523:   }
+524: 
+525:   const result = await sendRewardRedeemedEmail(
+526:     email.recipient_email,
+527:     nombre,
+--- coincidencia en linea 525 ---
+522:     throw new Error("REWARD_REDEEMED payload requires publicToken");
+523:   }
+524: 
+525:   const result = await sendRewardRedeemedEmail(
+526:     email.recipient_email,
+527:     nombre,
+528:     premioNombre,
+529:     publicToken,
+530:     email.idempotency_key,
+
+===== lib\email\sendRewardRedeemedEmail.ts (61 lineas; 1 coincidencias) =====
+--- coincidencia en linea 7 ---
+4: const FROM_EMAIL =
+5:   "Nook Heladería de Autora <fidelizacion@fidelidad.nookheladeria.cl>";
+6: 
+7: export async function sendRewardRedeemedEmail(
+8:   email: string,
+9:   nombre: string,
+10:   premioNombre: string,
+11: [LINEA OMITIDA: posible secreto]
+12:   idempotencyKey: string,
+
+===== lib\loyalty\customer-loyalty.mapper.ts (390 lineas; 17 coincidencias) =====
+--- coincidencia en linea 15 ---
+12:   lifetime_stamps_earned: unknown;
+13:   lifetime_stamps_reversed: unknown;
+14:   lifetime_rewards_issued: unknown;
+15:   lifetime_rewards_redeemed: unknown;
+16:   active_rewards_count: unknown;
+17:   last_movement_id: unknown;
+18:   last_movement_at: unknown;
+19:   projection_version: unknown;
+20: };
+--- coincidencia en linea 31 ---
+28:   status: unknown;
+29:   issued_at: unknown;
+30:   expires_at: unknown;
+31:   redeemed_at: unknown;
+32:   cancelled_at: unknown;
+33:   campaign_id: unknown;
+34:   reward_product_id: unknown;
+35:   legacy_reward_id: unknown;
+36:   source: unknown;
+--- coincidencia en linea 35 ---
+32:   cancelled_at: unknown;
+33:   campaign_id: unknown;
+34:   reward_product_id: unknown;
+35:   legacy_reward_id: unknown;
+36:   source: unknown;
+37:   source_reference: unknown;
+38:   metadata: unknown;
+39: };
+40: 
+--- coincidencia en linea 45 ---
+42:   id: unknown;
+43:   customer_id: unknown;
+44:   sale_id: unknown;
+45:   reward_id: unknown;
+46:   movement_type: unknown;
+47:   stamp_delta: unknown;
+48:   stamp_balance_after: unknown;
+49:   source: unknown;
+50:   source_reference: unknown;
+--- coincidencia en linea 47 ---
+44:   sale_id: unknown;
+45:   reward_id: unknown;
+46:   movement_type: unknown;
+47:   stamp_delta: unknown;
+48:   stamp_balance_after: unknown;
+49:   source: unknown;
+50:   source_reference: unknown;
+51:   reason: unknown;
+52:   actor_role: unknown;
+--- coincidencia en linea 175 ---
+172: 
+173:   if (
+174:     normalized === "active" ||
+175:     normalized === "redeemed" ||
+176:     normalized === "expired" ||
+177:     normalized === "cancelled"
+178:   ) {
+179:     return normalized;
+180:   }
+--- coincidencia en linea 216 ---
+213:       "El total histórico de premios emitidos",
+214:     ),
+215: 
+216:     lifetimeRewardsRedeemed: normalizeNonNegativeInteger(
+217:       row.lifetime_rewards_redeemed,
+218:       "El total histórico de premios canjeados",
+219:     ),
+220: 
+221:     activeRewardsCount: normalizeNonNegativeInteger(
+--- coincidencia en linea 217 ---
+214:     ),
+215: 
+216:     lifetimeRewardsRedeemed: normalizeNonNegativeInteger(
+217:       row.lifetime_rewards_redeemed,
+218:       "El total histórico de premios canjeados",
+219:     ),
+220: 
+221:     activeRewardsCount: normalizeNonNegativeInteger(
+222:       row.active_rewards_count,
+--- coincidencia en linea 268 ---
+265:       "La fecha de vencimiento del premio",
+266:     ),
+267: 
+268:     redeemedAt: normalizeOptionalDate(
+269:       row.redeemed_at,
+270:       "La fecha de canje del premio",
+271:     ),
+272: 
+273:     cancelledAt: normalizeOptionalDate(
+--- coincidencia en linea 269 ---
+266:     ),
+267: 
+268:     redeemedAt: normalizeOptionalDate(
+269:       row.redeemed_at,
+270:       "La fecha de canje del premio",
+271:     ),
+272: 
+273:     cancelledAt: normalizeOptionalDate(
+274:       row.cancelled_at,
+--- coincidencia en linea 290 ---
+287: 
+288:     source: normalizeRequiredText(row.source, "El origen del premio"),
+289:     sourceReference: normalizeOptionalText(row.source_reference),
+290:     legacyRewardId: normalizeOptionalText(row.legacy_reward_id),
+291:     metadata: normalizeMetadata(row.metadata),
+292:   };
+293: }
+294: 
+295: export function mapLoyaltyMovementRow(
+--- coincidencia en linea 312 ---
+309:     ),
+310: 
+311:     rewardId: normalizeOptionalPositiveInteger(
+312:       row.reward_id,
+313:       "El premio del movimiento",
+314:     ),
+315: 
+316:     movementType: normalizeRequiredText(
+317:       row.movement_type,
+--- coincidencia en linea 321 ---
+318:       "El tipo de movimiento",
+319:     ),
+320: 
+321:     stampDelta: normalizeInteger(row.stamp_delta, "La variación de sellos"),
+322: 
+323:     stampBalanceAfter: normalizeOptionalNonNegativeInteger(
+324:       row.stamp_balance_after,
+325:       "El saldo posterior",
+326:     ),
+--- coincidencia en linea 361 ---
+358:     (reward) => reward.status === "active" && !isExpiredByDate(reward),
+359:   );
+360: 
+361:   const redeemedRewards = rewards.filter(
+362:     (reward) => reward.status === "redeemed",
+363:   );
+364: 
+365:   const expiredRewards = rewards.filter(
+366:     (reward) =>
+--- coincidencia en linea 362 ---
+359:   );
+360: 
+361:   const redeemedRewards = rewards.filter(
+362:     (reward) => reward.status === "redeemed",
+363:   );
+364: 
+365:   const expiredRewards = rewards.filter(
+366:     (reward) =>
+367:       reward.status === "expired" ||
+--- coincidencia en linea 382 ---
+379:     lifetimeStampsEarned: account.lifetimeStampsEarned,
+380:     lifetimeStampsReversed: account.lifetimeStampsReversed,
+381:     lifetimeRewardsIssued: account.lifetimeRewardsIssued,
+382:     lifetimeRewardsRedeemed: account.lifetimeRewardsRedeemed,
+383:     activeRewardsCount: activeRewards.length,
+384:     activeRewards,
+385:     redeemedRewards,
+386:     expiredRewards,
+387:     cancelledRewards,
+--- coincidencia en linea 385 ---
+382:     lifetimeRewardsRedeemed: account.lifetimeRewardsRedeemed,
+383:     activeRewardsCount: activeRewards.length,
+384:     activeRewards,
+385:     redeemedRewards,
+386:     expiredRewards,
+387:     cancelledRewards,
+388:     lastMovementAt: account.lastMovementAt,
+389:   };
+390: }
+
+===== lib\loyalty\customer-loyalty.repository.ts (181 lineas; 8 coincidencias) =====
+--- coincidencia en linea 53 ---
+50:   const normalizedMovementLimit = normalizeMovementLimit(movementLimit);
+51: 
+52:   const { error: expirationError } = await supabaseAdmin.rpc(
+53:     "expire_customer_rewards",
+54:     {
+55:       p_customer_id: normalizedCustomerId,
+56:       p_actor_role: "system",
+57:       p_actor_identifier: "customer-loyalty-read",
+58:     },
+--- coincidencia en linea 76 ---
+73:       lifetime_stamps_earned,
+74:       lifetime_stamps_reversed,
+75:       lifetime_rewards_issued,
+76:       lifetime_rewards_redeemed,
+77:       active_rewards_count,
+78:       last_movement_id,
+79:       last_movement_at,
+80:       projection_version
+81:     `,
+--- coincidencia en linea 87 ---
+84:     .maybeSingle();
+85: 
+86:   const rewardsPromise = supabaseAdmin
+87:     .from("customer_rewards")
+88:     .select(
+89:       `
+90:       id,
+91:       customer_id,
+92:       reward_type,
+--- coincidencia en linea 98 ---
+95:       status,
+96:       issued_at,
+97:       expires_at,
+98:       redeemed_at,
+99:       cancelled_at,
+100:       campaign_id,
+101:       reward_product_id,
+102:       legacy_reward_id,
+103:       source,
+--- coincidencia en linea 102 ---
+99:       cancelled_at,
+100:       campaign_id,
+101:       reward_product_id,
+102:       legacy_reward_id,
+103:       source,
+104:       source_reference,
+105:       metadata
+106:     `,
+107:     )
+--- coincidencia en linea 118 ---
+115: 
+116:   const movementsPromise = includeMovements
+117:     ? supabaseAdmin
+118:         .from("loyalty_movements")
+119:         .select(
+120:           `
+121:           id,
+122:           customer_id,
+123:           sale_id,
+--- coincidencia en linea 124 ---
+121:           id,
+122:           customer_id,
+123:           sale_id,
+124:           reward_id,
+125:           movement_type,
+126:           stamp_delta,
+127:           stamp_balance_after,
+128:           source,
+129:           source_reference,
+--- coincidencia en linea 126 ---
+123:           sale_id,
+124:           reward_id,
+125:           movement_type,
+126:           stamp_delta,
+127:           stamp_balance_after,
+128:           source,
+129:           source_reference,
+130:           reason,
+131:           actor_role,
+
+===== lib\loyalty\customer-loyalty.ts (129 lineas; 2 coincidencias) =====
+--- coincidencia en linea 29 ---
+26:     lifetimeStampsEarned: 0,
+27:     lifetimeStampsReversed: 0,
+28:     lifetimeRewardsIssued: 0,
+29:     lifetimeRewardsRedeemed: 0,
+30:     activeRewardsCount: 0,
+31:     lastMovementId: null,
+32:     lastMovementAt: null,
+33:     projectionVersion: 1,
+34:   };
+--- coincidencia en linea 117 ---
+114: 
+115:   return [
+116:     ...loyalty.activeRewards,
+117:     ...loyalty.redeemedRewards,
+118:     ...loyalty.expiredRewards,
+119:     ...loyalty.cancelledRewards,
+120:   ];
+121: }
+122: 
+
+===== lib\loyalty\customer-loyalty.types.ts (79 lineas; 5 coincidencias) =====
+--- coincidencia en linea 3 ---
+1: export type CustomerRewardStatus =
+2:   | "active"
+3:   | "redeemed"
+4:   | "expired"
+5:   | "cancelled";
+6: 
+7: export type CustomerRewardSummary = {
+8:   id: number;
+--- coincidencia en linea 16 ---
+13:   status: CustomerRewardStatus;
+14:   issuedAt: string;
+15:   expiresAt: string | null;
+16:   redeemedAt: string | null;
+17:   cancelledAt: string | null;
+18:   campaignId: number | null;
+19:   rewardProductId: number | null;
+20:   source: string;
+21:   sourceReference: string | null;
+--- coincidencia en linea 49 ---
+46:   lifetimeStampsEarned: number;
+47:   lifetimeStampsReversed: number;
+48:   lifetimeRewardsIssued: number;
+49:   lifetimeRewardsRedeemed: number;
+50:   activeRewardsCount: number;
+51:   lastMovementId: number | null;
+52:   lastMovementAt: string | null;
+53:   projectionVersion: number;
+54: };
+--- coincidencia en linea 63 ---
+60:   lifetimeStampsEarned: number;
+61:   lifetimeStampsReversed: number;
+62:   lifetimeRewardsIssued: number;
+63:   lifetimeRewardsRedeemed: number;
+64:   activeRewardsCount: number;
+65:   activeRewards: CustomerRewardSummary[];
+66:   redeemedRewards: CustomerRewardSummary[];
+67:   expiredRewards: CustomerRewardSummary[];
+68:   cancelledRewards: CustomerRewardSummary[];
+--- coincidencia en linea 66 ---
+63:   lifetimeRewardsRedeemed: number;
+64:   activeRewardsCount: number;
+65:   activeRewards: CustomerRewardSummary[];
+66:   redeemedRewards: CustomerRewardSummary[];
+67:   expiredRewards: CustomerRewardSummary[];
+68:   cancelledRewards: CustomerRewardSummary[];
+69:   lastMovementAt: string | null;
+70: };
+71: 
+
+===== lib\loyalty-movements.ts (188 lineas; 3 coincidencias) =====
+--- coincidencia en linea 132 ---
+129:   const { data, error } = await supabaseAdmin.rpc("record_loyalty_movement", {
+130:     p_customer_id: customerId,
+131:     p_movement_type: input.movementType,
+132:     p_stamp_delta: stampDelta,
+133:     p_source: source,
+134:     p_source_reference: normalizeOptionalText(input.sourceReference),
+135:     p_sale_id: normalizeOptionalPositiveId(input.saleId, "La venta"),
+136:     p_reward_id: normalizeOptionalPositiveId(input.rewardId, "El premio"),
+137:     p_reason: normalizeOptionalText(input.reason),
+--- coincidencia en linea 136 ---
+133:     p_source: source,
+134:     p_source_reference: normalizeOptionalText(input.sourceReference),
+135:     p_sale_id: normalizeOptionalPositiveId(input.saleId, "La venta"),
+136:     p_reward_id: normalizeOptionalPositiveId(input.rewardId, "El premio"),
+137:     p_reason: normalizeOptionalText(input.reason),
+138:     p_actor_role: normalizeOptionalText(input.actorRole),
+139:     p_actor_identifier: normalizeOptionalText(input.actorIdentifier),
+140:     p_reversal_of_movement_id: normalizeOptionalPositiveId(
+141:       input.reversalOfMovementId,
+--- coincidencia en linea 157 ---
+154: 
+155:   const movementId = Number(data?.movement_id);
+156:   const resultCustomerId = Number(data?.customer_id);
+157:   const resultStampDelta = Number(data?.stamp_delta);
+158:   const stampBalanceAfter = Number(data?.stamp_balance_after);
+159: 
+160:   const stampBalanceBefore =
+161:     data?.stamp_balance_before === null ||
+162:     data?.stamp_balance_before === undefined
+
+===== lib\loyalty-rewards.ts (146 lineas; 3 coincidencias) =====
+--- coincidencia en linea 26 ---
+23:   customer_id?: unknown;
+24:   balance_before?: unknown;
+25:   rewards_issued?: unknown;
+26:   reward_ids?: unknown;
+27:   stamps_consumed?: unknown;
+28:   conversion_movement_id?: unknown;
+29:   balance_after?: unknown;
+30:   converted?: unknown;
+31:   reason?: unknown;
+--- coincidencia en linea 104 ---
+101: 
+102:   const result = data as ConvertLoyaltyStampsRpcResult;
+103: 
+104:   const rewardIds = Array.isArray(result.reward_ids)
+105:     ? result.reward_ids.map((value) =>
+106:         normalizePositiveInteger(value, "Uno de los premios"),
+107:       )
+108:     : [];
+109: 
+--- coincidencia en linea 105 ---
+102:   const result = data as ConvertLoyaltyStampsRpcResult;
+103: 
+104:   const rewardIds = Array.isArray(result.reward_ids)
+105:     ? result.reward_ids.map((value) =>
+106:         normalizePositiveInteger(value, "Uno de los premios"),
+107:       )
+108:     : [];
+109: 
+110:   return {

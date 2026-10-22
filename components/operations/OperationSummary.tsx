@@ -11,6 +11,8 @@ type Summary = {
   newCustomers: number;
   stampsIssued: number;
   expiringRewards: number;
+  rewardsIssued: number;
+  rewardsRedeemed: number;
   pendingOrders: number;
   preparingOrders: number;
   readyOrders: number;
@@ -86,7 +88,7 @@ export default function OperationSummary() {
                 {metric("Sellos generados", String(summary.stampsIssued), "Créditos positivos de hoy")}
                 {metric("Facturación identificada", summary.totalRevenue ? `${Math.round(summary.identifiedRevenue * 100 / summary.totalRevenue)}%` : "—", "Sobre facturación del día")}
                 {metric("Premios por vencer", String(summary.expiringRewards), "Activos · próximos 6 días")}
-                {metric("Premios otorgados / canjeados", "—", "Pendiente de validar eventos")}
+                {metric("Premios otorgados / canjeados", `${summary.rewardsIssued} / ${summary.rewardsRedeemed}`, "Eventos de la jornada")}
               </div>
             </div>
             <div className="rounded-xl border border-neutral-200 p-3">
