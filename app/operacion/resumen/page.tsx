@@ -47,6 +47,20 @@ export default function ResumenOperativoPage() {
   const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
   const [mensajeSuscripcion, setMensajeSuscripcion] = useState("");
   const [consultaAbierta, setConsultaAbierta] = useState(false);
+
+  useEffect(() => {
+    if (!consultaAbierta) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setConsultaAbierta(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [consultaAbierta]);
   useEffect(() => {
     cargarSesion();
     cargarDatos();
@@ -291,8 +305,19 @@ export default function ResumenOperativoPage() {
               {consultaAbierta ? "Ocultar consulta" : "Consultar cliente"}
             </button>
           </div>
-          {consultaAbierta && (
-            <div className="border-t border-neutral-100 p-3 sm:p-4">
+        </section>
+        {consultaAbierta && (
+          <div className="fixed inset-0 z-[80]" role="presentation">
+            <button type="button" aria-label="Cerrar consulta de cliente" onClick={() => setConsultaAbierta(false)} className="absolute inset-0 h-full w-full bg-neutral-950/40" />
+            <aside role="dialog" aria-modal="true" aria-label="Consulta rápida de cliente" className="absolute inset-y-0 right-0 flex w-full max-w-[640px] flex-col bg-white shadow-2xl">
+              <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-3">
+                <div>
+                  <h2 className="text-base font-semibold text-neutral-900">Consulta rápida de cliente</h2>
+                  <p className="text-xs text-neutral-500">Fidelización, premios y suscripciones</p>
+                </div>
+                <button type="button" onClick={() => setConsultaAbierta(false)} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-50" aria-label="Cerrar panel">Cerrar ✕</button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 p-4">
             <span className="text-lg font-semibold text-violet-800">
@@ -441,10 +466,11 @@ export default function ResumenOperativoPage() {
               </>
             )}
           </div>
+              </div>
+              </div>
+            </aside>
           </div>
-          </div>
-          )}
-        </section>
+        )}
       </div>
     </main>
   );

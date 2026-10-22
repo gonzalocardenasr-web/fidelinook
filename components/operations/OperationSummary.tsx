@@ -54,9 +54,9 @@ export default function OperationSummary() {
 
   const metric = (label: string, value: string, detail: string) => (
     <div className="min-w-0 px-2 py-2">
-      <p className="text-[11px] font-medium text-neutral-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-neutral-900">{value}</p>
-      <p className="mt-0.5 text-[10px] text-neutral-500">{detail}</p>
+      <p className="text-xs font-medium text-neutral-600">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-neutral-900">{value}</p>
+      <p className="mt-0.5 text-xs text-neutral-500">{detail}</p>
     </div>
   );
 
@@ -64,8 +64,8 @@ export default function OperationSummary() {
     <section className="rounded-xl border border-neutral-200 bg-white px-3 py-3 shadow-sm sm:px-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-base font-semibold text-neutral-900">Resumen operativo</h1>
-          <p className="text-[11px] text-neutral-500">Jornada actual · {updatedAt ? `Actualizado ${updatedAt}` : "Actualizando"}</p>
+          <h1 className="text-lg font-semibold text-neutral-900">Resumen operativo</h1>
+          <p className="text-xs text-neutral-500">Jornada actual · {updatedAt ? `Actualizado ${updatedAt}` : "Actualizando"}</p>
         </div>
         <button type="button" onClick={() => { void cargarResumen(); }}
           className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50">
@@ -83,7 +83,7 @@ export default function OperationSummary() {
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="rounded-xl border border-neutral-200 p-3">
-              <h2 className="text-sm font-semibold text-neutral-900">Fidelización de hoy</h2>
+              <h2 className="text-base font-semibold text-neutral-900">Fidelización de hoy</h2>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {metric("Sellos generados", String(summary.stampsIssued), "Créditos positivos de hoy")}
                 {metric("Facturación identificada", summary.totalRevenue ? `${Math.round(summary.identifiedRevenue * 100 / summary.totalRevenue)}%` : "—", "Sobre facturación del día")}
@@ -92,7 +92,7 @@ export default function OperationSummary() {
               </div>
             </div>
             <div className="rounded-xl border border-neutral-200 p-3">
-              <h2 className="text-sm font-semibold text-neutral-900">Operación en curso</h2>
+              <h2 className="text-base font-semibold text-neutral-900">Operación en curso</h2>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {metric("Pendientes", String(summary.pendingOrders), "Por preparar")}
                 {metric("Preparación", String(summary.preparingOrders), "En curso")}
