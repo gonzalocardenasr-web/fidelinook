@@ -63,18 +63,19 @@ export async function GET() {
   const startOfDay = localMidnightUtc(businessDate);
   const startOfTomorrow = localMidnightUtc(tomorrow);
 
-  const { data: sales, error: salesError } = await supabaseAdmin
-    .from("sales")
-    .select("id, total, status, created_at")
-    .gte("created_at", startOfDay)
-    .lt("created_at", startOfTomorrow)
-    .neq("status", "cancelled");
-
-  if (salesError) {
-    return NextResponse.json(
-      { ok: false, message: salesError.message },
-      { status: 500 },
-    );
+  const sales: Array<{ id: number; total: number | null; customer_id: number | null }> = [];
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await supabaseAdmin
+      .from("sales")
+      .select("id, total, customer_id")
+      .gte("created_at", startOfDay)
+      .lt("created_at", startOfTomorrow)
+      .neq("status", "cancelled")
+      .order("id", { ascending: true }).range(from, from + 499);
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    sales.push(...(data || []));
+    if ((data || []).length < 500) break;
+    if (from >= 99500) return NextResponse.json({ ok: false, message: "Límite de ventas alcanzado." }, { status: 500 });
   }
 
   const { data: orders, error: ordersError } = await supabaseAdmin
@@ -88,6 +89,55 @@ export async function GET() {
       { status: 500 },
     );
   }
+
+  // Indicadores de fidelización: consultar exclusivamente eventos canónicos.
+  // Cada consulta tiene paginación explícita para evitar el límite por defecto de PostgREST.
+  async function fetchAllRows<T>(makeQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+    const all: T[] = [];
+    const pageSize = 500;
+    for (let from = 0; ; from += pageSize) {
+      const result = await makeQuery(from, from + pageSize - 1);
+      if (result.error) throw new Error(result.error.message);
+      const batch = result.data || [];
+      all.push(...batch);
+      if (batch.length < pageSize) return all;
+      if (from >= 99500) throw new Error("Límite de paginación de indicadores alcanzado.");
+    }
+  }
+
+  let newCustomers: number;
+  let stampsIssued: number;
+  let expiringRewards: number;
+  try {
+    const [customersToday, positiveMovements, rewardsSoon] = await Promise.all([
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("clientes").select("id")
+          .gte("created_At", startOfDay).lt("created_At", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
+      fetchAllRows<{ stamp_delta: number }>((from, to) =>
+        supabaseAdmin.from("loyalty_movements").select("stamp_delta")
+          .gt("stamp_delta", 0)
+          .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+          .order("occurred_at", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .eq("status", "active")
+          .not("expires_at", "is", null)
+          .gte("expires_at", new Date().toISOString())
+          .lt("expires_at", new Date(Date.now() + 6 * 86400000).toISOString())
+          .order("expires_at", { ascending: true }).range(from, to)),
+    ]);
+    newCustomers = customersToday.length;
+    stampsIssued = positiveMovements.reduce((sum, movement) => sum + Number(movement.stamp_delta || 0), 0);
+    expiringRewards = rewardsSoon.length;
+  } catch (error) {
+    console.error("OPERATION_SUMMARY_LOYALTY_METRICS_ERROR", error);
+    return NextResponse.json({ ok: false, message: "No se pudieron calcular los indicadores de fidelización." }, { status: 500 });
+  }
+
+  const identifiedSales = (sales || []).filter((sale) => sale.customer_id !== null).length;
+  const identifiedRevenue = (sales || []).reduce((sum, sale) =>
+    sum + (sale.customer_id !== null ? Number(sale.total || 0) : 0), 0);
 
   const totalSales = sales?.length || 0;
   const totalRevenue =
@@ -111,6 +161,11 @@ export async function GET() {
       businessDate,
       totalSales,
       totalRevenue,
+      identifiedSales,
+      identifiedRevenue,
+      newCustomers,
+      stampsIssued,
+      expiringRewards,
       pendingOrders,
       preparingOrders,
       readyOrders,

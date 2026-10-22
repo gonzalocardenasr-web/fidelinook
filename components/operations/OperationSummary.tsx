@@ -6,6 +6,11 @@ type Summary = {
   businessDate: string;
   totalSales: number;
   totalRevenue: number;
+  identifiedSales: number;
+  identifiedRevenue: number;
+  newCustomers: number;
+  stampsIssued: number;
+  expiringRewards: number;
   pendingOrders: number;
   preparingOrders: number;
   readyOrders: number;
@@ -71,14 +76,18 @@ export default function OperationSummary() {
           <div className="mt-3 grid grid-cols-2 gap-1 border-b border-neutral-100 pb-2 md:grid-cols-4">
             {metric("Facturación", money(summary.totalRevenue), `${summary.totalSales} ventas`)}
             {metric("Ticket promedio", summary.totalSales ? money(summary.totalRevenue / summary.totalSales) : "—", "Ventas de la jornada")}
-            {metric("Ventas identificadas", "—", "Fuente pendiente de validar")}
-            {metric("Clientes nuevos", "—", "Fuente pendiente de validar")}
+            {metric("Ventas identificadas", summary.totalSales ? `${Math.round(summary.identifiedSales * 100 / summary.totalSales)}%` : "—", `${summary.identifiedSales} de ${summary.totalSales} ventas`)}
+            {metric("Clientes nuevos", String(summary.newCustomers), "Registrados hoy")}
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="rounded-xl border border-neutral-200 p-3">
               <h2 className="text-sm font-semibold text-neutral-900">Fidelización de hoy</h2>
-              <p className="mt-2 text-xs text-neutral-500">Sellos, premios y facturación identificada</p>
-              <p className="mt-1 text-xs text-neutral-500">Indicadores pendientes de validación de fuentes.</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {metric("Sellos generados", String(summary.stampsIssued), "Créditos positivos de hoy")}
+                {metric("Facturación identificada", summary.totalRevenue ? `${Math.round(summary.identifiedRevenue * 100 / summary.totalRevenue)}%` : "—", "Sobre facturación del día")}
+                {metric("Premios por vencer", String(summary.expiringRewards), "Activos · próximos 6 días")}
+                {metric("Premios otorgados / canjeados", "—", "Pendiente de validar eventos")}
+              </div>
             </div>
             <div className="rounded-xl border border-neutral-200 p-3">
               <h2 className="text-sm font-semibold text-neutral-900">Operación en curso</h2>
