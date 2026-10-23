@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -486,7 +486,7 @@ export default function InventoryReceiptDetailPage() {
 
       await cancelInventoryReceipt(receipt.id);
 
-      router.push("/operacion/inventario/recepciones");
+      router.push("/gestion/inventario/recepciones");
       router.refresh();
     } catch (error) {
       setCancelReceiptErrorMessage(
@@ -518,7 +518,7 @@ export default function InventoryReceiptDetailPage() {
       <main className="min-w-0 w-full px-3 py-3">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
           <Link
-            href="/operacion/inventario/recepciones"
+            href="/gestion/inventario/recepciones"
             className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
           >
             ← Volver a Recepciones
@@ -796,7 +796,7 @@ export default function InventoryReceiptDetailPage() {
 
         <section className="flex flex-wrap justify-between gap-2">
           <Link
-            href="/operacion/inventario/recepciones"
+            href="/gestion/inventario/recepciones"
             className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
           >
             Volver al listado

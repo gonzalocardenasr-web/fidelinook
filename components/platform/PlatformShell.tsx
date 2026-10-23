@@ -90,8 +90,8 @@ function isActiveRoute(pathname: string, href: string): boolean {
     );
   }
 
-  if (href === "/operacion/inventario/recepciones") {
-    return pathname.startsWith("/operacion/inventario/recepciones");
+  if (href === "/gestion/inventario") {
+    return pathname.startsWith("/gestion/inventario") || pathname.startsWith("/operacion/inventario/recepciones");
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -118,8 +118,12 @@ function getBreadcrumbs(pathname: string): string[] {
     return ["Operación", "Caja"];
   }
 
-  if (pathname.startsWith("/operacion/inventario/recepciones")) {
+  if (pathname.startsWith("/gestion/inventario/recepciones") || pathname.startsWith("/operacion/inventario/recepciones")) {
     return ["Gestión", "Inventario", "Recepciones"];
+  }
+
+  if (pathname === "/gestion/inventario") {
+    return ["Gestión", "Inventario"];
   }
 
   if (pathname.startsWith("/operacion/inventario/stock")) {

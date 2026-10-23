@@ -67,7 +67,7 @@ export default async function InventoryReceiptsPage() {
         </div>
 
         <Link
-          href="/operacion/inventario/recepciones/nueva"
+          href="/gestion/inventario/recepciones/nueva"
           className="inline-flex min-h-11 items-center justify-center rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
         >
           Nueva recepción
@@ -86,7 +86,7 @@ export default async function InventoryReceiptsPage() {
           </p>
 
           <Link
-            href="/operacion/inventario/recepciones/nueva"
+            href="/gestion/inventario/recepciones/nueva"
             className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
           >
             Registrar primera recepción
@@ -193,7 +193,7 @@ export default async function InventoryReceiptsPage() {
 
                     <td className="whitespace-nowrap px-4 py-4 text-right">
                       <Link
-                        href={`/operacion/inventario/recepciones/${receipt.id}`}
+                        href={`/gestion/inventario/recepciones/${receipt.id}`}
                         className="inline-flex rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
                       >
                         {receipt.status === "DRAFT" ? "Continuar" : "Ver"}

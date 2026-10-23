@@ -127,7 +127,7 @@ const PLATFORM_NAVIGATION: readonly PlatformNavigationItem[] = [
     id: "inventory-management",
     label: "Inventario",
     shortLabel: "Inv.",
-    href: "/operacion/inventario/recepciones",
+    href: "/gestion/inventario",
     section: "management",
     permission: "inventory.receipts.manage",
     icon: "inventory",

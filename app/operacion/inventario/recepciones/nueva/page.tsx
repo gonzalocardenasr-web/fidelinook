@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -89,7 +89,7 @@ export default function NewInventoryReceiptPage() {
         notes: form.notes.trim(),
       });
 
-      router.push(`/operacion/inventario/recepciones/${transactionId}`);
+      router.push(`/gestion/inventario/recepciones/${transactionId}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -262,7 +262,7 @@ export default function NewInventoryReceiptPage() {
 
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Link
-              href="/operacion/inventario/recepciones"
+              href="/gestion/inventario/recepciones"
               className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
             >
               Cancelar
