@@ -233,3 +233,20 @@ Esta secciÃ³n complementa la lÃ­nea base v1.0 sin sustituir el backlog de la
 - **Siguiente DEV:** DEV-UX-ARCH-01.12 â€” POS, PreparaciÃ³n e Historial, comenzando por auditorÃ­a de referencias, compatibilidad y preservaciÃ³n de venta activa. No renombrar rutas sin mapa de dependencias.
 
 **Evidencia de cierre documental:** esta anotaciÃ³n registra validaciones comunicadas; no afirma QA E2E integral, pruebas RBAC negativas ni commit/push de P4.2 hasta que se acrediten.
+
+
+## Actualización de ejecución — DEV-UX-ARCH-01.12 a 01.14 (2026-10-23)
+
+**Estado reportado por responsable:** DEV-UX-ARCH-01.12, 01.13 y 01.14 completados; para 01.14 se confirmó QA funcional, push y despliegue OK. Este registro actualiza el estado de ejecución sin sustituir las decisiones funcionales aprobadas en las secciones anteriores.
+
+| DEV | Estado | Resultado |
+|---|---|---|
+| 01.12 | CERRADO | Rutas canónicas de POS `/operacion/pos`, Preparación `/operacion/preparacion` e Historial `/operacion/historial`; compatibilidad de rutas anteriores. |
+| 01.13 | QA APROBADO | Rutas de Gestión para Analytics, Clientes, Catálogo, Campañas y Suscripciones; Usuarios en Administración. Implementaciones heredadas reutilizadas temporalmente. El cierre Git/despliegue específico de 01.13 no está acreditado de forma independiente en este registro. |
+| 01.14 | CERRADO / DESPLEGADO | Inventario administrativo `/gestion/inventario` y recepciones (`/recepciones`, `/nueva`, `/[transactionId]`), separado de stock, bachas y movimientos operacionales. TypeScript, build, diff-check, QA, push y deploy OK. |
+
+**Arquitectura de transición:** rutas canónicas pueden reexportar implementaciones alojadas en rutas anteriores. No confundir URL funcional con desacoplamiento de código; la eliminación de dependencias y el destino de rutas históricas requieren auditoría en 01.15. Mantener protecciones server-side y compatibilidad durante la transición.
+
+**01.15 — alcance propuesto para auditoría antes de programar:** inventariar rutas legadas y referencias internas/externas; distinguir redirecciones seguras de rutas que deben permanecer; migrar propiedad de implementaciones sin duplicar lógica; comprobar acceso por rol, APIs, estaciones, POS activo, impresiones y flujos públicos; pruebas de regresión y despliegue controlado. No eliminar rutas públicas por presunción ni activar campañas masivas.
+
+**Backlog adicional:** `PERF-CLIENTES-01` — latencia de búsqueda de clientes; instrumentar tiempos de UI/red/API/consulta e índices antes de optimizar. Prioridad media-alta; no incluido en 01.14.

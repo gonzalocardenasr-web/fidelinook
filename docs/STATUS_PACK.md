@@ -1823,3 +1823,20 @@ git commit -m "\<ID DEV>: \<descripción breve>"
 git push
 
 \`\`\`
+
+
+## Actualización 2026-10-23 — cierre DEV-UX-ARCH-01.12–01.14
+
+**Último DEV validado:** `DEV-UX-ARCH-01.14` — QA funcional aprobado, push y despliegue OK (confirmación del responsable). `01.12` cerrado; `01.13` QA aprobado, sin evidencia independiente de su push/deploy en este registro.
+
+**Arquitectura vigente:** Operación (`/operacion/resumen`, `/operacion/pos`, `/operacion/preparacion`, `/operacion/historial`, `/operacion/inventario`, `/operacion/caja`); Gestión (`/gestion/analytics`, `/gestion/clientes`, `/gestion/catalogo`, `/gestion/inventario`, `/gestion/campanas`, `/gestion/suscripciones`); Administración (`/administracion/usuarios`). Preparación con rol estación restringido. Cashier mantiene `customers.operate` para flujos de POS sin acceso a Gestión → Clientes; Admin/Superadmin tienen gestión. Recepciones administrativas bajo `/gestion/inventario/recepciones`; stock, bachas y movimientos permanecen en Operación.
+
+**Evidencia técnica 01.14:** instalador reportó 11 archivos y respaldo; `npx.cmd tsc --noEmit` OK, `npm.cmd run build` OK (Next.js 16.2.1; rutas canónicas generadas), `git diff --check` OK. Advertencias LF/CRLF informativas. QA, push y deploy confirmados posteriormente por el responsable.
+
+**Decisiones y cautelas:** rutas anteriores se mantienen por compatibilidad; algunas rutas canónicas reutilizan páginas históricas mediante reexportaciones. No declarar desacoplamiento físico ni retirar rutas sin auditoría. No modificar lógica de stock, POS, bachas, pagos o campañas masivas como efecto colateral.
+
+**Backlog:**
+- `DEV-UX-ARCH-01.15` — auditar y consolidar rutas legadas y propiedad de implementaciones, enlaces, autorización efectiva, estaciones, impresiones, flujos públicos y regresiones. Empezar por diagnóstico de solo lectura; no ejecutar eliminación masiva.
+- `PERF-CLIENTES-01` — lentitud de búsqueda de clientes. Medir UI, red, endpoints, consultas e índices antes de corregir; prioridad media-alta, separado del DEV arquitectónico.
+
+**Siguiente acción:** ejecutar diagnóstico acotado de 01.15 con inventario de referencias y controles de autorización; construir parche solo después de clasificar dependencias.
