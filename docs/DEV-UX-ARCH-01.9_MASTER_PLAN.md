@@ -220,3 +220,16 @@ Si un hallazgo técnico exige variar una decisión cerrada, registrar solicitud 
 ---
 
 **Próxima acción:** ejecutar P0.02B de solo lectura enfocado en auth, RBAC, navegación, redirecciones y dependencias de `/operacion`; luego preparar y ejecutar DEV-UX-ARCH-01.10 contra esta línea base.
+
+## 12. Seguimiento de implementaciÃ³n â€” 22-10-2026
+
+Esta secciÃ³n complementa la lÃ­nea base v1.0 sin sustituir el backlog de la secciÃ³n 8 ni alterar las decisiones D-01 a D-15.
+
+- **DEV-UX-ARCH-01.10:** shell, Resumen como primera opciÃ³n, redirecciÃ³n de `/operacion` y aterrizaje por rol reportados como desplegados y validados en la conversaciÃ³n.
+- **DEV-UX-ARCH-01.11 P1/P2A/P2B:** Resumen Operativo compacto, indicadores y eventos de premios implementados progresivamente; TypeScript y build reportados exitosos; visualizaciÃ³n productiva aprobada.
+- **DEV-UX-ARCH-01.11 P3/P3.1:** consulta rÃ¡pida de cliente en panel lateral superpuesto. P3 presentÃ³ error JSX, corregido en P3.1; TypeScript y build posteriores exitosos, despliegue y QA visual aprobados por el usuario. UX validada como versiÃ³n funcional, no necesariamente TO-BE definitiva.
+- **DEV-UX-ARCH-01.11 P4:** cierre documental original bloqueado por coincidencia textual demasiado estricta del instalador; no equivale a defecto del backlog. P4.2 sustituye solo el procedimiento documental.
+- **Pendiente explÃ­cito:** conciliaciÃ³n de KPIs del Resumen con la regla canÃ³nica de Analytics (venta `confirmed` + `paid`, `sales.revenue`, fecha comercial); no introducir cambios sin auditorÃ­a de datos. RestricciÃ³n de Cashier para GestiÃ³n/Clientes permanece diferida por decisiÃ³n del usuario, sin revocar su consulta operacional.
+- **Siguiente DEV:** DEV-UX-ARCH-01.12 â€” POS, PreparaciÃ³n e Historial, comenzando por auditorÃ­a de referencias, compatibilidad y preservaciÃ³n de venta activa. No renombrar rutas sin mapa de dependencias.
+
+**Evidencia de cierre documental:** esta anotaciÃ³n registra validaciones comunicadas; no afirma QA E2E integral, pruebas RBAC negativas ni commit/push de P4.2 hasta que se acrediten.

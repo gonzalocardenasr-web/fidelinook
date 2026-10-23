@@ -1,4 +1,20 @@
-**# STATUS PACK — PLATAFORMA NOOK**
+*# STATUS PACK — PLATAFORMA NOOK**
+
+## ActualizaciÃ³n 22-10-2026 â€” DEV-UX-ARCH-01.10/01.11 y continuidad
+
+**Estado del corte:** implementaciÃ³n y despliegue de Resumen Operativo reportados y aprobados visualmente por el usuario. P4.2 corresponde exclusivamente a actualizaciÃ³n documental. Las secciones anteriores se conservan como fotografÃ­as histÃ³ricas.
+
+- **01.10:** Resumen Operativo primera opciÃ³n, destino de `/operacion`, landing de Cashier/Admin/Superadmin y estaciÃ³n restringida: despliegue y QA por rol reportados OK.
+- **01.11 P1/P2A/P2B:** interfaz compacta y mÃ©tricas de jornada/fidelizaciÃ³n; P2B con TypeScript y build exitosos y pantalla productiva compartida. No inferir que la compilaciÃ³n certifica exactitud contable.
+- **01.11 P3/P3.1:** consulta rÃ¡pida de cliente mediante panel lateral superpuesto. Error JSX de P3 corregido por P3.1; TypeScript y build OK, despliegue OK y captura de QA visual validada. Es una versiÃ³n funcional aceptada, no el TO-BE UX definitivo.
+- **P4 original:** instalador detenido antes de escritura por condiciÃ³n textual exacta sobre backlog; el Master Plan adjunto sÃ­ registra `DEV-UX-ARCH-01.12` como POS, PreparaciÃ³n, Historial. P4.2 documenta el cierre sin alterar el backlog.
+- **Pendientes sin cierre implÃ­cito:** conciliar mÃ©tricas de Resumen con `sales.status='confirmed'`, `sales.payment_status='paid'`, `sales.revenue` y fecha comercial; verificar integralmente permisos de Cashier sobre GestiÃ³n/Clientes en DEV posterior (en stand-by por decisiÃ³n explÃ­cita, manteniendo funciones operacionales); no habilitar campaÃ±as masivas; no alterar Auth/sesiÃ³n sin evidencia.
+- **PrÃ³xima acciÃ³n:** DEV-UX-ARCH-01.12 â€” auditar dependencias y ejecutar migraciÃ³n incremental de POS, PreparaciÃ³n e Historial, preservando carrito, impresiones, colas, enlaces y RBAC. No cerrar el DEV por build solamente.
+
+**Alcance de evidencia:** no se acreditan aquÃ­ pruebas E2E completas ni commit/push de este cierre documental. La ejecuciÃ³n local de P4.2 y la revisiÃ³n del diff deben preceder a su commit.
+
+---
+
 
 **\*\*Última actualización:\*\*** 21-10-2026
 
