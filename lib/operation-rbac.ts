@@ -6,6 +6,7 @@ export type OperationPermission =
   | "sales.export"
   | "orders.operate"
   | "customers.operate"
+  | "customers.manage"
   | "loyalty.operate"
   | "cash.operate"
   | "cash.audit"
@@ -42,6 +43,7 @@ const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
 const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
   ...CASHIER_PERMISSIONS,
   "sales.export",
+  "customers.manage",
   "catalog.manage",
   "inventory.receipts.manage",
   "inventory.config.manage",

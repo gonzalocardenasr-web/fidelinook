@@ -53,6 +53,19 @@ function isOperationRole(value: unknown): value is OperationRole {
 }
 
 function isActiveRoute(pathname: string, href: string): boolean {
+  const managementAliases: Record<string, string[]> = {
+    "/gestion/analytics": ["/dashboard"],
+    "/gestion/clientes": ["/clientes"],
+    "/gestion/catalogo": ["/operacion/catalogo"],
+    "/gestion/campanas": ["/campanas"],
+    "/gestion/suscripciones": ["/suscripciones"],
+    "/administracion/usuarios": ["/admin/usuarios"],
+  };
+  if (managementAliases[href]) {
+    return [href, ...managementAliases[href]].some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    );
+  }
   if (href === "/operacion/historial") {
     if (pathname === "/operacion/historial" || pathname.startsWith("/operacion/historial/")) return true;
     return (
@@ -129,31 +142,31 @@ function getBreadcrumbs(pathname: string): string[] {
     return ["Operación", "Inventario"];
   }
 
-  if (pathname.startsWith("/operacion/catalogo")) {
+  if (pathname.startsWith("/gestion/catalogo") || pathname.startsWith("/operacion/catalogo")) {
     return ["Gestión", "Catálogo"];
   }
 
-  if (pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/gestion/analytics") || pathname.startsWith("/dashboard")) {
     return ["Gestión", "Analytics"];
   }
 
-  if (pathname.startsWith("/clientes")) {
+  if (pathname.startsWith("/gestion/clientes") || pathname.startsWith("/clientes")) {
     return ["Gestión", "Clientes"];
   }
 
-  if (pathname.startsWith("/campanas/")) {
+  if (pathname.startsWith("/gestion/campanas/") || pathname.startsWith("/campanas/")) {
     return ["Gestión", "Campañas", "Detalle"];
   }
 
-  if (pathname.startsWith("/campanas")) {
+  if (pathname.startsWith("/gestion/campanas") || pathname.startsWith("/campanas")) {
     return ["Gestión", "Campañas"];
   }
 
-  if (pathname.startsWith("/suscripciones")) {
+  if (pathname.startsWith("/gestion/suscripciones") || pathname.startsWith("/suscripciones")) {
     return ["Gestión", "Suscripciones"];
   }
 
-  if (pathname.startsWith("/admin/usuarios")) {
+  if (pathname.startsWith("/administracion/usuarios") || pathname.startsWith("/admin/usuarios")) {
     return ["Administración", "Usuarios"];
   }
 
