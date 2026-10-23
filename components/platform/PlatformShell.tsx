@@ -53,7 +53,8 @@ function isOperationRole(value: unknown): value is OperationRole {
 }
 
 function isActiveRoute(pathname: string, href: string): boolean {
-  if (href === "/operacion/ventas") {
+  if (href === "/operacion/historial") {
+    if (pathname === "/operacion/historial" || pathname.startsWith("/operacion/historial/")) return true;
     return (
       pathname === "/operacion/ventas" ||
       (pathname.startsWith("/operacion/ventas/") &&
@@ -62,6 +63,9 @@ function isActiveRoute(pathname: string, href: string): boolean {
         !pathname.includes("/ticket"))
     );
   }
+
+  if (href === "/operacion/pos") return pathname.startsWith("/operacion/pos") || pathname.startsWith("/operacion/ventas/nueva");
+  if (href === "/operacion/preparacion") return pathname.startsWith("/operacion/preparacion") || pathname.startsWith("/operacion/cola");
 
   if (href === "/operacion/inventario") {
     return (
@@ -85,15 +89,15 @@ function getBreadcrumbs(pathname: string): string[] {
     return ["Operación", "Resumen Operativo"];
   }
 
-  if (pathname.startsWith("/operacion/ventas/nueva")) {
+  if (pathname.startsWith("/operacion/pos") || pathname.startsWith("/operacion/ventas/nueva")) {
     return ["Operación", "POS"];
   }
 
-  if (pathname.startsWith("/operacion/cola")) {
+  if (pathname.startsWith("/operacion/preparacion") || pathname.startsWith("/operacion/cola")) {
     return ["Operación", "Preparación"];
   }
 
-  if (pathname.startsWith("/operacion/ventas")) {
+  if (pathname.startsWith("/operacion/historial") || pathname.startsWith("/operacion/ventas")) {
     return ["Operación", "Historial"];
   }
 
@@ -400,13 +404,13 @@ export default function PlatformShell({ children }: PlatformShellProps) {
   }
 
   const isPreparationStation =
-    pathname.startsWith("/operacion/cola") && session?.role === "preparation";
+    (pathname.startsWith("/operacion/preparacion") || pathname.startsWith("/operacion/cola")) && session?.role === "preparation";
 
   useEffect(() => {
     if (!session || session.role !== "preparation") return;
-    if (pathname.startsWith("/operacion/cola")) return;
+    if (pathname.startsWith("/operacion/preparacion") || pathname.startsWith("/operacion/cola")) return;
 
-    router.replace("/operacion/cola");
+    router.replace("/operacion/preparacion");
   }, [pathname, router, session]);
 
   if (sessionLoading) {

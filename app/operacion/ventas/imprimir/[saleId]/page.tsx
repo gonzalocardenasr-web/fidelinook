@@ -186,7 +186,7 @@ export default function ImprimirVentaPage() {
 
       <div className="no-print mx-auto mb-4 flex max-w-md items-center justify-between gap-3 rounded-xl bg-white p-3 shadow-sm">
         <Link
-          href="/operacion/ventas"
+          href="/operacion/historial"
           className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[12px] font-bold text-neutral-700 transition hover:bg-neutral-50"
         >
           ← Historial

@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
       }
 
       const destination =
-        data.role === "preparation" ? "/operacion/cola" : "/operacion/resumen";
+        data.role === "preparation" ? "/operacion/preparacion" : "/operacion/resumen";
 
       setMensaje(
         data.role === "preparation"
