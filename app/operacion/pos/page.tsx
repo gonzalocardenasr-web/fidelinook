@@ -1,1 +1,1284 @@
-export { default } from "../ventas/nueva/page";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ClienteSelectorValue } from "@/components/client/ClienteSelector";
+import ProductGrid from "@/components/sales/ProductGrid";
+import OrderBuilder from "@/components/sales/OrderBuilder";
+import {
+  CartItem,
+  CoffeeOption,
+  CustomCartItem,
+  OptionGroup,
+  Product,
+  ProductCartItem,
+} from "@/types/sales";
+import POSLayout from "@/components/pos/POSLayout";
+import POSContextPanel from "@/components/pos/POSContextPanel";
+import ProductConfigurator from "@/components/sales/ProductConfigurator";
+import { SalesChannel } from "@/components/pos/SalesChannelSelector";
+import CustomMessagePrintModal from "@/components/pos/CustomMessagePrintModal";
+import { sortPosProducts } from "@/lib/pos/posProductOrder";
+
+type ManualDiscountType = "percent" | "fixed";
+
+type ManualDiscountReason =
+  | "courtesy"
+  | "promotion"
+  | "platform_discount"
+  | "customer_compensation"
+  | "nooklovers"
+  | "other";
+
+export default function NuevaVentaPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("tarjeta");
+  const [cashReceived, setCashReceived] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [clienteSelectorResetKey, setClienteSelectorResetKey] = useState(0);
+  const [editingItem, setEditingItem] = useState<ProductCartItem | null>(null);
+
+  const [channel, setChannel] = useState<SalesChannel>("local");
+  const [externalOrderId, setExternalOrderId] = useState("");
+
+  const [selectedCliente, setSelectedCliente] =
+    useState<ClienteSelectorValue | null>(null);
+
+  const [selectedRewardId, setSelectedRewardId] = useState<number | null>(null);
+
+  const [configuringProduct, setConfiguringProduct] = useState<Product | null>(
+    null,
+  );
+
+  const [customMessageModalOpen, setCustomMessageModalOpen] = useState(false);
+
+  const [promotionalStamps, setPromotionalStamps] = useState(0);
+
+  const [manualDiscountEnabled, setManualDiscountEnabled] = useState(false);
+  const [manualDiscountType, setManualDiscountType] =
+    useState<ManualDiscountType>("percent");
+  const [manualDiscountValue, setManualDiscountValue] = useState("");
+  const [manualDiscountReason, setManualDiscountReason] = useState<
+    ManualDiscountReason | ""
+  >("");
+  const [manualDiscountNotes, setManualDiscountNotes] = useState("");
+
+  const [openBatchFlavorIds, setOpenBatchFlavorIds] = useState<number[]>([]);
+
+  const [readyPotFlavorIds, setReadyPotFlavorIds] = useState<number[]>([]);
+
+  const [availableBrownieVarietyIds, setAvailableBrownieVarietyIds] = useState<
+    number[]
+  >([]);
+
+  const [availableMineralWaterTypeIds, setAvailableMineralWaterTypeIds] =
+    useState<number[]>([]);
+
+  const [availableCoffeeTypeIds, setAvailableCoffeeTypeIds] = useState<
+    number[]
+  >([]);
+
+  const [coffeeOptionPrices, setCoffeeOptionPrices] = useState<
+    {
+      optionValueId: number;
+      channel: string;
+      price: number;
+      inventoryQuantity: number;
+      stockQuantity: number;
+      isAvailable: boolean;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    if (!selectedCliente) {
+      setPromotionalStamps(0);
+    }
+  }, [selectedCliente]);
+
+  useEffect(() => {
+    cargarCatalogo();
+  }, []);
+
+  useEffect(() => {
+    setCashReceived("");
+
+    if (channel === "local") {
+      setPaymentMethod("tarjeta");
+    } else {
+      setPaymentMethod("pago_electronico");
+    }
+  }, [channel]);
+
+  async function cargarCatalogo() {
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/operacion/catalogo");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo cargar catálogo.");
+        return;
+      }
+
+      setProducts(data.products || []);
+      setOptionGroups(data.optionGroups || []);
+      setOpenBatchFlavorIds(data.openBatchFlavorIds || []);
+      setReadyPotFlavorIds(data.readyPotFlavorIds || []);
+      setAvailableBrownieVarietyIds(data.availableBrownieVarietyIds || []);
+      setAvailableMineralWaterTypeIds(data.availableMineralWaterTypeIds || []);
+      setAvailableCoffeeTypeIds(data.availableCoffeeTypeIds || []);
+      setCoffeeOptionPrices(data.coffeeOptionPrices || []);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error cargando catálogo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase();
+
+    return sortPosProducts(
+      products.filter((product) => {
+        if (!isProductSellable(product)) {
+          return false;
+        }
+
+        if (!search) {
+          return true;
+        }
+
+        const name = product.name?.toLowerCase() || "";
+        const sku = product.sku?.toLowerCase() || "";
+        const category = product.category?.toLowerCase() || "";
+        const operationalType = product.operational_type?.toLowerCase() || "";
+        const subcategory = product.subcategory?.toLowerCase() || "";
+
+        return (
+          name.includes(search) ||
+          sku.includes(search) ||
+          category.includes(search) ||
+          operationalType.includes(search) ||
+          subcategory.includes(search)
+        );
+      }),
+    );
+  }, [products, productSearch, channel, coffeeOptionPrices]);
+
+  const flavors = useMemo(() => {
+    return (
+      optionGroups.find((group) => group.code === "flavor")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active)
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups]);
+
+  const openBatchFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(openBatchFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
+  }, [flavors, openBatchFlavorIds]);
+
+  const readyPotFlavors = useMemo(() => {
+    const availableFlavorIds = new Set(readyPotFlavorIds);
+
+    return flavors.filter((flavor) => availableFlavorIds.has(flavor.id));
+  }, [flavors, readyPotFlavorIds]);
+
+  const brownieVarieties = useMemo(() => {
+    const availableIds = new Set(availableBrownieVarietyIds);
+
+    return (
+      optionGroups.find((group) => group.code === "brownie_variety")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableBrownieVarietyIds]);
+
+  const mineralWaterTypes = useMemo(() => {
+    const availableIds = new Set(availableMineralWaterTypeIds);
+
+    return (
+      optionGroups.find((group) => group.code === "mineral_water_type")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active && availableIds.has(option.id))
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableMineralWaterTypeIds]);
+
+  const coffeeTypes = useMemo<CoffeeOption[]>(() => {
+    const availableIds = new Set(availableCoffeeTypeIds);
+
+    const priceByOptionValueId = new Map(
+      coffeeOptionPrices
+        .filter((option) => option.channel === channel)
+        .map((option) => [Number(option.optionValueId), option]),
+    );
+
+    return (
+      optionGroups.find((group) => group.code === "coffee_type")
+        ?.catalog_option_values || []
+    )
+      .filter(
+        (option) =>
+          option.is_active &&
+          availableIds.has(option.id) &&
+          priceByOptionValueId.has(option.id),
+      )
+      .map((option) => {
+        const priceData = priceByOptionValueId.get(option.id);
+
+        return {
+          ...option,
+          price: Number(priceData?.price ?? 0),
+          inventoryQuantity: Number(priceData?.inventoryQuantity ?? 1),
+          stockQuantity: Number(priceData?.stockQuantity ?? 0),
+          isAvailable: Boolean(priceData?.isAvailable),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups, availableCoffeeTypeIds, coffeeOptionPrices, channel]);
+
+  const toppings = useMemo(() => {
+    return (
+      optionGroups.find((group) => group.code === "topping")
+        ?.catalog_option_values || []
+    )
+      .filter((option) => option.is_active)
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [optionGroups]);
+
+  function getChannelPrice(product: Product): number | null {
+    const price = product.product_prices?.find(
+      (item) =>
+        item.channel === channel &&
+        item.price_list === "general" &&
+        item.is_active,
+    );
+
+    return price ? Number(price.price) : null;
+  }
+
+  function isProductEnabledForChannel(product: Product): boolean {
+    return Boolean(
+      product.product_channels?.some(
+        (item) => item.channel_code === channel && item.is_enabled,
+      ),
+    );
+  }
+
+  function isProductSellable(product: Product): boolean {
+    if (!isProductEnabledForChannel(product)) {
+      return false;
+    }
+
+    if (product.sku === "CAFE") {
+      return coffeeOptionPrices.some(
+        (option) => option.channel === channel && option.isAvailable,
+      );
+    }
+
+    return getChannelPrice(product) !== null;
+  }
+
+  function getPrice(product: Product): number {
+    return getChannelPrice(product) ?? 0;
+  }
+
+  function getItemExtraUnitPrice(item: ProductCartItem): number | null {
+    if (item.product.sku !== "CAFE") {
+      return item.extraUnitPrice || 0;
+    }
+
+    if (!item.coffeeTypeId) {
+      return null;
+    }
+
+    const coffeePrice = coffeeOptionPrices.find(
+      (option) =>
+        option.optionValueId === item.coffeeTypeId &&
+        option.channel === channel &&
+        option.isAvailable,
+    );
+
+    return coffeePrice ? Number(coffeePrice.price) : null;
+  }
+
+  function addProduct(product: Product) {
+    setEditingItem(null);
+    setConfiguringProduct(product);
+  }
+
+  function addCustomItem(input: {
+    customName: string;
+    customUnitPrice: number;
+    quantity: number;
+    loyaltyEligible: boolean;
+  }) {
+    const customItem: CustomCartItem = {
+      itemType: "custom",
+      localId: `custom-${Date.now()}-${Math.random()}`,
+      customName: input.customName.trim(),
+      customUnitPrice: input.customUnitPrice,
+      quantity: input.quantity,
+      loyaltyEligible: input.loyaltyEligible,
+      notes: "",
+    };
+
+    setCart((current) => [...current, customItem]);
+  }
+
+  function removeItem(localId: string) {
+    setCart((current) => current.filter((item) => item.localId !== localId));
+  }
+
+  function updateItem(localId: string, patch: Partial<CartItem>) {
+    setCart((current) =>
+      current.map((item) => {
+        if (item.localId !== localId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          ...patch,
+        } as CartItem;
+      }),
+    );
+  }
+
+  function toggleFlavor(item: ProductCartItem, flavorId: number) {
+    const maxFlavors = item.product.max_flavors || 0;
+    const currentSelections = item.flavorSelections || [];
+
+    if (maxFlavors <= 0) return;
+
+    if (currentSelections.length >= maxFlavors) {
+      updateItem(item.localId, {
+        flavorSelections: currentSelections.slice(0, -1),
+      });
+      return;
+    }
+
+    updateItem(item.localId, {
+      flavorSelections: [...currentSelections, flavorId],
+    });
+  }
+
+  function removeFlavorSelection(
+    item: ProductCartItem,
+    selectionIndex: number,
+  ) {
+    updateItem(item.localId, {
+      flavorSelections: item.flavorSelections.filter(
+        (_flavorId, index) => index !== selectionIndex,
+      ),
+    });
+  }
+
+  function toggleTopping(item: ProductCartItem, toppingId: number) {
+    const exists = item.toppingIds.includes(toppingId);
+
+    if (exists) {
+      updateItem(item.localId, {
+        toppingIds: item.toppingIds.filter((id) => id !== toppingId),
+      });
+      return;
+    }
+
+    if (item.toppingIds.length >= item.product.max_toppings) return;
+
+    updateItem(item.localId, {
+      toppingIds: [...item.toppingIds, toppingId],
+    });
+  }
+
+  const potSkus = new Set(["POT-16-LISTO", "POT-16-ARMADO"]);
+
+  const now = Date.now();
+
+  const eligibleRewards = (
+    selectedCliente?.loyalty?.activeRewards ?? []
+  ).filter((reward) => {
+    if (
+      reward.status !== "active" ||
+      !reward.rewardProductId ||
+      reward.customerId !== selectedCliente?.id
+    ) {
+      return false;
+    }
+
+    if (reward.expiresAt && new Date(reward.expiresAt).getTime() < now) {
+      return false;
+    }
+
+    return cart.some(
+      (item) =>
+        item.itemType === "product" &&
+        !item.isGift &&
+        item.product.id === reward.rewardProductId,
+    );
+  });
+
+  const selectedReward =
+    eligibleRewards.find((reward) => reward.id === selectedRewardId) ?? null;
+
+  const rewardProductLine = selectedReward
+    ? cart.find(
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
+          !item.isGift &&
+          item.product.id === selectedReward.rewardProductId,
+      )
+    : undefined;
+
+  const rewardDiscountTotal = rewardProductLine
+    ? (getChannelPrice(rewardProductLine.product) ?? 0) +
+      (getItemExtraUnitPrice(rewardProductLine) ?? 0)
+    : 0;
+
+  const pricing = cart.reduce(
+    (acc, item) => {
+      if (item.itemType === "custom") {
+        acc.subtotal += item.customUnitPrice * item.quantity;
+        return acc;
+      }
+
+      const channelPrice = getChannelPrice(item.product);
+      const extraUnitPrice = getItemExtraUnitPrice(item);
+
+      const requiresBasePrice = item.product.sku !== "CAFE";
+      const hasValidBasePrice = !requiresBasePrice || channelPrice !== null;
+      const hasValidExtraPrice = extraUnitPrice !== null;
+
+      const unitPrice = (channelPrice ?? 0) + (extraUnitPrice ?? 0);
+      const lineTotal =
+        hasValidBasePrice && hasValidExtraPrice ? unitPrice * item.quantity : 0;
+
+      acc.subtotal += lineTotal;
+
+      if (item.isGift) {
+        acc.giftDiscountTotal += lineTotal;
+      }
+
+      if (!item.isGift && potSkus.has(item.product.sku)) {
+        acc.potQuantity += item.quantity;
+
+        const rewardAmountForLine =
+          selectedReward && item.product.id === selectedReward.rewardProductId
+            ? unitPrice
+            : 0;
+
+        acc.potSubtotal += Math.max(0, lineTotal - rewardAmountForLine);
+      }
+
+      return acc;
+    },
+    {
+      subtotal: 0,
+      potQuantity: 0,
+      potSubtotal: 0,
+      giftDiscountTotal: 0,
+    },
+  );
+
+  const discountRate =
+    channel === "local"
+      ? pricing.potQuantity >= 6
+        ? 0.15
+        : pricing.potQuantity >= 4
+          ? 0.1
+          : 0
+      : channel === "shopify"
+        ? pricing.potQuantity >= 9
+          ? 0.15
+          : pricing.potQuantity >= 4 && pricing.potQuantity !== 6
+            ? 0.1
+            : 0
+        : 0;
+
+  const mysteryRewardDiscountTotal =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? products.find((product) => product.sku === "POT-16-LISTO")
+        ? (getChannelPrice(
+            products.find((product) => product.sku === "POT-16-LISTO")!,
+          ) ?? 0)
+        : 0
+      : 0;
+
+  const potDiscountBase =
+    channel === "shopify" && pricing.potQuantity >= 7
+      ? Math.max(0, pricing.potSubtotal - mysteryRewardDiscountTotal)
+      : pricing.potSubtotal;
+
+  const potDiscountTotal = Math.round(potDiscountBase * discountRate);
+
+  const totalBeforeManualDiscount = Math.max(
+    0,
+    pricing.subtotal -
+      pricing.giftDiscountTotal -
+      mysteryRewardDiscountTotal -
+      rewardDiscountTotal -
+      potDiscountTotal,
+  );
+
+  const parsedManualDiscountValue = Number(manualDiscountValue);
+
+  const manualDiscountAmount = manualDiscountEnabled
+    ? manualDiscountType === "percent"
+      ? Math.min(
+          totalBeforeManualDiscount,
+          Math.round(
+            (totalBeforeManualDiscount * parsedManualDiscountValue) / 100,
+          ),
+        )
+      : Math.min(totalBeforeManualDiscount, parsedManualDiscountValue)
+    : 0;
+
+  const discountTotal =
+    potDiscountTotal +
+    pricing.giftDiscountTotal +
+    mysteryRewardDiscountTotal +
+    rewardDiscountTotal +
+    (Number.isFinite(manualDiscountAmount) ? manualDiscountAmount : 0);
+
+  const total = Math.max(0, pricing.subtotal - discountTotal);
+
+  function handleClienteChange(cliente: ClienteSelectorValue | null) {
+    setSelectedCliente(cliente);
+    setSelectedRewardId(null);
+  }
+
+  function handleRewardChange(rewardId: number | null) {
+    setSelectedRewardId(rewardId);
+  }
+
+  function handlePaymentMethodChange(value: string) {
+    setPaymentMethod(value);
+    setCashReceived("");
+  }
+
+  function validarVenta() {
+    if (cart.length === 0) {
+      return "Agrega al menos una línea a la venta.";
+    }
+
+    if (channel === "shopify" && pricing.potQuantity === 6) {
+      return "Un pedido Shopify de 6 potes no es válido: desde 6 potes pagados, Shopify incorpora un séptimo pote como Premio Misterioso.";
+    }
+
+    const unavailableItem = cart.find(
+      (item) => item.itemType === "product" && !isProductSellable(item.product),
+    );
+
+    if (unavailableItem?.itemType === "product") {
+      return `${unavailableItem.product.name} no está disponible para el canal seleccionado o no tiene una configuración comercial válida.`;
+    }
+
+    const unavailableCoffeeItem = cart.find(
+      (item): item is ProductCartItem =>
+        item.itemType === "product" &&
+        item.product.sku === "CAFE" &&
+        getItemExtraUnitPrice(item) === null,
+    );
+
+    if (unavailableCoffeeItem) {
+      return "El tipo de café seleccionado no tiene un precio disponible para el canal actual.";
+    }
+
+    if (selectedRewardId !== null && !selectedReward) {
+      return "El premio seleccionado ya no está disponible para esta venta.";
+    }
+
+    if (channel !== "local" && !externalOrderId.trim()) {
+      return "Ingresa el número externo del pedido digital.";
+    }
+
+    if (manualDiscountEnabled) {
+      if (
+        manualDiscountValue.trim() === "" ||
+        !Number.isInteger(parsedManualDiscountValue) ||
+        parsedManualDiscountValue <= 0
+      ) {
+        return "Ingresa un valor válido para el descuento manual.";
+      }
+
+      if (manualDiscountType === "percent" && parsedManualDiscountValue > 100) {
+        return "El descuento porcentual no puede superar 100%.";
+      }
+
+      if (
+        manualDiscountType === "fixed" &&
+        parsedManualDiscountValue > totalBeforeManualDiscount
+      ) {
+        return "El descuento manual no puede superar el total vigente.";
+      }
+
+      if (!manualDiscountReason) {
+        return "Selecciona el motivo del descuento manual.";
+      }
+
+      if (manualDiscountReason === "other" && !manualDiscountNotes.trim()) {
+        return "Especifica el motivo del descuento manual.";
+      }
+    }
+
+    if (paymentMethod === "efectivo") {
+      const receivedAmount = Number(cashReceived);
+
+      if (
+        cashReceived.trim() === "" ||
+        !Number.isFinite(receivedAmount) ||
+        receivedAmount < total
+      ) {
+        return "El monto recibido es inferior al total.";
+      }
+    }
+
+    if (
+      !Number.isInteger(promotionalStamps) ||
+      promotionalStamps < 0 ||
+      promotionalStamps > 5
+    ) {
+      return "La cantidad de sellos promocionales no es válida.";
+    }
+
+    if (promotionalStamps > 0 && !selectedCliente) {
+      return "Selecciona un cliente para asignar sellos promocionales.";
+    }
+
+    for (const item of cart) {
+      if (item.itemType === "custom") {
+        if (!item.customName.trim()) {
+          return "El ítem personalizado debe tener un nombre.";
+        }
+
+        if (
+          !Number.isInteger(item.customUnitPrice) ||
+          item.customUnitPrice <= 0
+        ) {
+          return `El precio de ${item.customName} no es válido.`;
+        }
+
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          return `La cantidad de ${item.customName} no es válida.`;
+        }
+
+        continue;
+      }
+      if (item.isGift) {
+        const giftReason = item.giftReason?.trim() || "";
+
+        if (!giftReason) {
+          return `Debes indicar el motivo del regalo para ${item.product.name}.`;
+        }
+
+        if (
+          giftReason === "Otro" ||
+          giftReason === "Otro:" ||
+          (giftReason.startsWith("Otro:") &&
+            !giftReason.slice("Otro:".length).trim())
+        ) {
+          return `Debes especificar el motivo del regalo para ${item.product.name}.`;
+        }
+      }
+
+      const isServedIceCream =
+        item.product.category?.trim().toLowerCase() === "helados" &&
+        item.product.operational_type?.trim().toLowerCase() === "servido";
+
+      /*
+       * Los helados servidos no requieren sabor en caja.
+       * Los potes armados y demás productos configurables sí.
+       */
+      const requiresBrownieVariety =
+        item.product.sku === "BROWNIE" || item.product.sku === "BROWNIE-HELADO";
+
+      if (
+        requiresBrownieVariety &&
+        (!Number.isInteger(item.brownieVarietyId) ||
+          Number(item.brownieVarietyId) <= 0)
+      ) {
+        return `Debes seleccionar una variedad para ${item.product.name}.`;
+      }
+
+      if (
+        !isServedIceCream &&
+        item.product.has_flavors &&
+        item.product.sku !== "POT-16-ARMADO" &&
+        item.flavorSelections.length === 0
+      ) {
+        return `Debes seleccionar sabor para ${item.product.name}.`;
+      }
+
+      if (
+        !isServedIceCream &&
+        item.product.has_flavors &&
+        item.flavorSelections.length > item.product.max_flavors
+      ) {
+        return `${item.product.name} supera el máximo de sabores.`;
+      }
+
+      if (
+        item.product.allows_toppings &&
+        item.toppingIds.length > item.product.max_toppings
+      ) {
+        return `${item.product.name} supera el máximo de toppings.`;
+      }
+
+      const requiresMineralWaterType =
+        item.product.sku === "AGUA-MINERAL-500CC";
+
+      if (
+        requiresMineralWaterType &&
+        (!Number.isInteger(item.mineralWaterTypeId) ||
+          Number(item.mineralWaterTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo para ${item.product.name}.`;
+      }
+
+      const requiresCoffeeType = item.product.sku === "CAFE";
+
+      if (
+        requiresCoffeeType &&
+        (!Number.isInteger(item.coffeeTypeId) || Number(item.coffeeTypeId) <= 0)
+      ) {
+        return `Debes seleccionar el tipo de café para ${item.product.name}.`;
+      }
+    }
+
+    return null;
+  }
+
+  function getCartItemSignature(item: Omit<ProductCartItem, "localId">) {
+    return JSON.stringify({
+      productId: item.product.id,
+
+      flavorSelections: [...(item.flavorSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+
+      toppingIds: [...(item.toppingIds || [])].sort((a, b) => a - b),
+
+      brownieVarietyId: item.brownieVarietyId ?? null,
+
+      serviceFormat: item.serviceFormat || null,
+
+      includesCookie: Boolean(item.includesCookie),
+
+      chocolateDip: Boolean(item.chocolateDip),
+
+      extraToppingSelections: [...(item.extraToppingSelections || [])].sort(
+        (a, b) => a - b,
+      ),
+
+      notes: item.notes?.trim() || "",
+
+      extraUnitPrice: item.extraUnitPrice || 0,
+
+      mineralWaterTypeId: item.mineralWaterTypeId ?? null,
+
+      coffeeTypeId: item.coffeeTypeId ?? null,
+
+      isGift: Boolean(item.isGift),
+      giftReason: item.giftReason?.trim() || null,
+    });
+  }
+
+  function addConfiguredProduct(item: Omit<ProductCartItem, "localId">) {
+    const newSignature = getCartItemSignature(item);
+
+    setCart((current) => {
+      const existingIndex = current.findIndex((cartItem) => {
+        if (cartItem.itemType !== "product") {
+          return false;
+        }
+
+        return getCartItemSignature(cartItem) === newSignature;
+      });
+
+      if (existingIndex === -1) {
+        const newProductItem: ProductCartItem = {
+          ...item,
+          localId: `${item.product.id}-${Date.now()}-${Math.random()}`,
+        };
+
+        return [...current, newProductItem];
+      }
+
+      return current.map((cartItem, index) => {
+        if (index !== existingIndex || cartItem.itemType !== "product") {
+          return cartItem;
+        }
+
+        return {
+          ...cartItem,
+          quantity: cartItem.quantity + item.quantity,
+        };
+      });
+    });
+
+    setEditingItem(null);
+    setConfiguringProduct(null);
+  }
+
+  function imprimirVentaEnSegundoPlano(saleId: number) {
+    const iframe = window.document.createElement("iframe");
+
+    const printId = `nook-print-${saleId}-${Date.now()}`;
+
+    iframe.id = printId;
+    iframe.title = "Impresión Nook";
+    iframe.setAttribute("aria-hidden", "true");
+
+    iframe.src = `/operacion/ventas/ticket/${saleId}` + "?autoPrint=1";
+
+    /*
+     * No usamos display:none porque algunos navegadores no
+     * imprimen el contenido de elementos completamente ocultos.
+     */
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "80mm",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
+    });
+
+    let cleaned = false;
+
+    function cleanup() {
+      if (cleaned) return;
+
+      cleaned = true;
+
+      window.clearTimeout(cleanupTimeout);
+
+      window.removeEventListener("message", handlePrintMessage);
+
+      iframe.remove();
+    }
+
+    function handlePrintMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        event.data?.type === "NOOK_PRINT_COMPLETED" &&
+        Number(event.data?.saleId) === saleId
+      ) {
+        /*
+         * Damos un margen breve después del diálogo para evitar
+         * retirar el iframe antes de que el driver finalice.
+         */
+        window.setTimeout(cleanup, 500);
+      }
+    }
+
+    window.addEventListener("message", handlePrintMessage);
+
+    /*
+     * Contingencia: si el navegador no emite afterprint,
+     * el iframe se elimina igualmente después de un minuto.
+     */
+    const cleanupTimeout = window.setTimeout(cleanup, 60000);
+
+    window.document.body.appendChild(iframe);
+  }
+
+  async function confirmarVenta() {
+    if (saving) {
+      return;
+    }
+    const error = validarVenta();
+
+    if (error) {
+      setMessage(error);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage("");
+
+      const payload = {
+        channel,
+        externalOrderId: channel === "local" ? null : externalOrderId.trim(),
+        paymentMethod,
+        orderNotes: orderNotes.trim() || null,
+        customerId: selectedCliente?.id ?? null,
+        rewardId: selectedReward?.id ?? null,
+        promotionalStamps,
+        promotionReason: promotionalStamps > 0 ? "Promoción RRSS" : null,
+        manualDiscountType: manualDiscountEnabled ? manualDiscountType : null,
+        manualDiscountValue: manualDiscountEnabled
+          ? parsedManualDiscountValue
+          : null,
+        manualDiscountReason: manualDiscountEnabled
+          ? manualDiscountReason
+          : null,
+        manualDiscountNotes: manualDiscountEnabled
+          ? manualDiscountNotes.trim() || null
+          : null,
+        items: cart.map((item) => {
+          if (item.itemType === "custom") {
+            return {
+              item_type: "CUSTOM",
+              custom_name: item.customName.trim(),
+              unit_price: item.customUnitPrice,
+              quantity: item.quantity,
+              loyalty_eligible: item.loyaltyEligible,
+              notes: item.notes.trim() || null,
+              options: [],
+              is_gift: false,
+              gift_reason: null,
+            };
+          }
+
+          return {
+            item_type: "PRODUCT",
+            product_id: item.product.id,
+            quantity: item.quantity,
+            is_gift: Boolean(item.isGift),
+            gift_reason: item.isGift ? item.giftReason?.trim() || null : null,
+            extra_unit_price: item.extraUnitPrice || 0,
+            notes: [
+              item.serviceFormat
+                ? `Formato: ${
+                    item.serviceFormat === "ambos"
+                      ? "vaso + barquillo"
+                      : item.serviceFormat
+                  }`
+                : null,
+              item.includesCookie ? "Con galleta" : null,
+              ...(item.extraLabels || []),
+              item.notes?.trim() || null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            options: [
+              ...item.flavorSelections.map((id) => ({
+                option_group_code: "flavor",
+                option_value_id: id,
+                quantity: 1,
+              })),
+
+              ...(item.brownieVarietyId
+                ? [
+                    {
+                      option_group_code: "brownie_variety",
+                      option_value_id: item.brownieVarietyId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...(item.mineralWaterTypeId
+                ? [
+                    {
+                      option_group_code: "mineral_water_type",
+                      option_value_id: item.mineralWaterTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...(item.coffeeTypeId
+                ? [
+                    {
+                      option_group_code: "coffee_type",
+                      option_value_id: item.coffeeTypeId,
+                      quantity: 1,
+                    },
+                  ]
+                : []),
+
+              ...item.toppingIds.map((id) => ({
+                option_group_code: "topping",
+                option_value_id: id,
+                quantity: 1,
+              })),
+            ],
+          };
+        }),
+      };
+
+      const res = await fetch("/api/operacion/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message || "No se pudo crear la venta.");
+
+        return;
+      }
+
+      const createdSaleId = Number(data.saleId);
+
+      if (!Number.isInteger(createdSaleId) || createdSaleId <= 0) {
+        setMessage(
+          "La venta fue creada, pero no se pudo identificar para imprimir.",
+        );
+
+        return;
+      }
+
+      const displayOrderCode =
+        data.result?.display_order_code ||
+        data.result?.order?.display_order_code ||
+        `Pedido creado`;
+
+      imprimirVentaEnSegundoPlano(createdSaleId);
+
+      setCart([]);
+      setOrderNotes("");
+      setSelectedCliente(null);
+      setSelectedRewardId(null);
+      setCashReceived("");
+      setChannel("local");
+      setExternalOrderId("");
+      setClienteSelectorResetKey((current) => current + 1);
+      setPromotionalStamps(0);
+      setManualDiscountEnabled(false);
+      setManualDiscountType("percent");
+      setManualDiscountValue("");
+      setManualDiscountReason("");
+      setManualDiscountNotes("");
+
+      const warnings = Array.isArray(data.warnings)
+        ? data.warnings.filter(
+            (warning: unknown) => typeof warning === "string" && warning.trim(),
+          )
+        : [];
+
+      setMessage(
+        warnings.length > 0
+          ? `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              `Preparando impresión. Advertencia: ${warnings.join(" ")}`
+          : `Venta creada correctamente. Pedido ${displayOrderCode}. ` +
+              "Preparando impresión.",
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage("Error inesperado al confirmar venta.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function duplicateItem(item: ProductCartItem) {
+    setCart((current) =>
+      current.map((cartItem) =>
+        cartItem.localId === item.localId
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem,
+      ),
+    );
+  }
+
+  function reconfigureItem(item: ProductCartItem) {
+    setEditingItem(item);
+    setConfiguringProduct(item.product);
+  }
+
+  function updateConfiguredProduct(
+    localId: string,
+    updatedItem: Omit<ProductCartItem, "localId">,
+  ) {
+    const updatedSignature = getCartItemSignature(updatedItem);
+
+    setCart((current) => {
+      const itemBeingEdited = current.find((item) => item.localId === localId);
+
+      if (!itemBeingEdited || itemBeingEdited.itemType !== "product") {
+        return current;
+      }
+
+      const matchingItem = current.find(
+        (item): item is ProductCartItem =>
+          item.itemType === "product" &&
+          item.localId !== localId &&
+          getCartItemSignature(item) === updatedSignature,
+      );
+
+      if (!matchingItem) {
+        return current.map((item) => {
+          if (item.localId !== localId) {
+            return item;
+          }
+
+          const updatedProductItem: ProductCartItem = {
+            ...updatedItem,
+            localId,
+          };
+
+          return updatedProductItem;
+        });
+      }
+
+      return current
+        .filter((item) => item.localId !== localId)
+        .map((item) => {
+          if (
+            item.itemType !== "product" ||
+            item.localId !== matchingItem.localId
+          ) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: item.quantity + updatedItem.quantity,
+          };
+        });
+    });
+
+    setEditingItem(null);
+    setConfiguringProduct(null);
+  }
+
+  return (
+    <>
+      <POSLayout
+        center={
+          <div
+            className={
+              configuringProduct
+                ? "grid h-full min-h-0 min-w-0 grid-cols-[minmax(240px,0.9fr)_minmax(300px,1.1fr)] gap-2 overflow-hidden"
+                : "grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-hidden"
+            }
+          >
+            <ProductGrid
+              products={filteredProducts}
+              loading={loading}
+              getPrice={getPrice}
+              onAdd={addProduct}
+              search={productSearch}
+              onSearchChange={setProductSearch}
+              compact={Boolean(configuringProduct)}
+            />
+
+            {configuringProduct && (
+              <ProductConfigurator
+                key={`${configuringProduct.id}-${editingItem?.localId ?? "new"}`}
+                product={configuringProduct}
+                editingItem={editingItem}
+                flavors={
+                  configuringProduct?.sku === "POT-16-ARMADO" ||
+                  configuringProduct?.sku === "BROWNIE-HELADO"
+                    ? openBatchFlavors
+                    : configuringProduct?.sku === "POT-16-LISTO"
+                      ? readyPotFlavors
+                      : flavors
+                }
+                brownieVarieties={brownieVarieties}
+                mineralWaterTypes={mineralWaterTypes}
+                coffeeTypes={coffeeTypes}
+                getPrice={getPrice}
+                onCancel={() => {
+                  setConfiguringProduct(null);
+                  setEditingItem(null);
+                }}
+                onAddConfigured={addConfiguredProduct}
+                onUpdateConfigured={updateConfiguredProduct}
+              />
+            )}
+          </div>
+        }
+        right={
+          <OrderBuilder
+            cart={cart}
+            flavors={flavors}
+            toppings={toppings}
+            selectedCliente={selectedCliente}
+            paymentMethod={paymentMethod}
+            channel={channel}
+            cashReceived={cashReceived}
+            orderNotes={orderNotes}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            subtotal={pricing.subtotal}
+            potQuantity={pricing.potQuantity}
+            discountRate={discountRate}
+            potDiscountTotal={potDiscountTotal}
+            giftDiscountTotal={pricing.giftDiscountTotal}
+            mysteryRewardDiscountTotal={mysteryRewardDiscountTotal}
+            eligibleRewards={eligibleRewards}
+            selectedRewardId={selectedReward?.id ?? null}
+            rewardDiscountTotal={rewardDiscountTotal}
+            discountTotal={discountTotal}
+            total={total}
+            saving={saving}
+            manualDiscountEnabled={manualDiscountEnabled}
+            manualDiscountType={manualDiscountType}
+            manualDiscountValue={manualDiscountValue}
+            manualDiscountReason={manualDiscountReason}
+            manualDiscountNotes={manualDiscountNotes}
+            manualDiscountAmount={manualDiscountAmount}
+            totalBeforeManualDiscount={totalBeforeManualDiscount}
+            getPrice={getPrice}
+            onClienteChange={handleClienteChange}
+            onRewardChange={handleRewardChange}
+            onPaymentMethodChange={handlePaymentMethodChange}
+            onCashReceivedChange={setCashReceived}
+            onManualDiscountEnabledChange={setManualDiscountEnabled}
+            onManualDiscountTypeChange={setManualDiscountType}
+            onManualDiscountValueChange={setManualDiscountValue}
+            onManualDiscountReasonChange={setManualDiscountReason}
+            onManualDiscountNotesChange={setManualDiscountNotes}
+            onOrderNotesChange={setOrderNotes}
+            onAddCustomItem={addCustomItem}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
+            onToggleFlavor={toggleFlavor}
+            onToggleTopping={toggleTopping}
+            onRemoveFlavorSelection={removeFlavorSelection}
+            onConfirm={confirmarVenta}
+            onDuplicateItem={duplicateItem}
+            onReconfigureItem={reconfigureItem}
+          />
+        }
+        context={
+          <POSContextPanel
+            selectedCliente={selectedCliente}
+            cart={cart}
+            message={message}
+            onClienteChange={handleClienteChange}
+            clienteSelectorResetKey={clienteSelectorResetKey}
+            channel={channel}
+            externalOrderId={externalOrderId}
+            onChannelChange={setChannel}
+            onExternalOrderIdChange={setExternalOrderId}
+            onOpenCustomMessage={() => setCustomMessageModalOpen(true)}
+            promotionalStamps={promotionalStamps}
+            onPromotionalStampsChange={setPromotionalStamps}
+          />
+        }
+      />
+
+      <CustomMessagePrintModal
+        open={customMessageModalOpen}
+        onClose={() => setCustomMessageModalOpen(false)}
+      />
+    </>
+  );
+}

@@ -1,1 +1,1077 @@
-export { default } from "@/app/suscripciones/page";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+type Cliente = {
+  id: number;
+  nombre: string;
+  correo: string;
+  telefono: string | null;
+};
+
+const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+const PERIODOS = [
+  { value: "mensual", label: "Mensual" },
+  { value: "trimestral", label: "Trimestral" },
+  { value: "semestral", label: "Semestral" },
+  { value: "anual", label: "Anual" },
+] as const;
+
+export default function SuscripcionesPage() {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [asignaciones, setAsignaciones] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+
+  const [clienteId, setClienteId] = useState("");
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [letraActiva, setLetraActiva] = useState<string>("TODOS");
+
+  const [mostrarActivas, setMostrarActivas] = useState(true);
+  const [mostrarAsignaciones, setMostrarAsignaciones] = useState(true);
+  const [mostrarCodigo, setMostrarCodigo] = useState(true);
+  const [mostrarAsignacionCliente, setMostrarAsignacionCliente] =
+    useState(true);
+
+  const [billingPeriodAsignacion, setBillingPeriodAsignacion] =
+    useState("mensual");
+  const [potsAsignacion, setPotsAsignacion] = useState("0");
+  const [toppingsAsignacion, setToppingsAsignacion] = useState("0");
+  const [waferAsignacion, setWaferAsignacion] = useState("0");
+  const [cookieAsignacion, setCookieAsignacion] = useState("0");
+
+  const [billingPeriodCodigo, setBillingPeriodCodigo] = useState("mensual");
+  const [potsCodigo, setPotsCodigo] = useState("0");
+  const [toppingsCodigo, setToppingsCodigo] = useState("0");
+  const [waferCodigo, setWaferCodigo] = useState("0");
+  const [cookieCodigo, setCookieCodigo] = useState("0");
+
+  const [mensaje, setMensaje] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState<"success" | "error" | "info">(
+    "info",
+  );
+  const [codigoGenerado, setCodigoGenerado] = useState("");
+
+  const [procesandoAsignacion, setProcesandoAsignacion] = useState(false);
+  const [procesandoCodigo, setProcesandoCodigo] = useState(false);
+  const [eliminandoAsignacionId, setEliminandoAsignacionId] = useState<
+    number | null
+  >(null);
+
+  const [claimFilter, setClaimFilter] = useState<"all" | "pending" | "claimed">(
+    "all",
+  );
+  const [subscriptionFilter, setSubscriptionFilter] = useState<
+    "all" | "active" | "expired"
+  >("all");
+
+  const [cargandoRol, setCargandoRol] = useState(true);
+  const [rol, setRol] = useState<string | null>(null);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    cargarSesion();
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      const res = await fetch("/api/subscriptions", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMensaje(data.message || "No fue posible cargar las suscripciones.");
+        setTipoMensaje("error");
+        return;
+      }
+
+      setClientes(data.clientes || []);
+      setAsignaciones(data.claims || []);
+      setSubscriptions(data.subscriptions || []);
+    } catch (error) {
+      console.error("[suscripciones] cargarDatos error:", error);
+
+      setMensaje("No fue posible cargar las suscripciones.");
+      setTipoMensaje("error");
+    }
+  };
+
+  const clientesFiltrados = useMemo(() => {
+    let resultado = [...clientes];
+
+    if (letraActiva !== "TODOS") {
+      resultado = resultado.filter((cliente) =>
+        (cliente.nombre || "")
+          .trim()
+          .toLowerCase()
+          .startsWith(letraActiva.toLowerCase()),
+      );
+    }
+
+    const texto = busquedaCliente.trim().toLowerCase();
+    if (!texto) return resultado;
+
+    return resultado.filter((cliente) => {
+      const nombre = (cliente.nombre || "").toLowerCase();
+      const correo = (cliente.correo || "").toLowerCase();
+      const telefono = (cliente.telefono || "").toLowerCase();
+
+      return (
+        nombre.includes(texto) ||
+        correo.includes(texto) ||
+        telefono.includes(texto)
+      );
+    });
+  }, [clientes, busquedaCliente, letraActiva]);
+
+  const clienteSeleccionado =
+    clientes.find((c) => String(c.id) === String(clienteId)) || null;
+
+  const asignacionesFiltradas = asignaciones.filter((item) => {
+    if (claimFilter === "all") return true;
+    return item.status === claimFilter;
+  });
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const subscriptionsFiltradas = subscriptions.filter((subscription) => {
+    if (subscriptionFilter === "all") return true;
+
+    if (subscriptionFilter === "active") {
+      return subscription.status === "active";
+    }
+
+    if (subscriptionFilter === "expired") {
+      if (!subscription.end_date) return false;
+      const endDate = new Date(subscription.end_date);
+      endDate.setHours(0, 0, 0, 0);
+      return endDate < hoy;
+    }
+
+    return true;
+  });
+
+  const asignarSuscripcion = async () => {
+    if (!clienteId || !clienteSeleccionado) {
+      setMensaje("Selecciona un cliente.");
+      return;
+    }
+
+    const cantidades = [
+      Number(potsAsignacion),
+      Number(toppingsAsignacion),
+      Number(waferAsignacion),
+      Number(cookieAsignacion),
+    ];
+
+    if (!cantidades.some((valor) => valor > 0)) {
+      setMensaje("Debes configurar al menos un producto para asignar.");
+      return;
+    }
+
+    const confirmado = window.confirm(
+      `¿Confirmas asignar una suscripción ${billingPeriodAsignacion} a ${clienteSeleccionado.nombre}?`,
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setProcesandoAsignacion(true);
+      setMensaje("");
+      setCodigoGenerado("");
+
+      const res = await fetch("/api/subscriptions/create-assigned", {
+        method: "POST",
+        body: JSON.stringify({
+          clienteId: Number(clienteId),
+          billingPeriod: billingPeriodAsignacion,
+          potsPerCycle: Number(potsAsignacion),
+          toppingsPerCycle: Number(toppingsAsignacion),
+          waferPacksPerCycle: Number(waferAsignacion),
+          cookiePacksPerCycle: Number(cookieAsignacion),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo asignar la suscripción.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje("Suscripción asignada correctamente.");
+      await cargarDatos();
+    } finally {
+      setProcesandoAsignacion(false);
+    }
+  };
+
+  const generarCodigo = async () => {
+    const cantidades = [
+      Number(potsCodigo),
+      Number(toppingsCodigo),
+      Number(waferCodigo),
+      Number(cookieCodigo),
+    ];
+
+    if (!cantidades.some((valor) => valor > 0)) {
+      setTipoMensaje("error");
+      setMensaje(
+        "Debes configurar al menos un producto para generar un código.",
+      );
+      return;
+    }
+
+    const confirmado = window.confirm(
+      `¿Confirmas generar un código para una suscripción ${billingPeriodCodigo}?`,
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setProcesandoCodigo(true);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/subscriptions/create-code", {
+        method: "POST",
+        body: JSON.stringify({
+          billingPeriod: billingPeriodCodigo,
+          potsPerCycle: Number(potsCodigo),
+          toppingsPerCycle: Number(toppingsCodigo),
+          waferPacksPerCycle: Number(waferCodigo),
+          cookiePacksPerCycle: Number(cookieCodigo),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo generar el código.");
+        return;
+      }
+
+      setCodigoGenerado(data.code);
+      setTipoMensaje("success");
+      setMensaje("Código generado correctamente.");
+      await cargarDatos();
+    } finally {
+      setProcesandoCodigo(false);
+    }
+  };
+
+  const cargarSesion = async () => {
+    try {
+      setCargandoRol(true);
+
+      const res = await fetch("/api/session", {
+        method: "GET",
+      });
+
+      if (!res.ok) {
+        setRol(null);
+        return;
+      }
+
+      const data = await res.json();
+      setRol(data.role || null);
+    } catch (error) {
+      console.error("Error cargando sesión:", error);
+      setRol(null);
+    } finally {
+      setCargandoRol(false);
+    }
+  };
+
+  const eliminarAsignacion = async (claimId: number) => {
+    const confirmado = window.confirm(
+      "¿Seguro que quieres eliminar este registro pendiente?",
+    );
+
+    if (!confirmado) return;
+
+    try {
+      setEliminandoAsignacionId(claimId);
+      setMensaje("");
+      setTipoMensaje("info");
+
+      const res = await fetch("/api/subscriptions/delete-claim", {
+        method: "POST",
+        body: JSON.stringify({ claimId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data.message || "No se pudo eliminar el registro.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje("Registro eliminado correctamente.");
+      await cargarDatos();
+    } finally {
+      setEliminandoAsignacionId(null);
+    }
+  };
+
+  const eliminarSuscripcion = async (subscriptionId: number) => {
+    const confirmado = window.confirm(
+      "¿Seguro que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
+    );
+
+    if (!confirmado) return;
+
+    try {
+      const res = await fetch("/api/subscriptions/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subscriptionId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTipoMensaje("error");
+        setMensaje(data?.message || "No se pudo eliminar la suscripción.");
+        return;
+      }
+
+      setTipoMensaje("success");
+      setMensaje("Suscripción eliminada correctamente.");
+      await cargarDatos();
+
+      // aquí llama tus recargas actuales
+      // por ejemplo:
+      // await cargarSuscripcionesActivas();
+      // await cargarAsignacionesRecientes();
+      // o la función general que ya uses
+    } catch (error) {
+      console.error("Error eliminando suscripción:", error);
+      setTipoMensaje("error");
+      setMensaje("Ocurrió un error inesperado al eliminar la suscripción.");
+    }
+  };
+
+  const cerrarSesion = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+      });
+      router.push("/admin/login");
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+    }
+  };
+
+  return (
+    <main className="h-full min-h-0 w-full overflow-hidden rounded-xl bg-neutral-50 p-2">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-none flex-col gap-2">
+        {mensaje && (
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm ${
+              tipoMensaje === "success"
+                ? "border border-[#D8E7C9] bg-[#F3FAEC] text-[#42622B]"
+                : tipoMensaje === "error"
+                  ? "border border-[#E7C9D1] bg-[#FFF1F4] text-[#8A3550]"
+                  : "border border-[#E7C8F2] bg-[#FCF8FF] text-neutral-700"
+            }`}
+          >
+            {mensaje}
+          </div>
+        )}
+<div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-2">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMostrarActivas(!mostrarActivas)}
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
+          >
+            <div>
+              <h2 className="text-sm font-semibold">Suscripciones activas</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Revisa suscripciones activas y su historial reciente
+              </p>
+            </div>
+            <span className="text-2xl leading-none">
+              {mostrarActivas ? "−" : "+"}
+            </span>
+          </button>
+
+          {mostrarActivas && (
+            <div className="min-h-0 flex-1 overflow-auto border-t border-neutral-200 p-3">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("all")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      subscriptionFilter === "all"
+                        ? "cursor-pointer bg-black text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Todas
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("active")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      subscriptionFilter === "active"
+                        ? "cursor-pointer bg-green-600 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Activas
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionFilter("expired")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      subscriptionFilter === "expired"
+                        ? "cursor-pointer bg-neutral-700 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Vencidas
+                  </button>
+                </div>
+              </div>
+
+              {subscriptionsFiltradas.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                  No hay suscripciones activas registradas aún.
+                </p>
+              ) : (
+                <div className="min-w-0 overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="text-left text-xs uppercase text-neutral-500">
+                        <th className="px-2 py-1.5">Cliente</th>
+                        <th className="px-2 py-1.5">Suscripción</th>
+                        <th className="px-2 py-1.5">Estado</th>
+                        <th className="px-2 py-1.5">Inicio</th>
+                        <th className="px-2 py-1.5">Vencimiento</th>
+                        <th className="px-2 py-1.5">Próximo ciclo</th>
+                        <th className="px-2 py-1.5">Activada</th>
+                        {rol === "superadmin" && (
+                          <th className="px-2 py-1.5">Acciones</th>
+                        )}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {subscriptionsFiltradas.map((s) => (
+                        <tr key={s.id} className="border-t text-xs">
+                          <td className="px-2 py-1.5">
+                            {s.clientes?.nombre || "-"}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            {s.subscription_templates?.name || "-"}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                s.status === "active"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-neutral-100 text-neutral-700"
+                              }`}
+                            >
+                              {s.status === "active" ? "Activa" : s.status}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-neutral-600">
+                            {s.start_date
+                              ? new Date(s.start_date).toLocaleDateString(
+                                  "es-CL",
+                                )
+                              : "-"}
+                          </td>
+                          <td className="px-2 py-1.5 text-neutral-600">
+                            {s.end_date
+                              ? new Date(s.end_date).toLocaleDateString("es-CL")
+                              : "-"}
+                          </td>
+                          <td className="px-2 py-1.5 text-neutral-600">
+                            {s.next_cycle_date
+                              ? new Date(s.next_cycle_date).toLocaleDateString(
+                                  "es-CL",
+                                )
+                              : "-"}
+                          </td>
+                          <td className="px-2 py-1.5 text-neutral-500">
+                            {s.activated_at
+                              ? new Date(s.activated_at).toLocaleString("es-CL")
+                              : s.created_at
+                                ? new Date(s.created_at).toLocaleString("es-CL")
+                                : "-"}
+                          </td>
+
+                          {rol === "superadmin" && (
+                            <td className="px-2 py-1.5">
+                              <button
+                                type="button"
+                                onClick={() => eliminarSuscripcion(s.id)}
+                                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMostrarAsignaciones(!mostrarAsignaciones)}
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
+          >
+            <div>
+              <h2 className="text-sm font-semibold">
+                Asignaciones y códigos recientes
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Revisa registros recientes y su historial
+              </p>
+            </div>
+            <span className="text-2xl leading-none">
+              {mostrarAsignaciones ? "−" : "+"}
+            </span>
+          </button>
+
+          {mostrarAsignaciones && (
+            <div className="min-h-0 flex-1 overflow-auto border-t border-neutral-200 p-3">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setClaimFilter("all")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      claimFilter === "all"
+                        ? "cursor-pointer bg-black text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Todos
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setClaimFilter("pending")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      claimFilter === "pending"
+                        ? "cursor-pointer bg-amber-500 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Pendientes
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setClaimFilter("claimed")}
+                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                      claimFilter === "claimed"
+                        ? "cursor-pointer bg-green-600 text-white"
+                        : "cursor-pointer border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    Usados
+                  </button>
+                </div>
+              </div>
+
+              {asignacionesFiltradas.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                  No hay registros aún.
+                </p>
+              ) : (
+                <div className="min-w-0 overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="text-left text-xs uppercase text-neutral-500">
+                        <th className="px-2 py-1.5">Tipo</th>
+                        <th className="px-2 py-1.5">Suscripción</th>
+                        <th className="px-2 py-1.5">Cliente</th>
+                        <th className="px-2 py-1.5">Código</th>
+                        <th className="px-2 py-1.5">Estado</th>
+                        <th className="px-2 py-1.5">Fecha</th>
+                        <th className="px-2 py-1.5">Acción</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {asignacionesFiltradas.map((c) => (
+                        <tr key={c.id} className="border-t text-xs">
+                          <td className="px-2 py-1.5">
+                            {c.source === "admin_code" ? "Código" : "Asignado"}
+                          </td>
+
+                          <td className="px-2 py-1.5">
+                            {c.subscription_templates?.name || "-"}
+                          </td>
+
+                          <td className="px-2 py-1.5">
+                            {c.clientes?.nombre || "-"}
+                          </td>
+
+                          <td className="px-2 py-1.5 font-mono">
+                            {c.claim_code || "-"}
+                          </td>
+
+                          <td className="px-2 py-1.5">
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                c.status === "claimed"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {c.status === "claimed" ? "Usado" : "Pendiente"}
+                            </span>
+                          </td>
+
+                          <td className="px-2 py-1.5 text-neutral-500">
+                            {new Date(c.created_at).toLocaleString("es-CL")}
+                          </td>
+
+                          <td className="px-2 py-1.5">
+                            {c.status === "pending" ? (
+                              <div className="flex flex-wrap gap-2">
+                                {c.claim_code && (
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(
+                                        c.claim_code,
+                                      );
+                                      setMensaje(
+                                        "Código copiado al portapapeles.",
+                                      );
+                                    }}
+                                    className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                                  >
+                                    Copiar código
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => eliminarAsignacion(c.id)}
+                                  disabled={eliminandoAsignacionId === c.id}
+                                  className="cursor-pointer rounded-xl bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                                >
+                                  {eliminandoAsignacionId === c.id
+                                    ? "Eliminando..."
+                                    : "Eliminar"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-neutral-400">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMostrarCodigo(!mostrarCodigo)}
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
+          >
+            <div>
+              <h2 className="text-sm font-semibold">Generar código genérico</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Configura una suscripción y genera un código para canje
+                posterior
+              </p>
+            </div>
+            <span className="text-2xl leading-none">
+              {mostrarCodigo ? "−" : "+"}
+            </span>
+          </button>
+
+          {mostrarCodigo && (
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto border-t border-neutral-200 p-3">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Tipo de suscripción
+                  </label>
+                  <select
+                    value={billingPeriodCodigo}
+                    onChange={(e) => setBillingPeriodCodigo(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  >
+                    {PERIODOS.map((periodo) => (
+                      <option key={periodo.value} value={periodo.value}>
+                        {periodo.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Potes
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={potsCodigo}
+                    onChange={(e) => setPotsCodigo(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Toppings
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={toppingsCodigo}
+                    onChange={(e) => setToppingsCodigo(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Pack barquillos
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={waferCodigo}
+                    onChange={(e) => setWaferCodigo(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Pack galletas
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={cookieCodigo}
+                    onChange={(e) => setCookieCodigo(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={generarCodigo}
+                disabled={procesandoCodigo}
+                className="cursor-pointer rounded-2xl bg-violet-600 px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                {procesandoCodigo ? "Generando..." : "Generar código"}
+              </button>
+
+              {codigoGenerado && (
+                <div className="rounded-2xl bg-neutral-100 p-4">
+                  <p className="mb-2 text-sm font-medium text-neutral-600">
+                    Código generado
+                  </p>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="font-mono text-lg text-[#111111]">
+                      {codigoGenerado}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(codigoGenerado);
+                        setMensaje("Código copiado al portapapeles.");
+                      }}
+                      className="cursor-pointer rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+                    >
+                      Copiar código
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() =>
+              setMostrarAsignacionCliente(!mostrarAsignacionCliente)
+            }
+            className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2 text-left"
+          >
+            <div>
+              <h2 className="text-sm font-semibold">
+                Asignar suscripción a cliente
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Selecciona un cliente, configura la suscripción y confirma la
+                asignación
+              </p>
+            </div>
+            <span className="text-2xl leading-none">
+              {mostrarAsignacionCliente ? "−" : "+"}
+            </span>
+          </button>
+
+          {mostrarAsignacionCliente && (
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto border-t border-neutral-200 p-3">
+              <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                <p className="text-sm font-semibold text-violet-800">
+                  Cliente seleccionado para asignación
+                </p>
+
+                {!clienteSeleccionado ? (
+                  <p className="mt-3 text-sm text-neutral-600">
+                    No hay ningún cliente seleccionado.
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-violet-100 bg-white p-3">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Nombre
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[#111111]">
+                        {clienteSeleccionado.nombre}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-violet-100 bg-white p-3">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Correo
+                      </p>
+                      <p className="mt-1 break-all text-sm font-semibold text-[#111111]">
+                        {clienteSeleccionado.correo}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-violet-100 bg-white p-3">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
+                        Teléfono
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[#111111]">
+                        {clienteSeleccionado.telefono || "-"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-violet-700">
+                    Buscar cliente por nombre, correo o teléfono
+                  </label>
+                  <input
+                    type="text"
+                    value={busquedaCliente}
+                    onChange={(e) => setBusquedaCliente(e.target.value)}
+                    placeholder="Nombre, correo o teléfono"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-violet-700">
+                      Filtrar por letra
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      {clientesFiltrados.length} resultado
+                      {clientesFiltrados.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLetraActiva("TODOS")}
+                      className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                        letraActiva === "TODOS"
+                          ? "cursor-pointer border-transparent bg-black text-white"
+                          : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                      }`}
+                    >
+                      Todos
+                    </button>
+
+                    {LETRAS.map((letra) => (
+                      <button
+                        key={letra}
+                        type="button"
+                        onClick={() => setLetraActiva(letra)}
+                        className={`min-w-[36px] rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                          letraActiva === letra
+                            ? "cursor-pointer border-transparent bg-black text-white"
+                            : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                        }`}
+                      >
+                        {letra}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-violet-700">
+                    Buscar cliente en listado
+                  </label>
+
+                  <select
+                    value={clienteId}
+                    onChange={(e) => setClienteId(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  >
+                    <option value="">Selecciona cliente</option>
+                    {clientesFiltrados.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre} · {c.correo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-sm font-semibold text-violet-700">
+                  Configuración de la suscripción
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Tipo de suscripción
+                    </label>
+                    <select
+                      value={billingPeriodAsignacion}
+                      onChange={(e) =>
+                        setBillingPeriodAsignacion(e.target.value)
+                      }
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    >
+                      {PERIODOS.map((periodo) => (
+                        <option key={periodo.value} value={periodo.value}>
+                          {periodo.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Potes
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={potsAsignacion}
+                      onChange={(e) => setPotsAsignacion(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Toppings
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={toppingsAsignacion}
+                      onChange={(e) => setToppingsAsignacion(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Pack barquillos
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={waferAsignacion}
+                      onChange={(e) => setWaferAsignacion(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Pack galletas
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={cookieAsignacion}
+                      onChange={(e) => setCookieAsignacion(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={asignarSuscripcion}
+                  disabled={procesandoAsignacion}
+                  className="cursor-pointer rounded-2xl bg-black px-4 py-3 text-white transition hover:opacity-90 disabled:opacity-60"
+                >
+                  {procesandoAsignacion
+                    ? "Asignando..."
+                    : "Confirmar asignación"}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+        </div>
+
+        {mensaje && (
+          <div className="rounded-2xl bg-neutral-200 p-4 text-sm text-neutral-800">
+            {mensaje}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
