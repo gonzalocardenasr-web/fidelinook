@@ -1,4 +1,5 @@
 "use client";
+import dashboardFrame from "@/components/analytics/dashboard-frame.module.css";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -42,7 +43,7 @@ const initialFilters = () => {
 };
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const links: { view: View; title: string; href: string }[] = [
-  { view: "resumen", title: "Resumen", href: "/gestion/analytics/comercial" },
+  { view: "resumen", title: "Resumen", href: "/gestion/analytics" },
   { view: "ventas", title: "Ventas", href: "/gestion/analytics/comercial/ventas" },
   { view: "productos", title: "Productos", href: "/gestion/analytics/comercial/productos" },
   { view: "sabores", title: "Sabores", href: "/gestion/analytics/comercial/sabores" },
@@ -151,11 +152,10 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   const maxUnits = Math.max(1, ...(products?.products || []).map((p) => Number(p.units)));
   const maxFlavorUnits = Math.max(1, ...(flavors?.flavors || []).map((f) => Number(f.observedUnits)));
 
-  return <main className={styles.workspace}>
+  return <main className={`${styles.workspace} ${dashboardFrame.frame}`}>
     <AnalyticsToolbar section="Analytics" from={from} to={to} channel={channel}
       onFrom={setFrom} onTo={setTo} onChannel={setChannel} loading={loading}
       items={links.map(link => ({ label: link.title, href: `${link.href}?${navQuery.toString()}`, active: view === link.view }))}
-      action={<Link href="/gestion/analytics">Vista anterior ↗</Link>}
       onApply={event => { event.preventDefault(); if (!from || !to || from > to) { setError("Selecciona un período válido."); return; } const next = { from, to, channel, topN, rankBy }; setApplied(next); const params = new URLSearchParams({ from, to, topN: String(topN), rankBy }); if (channel) params.set("channel", channel); window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`); }}>
       {(view === "productos" || view === "sabores") && <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>Top <select value={topN} onChange={e => setTopN(Number(e.target.value) as AnalyticsTopN)}>{[5,10,20,50].map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
       {view === "productos" && <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>Orden <select value={rankBy} onChange={e => setRankBy(e.target.value as AnalyticsRankingMetric)}><option value="revenue">Ingresos</option><option value="units">Unidades</option></select></label>}

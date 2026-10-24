@@ -39,3 +39,28 @@
 @media(max-height:790px) and (min-width:1251px){.page{height:auto;min-height:calc(100dvh - 76px);overflow:visible}.grid{min-height:355px}}
 @media(max-width:1250px){.page{height:auto;min-height:calc(100dvh - 76px);overflow:visible}.grid{grid-template-columns:1fr}.card{min-height:350px}.chart{height:290px;flex:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.kpis{grid-template-columns:1fr}.channelMeta{flex-wrap:wrap}}
+
+/* DEV-ANL-UX-02: distribute height among KPIs, visualization and complete comparison */
+.page{height:calc(100dvh - 64px);min-height:0;padding:8px;gap:8px}
+.body{gap:8px}
+.kpis{gap:8px}
+.kpis article{min-height:96px;padding:10px 13px;gap:5px}
+.grid{min-height:0;flex:1 1 auto;gap:8px}
+.card{padding:11px 13px}
+.channels{gap:7px;overflow-y:auto}
+.channel{min-height:45px}
+.channelMeta{margin-top:3px}
+.track{margin-top:4px}
+.heading{margin-bottom:6px}
+.note{margin-top:5px}
+.callout{margin-top:5px;padding:7px}
+.tableCard{flex:0 0 196px;min-height:0;padding:9px 13px}
+.tableWrap{flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
+.tableWrap th,.tableWrap td{padding:6px 10px}
+@media(max-height:790px) and (min-width:1251px){
+ .page{height:calc(100dvh - 64px);min-height:0;overflow:hidden}
+ .grid{min-height:0}
+ .tableCard{flex-basis:182px}
+ .kpis article{min-height:86px}
+}
+@media(max-width:1250px){.page{height:auto;min-height:calc(100dvh - 64px);overflow:visible}.grid{min-height:0}.tableCard{flex-basis:auto}.tableWrap{max-height:230px}}

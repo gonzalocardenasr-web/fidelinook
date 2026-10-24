@@ -1,4 +1,5 @@
 "use client";
+import dashboardFrame from "@/components/analytics/dashboard-frame.module.css";
 import { useEffect, useMemo, useState } from "react";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
 import s from "./channels.module.css";
@@ -53,11 +54,11 @@ export default function Channels() {
   const channels=data?.channels||[];
   const leader=channels[0];
   const digital=channels.filter(c=>c.code!=="local").reduce((a,c)=>a+c.revenue,0);
-  return <main className={s.page}>
+  return <main className={`${s.page} ${dashboardFrame.frame}`}>
     <AnalyticsToolbar section="Ventas" from={draft.from} to={draft.to} channel={draft.channel}
       onFrom={v=>setDraft({...draft,from:v})} onTo={v=>setDraft({...draft,to:v})} onChannel={v=>setDraft({...draft,channel:v})}
       loading={loading} items={[
-        {label:"Resumen",href:`/gestion/analytics/comercial?${q}`},
+        {label:"Resumen",href:`/gestion/analytics?${q}`},
         {label:"Evolución",href:`/gestion/analytics/comercial/ventas?${q}`},
         {label:"Temporalidad",href:`/gestion/analytics/comercial/ventas/temporalidad?${q}`},
         {label:"Canales",href:`/gestion/analytics/comercial/ventas/canales?${q}`,active:true},

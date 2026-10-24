@@ -151,3 +151,8 @@
 /* Analytics Workspace shared header */
 .workspace{height:calc(100dvh - 76px);padding:10px 14px;gap:10px;max-width:none}
 @media(max-width:1100px){.workspace{height:auto;min-height:0;overflow:visible}}
+
+/* DEV-ANL-UX-02: full-width, compact, self-contained executive workspace */
+.workspace{max-width:none;margin:0;padding:8px;height:calc(100dvh - 64px);min-height:0;gap:8px}
+.stack{gap:8px}
+@media(max-width:1100px){.workspace{height:auto;min-height:calc(100dvh - 64px);overflow:visible}}

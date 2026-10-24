@@ -1,4 +1,5 @@
 "use client";
+import dashboardFrame from "@/components/analytics/dashboard-frame.module.css";
 import { useEffect, useMemo, useState } from "react";
 import s from "./sales-evolution.module.css";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
@@ -75,11 +76,11 @@ export default function SalesEvolution() {
   const average = data?.salesCount ? data.revenue / data.salesCount : 0;
   const peak = rows.reduce<Row | null>((best, row) => !best || row.revenue > best.revenue ? row : best, null);
   const qs = new URLSearchParams({ from: filter.from, to: filter.to }); if (filter.channel) qs.set("channel", filter.channel);
-  return <main className={s.page}>
+  return <main className={`${s.page} ${dashboardFrame.frame}`}>
     <AnalyticsToolbar section="Ventas" from={draft.from} to={draft.to} channel={draft.channel}
       onFrom={v => setDraft({ ...draft, from: v })} onTo={v => setDraft({ ...draft, to: v })}
       onChannel={v => setDraft({ ...draft, channel: v })} loading={loading}
-      items={[{ label: "Resumen", href: `/gestion/analytics/comercial?${qs}` }, { label: "Evolución", href: `/gestion/analytics/comercial/ventas?${qs}`, active: true }, { label: "Temporalidad", href: `/gestion/analytics/comercial/ventas/temporalidad?${qs}` }, { label: "Canales", href: `/gestion/analytics/comercial/ventas/canales?${qs}` }, { label: "Productos", href: `/gestion/analytics/comercial/productos?${qs}` }]}
+      items={[{ label: "Resumen", href: `/gestion/analytics?${qs}` }, { label: "Evolución", href: `/gestion/analytics/comercial/ventas?${qs}`, active: true }, { label: "Temporalidad", href: `/gestion/analytics/comercial/ventas/temporalidad?${qs}` }, { label: "Canales", href: `/gestion/analytics/comercial/ventas/canales?${qs}` }, { label: "Productos", href: `/gestion/analytics/comercial/productos?${qs}` }]}
       onApply={e => { e.preventDefault(); if (draft.from > draft.to) { setError("El inicio no puede superar el término."); return; } setFilter({ ...draft }); const q = new URLSearchParams({ from: draft.from, to: draft.to }); if (draft.channel) q.set("channel", draft.channel); window.history.replaceState(null, "", `${window.location.pathname}?${q}`); }} />
     {loading ? <section className={s.notice}>Cargando evolución comercial…</section> : error ? <section className={s.error}>{error}</section> : data && prev ? <div className={s.body}>
       <section className={s.kpis}>

@@ -11,3 +11,7 @@
 .tableCard{height:100%;min-height:0;flex:1 1 auto;overflow:hidden}.tableScroll{overflow-y:auto;overflow-x:auto;min-height:0}
 .tableScroll th,.tableScroll td{padding:9px 8px;white-space:nowrap}
 @media(max-width:1100px){.page{height:auto;overflow:visible}.mainGrid{grid-template-columns:1fr}.chartFrame{height:260px;flex:none}.tableCard{height:390px}}
+
+/* DEV-ANL-UX-02 */
+.page{padding:8px;height:calc(100dvh - 64px);gap:8px}
+@media(max-width:1100px){.page{height:auto;min-height:calc(100dvh - 64px);overflow:visible}}
