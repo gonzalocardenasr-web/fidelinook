@@ -9,6 +9,7 @@ type View = "resumen" | "ventas" | "productos" | "sabores";
 type Daily = { date: string; salesCount: number; revenue: number };
 type Overview = AnalyticsCommercialSummary & { daily?: Daily[] };
 type MonthComparison = { previous: Overview; comparableRevenue: number; comparableSales: number; previousFullRevenue: number; previousFullSales: number; comparableThrough: string };
+type ChannelDatum = { code: string; label: string; revenue: number; salesCount: number };
 type Products = AnalyticsProductRanking & { reconciliation?: { allAllocatedRevenue: number; catalogAllocatedRevenue: number } };
 type Flavors = AnalyticsFlavorRanking & { scope?: string };
 type ApiResult<T> = { ok: true; data: T } | { ok: false; message: string };
@@ -54,6 +55,7 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   const [topN, setTopN] = useState<AnalyticsTopN>(initial.topN);
   const [rankBy, setRankBy] = useState<AnalyticsRankingMetric>(initial.rankBy);
   const [applied, setApplied] = useState(initial);
+  const [channels, setChannels] = useState<ChannelDatum[]>([]);
   const [previousMonth, setPreviousMonth] = useState<Overview | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [products, setProducts] = useState<Products | null>(null);
@@ -80,6 +82,18 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     comparableThrough: previousComparableEnd,
   } : null;
   const delta = (current: number, reference: number) => reference > 0 ? `${current >= reference ? "+" : ""}${fmt((current / reference - 1) * 100)}%` : "Sin base";
+  const comparisonTone = (current: number, reference: number) => reference <= 0 ? styles.neutral : current > reference ? styles.positive : current < reference ? styles.negative : styles.neutral;
+  const comparisonArrow = (current: number, reference: number) => reference <= 0 ? "—" : current > reference ? "▲" : current < reference ? "▼" : "=";
+  const comparableTicket = comparison && comparison.comparableSales > 0 ? comparison.comparableRevenue / comparison.comparableSales : null;
+  const accumulated = (rows: Daily[], limit: number) => {
+    const byDay = new Map(rows.map(row => [Number(row.date.slice(8)), Number(row.revenue)]));
+    let total = 0;
+    return Array.from({ length: limit }, (_, i) => { total += byDay.get(i + 1) || 0; return total; });
+  };
+  const currentCumulative = overview ? accumulated(overview.daily || [], Number(applied.to.slice(8))) : [];
+  const previousCumulative = previousMonth ? accumulated(previousMonth.daily || [], daysInMonth(previousYearMonth)) : [];
+  const channelTotal = channels.reduce((sum, item) => sum + item.revenue, 0);
+  const channelDifference = overview && channels.length === 4 ? Number(overview.revenue) - channelTotal : null;
   const navQuery = new URLSearchParams({ from: applied.from, to: applied.to, topN: String(applied.topN), rankBy: applied.rankBy });
   if (applied.channel) navQuery.set("channel", applied.channel);
 
@@ -104,6 +118,17 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           if (!response.ok || !payload.ok) throw new Error(!payload.ok ? payload.message : `Error HTTP ${response.status}`);
           if (!controller.signal.aborted) setPreviousMonth(payload.data);
         } else if (!controller.signal.aborted) setPreviousMonth(null);
+        if (view === "resumen" && !applied.channel) {
+          const definitions = [{ code: "local", label: "Local" }, { code: "shopify", label: "Shopify" }, { code: "uber_eats", label: "Uber Eats" }, { code: "rappi", label: "Rappi" }];
+          const breakdown = await Promise.all(definitions.map(async (definition) => {
+            const params = new URLSearchParams({ from: applied.from, to: applied.to, channel: definition.code });
+            const response = await fetch(`/api/analytics/commercial/overview?${params}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+            const payload: ApiResult<Overview> = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(!payload.ok ? payload.message : `Error HTTP ${response.status}`);
+            return { ...definition, revenue: Number(payload.data.revenue), salesCount: Number(payload.data.salesCount) };
+          }));
+          if (!controller.signal.aborted) setChannels(breakdown.sort((a,b) => b.revenue - a.revenue));
+        } else if (!controller.signal.aborted) setChannels([]);
         if (controller.signal.aborted) return;
         for (const result of results) {
           if (result.endpoint === "overview") setOverview(result.data as Overview);
@@ -157,22 +182,28 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
       {error && <div className={styles.error} role="alert">{error}</div>}
       {!loading && !error && view === "resumen" && overview && <div className={styles.stack}>
         <div className={styles.kpis}>
-          <Kpi title="Ingresos" value={clp(overview.revenue)} />
+          <Kpi title="Ingresos del período" value={clp(overview.revenue)} />
           <Kpi title="Ventas" value={fmt(overview.salesCount)} />
           <Kpi title="Ticket promedio" value={clp(overview.averageTicket)} />
           <Kpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} />
           <Kpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} />
         </div>
         {comparison && <div className={styles.comparisonStrip}>
-          <div><span>Mes actual · hasta el {Number(applied.to.slice(8))}</span><strong>{clp(overview.revenue)}</strong></div>
-          <div><span>Mes anterior · mismo día</span><strong>{clp(comparison.comparableRevenue)}</strong><small className={styles.delta}>{delta(Number(overview.revenue), comparison.comparableRevenue)} vs. MTD anterior</small></div>
-          <div><span>Mes anterior · completo</span><strong>{clp(comparison.previousFullRevenue)}</strong><small>{comparison.previousFullRevenue > 0 ? `${fmt(Number(overview.revenue) / comparison.previousFullRevenue * 100)}% del cierre anterior` : "Sin base"}</small></div>
-          <div><span>Ventas · MTD actual / anterior</span><strong>{fmt(overview.salesCount)} / {fmt(comparison.comparableSales)}</strong><small className={styles.delta}>{delta(Number(overview.salesCount), comparison.comparableSales)} vs. MTD anterior</small></div>
+          <div><span>Ingresos MTD · actual</span><strong>{clp(overview.revenue)}</strong><small className={comparisonTone(Number(overview.revenue), comparison.comparableRevenue)}>{comparisonArrow(Number(overview.revenue), comparison.comparableRevenue)} {delta(Number(overview.revenue), comparison.comparableRevenue)} · {clp(Number(overview.revenue) - comparison.comparableRevenue)}</small></div>
+          <div><span>Ingresos MTD · mes anterior</span><strong>{clp(comparison.comparableRevenue)}</strong><small>Hasta el día {Number(applied.to.slice(8))} (o último disponible)</small></div>
+          <div><span>Mes anterior completo</span><strong>{clp(comparison.previousFullRevenue)}</strong><small>{comparison.previousFullRevenue > 0 ? `${fmt(Number(overview.revenue) / comparison.previousFullRevenue * 100)}% del cierre anterior` : "Sin base"}</small></div>
+          <div><span>Ventas · MTD actual vs. anterior</span><strong>{fmt(overview.salesCount)} / {fmt(comparison.comparableSales)}</strong><small className={comparisonTone(Number(overview.salesCount), comparison.comparableSales)}>{comparisonArrow(Number(overview.salesCount), comparison.comparableSales)} {delta(Number(overview.salesCount), comparison.comparableSales)} vs. mes anterior</small></div>
+          <div><span>Ticket promedio · MTD</span><strong>{clp(overview.averageTicket)}</strong><small className={comparableTicket === null ? styles.neutral : comparisonTone(Number(overview.averageTicket), comparableTicket)}>{comparableTicket === null ? "Sin base" : `${comparisonArrow(Number(overview.averageTicket), comparableTicket)} ${delta(Number(overview.averageTicket), comparableTicket)} vs. ${clp(comparableTicket)}`}</small></div>
         </div>}
-        {!comparisonEligible && <div className={styles.comparisonHint}>Comparación mensual disponible al seleccionar desde el día 1 hasta una fecha del mismo mes.</div>}
-        <div className={styles.twoColumns}>
-          <section className={styles.card}><div className={styles.cardHeader}><h2>Evolución de ingresos</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div><div className={styles.barArea}>{daily.length ? daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>) : <p>Sin ventas en el período.</p>}</div><div className={styles.muted}>Últimos 14 días con ventas · detalle en Ventas</div></section>
-          <section className={styles.card}><div className={styles.cardHeader}><h2>Productos destacados</h2><Link href="/gestion/analytics/comercial/productos">Ver ranking →</Link></div><div className={styles.rows}>{(products?.products || []).slice(0, 5).map((p, i) => <div className={styles.compactRow} key={`${p.productId}-${i}`}><span>{p.name}</span><strong>{clp(p.allocatedRevenue)}</strong></div>)}{!products?.products?.length && <p>Sin productos para el período.</p>}</div></section>
+        {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
+        <div className={styles.executiveGrid}>
+          <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
+            {comparison ? <CumulativeChart current={currentCumulative} previous={previousCumulative} /> : <div className={styles.barArea}>{daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>)}</div>}
+          </section>
+          <section className={styles.card}><div className={styles.cardHeader}><h2>Canales · participación en ingresos</h2><span>{applied.channel ? "Canal filtrado" : "Todos los canales"}</span></div>
+            {applied.channel ? <div className={styles.channelSingle}>Filtro activo: {applied.channel}. Selecciona «Todos» para comparar canales.</div> : <div className={styles.channelRows}>{channels.map((item) => <div key={item.code} className={styles.channelRow}><div><strong>{item.label}</strong><span>{clp(item.revenue)} · {fmt(item.salesCount)} ventas</span></div><div className={styles.channelTrack}><div style={{ width: `${channelTotal > 0 ? item.revenue / channelTotal * 100 : 0}%` }} /></div><b>{channelTotal > 0 ? fmt(item.revenue / channelTotal * 100) : "0"}%</b></div>)}{channels.length === 0 && <p>Sin datos de canales.</p>}{channelDifference !== null && Math.abs(channelDifference) > 0.02 && <p className={styles.negative}>Diferencia entre canales y total: {clp(channelDifference)}. Revisar canales no contemplados.</p>}</div>}
+          </section>
+          <section className={`${styles.card} ${styles.productsCard}`}><div className={styles.cardHeader}><h2>Productos destacados</h2><Link href="/gestion/analytics/comercial/productos">Ver ranking →</Link></div><div className={styles.rows}>{(products?.products || []).slice(0, 5).map((p, i) => <div className={styles.compactRow} key={`${p.productId}-${i}`}><span>{p.name}</span><strong>{clp(p.allocatedRevenue)}</strong></div>)}{!products?.products?.length && <p>Sin productos para el período.</p>}</div></section>
         </div>
         <div className={styles.footerNote}>{difference === null ? "Conciliación no disponible" : Math.abs(difference) < 0.02 ? "✓ Ingresos conciliados con las asignaciones de venta" : `⚠ Diferencia de conciliación: ${clp(difference)}`} · Ventas confirmadas y pagadas · Fecha comercial de Santiago</div>
       </div>}
@@ -196,4 +227,22 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
 
 function Kpi({ title, value }: { title: string; value: string }) {
   return <div className={styles.kpi}><div>{title}</div><strong>{value}</strong></div>;
+}
+
+function CumulativeChart({ current, previous }: { current: number[]; previous: number[] }) {
+  const max = Math.max(1, ...current, ...previous);
+  const width = 720, height = 235, left = 53, right = 12, top = 12, bottom = 28;
+  const x = (index: number) => left + (index / 30) * (width - left - right);
+  const y = (value: number) => top + (1 - value / max) * (height - top - bottom);
+  const path = (values: number[]) => values.map((value, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
+  return <div className={styles.chartBox}>
+    <div className={styles.chartLegend}><span><i className={styles.legendCurrent} />Mes seleccionado</span><span><i className={styles.legendPrevious} />Mes anterior completo</span></div>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Comparación de ingresos acumulados por día del mes" preserveAspectRatio="none">
+      {[0, .25, .5, .75, 1].map((fraction) => <g key={fraction}><line x1={left} y1={y(max * fraction)} x2={width-right} y2={y(max*fraction)} stroke="#e2e8f0" /><text x={left-7} y={y(max*fraction)+4} textAnchor="end" fontSize="10" fill="#64748b">{Math.round(max*fraction/1000000*10)/10}M</text></g>)}
+      {[1, 5, 10, 15, 20, 25, 30].map((day) => <text key={day} x={x(day-1)} y={height-8} textAnchor="middle" fontSize="10" fill="#64748b">{day}</text>)}
+      <path d={path(previous)} fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />
+      <path d={path(current)} fill="none" stroke="#4f46e5" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+    </svg>
+    <div className={styles.chartCaption}>Comparación por día calendario · CLP acumulados · la curva actual termina en la fecha seleccionada.</div>
+  </div>;
 }

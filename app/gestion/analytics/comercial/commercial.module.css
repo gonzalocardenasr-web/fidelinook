@@ -71,3 +71,35 @@
 @media (max-width: 1050px) { .comparisonStrip { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 900px) { .workspace { height: auto; min-height: 0; overflow: visible; } .filters label { display: grid; } }
 @media (max-width: 560px) { .comparisonStrip { grid-template-columns: 1fr; } }
+/* DEV-ANL-02.2F — Semántica visual y lectura ejecutiva */
+.positive { color: #047857 !important; font-weight: 800; }
+.negative { color: #b91c1c !important; font-weight: 800; }
+.neutral { color: #64748b !important; font-weight: 700; }
+.comparisonStrip { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.comparisonStrip > div { border-top: 3px solid #c7d2fe; }
+.comparisonStrip small { line-height: 1.3; }
+.executiveGrid { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; gap: 8px; flex: 1 1 auto; min-height: 0; }
+.executiveGrid > .card { min-height: 0; }
+.productsCard { grid-column: 1 / -1; }
+.productsCard .rows { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.productsCard .compactRow { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 7px; }
+.productsCard .compactRow strong { color: #3730a3; }
+.chartBox { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.chartBox svg { display: block; width: 100%; flex: 1 1 auto; min-height: 110px; }
+.chartLegend { display: flex; gap: 16px; font-size: 11px; color: #475569; flex: 0 0 auto; }
+.chartLegend span { display: inline-flex; align-items: center; gap: 6px; }
+.chartLegend i { display: inline-block; width: 17px; height: 3px; }
+.legendCurrent { background: #4f46e5; }
+.legendPrevious { background: #94a3b8; }
+.chartCaption { font-size: 10px; color: #64748b; }
+.channelRows { display: flex; flex-direction: column; gap: 15px; justify-content: center; flex: 1; min-height: 0; overflow: auto; }
+.channelRow { display: grid; grid-template-columns: minmax(100px,1fr) minmax(40px,1.2fr) 48px; gap: 10px; align-items: center; font-size: 11px; }
+.channelRow > div:first-child { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.channelRow span { color: #64748b; font-size: 10px; }
+.channelRow b { text-align: right; color: #3730a3; }
+.channelTrack { background: #e2e8f0; border-radius: 10px; height: 10px; overflow: hidden; }
+.channelTrack div { height: 100%; background: #6366f1; border-radius: 10px; }
+.channelSingle { padding: 20px; color: #64748b; font-size: 12px; }
+@media (max-width: 1250px) { .comparisonStrip { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 900px) { .executiveGrid { grid-template-columns: 1fr; grid-template-rows: auto; } .productsCard { grid-column: auto; } .productsCard .rows { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 560px) { .comparisonStrip { grid-template-columns: 1fr; } .productsCard .rows { grid-template-columns: 1fr; } }
