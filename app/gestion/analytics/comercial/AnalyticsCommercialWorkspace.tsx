@@ -188,7 +188,15 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
         {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.executiveGrid}>
           <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
-            {comparison ? <CumulativeChart current={currentCumulative} previous={previousCumulative} /> : <div className={styles.barArea}>{daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>)}</div>}
+            {comparison ? <div className={styles.chartAndInsights}>
+              <CumulativeChart current={currentCumulative} previous={previousCumulative} />
+              <div className={styles.insightPanel} aria-label="Lectura comercial del período comparable">
+                <h3>Lectura comercial</h3>
+                <Insight title="Diferencia de ingresos" current={Number(overview.revenue)} reference={comparison.comparableRevenue} kind="money" />
+                <Insight title="Diferencia de ventas" current={Number(overview.salesCount)} reference={comparison.comparableSales} kind="count" />
+                {comparableTicket !== null && <Insight title="Variación del ticket" current={Number(overview.averageTicket)} reference={comparableTicket} kind="percentage" />}
+              </div>
+            </div> : <div className={styles.barArea}>{daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>)}</div>}
           </section>
           <section className={styles.card}><div className={styles.cardHeader}><h2>Canales · participación en ingresos</h2><span>{applied.channel ? "Canal filtrado" : "Todos los canales"}</span></div>
             {applied.channel ? <div className={styles.channelSingle}>Filtro activo: {applied.channel}. Selecciona «Todos» para comparar canales.</div> : <div className={styles.channelRows}>{channels.map((item) => <div key={item.code} className={styles.channelRow}><div><strong>{item.label}</strong><span>{clp(item.revenue)} · {fmt(item.salesCount)} ventas</span></div><div className={styles.channelTrack}><div style={{ width: `${channelTotal > 0 ? item.revenue / channelTotal * 100 : 0}%` }} /></div><b>{channelTotal > 0 ? fmt(item.revenue / channelTotal * 100) : "0"}%</b></div>)}{channels.length === 0 && <p>Sin datos de canales.</p>}{channelDifference !== null && Math.abs(channelDifference) > 0.02 && <p className={styles.negative}>Diferencia entre canales y total: {clp(channelDifference)}. Revisar canales no contemplados.</p>}</div>}
@@ -237,6 +245,22 @@ function ExecutiveKpi({ title, value, comparison, subtitle }: {
 
 function Kpi({ title, value }: { title: string; value: string }) {
   return <div className={styles.kpi}><div>{title}</div><strong>{value}</strong></div>;
+}
+
+function Insight({ title, current, reference, kind }: { title: string; current: number; reference: number; kind: "money" | "count" | "percentage" }) {
+  const diff = current - reference;
+  const change = reference > 0 ? (diff / reference) * 100 : null;
+  const direction = diff > 0 ? "▲" : diff < 0 ? "▼" : "=";
+  const tone = diff > 0 ? styles.positive : diff < 0 ? styles.negative : styles.neutral;
+  const display = kind === "percentage"
+    ? change === null ? "Sin base comparable" : `${direction} ${change > 0 ? "+" : ""}${fmt(change)}%`
+    : kind === "money" ? `${direction} ${diff > 0 ? "+" : diff < 0 ? "−" : ""}${clp(Math.abs(diff))}`
+    : `${direction} ${diff > 0 ? "+" : diff < 0 ? "−" : ""}${fmt(Math.abs(diff))}`;
+  return <div className={styles.insightRow}>
+    <span>{title}</span>
+    <strong className={tone}>{display}</strong>
+    <small>{kind === "percentage" ? "vs. ticket del MTD anterior" : "vs. mismo día del mes anterior"}</small>
+  </div>;
 }
 
 function CumulativeChart({ current, previous }: { current: number[]; previous: number[] }) {
