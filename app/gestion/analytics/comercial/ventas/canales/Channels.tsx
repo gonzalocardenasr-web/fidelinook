@@ -22,7 +22,7 @@ const initial = (): Filter => {
 const colors = ["#4f46e5", "#0891b2", "#f59e0b", "#10b981", "#a855f7", "#e11d48"];
 function DailyChart({ rows, channels, metric }: { rows: Daily[]; channels: Channel[]; metric: "revenue" | "tickets" }) {
   const dates = [...new Set(rows.map(r => r.date))].sort();
-  const w = 920, h = 310, left = 83, right = 28, top = 20, bottom = 42;
+  const w = 920, h = 270, left = 83, right = 28, top = 20, bottom = 42;
   const max = Math.max(1, ...rows.map(r => r[metric]));
   const x = (i: number) => left + (dates.length < 2 ? (w - left - right) / 2 : i * (w - left - right) / (dates.length - 1));
   const y = (n: number) => h - bottom - n / max * (h - top - bottom);
@@ -33,6 +33,16 @@ function DailyChart({ rows, channels, metric }: { rows: Daily[]; channels: Chann
       const map = new Map(rows.filter(r => r.channel===c.code).map(r => [r.date,r[metric]]));
       const pts = dates.map((d,i) => `${x(i)},${y(map.get(d)||0)}`).join(" ");
       return dates.length > 1 ? <polyline key={c.code} points={pts} fill="none" stroke={colors[ci%colors.length]} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/> : <circle key={c.code} cx={x(0)} cy={y(map.get(dates[0])||0)} r="5" fill={colors[ci%colors.length]}/>;
+    })}
+    {dates.map((d,i) => {
+      const leftEdge = i===0 ? left : (x(i-1)+x(i))/2;
+      const rightEdge = i===dates.length-1 ? w-right : (x(i)+x(i+1))/2;
+      const entries = channels.map(c => ({c, value: rows.find(r => r.date===d && r.channel===c.code)?.[metric] ?? 0}));
+      const total = entries.reduce((sum,e)=>sum+e.value,0);
+      const format = (value:number) => metric === "revenue" ? money(value) : `${num(value)} transacciones`;
+      return <rect key={`hover-${d}`} x={leftEdge} y={top} width={Math.max(1,rightEdge-leftEdge)} height={h-top-bottom} fill="transparent" style={{cursor:"crosshair"}}>
+        <title>{`${d.slice(8,10)}/${d.slice(5,7)}/${d.slice(0,4)}\n${entries.map(e=>`${e.c.name}: ${format(e.value)}`).join("\n")}\nTotal: ${format(total)}`}</title>
+      </rect>;
     })}
     {dates.map((d,i) => (i%ticks===0||i===dates.length-1) ? <text key={d} x={x(i)} y={h-12} textAnchor="middle" fontSize="12" fill="#64748b">{d.slice(8)}/{d.slice(5,7)}</text> : null)}
   </svg>;

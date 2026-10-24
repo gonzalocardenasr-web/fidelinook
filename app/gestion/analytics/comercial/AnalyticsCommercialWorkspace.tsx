@@ -260,8 +260,8 @@ function CumulativeChart({ current, previous }: { current: number[]; previous: n
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Comparación de ingresos acumulados por día del mes" preserveAspectRatio="xMidYMid meet">
       {[0, .25, .5, .75, 1].map((fraction) => <g key={fraction}><line x1={left} y1={y(max * fraction)} x2={width-right} y2={y(max*fraction)} stroke="#e2e8f0" /><text x={left-7} y={y(max*fraction)+4} textAnchor="end" fontSize="12" fill="#64748b">{Math.round(max*fraction/1000000*10)/10}M</text></g>)}
       {[1, 5, 10, 15, 20, 25, 30].map((day) => <text key={day} x={x(day-1)} y={height-8} textAnchor="middle" fontSize="12" fill="#64748b">{day}</text>)}
-      <path d={path(previous)} fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />
-      <path d={path(current)} fill="none" stroke="#4f46e5" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+      <path d={path(previous)} fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="6 5" vectorEffect="non-scaling-stroke"><title>Mes anterior: ingresos acumulados</title></path>
+      <path d={path(current)} fill="none" stroke="#4f46e5" strokeWidth="3" vectorEffect="non-scaling-stroke"><title>Mes seleccionado: ingresos acumulados</title></path>
     </svg>
     <div className={styles.chartCaption}>Comparación por día calendario · CLP acumulados · la curva actual termina en la fecha seleccionada.</div>
   </div>;

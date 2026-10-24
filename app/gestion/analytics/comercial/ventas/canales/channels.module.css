@@ -64,3 +64,6 @@
  .kpis article{min-height:86px}
 }
 @media(max-width:1250px){.page{height:auto;min-height:calc(100dvh - 64px);overflow:visible}.grid{min-height:0}.tableCard{flex-basis:auto}.tableWrap{max-height:230px}}
+
+/* DEV-ANL-UX-03: el PlatformShell ya aplica p-2 (8px). */
+.page { padding: 0; }

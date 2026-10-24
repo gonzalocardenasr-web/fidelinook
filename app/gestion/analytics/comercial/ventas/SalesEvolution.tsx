@@ -41,6 +41,13 @@ function DailyChart({ rows, metric }: { rows: Row[]; metric: "revenue" | "salesC
     {[0, .25, .5, .75, 1].map(v => <g key={v}><line x1={left} x2={width - right} y1={y(max * v)} y2={y(max * v)} stroke="#e2e8f0" /><text x={left - 9} y={y(max * v) + 4} textAnchor="end" fontSize="12" fill="#64748b">{metric === "revenue" ? `${num(max * v / 1000000)} mill.` : Math.round(max * v)}</text></g>)}
     {rows.length > 1 && <polyline fill="none" stroke="#4f46e5" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" points={points} vectorEffect="non-scaling-stroke" />}
     {rows.map((r, i) => i % tickEvery === 0 || i === rows.length - 1 ? <text key={r.date} x={x(i)} y={height - 9} textAnchor="middle" fontSize="12" fill="#64748b">{r.date.slice(8, 10)}/${r.date.slice(5, 7)}</text> : null)}
+    {rows.map((r,i) => {
+      const x0 = i===0 ? left : (x(i-1)+x(i))/2;
+      const x1 = i===rows.length-1 ? width-right : (x(i)+x(i+1))/2;
+      return <rect key={`hover-${r.date}`} x={x0} y={top} width={Math.max(1,x1-x0)} height={height-top-bottom} fill="transparent" style={{cursor:"crosshair"}}>
+        <title>{`${r.date.slice(8,10)}/${r.date.slice(5,7)}/${r.date.slice(0,4)}: ${metric === "revenue" ? money(Number(r[metric])) : `${num(Number(r[metric]))} ventas`}`}</title>
+      </rect>;
+    })}
     {rows.length === 1 && <circle cx={x(0)} cy={y(rows[0][metric])} r="5" fill="#4f46e5" />}
   </svg>;
 }

@@ -15,3 +15,6 @@
 /* DEV-ANL-UX-02 */
 .page{padding:8px;height:calc(100dvh - 64px);gap:8px}
 @media(max-width:1100px){.page{height:auto;min-height:calc(100dvh - 64px);overflow:visible}}
+
+/* DEV-ANL-UX-03: el PlatformShell ya aplica p-2 (8px). */
+.page { padding: 0; }
