@@ -8,11 +8,36 @@ import styles from "./commercial.module.css";
 type View = "resumen" | "ventas" | "productos" | "sabores";
 type Daily = { date: string; salesCount: number; revenue: number };
 type Overview = AnalyticsCommercialSummary & { daily?: Daily[] };
+type MonthComparison = { previous: Overview; comparableRevenue: number; comparableSales: number; previousFullRevenue: number; previousFullSales: number; comparableThrough: string };
 type Products = AnalyticsProductRanking & { reconciliation?: { allAllocatedRevenue: number; catalogAllocatedRevenue: number } };
 type Flavors = AnalyticsFlavorRanking & { scope?: string };
 type ApiResult<T> = { ok: true; data: T } | { ok: false; message: string };
 const clp = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value || 0));
 const fmt = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 }).format(Number(value || 0));
+const shiftMonth = (date: string, delta: number) => {
+  const [year, month] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+const daysInMonth = (yearMonth: string) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+};
+const initialFilters = () => {
+  const now = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const defaults = { from: `${now.slice(0, 7)}-01`, to: now, channel: "", topN: 10 as AnalyticsTopN, rankBy: "revenue" as AnalyticsRankingMetric };
+  if (typeof window === "undefined") return defaults;
+  const params = new URLSearchParams(window.location.search);
+  const date = /^\d{4}-\d{2}-\d{2}$/;
+  const from = params.get("from"), to = params.get("to");
+  if (from && to && date.test(from) && date.test(to) && from <= to) { defaults.from = from; defaults.to = to; }
+  const channel = params.get("channel");
+  if (channel && ["local", "shopify", "uber_eats", "rappi"].includes(channel)) defaults.channel = channel;
+  const top = Number(params.get("topN"));
+  if ([5,10,20,50].includes(top)) defaults.topN = top as AnalyticsTopN;
+  if (params.get("rankBy") === "units") defaults.rankBy = "units";
+  return defaults;
+};
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const links: { view: View; title: string; href: string }[] = [
   { view: "resumen", title: "Resumen", href: "/gestion/analytics/comercial" },
@@ -22,12 +47,14 @@ const links: { view: View; title: string; href: string }[] = [
 ];
 
 export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
-  const [from, setFrom] = useState(() => `${today().slice(0, 7)}-01`);
-  const [to, setTo] = useState(today);
-  const [channel, setChannel] = useState("");
-  const [topN, setTopN] = useState<AnalyticsTopN>(10);
-  const [rankBy, setRankBy] = useState<AnalyticsRankingMetric>("revenue");
-  const [applied, setApplied] = useState(() => ({ from: `${today().slice(0, 7)}-01`, to: today(), channel: "", topN: 10 as AnalyticsTopN, rankBy: "revenue" as AnalyticsRankingMetric }));
+  const [initial] = useState(initialFilters);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
+  const [channel, setChannel] = useState(initial.channel);
+  const [topN, setTopN] = useState<AnalyticsTopN>(initial.topN);
+  const [rankBy, setRankBy] = useState<AnalyticsRankingMetric>(initial.rankBy);
+  const [applied, setApplied] = useState(initial);
+  const [previousMonth, setPreviousMonth] = useState<Overview | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [products, setProducts] = useState<Products | null>(null);
   const [flavors, setFlavors] = useState<Flavors | null>(null);
@@ -38,6 +65,23 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     if (applied.channel) q.set("channel", applied.channel);
     return q.toString();
   }, [applied]);
+
+  const comparisonEligible = applied.from === `${applied.to.slice(0, 7)}-01`;
+  const previousYearMonth = shiftMonth(applied.to, -1);
+  const previousEnd = `${previousYearMonth}-${String(daysInMonth(previousYearMonth)).padStart(2, "0")}`;
+  const comparableDay = Math.min(Number(applied.to.slice(8)), daysInMonth(previousYearMonth));
+  const previousComparableEnd = `${previousYearMonth}-${String(comparableDay).padStart(2, "0")}`;
+  const comparison: MonthComparison | null = comparisonEligible && previousMonth ? {
+    previous: previousMonth,
+    comparableRevenue: (previousMonth.daily || []).filter((d) => d.date <= previousComparableEnd).reduce((sum, d) => sum + Number(d.revenue), 0),
+    comparableSales: (previousMonth.daily || []).filter((d) => d.date <= previousComparableEnd).reduce((sum, d) => sum + Number(d.salesCount), 0),
+    previousFullRevenue: Number(previousMonth.revenue),
+    previousFullSales: Number(previousMonth.salesCount),
+    comparableThrough: previousComparableEnd,
+  } : null;
+  const delta = (current: number, reference: number) => reference > 0 ? `${current >= reference ? "+" : ""}${fmt((current / reference - 1) * 100)}%` : "Sin base";
+  const navQuery = new URLSearchParams({ from: applied.from, to: applied.to, topN: String(applied.topN), rankBy: applied.rankBy });
+  if (applied.channel) navQuery.set("channel", applied.channel);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,6 +96,15 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           return { endpoint, data: payload.data };
         }));
         if (controller.signal.aborted) return;
+        if (view === "resumen" && comparisonEligible) {
+          const previousParams = new URLSearchParams({ from: `${previousYearMonth}-01`, to: previousEnd });
+          if (applied.channel) previousParams.set("channel", applied.channel);
+          const response = await fetch(`/api/analytics/commercial/overview?${previousParams}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+          const payload: ApiResult<Overview> = await response.json();
+          if (!response.ok || !payload.ok) throw new Error(!payload.ok ? payload.message : `Error HTTP ${response.status}`);
+          if (!controller.signal.aborted) setPreviousMonth(payload.data);
+        } else if (!controller.signal.aborted) setPreviousMonth(null);
+        if (controller.signal.aborted) return;
         for (const result of results) {
           if (result.endpoint === "overview") setOverview(result.data as Overview);
           if (result.endpoint === "products") setProducts(result.data as Products);
@@ -65,7 +118,7 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     }
     void load();
     return () => controller.abort();
-  }, [query, view]);
+  }, [query, view, comparisonEligible, previousYearMonth, previousEnd, applied.channel]);
 
   const title = links.find((link) => link.view === view)?.title || "Resumen";
   const difference = overview && products?.reconciliation?.allAllocatedRevenue !== undefined
@@ -77,16 +130,20 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
 
   return <main className={styles.workspace}>
     <header className={styles.header}>
-      <div><div className={styles.eyebrow}>GESTIÓN / ANALYTICS COMERCIAL</div><h1>{title}</h1></div>
-      <Link href="/gestion/analytics" className={styles.legacy}>Analytics anterior ↗</Link>
+      <div><div className={styles.eyebrow}>ANALYTICS COMERCIAL</div><h1>{title}</h1></div>
+      <Link href="/gestion/analytics" className={styles.legacy}>Vista anterior ↗</Link>
     </header>
     <nav className={styles.tabs} aria-label="Vistas de Analytics Comercial">
-      {links.map((link) => <Link key={link.view} href={link.href} aria-current={view === link.view ? "page" : undefined} className={view === link.view ? styles.activeTab : styles.tab}>{link.title}</Link>)}
+      {links.map((link) => <Link key={link.view} href={`${link.href}?${navQuery.toString()}`} aria-current={view === link.view ? "page" : undefined} className={view === link.view ? styles.activeTab : styles.tab}>{link.title}</Link>)}
     </nav>
     <form className={styles.filters} onSubmit={(event) => {
       event.preventDefault();
       if (!from || !to || from > to) { setError("Selecciona un período válido."); return; }
-      setApplied({ from, to, channel, topN, rankBy });
+      const next = { from, to, channel, topN, rankBy };
+      setApplied(next);
+      const params = new URLSearchParams({ from, to, topN: String(topN), rankBy });
+      if (channel) params.set("channel", channel);
+      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
     }}>
       <label>Desde<input type="date" required value={from} onChange={(e) => setFrom(e.target.value)} /></label>
       <label>Hasta<input type="date" required value={to} onChange={(e) => setTo(e.target.value)} /></label>
@@ -106,8 +163,15 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           <Kpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} />
           <Kpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} />
         </div>
+        {comparison && <div className={styles.comparisonStrip}>
+          <div><span>Mes actual · hasta el {Number(applied.to.slice(8))}</span><strong>{clp(overview.revenue)}</strong></div>
+          <div><span>Mes anterior · mismo día</span><strong>{clp(comparison.comparableRevenue)}</strong><small className={styles.delta}>{delta(Number(overview.revenue), comparison.comparableRevenue)} vs. MTD anterior</small></div>
+          <div><span>Mes anterior · completo</span><strong>{clp(comparison.previousFullRevenue)}</strong><small>{comparison.previousFullRevenue > 0 ? `${fmt(Number(overview.revenue) / comparison.previousFullRevenue * 100)}% del cierre anterior` : "Sin base"}</small></div>
+          <div><span>Ventas · MTD actual / anterior</span><strong>{fmt(overview.salesCount)} / {fmt(comparison.comparableSales)}</strong><small className={styles.delta}>{delta(Number(overview.salesCount), comparison.comparableSales)} vs. MTD anterior</small></div>
+        </div>}
+        {!comparisonEligible && <div className={styles.comparisonHint}>Comparación mensual disponible al seleccionar desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.twoColumns}>
-          <section className={styles.card}><div className={styles.cardHeader}><h2>Evolución de ingresos</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div><div className={styles.barArea}>{daily.length ? daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>) : <p>Sin ventas en el período.</p>}</div><div className={styles.muted}>Últimos {Math.min(daily.length, 14)} días con ventas · consulta completa en Ventas</div></section>
+          <section className={styles.card}><div className={styles.cardHeader}><h2>Evolución de ingresos</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div><div className={styles.barArea}>{daily.length ? daily.slice(-14).map((d) => <div key={d.date} className={styles.barColumn} title={`${d.date}: ${clp(d.revenue)}`}><div className={styles.bar} style={{ height: `${Math.max(2, Number(d.revenue) / maxRevenue * 100)}%` }} /><span>{d.date.slice(8)}</span></div>) : <p>Sin ventas en el período.</p>}</div><div className={styles.muted}>Últimos 14 días con ventas · detalle en Ventas</div></section>
           <section className={styles.card}><div className={styles.cardHeader}><h2>Productos destacados</h2><Link href="/gestion/analytics/comercial/productos">Ver ranking →</Link></div><div className={styles.rows}>{(products?.products || []).slice(0, 5).map((p, i) => <div className={styles.compactRow} key={`${p.productId}-${i}`}><span>{p.name}</span><strong>{clp(p.allocatedRevenue)}</strong></div>)}{!products?.products?.length && <p>Sin productos para el período.</p>}</div></section>
         </div>
         <div className={styles.footerNote}>{difference === null ? "Conciliación no disponible" : Math.abs(difference) < 0.02 ? "✓ Ingresos conciliados con las asignaciones de venta" : `⚠ Diferencia de conciliación: ${clp(difference)}`} · Ventas confirmadas y pagadas · Fecha comercial de Santiago</div>

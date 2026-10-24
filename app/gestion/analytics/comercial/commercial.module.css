@@ -45,3 +45,29 @@
 .error { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
 @media (max-width: 900px) { .workspace { height: auto; min-height: 0; overflow: visible; } .twoColumns { grid-template-columns: 1fr; } .card { min-height: 240px; } .scrollRegion { max-height: 470px; } }
 @media (max-width: 560px) { .workspace { padding: 12px; } .tabs { overflow-x: auto; } .tab, .activeTab { padding: 9px 12px; white-space: nowrap; } .filters { display: grid; grid-template-columns: repeat(2, 1fr); } .filters input, .filters select { width: 100%; } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* DEV-ANL-02.2E: mayor densidad, viewport autocontenido y comparaciones MTD */
+.workspace { max-width: none; width: 100%; padding: 8px 14px; gap: 7px; height: calc(100dvh - 72px); }
+.header h1 { font-size: 22px; }
+.eyebrow { font-size: 9px; }
+.tabs .tab, .tabs .activeTab { padding: 7px 14px; }
+.filters { padding: 7px 10px; gap: 8px; }
+.filters label { display: flex; align-items: center; gap: 6px; }
+.filters input, .filters select { min-height: 31px; }
+.kpis { gap: 7px; }
+.kpi { padding: 10px 12px; }
+.kpi strong { margin-top: 3px; font-size: clamp(17px, 1.5vw, 22px); }
+.stack { gap: 7px; }
+.twoColumns { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 7px; }
+.card { padding: 12px; }
+.compactRow { padding: 9px 2px; }
+.comparisonStrip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; flex: 0 0 auto; }
+.comparisonStrip > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 9px 12px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; }
+.comparisonStrip span { font-size: 10px; font-weight: 650; color: #64748b; }
+.comparisonStrip strong { font-size: clamp(15px,1.5vw,21px); letter-spacing: -.025em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comparisonStrip small { font-size: 10px; color: #475569; }
+.comparisonStrip .delta { font-weight: 750; color: #334155; }
+.comparisonHint { padding: 8px 12px; font-size: 11px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+@media (max-width: 1050px) { .comparisonStrip { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 900px) { .workspace { height: auto; min-height: 0; overflow: visible; } .filters label { display: grid; } }
+@media (max-width: 560px) { .comparisonStrip { grid-template-columns: 1fr; } }
