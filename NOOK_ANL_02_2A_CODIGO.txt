@@ -1,0 +1,967 @@
+﻿DEV-ANL-02.2A - INSPECCION DE CODIGO
+
+========== app\api\dashboard\overview\route.ts ==========
+import { NextResponse } from "next/server";
+import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+
+type ClienteRow = {
+  id: number;
+  nombre: string;
+  email_verificado: boolean | null;
+  tarjeta_activa: boolean | null;
+  premios: any;
+  created_At?: string | null;
+};
+
+type SubscriptionRow = {
+  id: number;
+  cliente_id: number;
+  template_id: number;
+  status: string;
+  start_date: string | null;
+  end_date: string | null;
+  activated_at: string | null;
+  created_at: string | null;
+  next_cycle_date: string | null;
+  clientes?:
+    | {
+        nombre: string;
+      }[]
+    | null;
+  subscription_templates?:
+    | {
+        name: string;
+      }[]
+    | null;
+};
+
+type ConsumptionRow = {
+  id: number;
+  cliente_id: number;
+  subscription_id: number;
+  cycle_number: number;
+  potes: number;
+  toppings: number;
+  barquillos: number;
+  galletas: number;
+  created_at: string;
+  clientes?:
+    | {
+        nombre: string;
+      }[]
+    | null;
+  subscriptions?:
+    | {
+        subscription_templates?:
+          | {
+              name: string;
+            }[]
+          | null;
+      }[]
+    | null;
+};
+
+function getMonthKey(dateStr?: string | null) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getDayKey(dateStr?: string | null) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function countPremios(premios: any, estado: "activo" | "usado") {
+  if (!Array.isArray(premios)) return 0;
+  return premios.filter((p) => p?.estado === estado).length;
+}
+
+async function validateOperationalUser() {
+  const session = await getOperationSession();
+
+  const authorization = authorizeOperationSession(session, "analytics.view");
+
+  if (!authorization.ok) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: authorization.message },
+        { status: authorization.status },
+      ),
+    };
+  }
+
+  if (!session.ok) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Tu sesion no se encuentra activa." },
+        { status: 401 },
+      ),
+    };
+  }
+
+  if (!session.userId) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Tu sesion debe renovarse para identificar al usuario. Cierra sesion e inicia sesion nuevamente.",
+        },
+        { status: 401 },
+      ),
+    };
+  }
+
+  const { data: operationalUser, error: operationalUserError } =
+    await supabaseAdmin
+      .from("operational_users")
+      .select("id, role, is_active")
+      .eq("id", session.userId)
+      .maybeSingle();
+
+  if (operationalUserError) {
+    console.error(
+      "Error validando usuario operacional en dashboard overview:",
+      operationalUserError,
+    );
+
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "No fue posible validar al usuario operacional.",
+        },
+        { status: 500 },
+      ),
+    };
+  }
+
+  if (!operationalUser || !operationalUser.is_active) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "El usuario operacional no se encuentra activo.",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
+  if (operationalUser.role !== session.role) {
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message: "La sesion operacional no es valida.",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return { error: null };
+}
+
+export async function GET() {
+  const validation = await validateOperationalUser();
+
+  if (validation.error) {
+    return validation.error;
+  }
+  try {
+    const today = new Date();
+    const plus7 = new Date();
+    plus7.setDate(today.getDate() + 7);
+
+    const plus30 = new Date();
+    plus30.setDate(today.getDate() + 30);
+
+    const [
+      clientesRes,
+      subscriptionsRes,
+      consumptionsRes,
+      activeSubscriptionsRes,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("clientes")
+        .select(
+          "id, nombre, email_verificado, tarjeta_activa, premios, created_At",
+        ),
+      supabaseAdmin.from("subscriptions").select(`
+          id,
+          cliente_id,
+          template_id,
+          status,
+          start_date,
+          end_date,
+          activated_at,
+          created_at,
+          next_cycle_date
+        `),
+      supabaseAdmin
+        .from("subscription_consumptions")
+        .select(
+          `
+          id,
+          cliente_id,
+          subscription_id,
+          cycle_number,
+          potes,
+          toppings,
+          barquillos,
+          galletas,
+          created_at,
+          clientes ( nombre ),
+          subscriptions (
+            subscription_templates ( name )
+          )
+        `,
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin
+        .from("subscriptions")
+        .select(
+          `
+          id,
+          cliente_id,
+          template_id,
+          status,
+          start_date,
+          end_date,
+          activated_at,
+          created_at,
+          next_cycle_date,
+          clientes ( nombre ),
+          subscription_templates ( name )
+        `,
+        )
+        .eq("status", "active")
+        .order("start_date", { ascending: false }),
+    ]);
+
+    if (clientesRes.error) {
+      return NextResponse.json(
+        { message: "Error cargando clientes para dashboard." },
+        { status: 500 },
+      );
+    }
+
+    if (subscriptionsRes.error) {
+      return NextResponse.json(
+        { message: "Error cargando suscripciones para dashboard." },
+        { status: 500 },
+      );
+    }
+
+    if (consumptionsRes.error) {
+      return NextResponse.json(
+        { message: "Error cargando consumos para dashboard." },
+        { status: 500 },
+      );
+    }
+
+    if (activeSubscriptionsRes.error) {
+      return NextResponse.json(
+        { message: "Error cargando suscripciones activas para dashboard." },
+        { status: 500 },
+      );
+    }
+
+    const clientes = (clientesRes.data || []) as ClienteRow[];
+    const subscriptions = (subscriptionsRes.data || []) as SubscriptionRow[];
+    const consumptions = (consumptionsRes.data || []) as ConsumptionRow[];
+    const activeSubscriptions = (activeSubscriptionsRes.data ||
+      []) as SubscriptionRow[];
+
+    const clientesTotales = clientes.length;
+    const clientesConTarjetaActiva = clientes.filter(
+      (c) => c.tarjeta_activa,
+    ).length;
+    const clientesConEmailVerificado = clientes.filter(
+      (c) => c.email_verificado,
+    ).length;
+
+    const premiosActivos = clientes.reduce(
+      (acc, c) => acc + countPremios(c.premios, "activo"),
+      0,
+    );
+    const premiosUsados = clientes.reduce(
+      (acc, c) => acc + countPremios(c.premios, "usado"),
+      0,
+    );
+
+    const suscripcionesActivas = activeSubscriptions.length;
+    const clientesConSuscripcionActiva = new Set(
+      activeSubscriptions.map((s) => s.cliente_id),
+    ).size;
+
+    const clientesConMasDeUnaSuscripcionActiva = Object.values(
+      activeSubscriptions.reduce<Record<string, number>>((acc, s) => {
+        const key = String(s.cliente_id);
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+    ).filter((count) => count > 1).length;
+
+    const suscripcionesPorVencer7Dias = activeSubscriptions.filter((s) => {
+      if (!s.end_date) return false;
+      const end = new Date(s.end_date);
+      return end >= today && end <= plus7;
+    }).length;
+
+    const suscripcionesPorVencer30Dias = activeSubscriptions.filter((s) => {
+      if (!s.end_date) return false;
+      const end = new Date(s.end_date);
+      return end >= today && end <= plus30;
+    }).length;
+
+    const consumosDelMes = consumptions.filter((c) => {
+      const d = new Date(c.created_at);
+      return (
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth()
+      );
+    }).length;
+
+    const clientesPorMesMap = clientes.reduce<Record<string, number>>(
+      (acc, c) => {
+        const key = getMonthKey(c.created_At);
+        if (!key) return acc;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {},
+    );
+
+    const clientesPorMes = Object.entries(clientesPorMesMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, total], index, arr) => {
+        const acumulado =
+          total +
+          arr
+            .slice(0, index)
+            .reduce((sum, [, prevTotal]) => sum + Number(prevTotal), 0);
+
+        return {
+          mes,
+          nuevosUsuarios: total,
+          acumulado,
+        };
+      });
+
+    const suscripcionesPorMesMap = subscriptions.reduce<Record<string, number>>(
+      (acc, s) => {
+        const key = getMonthKey(s.activated_at || s.start_date || s.created_at);
+        if (!key) return acc;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {},
+    );
+
+    const suscripcionesPorMes = Object.entries(suscripcionesPorMesMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, total]) => ({
+        mes,
+        nuevasSuscripciones: total,
+      }));
+
+    const consumosPorDiaMap = consumptions.reduce<
+      Record<
+        string,
+        {
+          fecha: string;
+          movimientos: number;
+          potes: number;
+          toppings: number;
+          barquillos: number;
+          galletas: number;
+        }
+      >
+    >((acc, c) => {
+      const key = getDayKey(c.created_at);
+      if (!key) return acc;
+
+      if (!acc[key]) {
+        acc[key] = {
+          fecha: key,
+          movimientos: 0,
+          potes: 0,
+          toppings: 0,
+          barquillos: 0,
+          galletas: 0,
+        };
+      }
+
+      acc[key].movimientos += 1;
+      acc[key].potes += c.potes || 0;
+      acc[key].toppings += c.toppings || 0;
+      acc[key].barquillos += c.barquillos || 0;
+      acc[key].galletas += c.galletas || 0;
+
+      return acc;
+    }, {});
+
+    const consumosPorDia = Object.values(consumosPorDiaMap)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .slice(-30);
+
+    const tablaSuscripcionesActivas = activeSubscriptions.map((s) => {
+      const endDate = s.end_date ? new Date(s.end_date) : null;
+      const diasParaVencer = endDate
+        ? Math.ceil(
+            (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+          )
+        : null;
+
+      return {
+        id: s.id,
+        cliente: s.clientes?.[0]?.nombre || "-",
+        suscripcion: s.subscription_templates?.[0]?.name || "-",
+        inicio: s.start_date,
+        fin: s.end_date,
+        estado: s.status,
+        proximoCiclo: s.next_cycle_date,
+        diasParaVencer,
+      };
+    });
+
+    const tablaConsumoReciente = consumptions.map((c) => ({
+      id: c.id,
+      fecha: c.created_at,
+      cliente: c.clientes?.[0]?.nombre || "-",
+      suscripcion:
+        c.subscriptions?.[0]?.subscription_templates?.[0]?.name || "-",
+      ciclo: c.cycle_number,
+      potes: c.potes,
+      toppings: c.toppings,
+      barquillos: c.barquillos,
+      galletas: c.galletas,
+    }));
+
+    return NextResponse.json({
+      ok: true,
+      kpis: {
+        clientesTotales,
+        clientesConTarjetaActiva,
+        clientesConEmailVerificado,
+        premiosActivos,
+        premiosUsados,
+        suscripcionesActivas,
+        clientesConSuscripcionActiva,
+        clientesConMasDeUnaSuscripcionActiva,
+        suscripcionesPorVencer7Dias,
+        suscripcionesPorVencer30Dias,
+        consumosDelMes,
+      },
+      clientesPorMes,
+      suscripcionesPorMes,
+      consumosPorDia,
+      tablaSuscripcionesActivas,
+      tablaConsumoReciente,
+    });
+  } catch (error) {
+    console.error("[dashboard/overview]", error);
+
+    return NextResponse.json(
+      { message: "OcurriÃ³ un error inesperado al cargar el dashboard." },
+      { status: 500 },
+    );
+  }
+}
+
+========== app\api\operacion\summary\route.ts ==========
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { getOperationSession } from "../../../../lib/operation-auth";
+import { authorizeOperationSession } from "@/lib/operation-rbac";
+
+export async function GET() {
+  const session = await getOperationSession();
+
+  if (!session.ok) {
+    return NextResponse.json(
+      { ok: false, message: "No autenticado." },
+      { status: 401 },
+    );
+  }
+  const authorization = authorizeOperationSession(
+    session,
+    "sales.operate",
+  );
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: authorization.code,
+        message: authorization.message,
+      },
+      { status: authorization.status },
+    );
+  }
+
+  const businessDate = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Santiago",
+  });
+
+  // Los lÃ­mites UTC se calculan por separado para respetar los cambios de hora.
+  function localMidnightUtc(date: string): string {
+    const [year, month, day] = date.split("-").map(Number);
+    const localAsUtc = Date.UTC(year, month - 1, day);
+    let candidate = localAsUtc;
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Santiago",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    });
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const parts = Object.fromEntries(
+        formatter.formatToParts(new Date(candidate)).map((part) => [part.type, part.value]),
+      );
+      const represented = Date.UTC(
+        Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+        Number(parts.hour), Number(parts.minute), Number(parts.second),
+      );
+      const correction = localAsUtc - represented;
+      candidate += correction;
+      if (correction === 0) break;
+    }
+    return new Date(candidate).toISOString();
+  }
+
+  const [year, month, day] = businessDate.split("-").map(Number);
+  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString().slice(0, 10);
+  const startOfDay = localMidnightUtc(businessDate);
+  const startOfTomorrow = localMidnightUtc(tomorrow);
+
+  const sales: Array<{ id: number; total: number | null; customer_id: number | null }> = [];
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await supabaseAdmin
+      .from("sales")
+      .select("id, total, customer_id")
+      .gte("created_at", startOfDay)
+      .lt("created_at", startOfTomorrow)
+      .neq("status", "cancelled")
+      .order("id", { ascending: true }).range(from, from + 499);
+    if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    sales.push(...(data || []));
+    if ((data || []).length < 500) break;
+    if (from >= 99500) return NextResponse.json({ ok: false, message: "LÃ­mite de ventas alcanzado." }, { status: 500 });
+  }
+
+  const { data: orders, error: ordersError } = await supabaseAdmin
+    .from("orders")
+    .select("id, status, business_date")
+    .eq("business_date", businessDate);
+
+  if (ordersError) {
+    return NextResponse.json(
+      { ok: false, message: ordersError.message },
+      { status: 500 },
+    );
+  }
+
+  // Indicadores de fidelizaciÃ³n: consultar exclusivamente eventos canÃ³nicos.
+  // Cada consulta tiene paginaciÃ³n explÃ­cita para evitar el lÃ­mite por defecto de PostgREST.
+  async function fetchAllRows<T>(makeQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+    const all: T[] = [];
+    const pageSize = 500;
+    for (let from = 0; ; from += pageSize) {
+      const result = await makeQuery(from, from + pageSize - 1);
+      if (result.error) throw new Error(result.error.message);
+      const batch = result.data || [];
+      all.push(...batch);
+      if (batch.length < pageSize) return all;
+      if (from >= 99500) throw new Error("LÃ­mite de paginaciÃ³n de indicadores alcanzado.");
+    }
+  }
+
+  let newCustomers: number;
+  let stampsIssued: number;
+  let expiringRewards: number;
+  let rewardsIssued: number;
+  let rewardsRedeemed: number;
+  try {
+    const [customersToday, positiveMovements, rewardsSoon, issuedToday, redeemedToday] = await Promise.all([
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("clientes").select("id")
+          .gte("created_At", startOfDay).lt("created_At", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
+      fetchAllRows<{ stamp_delta: number }>((from, to) =>
+        supabaseAdmin.from("loyalty_movements").select("stamp_delta")
+          .gt("stamp_delta", 0)
+          .gte("occurred_at", startOfDay).lt("occurred_at", startOfTomorrow)
+          .order("occurred_at", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .eq("status", "active")
+          .not("expires_at", "is", null)
+          .gte("expires_at", new Date().toISOString())
+          .lt("expires_at", new Date(Date.now() + 6 * 86400000).toISOString())
+          .order("expires_at", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .gte("issued_at", startOfDay).lt("issued_at", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
+      fetchAllRows<{ id: number }>((from, to) =>
+        supabaseAdmin.from("customer_rewards").select("id")
+          .eq("status", "redeemed")
+          .gte("redeemed_at", startOfDay).lt("redeemed_at", startOfTomorrow)
+          .order("id", { ascending: true }).range(from, to)),
+    ]);
+    newCustomers = customersToday.length;
+    stampsIssued = positiveMovements.reduce((sum, movement) => sum + Number(movement.stamp_delta || 0), 0);
+    expiringRewards = rewardsSoon.length;
+    rewardsIssued = issuedToday.length;
+    rewardsRedeemed = redeemedToday.length;
+  } catch (error) {
+    console.error("OPERATION_SUMMARY_LOYALTY_METRICS_ERROR", error);
+    return NextResponse.json({ ok: false, message: "No se pudieron calcular los indicadores de fidelizaciÃ³n." }, { status: 500 });
+  }
+
+  const identifiedSales = (sales || []).filter((sale) => sale.customer_id !== null).length;
+  const identifiedRevenue = (sales || []).reduce((sum, sale) =>
+    sum + (sale.customer_id !== null ? Number(sale.total || 0) : 0), 0);
+
+  const totalSales = sales?.length || 0;
+  const totalRevenue =
+    sales?.reduce((acc, sale) => acc + Number(sale.total || 0), 0) || 0;
+
+  const pendingOrders =
+    orders?.filter((order) => order.status === "pending").length || 0;
+
+  const preparingOrders =
+    orders?.filter((order) => order.status === "preparing").length || 0;
+
+  const readyOrders =
+    orders?.filter((order) => order.status === "ready").length || 0;
+
+  const deliveredOrders =
+    orders?.filter((order) => order.status === "delivered").length || 0;
+
+  return NextResponse.json({
+    ok: true,
+    summary: {
+      businessDate,
+      totalSales,
+      totalRevenue,
+      identifiedSales,
+      identifiedRevenue,
+      newCustomers,
+      stampsIssued,
+      expiringRewards,
+      rewardsIssued,
+      rewardsRedeemed,
+      pendingOrders,
+      preparingOrders,
+      readyOrders,
+      deliveredOrders,
+    },
+  });
+}
+
+========== lib\operation-auth.ts ==========
+import { cookies } from "next/headers";
+
+import { supabaseAdmin } from "@/lib/supabase-admin";
+
+export type OperationRole = "cashier" | "admin" | "superadmin" | "preparation";
+
+export type OperationUser = {
+  id: string;
+  authUserId: string;
+  displayName: string;
+  role: OperationRole;
+};
+
+export type OperationSession =
+  | {
+      ok: true;
+      role: OperationRole;
+      userId: string;
+      authUserId: string | null;
+      displayName: string | null;
+      source: "supabase";
+    }
+  | {
+      ok: false;
+      role: null;
+      userId: null;
+      authUserId: null;
+      displayName: null;
+      source: null;
+    };
+
+const OP_ACCESS_COOKIE = "nook_op_access_token";
+
+export class OperationAuthUnavailableError extends Error {
+  constructor(message = "Operational authentication temporarily unavailable") {
+    super(message);
+    this.name = "OperationAuthUnavailableError";
+  }
+}
+
+function emptyOperationSession(): OperationSession {
+  return {
+    ok: false,
+    role: null,
+    userId: null,
+    authUserId: null,
+    displayName: null,
+    source: null,
+  };
+}
+
+function isOperationRole(value: unknown): value is OperationRole {
+  return (
+    value === "cashier" ||
+    value === "admin" ||
+    value === "superadmin" ||
+    value === "preparation"
+  );
+}
+
+export async function getOperationalUserByAuthUserId(
+  authUserId: string,
+): Promise<OperationUser | null> {
+  const normalizedAuthUserId = String(authUserId || "").trim();
+
+  if (!normalizedAuthUserId) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("operational_users")
+    .select("id, auth_user_id, display_name, role, is_active")
+    .eq("auth_user_id", normalizedAuthUserId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("AUTH_OPERATIONAL_USER_LOOKUP_ERROR", {
+      code: error.code,
+    });
+
+    throw new OperationAuthUnavailableError();
+  }
+
+  if (!data) {
+    console.warn("AUTH_OPERATIONAL_USER_NOT_FOUND");
+    return null;
+  }
+
+  if (!data.is_active) {
+    console.warn("AUTH_OPERATIONAL_USER_INACTIVE");
+    return null;
+  }
+
+  if (!data.auth_user_id || !isOperationRole(data.role)) {
+    console.warn("AUTH_OPERATIONAL_USER_INVALID");
+    return null;
+  }
+
+  return {
+    id: data.id,
+    authUserId: data.auth_user_id,
+    displayName: data.display_name,
+    role: data.role,
+  };
+}
+
+async function resolveSupabaseAuthUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(OP_ACCESS_COOKIE)?.value;
+
+  if (!accessToken) {
+    console.warn("AUTH_ACCESS_COOKIE_MISSING");
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin.auth.getClaims(accessToken);
+
+  if (error) {
+    console.warn("AUTH_CLAIMS_REJECTED", {
+      status: error.status,
+      code: error.code,
+    });
+    return null;
+  }
+
+  const authUserId = data?.claims?.sub;
+
+  if (!authUserId || typeof authUserId !== "string") {
+    console.warn("AUTH_CLAIMS_SUB_MISSING");
+    return null;
+  }
+
+  return authUserId;
+}
+
+async function getSupabaseOperationSession(): Promise<OperationSession> {
+  const authUserId = await resolveSupabaseAuthUserId();
+
+  if (!authUserId) {
+    return emptyOperationSession();
+  }
+
+  const operationalUser = await getOperationalUserByAuthUserId(authUserId);
+
+  if (!operationalUser) {
+    return emptyOperationSession();
+  }
+
+  return {
+    ok: true,
+    role: operationalUser.role,
+    userId: operationalUser.id,
+    authUserId: operationalUser.authUserId,
+    displayName: operationalUser.displayName,
+    source: "supabase",
+  };
+}
+
+export async function getOperationSession(): Promise<OperationSession> {
+  return getSupabaseOperationSession();
+}
+
+========== lib\operation-rbac.ts ==========
+import type { OperationRole, OperationSession } from "@/lib/operation-auth";
+
+export type OperationPermission =
+  | "operation.summary.view"
+  | "sales.operate"
+  | "sales.export"
+  | "orders.operate"
+  | "customers.operate"
+  | "customers.manage"
+  | "loyalty.operate"
+  | "cash.operate"
+  | "cash.audit"
+  | "catalog.read"
+  | "catalog.manage"
+  | "inventory.stock.read"
+  | "inventory.movements.operate"
+  | "inventory.receipts.manage"
+  | "inventory.config.manage"
+  | "campaigns.manage"
+  | "subscriptions.operate"
+  | "subscriptions.manage"
+  | "subscriptions.delete"
+  | "analytics.view"
+  | "users.manage";
+
+const PREPARATION_PERMISSIONS: readonly OperationPermission[] = [
+  "orders.operate",
+];
+
+const CASHIER_PERMISSIONS: readonly OperationPermission[] = [
+  "operation.summary.view",
+  "sales.operate",
+  "orders.operate",
+  "customers.operate",
+  "loyalty.operate",
+  "cash.operate",
+  "catalog.read",
+  "inventory.stock.read",
+  "inventory.movements.operate",
+  "subscriptions.operate",
+];
+
+const ADMIN_PERMISSIONS: readonly OperationPermission[] = [
+  ...CASHIER_PERMISSIONS,
+  "sales.export",
+  "customers.manage",
+  "catalog.manage",
+  "inventory.receipts.manage",
+  "inventory.config.manage",
+  "campaigns.manage",
+  "subscriptions.manage",
+  "analytics.view",
+  "cash.audit",
+];
+
+const SUPERADMIN_PERMISSIONS: readonly OperationPermission[] = [
+  ...ADMIN_PERMISSIONS,
+  "subscriptions.delete",
+  "users.manage",
+];
+
+export const ROLE_PERMISSIONS: Readonly<
+  Record<OperationRole, readonly OperationPermission[]>
+> = {
+  cashier: CASHIER_PERMISSIONS,
+  admin: ADMIN_PERMISSIONS,
+  superadmin: SUPERADMIN_PERMISSIONS,
+  preparation: PREPARATION_PERMISSIONS,
+};
+
+export function hasOperationPermission(
+  role: OperationRole,
+  permission: OperationPermission,
+): boolean {
+  return ROLE_PERMISSIONS[role].includes(permission);
+}
+
+export type OperationAuthorizationResult =
+  | {
+      ok: true;
+      session: Extract<OperationSession, { ok: true }>;
+    }
+  | {
+      ok: false;
+      status: 401 | 403;
+      code: "UNAUTHENTICATED" | "FORBIDDEN";
+      message: string;
+    };
+
+export function authorizeOperationSession(
+  session: OperationSession,
+  permission: OperationPermission,
+): OperationAuthorizationResult {
+  if (!session.ok) {
+    return {
+      ok: false,
+      status: 401,
+      code: "UNAUTHENTICATED",
+      message: "No autenticado.",
+    };
+  }
+
+  if (!hasOperationPermission(session.role, permission)) {
+    return {
+      ok: false,
+      status: 403,
+      code: "FORBIDDEN",
+      message: "No tienes permisos para realizar esta acciÃ³n.",
+    };
+  }
+
+  return {
+    ok: true,
+    session,
+  };
+}
+
+========== lib\supabase-admin.ts ==========
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
