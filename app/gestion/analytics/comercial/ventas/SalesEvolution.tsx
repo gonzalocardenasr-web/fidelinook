@@ -7,6 +7,8 @@ type Row = { date: string; salesCount: number; revenue: number };
 type Summary = { revenue: number; salesCount: number; averageTicket: number; identifiedSalesCount: number; daily: Row[] };
 type Filter = { from: string; to: string; channel: string };
 const money = (n: number) => new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
+const dateLabel = (iso: string) => new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(new Date(`${iso}T12:00:00Z`));
+const rangeLabel = (from: string, to: string) => `${dateLabel(from)} – ${dateLabel(to)}`;
 const num = (n: number) => new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 }).format(n);
 const localDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const initial = (): Filter => {
@@ -28,16 +30,16 @@ function Trend({ current, previous, suffix = "%" }: { current: number; previous:
   return <span className={change > 0 ? s.good : change < 0 ? s.bad : s.muted}>{change > 0 ? "▲" : change < 0 ? "▼" : "●"} {change > 0 ? "+" : ""}{num(change)}{suffix} vs. período anterior</span>;
 }
 function DailyChart({ rows, metric }: { rows: Row[]; metric: "revenue" | "salesCount" }) {
-  const width = 900, height = 238, left = 72, right = 18, top = 16, bottom = 35;
+  const width = 900, height = 238, left = 90, right = 28, top = 18, bottom = 38;
   const max = Math.max(1, ...rows.map(r => Number(r[metric])));
   const x = (i: number) => left + (rows.length < 2 ? (width - left - right) / 2 : i * (width - left - right) / (rows.length - 1));
   const y = (v: number) => height - bottom - (Number(v) / max) * (height - top - bottom);
   const points = rows.map((r, i) => `${x(i)},${y(r[metric])}`).join(" ");
-  const tickEvery = Math.max(1, Math.ceil(rows.length / 9));
-  return <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Evolución diaria de ${metric === "revenue" ? "ingresos" : "ventas"}`} preserveAspectRatio="none">
-    {[0, .25, .5, .75, 1].map(v => <g key={v}><line x1={left} x2={width - right} y1={y(max * v)} y2={y(max * v)} stroke="#e2e8f0" /><text x={left - 9} y={y(max * v) + 4} textAnchor="end" fontSize="12" fill="#64748b">{metric === "revenue" ? `${num(max * v / 1000000)}M` : Math.round(max * v)}</text></g>)}
+  const tickEvery = Math.max(1, Math.ceil(rows.length / 7));
+  return <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Evolución diaria de ${metric === "revenue" ? "ingresos" : "ventas"}`} preserveAspectRatio="xMidYMid meet">
+    {[0, .25, .5, .75, 1].map(v => <g key={v}><line x1={left} x2={width - right} y1={y(max * v)} y2={y(max * v)} stroke="#e2e8f0" /><text x={left - 9} y={y(max * v) + 4} textAnchor="end" fontSize="12" fill="#64748b">{metric === "revenue" ? `${num(max * v / 1000000)} mill.` : Math.round(max * v)}</text></g>)}
     {rows.length > 1 && <polyline fill="none" stroke="#4f46e5" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" points={points} vectorEffect="non-scaling-stroke" />}
-    {rows.map((r, i) => i % tickEvery === 0 || i === rows.length - 1 ? <text key={r.date} x={x(i)} y={height - 9} textAnchor="middle" fontSize="12" fill="#64748b">{r.date.slice(5)}</text> : null)}
+    {rows.map((r, i) => i % tickEvery === 0 || i === rows.length - 1 ? <text key={r.date} x={x(i)} y={height - 9} textAnchor="middle" fontSize="12" fill="#64748b">{r.date.slice(8, 10)}/${r.date.slice(5, 7)}</text> : null)}
     {rows.length === 1 && <circle cx={x(0)} cy={y(rows[0][metric])} r="5" fill="#4f46e5" />}
   </svg>;
 }
@@ -91,10 +93,10 @@ export default function SalesEvolution() {
         <article className={s.chartCard}><div className={s.cardHead}><h2>Comportamiento diario</h2><div className={s.switch}><button className={metric === "revenue" ? s.selected : ""} onClick={() => setMetric("revenue")}>Ingresos</button><button className={metric === "salesCount" ? s.selected : ""} onClick={() => setMetric("salesCount")}>Transacciones</button></div></div>
           {rows.length ? <DailyChart rows={rows} metric={metric} /> : <p>Sin datos</p>}<p className={s.caption}>Días sin ventas incluidos como cero · Fecha comercial de Santiago</p></article>
         <article className={s.details}><div className={s.cardHead}><h2>Lectura del período</h2></div>
-          <div><small>Período seleccionado</small><strong>{filter.from} → {filter.to}</strong></div><div><small>Período comparable</small><strong>{previous.from} → {previous.to}</strong></div><div><small>Promedio diario de ingresos</small><strong>{money(rows.length ? data.revenue / rows.length : 0)}</strong></div><div><small>Mejor día por ingresos</small><strong>{peak && peak.revenue > 0 ? `${peak.date.slice(5)} · ${money(peak.revenue)}` : "Sin ventas"}</strong></div>
+          <div className={s.detailGrid}><div><small>Período seleccionado</small><strong>{rangeLabel(filter.from, filter.to)}</strong></div><div><small>Período comparable</small><strong>{rangeLabel(previous.from, previous.to)}</strong></div><div><small>Promedio diario de ingresos</small><strong>{money(rows.length ? data.revenue / rows.length : 0)}</strong></div><div><small>Mejor día por ingresos</small><strong>{peak && peak.revenue > 0 ? `${dateLabel(peak.date)} · ${money(peak.revenue)}` : "Sin ventas"}</strong></div></div>
         </article>
       </section>
-      <section className={s.tableCard}><div className={s.cardHead}><h2>Detalle diario</h2><span>{rows.length} días · consulta completa</span></div><div className={s.tableScroll}><table><thead><tr><th>Fecha</th><th>Ventas</th><th>Ingresos</th><th>Ticket promedio</th></tr></thead><tbody>{rows.map(row => <tr key={row.date}><td>{row.date}</td><td>{num(row.salesCount)}</td><td>{money(row.revenue)}</td><td>{row.salesCount ? money(row.revenue / row.salesCount) : "—"}</td></tr>)}</tbody></table></div></section>
+      <section className={s.tableCard}><div className={s.cardHead}><h2>Detalle diario</h2><span>{rows.length} días · consulta completa</span></div><div className={s.tableScroll}><table><thead><tr><th>Fecha</th><th>Ventas</th><th>Ingresos</th><th>Ticket promedio</th></tr></thead><tbody>{rows.map(row => <tr key={row.date}><td>{dateLabel(row.date)}</td><td>{num(row.salesCount)}</td><td>{money(row.revenue)}</td><td>{row.salesCount ? money(row.revenue / row.salesCount) : "—"}</td></tr>)}</tbody></table></div></section>
       <footer>Ventas confirmadas y pagadas · Comparación entre períodos consecutivos de igual duración · Sin estimaciones</footer>
     </div> : null}
   </main>;
