@@ -3,6 +3,7 @@ import dashboardFrame from "@/components/analytics/dashboard-frame.module.css";
 import { useEffect, useMemo, useState } from "react";
 import s from "./sales-evolution.module.css";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
+import { previousEqualPeriod, commercialDateStatus } from "@/lib/analytics/comparisons";
 
 type Row = { date: string; salesCount: number; revenue: number };
 type Summary = { revenue: number; salesCount: number; averageTicket: number; identifiedSalesCount: number; daily: Row[] };
@@ -18,12 +19,6 @@ const initial = (): Filter => {
   const q = new URLSearchParams(window.location.search);
   const from = q.get("from"), to = q.get("to"), channel = q.get("channel") || "";
   return { from: from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : `${now.slice(0, 7)}-01`, to: to && /^\d{4}-\d{2}-\d{2}$/.test(to) ? to : now, channel: ["local", "shopify", "uber_eats", "rappi"].includes(channel) ? channel : "" };
-};
-const previousPeriod = (from: string, to: string) => {
-  const a = new Date(`${from}T12:00:00Z`), b = new Date(`${to}T12:00:00Z`);
-  const length = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
-  const start = new Date(a.getTime() - length * 86400000), end = new Date(a.getTime() - 86400000);
-  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 };
 function Trend({ current, previous, suffix = "%" }: { current: number; previous: number; suffix?: string }) {
   if (!previous) return <span className={s.muted}>Sin base comparable</span>;
@@ -59,7 +54,7 @@ export default function SalesEvolution() {
   const [metric, setMetric] = useState<"revenue" | "salesCount">("revenue");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const previous = useMemo(() => previousPeriod(filter.from, filter.to), [filter]);
+  const previous = useMemo(() => previousEqualPeriod(filter.from, filter.to), [filter]);
   useEffect(() => {
     const controller = new AbortController();
     const get = async (from: string, to: string) => {
@@ -90,6 +85,8 @@ export default function SalesEvolution() {
       items={[{ label: "Resumen", href: `/gestion/analytics?${qs}` }, { label: "Evolución", href: `/gestion/analytics/comercial/ventas?${qs}`, active: true }, { label: "Temporalidad", href: `/gestion/analytics/comercial/ventas/temporalidad?${qs}` }, { label: "Canales", href: `/gestion/analytics/comercial/ventas/canales?${qs}` }, { label: "Productos", href: `/gestion/analytics/comercial/productos?${qs}` }]}
       onApply={e => { e.preventDefault(); if (draft.from > draft.to) { setError("El inicio no puede superar el término."); return; } setFilter({ ...draft }); const q = new URLSearchParams({ from: draft.from, to: draft.to }); if (draft.channel) q.set("channel", draft.channel); window.history.replaceState(null, "", `${window.location.pathname}?${q}`); }} />
     {loading ? <section className={s.notice}>Cargando evolución comercial…</section> : error ? <section className={s.error}>{error}</section> : data && prev ? <div className={s.body}>
+      {commercialDateStatus(filter.to, localDate()) === "in_progress" && <section className={s.notice}>El período incluye hoy: información provisional, no representa un cierre comercial.</section>}
+      {commercialDateStatus(filter.to, localDate()) === "future" && <section className={s.notice}>El período incluye fechas futuras; no interpretar esos días como cierres sin ventas.</section>}
       <section className={s.kpis}>
         <article><small>Ingresos</small><strong>{money(data.revenue)}</strong><Trend current={data.revenue} previous={prev.revenue} /></article>
         <article><small>Transacciones</small><strong>{num(data.salesCount)}</strong><Trend current={data.salesCount} previous={prev.salesCount} /></article>

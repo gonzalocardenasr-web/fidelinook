@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { AnalyticsCommercialSummary, AnalyticsProductRanking, AnalyticsFlavorRanking, AnalyticsTopN, AnalyticsRankingMetric } from "@/types/analytics";
 import styles from "./commercial.module.css";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
+import { shiftMonth, daysInMonth, monthlyComparison, commercialDateStatus } from "@/lib/analytics/comparisons";
 
 type View = "resumen" | "ventas" | "productos" | "sabores";
 type Daily = { date: string; salesCount: number; revenue: number };
@@ -17,15 +18,6 @@ type Flavors = AnalyticsFlavorRanking & { scope?: string };
 type ApiResult<T> = { ok: true; data: T } | { ok: false; message: string };
 const clp = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value || 0));
 const fmt = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 }).format(Number(value || 0));
-const shiftMonth = (date: string, delta: number) => {
-  const [year, month] = date.split("-").map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
-  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
-};
-const daysInMonth = (yearMonth: string) => {
-  const [year, month] = yearMonth.split("-").map(Number);
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-};
 const initialFilters = () => {
   const now = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const defaults = { from: `${now.slice(0, 7)}-01`, to: now, channel: "", topN: 10 as AnalyticsTopN, rankBy: "revenue" as AnalyticsRankingMetric };
@@ -70,11 +62,11 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     return q.toString();
   }, [applied]);
 
-  const comparisonEligible = applied.from === `${applied.to.slice(0, 7)}-01`;
+  const monthly = monthlyComparison(applied.from, applied.to);
+  const comparisonEligible = monthly !== null;
   const previousYearMonth = shiftMonth(applied.to, -1);
-  const previousEnd = `${previousYearMonth}-${String(daysInMonth(previousYearMonth)).padStart(2, "0")}`;
-  const comparableDay = Math.min(Number(applied.to.slice(8)), daysInMonth(previousYearMonth));
-  const previousComparableEnd = `${previousYearMonth}-${String(comparableDay).padStart(2, "0")}`;
+  const previousEnd = monthly?.full.to ?? `${previousYearMonth}-${String(daysInMonth(previousYearMonth)).padStart(2, "0")}`;
+  const previousComparableEnd = monthly?.comparable.to ?? previousEnd;
   const comparison: MonthComparison | null = comparisonEligible && previousMonth ? {
     previous: previousMonth,
     comparableRevenue: (previousMonth.daily || []).filter((d) => d.date <= previousComparableEnd).reduce((sum, d) => sum + Number(d.revenue), 0),
@@ -171,6 +163,8 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           <ExecutiveKpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} subtitle={overview.salesCount > 0 ? `${fmt(Number(overview.identifiedSalesCount) / Number(overview.salesCount) * 100)}% de las ventas` : "Sin ventas"} />
           <ExecutiveKpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} subtitle="Clientes únicos en el período" />
         </div>
+        {commercialDateStatus(applied.to, today()) === "in_progress" && <div className={styles.comparisonHint}>El período incluye hoy: los datos pueden estar incompletos. Comparación provisional, no cierre de caja.</div>}
+        {commercialDateStatus(applied.to, today()) === "future" && <div className={styles.comparisonHint}>El período incluye fechas futuras. Los días futuros no representan ventas cerradas.</div>}
         {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.executiveGrid}>
           <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
