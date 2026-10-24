@@ -1,2 +1,2 @@
-import AnalyticsCommercialWorkspace from "../AnalyticsCommercialWorkspace";
-export default function Page() { return <AnalyticsCommercialWorkspace view="ventas" />; }
+import SalesEvolution from './SalesEvolution';
+export default function Page() { return <SalesEvolution />; }
