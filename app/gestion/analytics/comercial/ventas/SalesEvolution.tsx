@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import s from "./sales-evolution.module.css";
+import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
 
 type Row = { date: string; salesCount: number; revenue: number };
 type Summary = { revenue: number; salesCount: number; averageTicket: number; identifiedSalesCount: number; daily: Row[] };
@@ -76,12 +76,11 @@ export default function SalesEvolution() {
   const peak = rows.reduce<Row | null>((best, row) => !best || row.revenue > best.revenue ? row : best, null);
   const qs = new URLSearchParams({ from: filter.from, to: filter.to }); if (filter.channel) qs.set("channel", filter.channel);
   return <main className={s.page}>
-    <header className={s.head}><div><small>ANALYTICS COMERCIAL / VENTAS</small><h1>Evolución de ventas</h1></div><Link href={`/gestion/analytics/comercial?${qs}`}>← Resumen ejecutivo</Link></header>
-    <nav className={s.tabs}><Link className={s.active} href={`/gestion/analytics/comercial/ventas?${qs}`}>Evolución</Link><span title="Próximo desarrollo">Temporalidad · próximamente</span><span title="Próximo desarrollo">Canales · próximamente</span><Link href={`/gestion/analytics/comercial/productos?${qs}`}>Productos →</Link></nav>
-    <form className={s.filters} onSubmit={e => { e.preventDefault(); if (draft.from > draft.to) { setError("El inicio no puede superar el término."); return; } setFilter({ ...draft }); const q = new URLSearchParams({ from: draft.from, to: draft.to }); if (draft.channel) q.set("channel", draft.channel); window.history.replaceState(null, "", `${window.location.pathname}?${q}`); }}>
-      <label>Desde<input type="date" required value={draft.from} onChange={e => setDraft({ ...draft, from: e.target.value })} /></label><label>Hasta<input type="date" required value={draft.to} onChange={e => setDraft({ ...draft, to: e.target.value })} /></label>
-      <label>Canal<select value={draft.channel} onChange={e => setDraft({ ...draft, channel: e.target.value })}><option value="">Todos</option><option value="local">Local</option><option value="shopify">Shopify</option><option value="uber_eats">Uber Eats</option><option value="rappi">Rappi</option></select></label><button disabled={loading}>Aplicar</button><span className={s.note}>Comparación: período inmediatamente anterior de igual duración</span>
-    </form>
+    <AnalyticsToolbar section="Ventas" from={draft.from} to={draft.to} channel={draft.channel}
+      onFrom={v => setDraft({ ...draft, from: v })} onTo={v => setDraft({ ...draft, to: v })}
+      onChannel={v => setDraft({ ...draft, channel: v })} loading={loading}
+      items={[{ label: "Resumen", href: `/gestion/analytics/comercial?${qs}` }, { label: "Evolución", href: `/gestion/analytics/comercial/ventas?${qs}`, active: true }, { label: "Temporalidad", disabled: true }, { label: "Canales", disabled: true }, { label: "Productos", href: `/gestion/analytics/comercial/productos?${qs}` }]}
+      onApply={e => { e.preventDefault(); if (draft.from > draft.to) { setError("El inicio no puede superar el término."); return; } setFilter({ ...draft }); const q = new URLSearchParams({ from: draft.from, to: draft.to }); if (draft.channel) q.set("channel", draft.channel); window.history.replaceState(null, "", `${window.location.pathname}?${q}`); }} />
     {loading ? <section className={s.notice}>Cargando evolución comercial…</section> : error ? <section className={s.error}>{error}</section> : data && prev ? <div className={s.body}>
       <section className={s.kpis}>
         <article><small>Ingresos</small><strong>{money(data.revenue)}</strong><Trend current={data.revenue} previous={prev.revenue} /></article>
@@ -91,12 +90,12 @@ export default function SalesEvolution() {
       </section>
       <section className={s.mainGrid}>
         <article className={s.chartCard}><div className={s.cardHead}><h2>Comportamiento diario</h2><div className={s.switch}><button className={metric === "revenue" ? s.selected : ""} onClick={() => setMetric("revenue")}>Ingresos</button><button className={metric === "salesCount" ? s.selected : ""} onClick={() => setMetric("salesCount")}>Transacciones</button></div></div>
-          {rows.length ? <DailyChart rows={rows} metric={metric} /> : <p>Sin datos</p>}<p className={s.caption}>Días sin ventas incluidos como cero · Fecha comercial de Santiago</p></article>
-        <article className={s.details}><div className={s.cardHead}><h2>Lectura del período</h2></div>
-          <div className={s.detailGrid}><div><small>Período seleccionado</small><strong>{rangeLabel(filter.from, filter.to)}</strong></div><div><small>Período comparable</small><strong>{rangeLabel(previous.from, previous.to)}</strong></div><div><small>Promedio diario de ingresos</small><strong>{money(rows.length ? data.revenue / rows.length : 0)}</strong></div><div><small>Mejor día por ingresos</small><strong>{peak && peak.revenue > 0 ? `${dateLabel(peak.date)} · ${money(peak.revenue)}` : "Sin ventas"}</strong></div></div>
-        </article>
-      </section>
+          <div className={s.chartFrame}>{rows.length ? <DailyChart rows={rows} metric={metric} /> : <p>Sin datos</p>}</div>
+          <div className={s.chartStats}><span>Promedio diario: <b>{money(rows.length ? data.revenue / rows.length : 0)}</b></span><span>Mejor día: <b>{peak && peak.revenue > 0 ? `${dateLabel(peak.date)} · ${money(peak.revenue)}` : "Sin ventas"}</b></span></div>
+          <p className={s.caption}>Días sin ventas incluidos como cero · Fecha comercial de Santiago</p></article>
+
       <section className={s.tableCard}><div className={s.cardHead}><h2>Detalle diario</h2><span>{rows.length} días · consulta completa</span></div><div className={s.tableScroll}><table><thead><tr><th>Fecha</th><th>Ventas</th><th>Ingresos</th><th>Ticket promedio</th></tr></thead><tbody>{rows.map(row => <tr key={row.date}><td>{dateLabel(row.date)}</td><td>{num(row.salesCount)}</td><td>{money(row.revenue)}</td><td>{row.salesCount ? money(row.revenue / row.salesCount) : "—"}</td></tr>)}</tbody></table></div></section>
+      </section>
       <footer>Ventas confirmadas y pagadas · Comparación entre períodos consecutivos de igual duración · Sin estimaciones</footer>
     </div> : null}
   </main>;

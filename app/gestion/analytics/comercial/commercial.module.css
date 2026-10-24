@@ -147,3 +147,7 @@
 .insightRow > small { font-size: 9px; line-height: 1.25; color: #64748b; }
 @media (max-width: 1250px) { .chartAndInsights { grid-template-columns: minmax(0, 6fr) minmax(160px, 4fr); gap: 8px; } .insightPanel { padding-left: 8px; } }
 @media (max-width: 900px) { .chartAndInsights { grid-template-columns: 1fr; overflow: visible; } .insightPanel { border-left: 0; border-top: 1px solid #e2e8f0; padding: 8px 0; } }
+
+/* Analytics Workspace shared header */
+.workspace{height:calc(100dvh - 76px);padding:10px 14px;gap:10px;max-width:none}
+@media(max-width:1100px){.workspace{height:auto;min-height:0;overflow:visible}}

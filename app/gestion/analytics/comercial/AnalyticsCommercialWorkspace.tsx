@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AnalyticsCommercialSummary, AnalyticsProductRanking, AnalyticsFlavorRanking, AnalyticsTopN, AnalyticsRankingMetric } from "@/types/analytics";
 import styles from "./commercial.module.css";
+import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
 
 type View = "resumen" | "ventas" | "productos" | "sabores";
 type Daily = { date: string; salesCount: number; revenue: number };
@@ -151,29 +152,14 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   const maxFlavorUnits = Math.max(1, ...(flavors?.flavors || []).map((f) => Number(f.observedUnits)));
 
   return <main className={styles.workspace}>
-    <header className={styles.header}>
-      <div><div className={styles.eyebrow}>ANALYTICS COMERCIAL</div><h1>{title}</h1></div>
-      <Link href="/gestion/analytics" className={styles.legacy}>Vista anterior ↗</Link>
-    </header>
-    <nav className={styles.tabs} aria-label="Vistas de Analytics Comercial">
-      {links.map((link) => <Link key={link.view} href={`${link.href}?${navQuery.toString()}`} aria-current={view === link.view ? "page" : undefined} className={view === link.view ? styles.activeTab : styles.tab}>{link.title}</Link>)}
-    </nav>
-    <form className={styles.filters} onSubmit={(event) => {
-      event.preventDefault();
-      if (!from || !to || from > to) { setError("Selecciona un período válido."); return; }
-      const next = { from, to, channel, topN, rankBy };
-      setApplied(next);
-      const params = new URLSearchParams({ from, to, topN: String(topN), rankBy });
-      if (channel) params.set("channel", channel);
-      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-    }}>
-      <label>Desde<input type="date" required value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-      <label>Hasta<input type="date" required value={to} onChange={(e) => setTo(e.target.value)} /></label>
-      <label>Canal<select value={channel} onChange={(e) => setChannel(e.target.value)}><option value="">Todos</option><option value="local">Local</option><option value="shopify">Shopify</option><option value="uber_eats">Uber Eats</option><option value="rappi">Rappi</option></select></label>
-      {(view === "productos" || view === "sabores") && <label>Top<select value={topN} onChange={(e) => setTopN(Number(e.target.value) as AnalyticsTopN)}>{[5,10,20,50].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>}
-      {view === "productos" && <label>Orden<select value={rankBy} onChange={(e) => setRankBy(e.target.value as AnalyticsRankingMetric)}><option value="revenue">Ingresos</option><option value="units">Unidades</option></select></label>}
-      <button type="submit" disabled={loading}>Aplicar</button>
-    </form>
+    <AnalyticsToolbar section="Analytics" from={from} to={to} channel={channel}
+      onFrom={setFrom} onTo={setTo} onChannel={setChannel} loading={loading}
+      items={links.map(link => ({ label: link.title, href: `${link.href}?${navQuery.toString()}`, active: view === link.view }))}
+      action={<Link href="/gestion/analytics">Vista anterior ↗</Link>}
+      onApply={event => { event.preventDefault(); if (!from || !to || from > to) { setError("Selecciona un período válido."); return; } const next = { from, to, channel, topN, rankBy }; setApplied(next); const params = new URLSearchParams({ from, to, topN: String(topN), rankBy }); if (channel) params.set("channel", channel); window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`); }}>
+      {(view === "productos" || view === "sabores") && <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>Top <select value={topN} onChange={e => setTopN(Number(e.target.value) as AnalyticsTopN)}>{[5,10,20,50].map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
+      {view === "productos" && <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>Orden <select value={rankBy} onChange={e => setRankBy(e.target.value as AnalyticsRankingMetric)}><option value="revenue">Ingresos</option><option value="units">Unidades</option></select></label>}
+    </AnalyticsToolbar>
     <div className={styles.content} aria-busy={loading}>
       {loading && <div className={styles.notice} role="status">Cargando información comercial…</div>}
       {error && <div className={styles.error} role="alert">{error}</div>}
