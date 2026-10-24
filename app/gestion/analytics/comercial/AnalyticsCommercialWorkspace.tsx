@@ -81,9 +81,6 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     previousFullSales: Number(previousMonth.salesCount),
     comparableThrough: previousComparableEnd,
   } : null;
-  const delta = (current: number, reference: number) => reference > 0 ? `${current >= reference ? "+" : ""}${fmt((current / reference - 1) * 100)}%` : "Sin base";
-  const comparisonTone = (current: number, reference: number) => reference <= 0 ? styles.neutral : current > reference ? styles.positive : current < reference ? styles.negative : styles.neutral;
-  const comparisonArrow = (current: number, reference: number) => reference <= 0 ? "—" : current > reference ? "▲" : current < reference ? "▼" : "=";
   const comparableTicket = comparison && comparison.comparableSales > 0 ? comparison.comparableRevenue / comparison.comparableSales : null;
   const accumulated = (rows: Daily[], limit: number) => {
     const byDay = new Map(rows.map(row => [Number(row.date.slice(8)), Number(row.revenue)]));
@@ -181,20 +178,13 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
       {loading && <div className={styles.notice} role="status">Cargando información comercial…</div>}
       {error && <div className={styles.error} role="alert">{error}</div>}
       {!loading && !error && view === "resumen" && overview && <div className={styles.stack}>
-        <div className={styles.kpis}>
-          <Kpi title="Ingresos del período" value={clp(overview.revenue)} />
-          <Kpi title="Ventas" value={fmt(overview.salesCount)} />
-          <Kpi title="Ticket promedio" value={clp(overview.averageTicket)} />
-          <Kpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} />
-          <Kpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} />
+        <div className={`${styles.kpis} ${styles.executiveKpis}`}>
+          <ExecutiveKpi title="Ingresos" value={clp(overview.revenue)} comparison={comparison ? { current: Number(overview.revenue), reference: comparison.comparableRevenue, referenceLabel: clp(comparison.comparableRevenue), extra: comparison.previousFullRevenue > 0 ? `${fmt(Number(overview.revenue) / comparison.previousFullRevenue * 100)}% del mes anterior completo (${clp(comparison.previousFullRevenue)})` : undefined } : null} />
+          <ExecutiveKpi title="Ventas" value={fmt(overview.salesCount)} comparison={comparison ? { current: Number(overview.salesCount), reference: comparison.comparableSales, referenceLabel: fmt(comparison.comparableSales) } : null} />
+          <ExecutiveKpi title="Ticket promedio" value={clp(overview.averageTicket)} comparison={comparison && comparableTicket !== null ? { current: Number(overview.averageTicket), reference: comparableTicket, referenceLabel: clp(comparableTicket) } : null} />
+          <ExecutiveKpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} subtitle={overview.salesCount > 0 ? `${fmt(Number(overview.identifiedSalesCount) / Number(overview.salesCount) * 100)}% de las ventas` : "Sin ventas"} />
+          <ExecutiveKpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} subtitle="Clientes únicos en el período" />
         </div>
-        {comparison && <div className={styles.comparisonStrip}>
-          <div><span>Ingresos MTD · actual</span><strong>{clp(overview.revenue)}</strong><small className={comparisonTone(Number(overview.revenue), comparison.comparableRevenue)}>{comparisonArrow(Number(overview.revenue), comparison.comparableRevenue)} {delta(Number(overview.revenue), comparison.comparableRevenue)} · {clp(Number(overview.revenue) - comparison.comparableRevenue)}</small></div>
-          <div><span>Ingresos MTD · mes anterior</span><strong>{clp(comparison.comparableRevenue)}</strong><small>Hasta el día {Number(applied.to.slice(8))} (o último disponible)</small></div>
-          <div><span>Mes anterior completo</span><strong>{clp(comparison.previousFullRevenue)}</strong><small>{comparison.previousFullRevenue > 0 ? `${fmt(Number(overview.revenue) / comparison.previousFullRevenue * 100)}% del cierre anterior` : "Sin base"}</small></div>
-          <div><span>Ventas · MTD actual vs. anterior</span><strong>{fmt(overview.salesCount)} / {fmt(comparison.comparableSales)}</strong><small className={comparisonTone(Number(overview.salesCount), comparison.comparableSales)}>{comparisonArrow(Number(overview.salesCount), comparison.comparableSales)} {delta(Number(overview.salesCount), comparison.comparableSales)} vs. mes anterior</small></div>
-          <div><span>Ticket promedio · MTD</span><strong>{clp(overview.averageTicket)}</strong><small className={comparableTicket === null ? styles.neutral : comparisonTone(Number(overview.averageTicket), comparableTicket)}>{comparableTicket === null ? "Sin base" : `${comparisonArrow(Number(overview.averageTicket), comparableTicket)} ${delta(Number(overview.averageTicket), comparableTicket)} vs. ${clp(comparableTicket)}`}</small></div>
-        </div>}
         {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.executiveGrid}>
           <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
@@ -225,21 +215,41 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   </main>;
 }
 
+function ExecutiveKpi({ title, value, comparison, subtitle }: {
+  title: string;
+  value: string;
+  comparison?: { current: number; reference: number; referenceLabel: string; extra?: string } | null;
+  subtitle?: string;
+}) {
+  const hasReference = comparison && comparison.reference > 0;
+  const change = hasReference ? (comparison.current / comparison.reference - 1) * 100 : null;
+  const tone = change === null ? styles.neutral : change > 0 ? styles.positive : change < 0 ? styles.negative : styles.neutral;
+  return <div className={`${styles.kpi} ${styles.executiveKpi}`}>
+    <div>{title}</div>
+    <strong>{value}</strong>
+    {comparison ? <>
+      <small className={tone}>{change === null ? "Sin base comparable" : `${change > 0 ? "▲" : change < 0 ? "▼" : "="} ${change > 0 ? "+" : ""}${fmt(change)}% vs. mes anterior`}</small>
+      <span className={styles.kpiDetail}>Referencia MTD: {comparison.referenceLabel}</span>
+      {comparison.extra && <span className={styles.kpiDetail}>{comparison.extra}</span>}
+    </> : <span className={styles.kpiDetail}>{subtitle || ""}</span>}
+  </div>;
+}
+
 function Kpi({ title, value }: { title: string; value: string }) {
   return <div className={styles.kpi}><div>{title}</div><strong>{value}</strong></div>;
 }
 
 function CumulativeChart({ current, previous }: { current: number[]; previous: number[] }) {
   const max = Math.max(1, ...current, ...previous);
-  const width = 720, height = 235, left = 53, right = 12, top = 12, bottom = 28;
+  const width = 720, height = 225, left = 68, right = 20, top = 18, bottom = 30;
   const x = (index: number) => left + (index / 30) * (width - left - right);
   const y = (value: number) => top + (1 - value / max) * (height - top - bottom);
   const path = (values: number[]) => values.map((value, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
   return <div className={styles.chartBox}>
     <div className={styles.chartLegend}><span><i className={styles.legendCurrent} />Mes seleccionado</span><span><i className={styles.legendPrevious} />Mes anterior completo</span></div>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Comparación de ingresos acumulados por día del mes" preserveAspectRatio="none">
-      {[0, .25, .5, .75, 1].map((fraction) => <g key={fraction}><line x1={left} y1={y(max * fraction)} x2={width-right} y2={y(max*fraction)} stroke="#e2e8f0" /><text x={left-7} y={y(max*fraction)+4} textAnchor="end" fontSize="10" fill="#64748b">{Math.round(max*fraction/1000000*10)/10}M</text></g>)}
-      {[1, 5, 10, 15, 20, 25, 30].map((day) => <text key={day} x={x(day-1)} y={height-8} textAnchor="middle" fontSize="10" fill="#64748b">{day}</text>)}
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Comparación de ingresos acumulados por día del mes" preserveAspectRatio="xMidYMid meet">
+      {[0, .25, .5, .75, 1].map((fraction) => <g key={fraction}><line x1={left} y1={y(max * fraction)} x2={width-right} y2={y(max*fraction)} stroke="#e2e8f0" /><text x={left-7} y={y(max*fraction)+4} textAnchor="end" fontSize="12" fill="#64748b">{Math.round(max*fraction/1000000*10)/10}M</text></g>)}
+      {[1, 5, 10, 15, 20, 25, 30].map((day) => <text key={day} x={x(day-1)} y={height-8} textAnchor="middle" fontSize="12" fill="#64748b">{day}</text>)}
       <path d={path(previous)} fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />
       <path d={path(current)} fill="none" stroke="#4f46e5" strokeWidth="3" vectorEffect="non-scaling-stroke" />
     </svg>
