@@ -159,3 +159,16 @@
 
 /* DEV-ANL-UX-03: el PlatformShell ya aplica p-2 (8px). */
 .page { padding: 0; }
+
+/* DEV-ANL-02.4A: visualización de productos, sin scrolling de página */
+.productDashboard{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;flex:1;min-height:0;overflow:hidden}
+.productRanking{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:8px 4px 8px 0}
+.productRankingRow{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(70px,1.3fr) minmax(78px,.65fr);align-items:center;gap:10px;font-size:12px;min-height:24px}
+.productRankName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.productRankTrack{height:11px;background:#e9edf7;border-radius:8px;overflow:hidden}
+.productRankFill{height:100%;background:#5145e8;border-radius:8px;transition:width .2s ease}
+.productRankingRow strong{text-align:right;font-variant-numeric:tabular-nums;color:#242e53}
+.productTablePane{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.productTableHeading{font-size:12px;color:#64748b;padding:8px 0 10px}
+.productTablePane .scrollRegion{overflow:auto;min-height:0}
+@media(max-width:1050px){.productDashboard{grid-template-columns:1fr;overflow:auto}.productRanking{max-height:240px;flex:none}.productTablePane{min-height:220px}.productRankingRow{grid-template-columns:minmax(120px,1fr) minmax(70px,1fr) minmax(80px,.5fr)}}

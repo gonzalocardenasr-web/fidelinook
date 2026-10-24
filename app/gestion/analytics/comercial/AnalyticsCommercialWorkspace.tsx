@@ -6,7 +6,6 @@ import Link from "next/link";
 import type { AnalyticsCommercialSummary, AnalyticsProductRanking, AnalyticsFlavorRanking, AnalyticsTopN, AnalyticsRankingMetric } from "@/types/analytics";
 import styles from "./commercial.module.css";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
-import { shiftMonth, daysInMonth, monthlyComparison, commercialDateStatus } from "@/lib/analytics/comparisons";
 
 type View = "resumen" | "ventas" | "productos" | "sabores";
 type Daily = { date: string; salesCount: number; revenue: number };
@@ -18,6 +17,15 @@ type Flavors = AnalyticsFlavorRanking & { scope?: string };
 type ApiResult<T> = { ok: true; data: T } | { ok: false; message: string };
 const clp = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Number(value || 0));
 const fmt = (value: number | null | undefined) => new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 }).format(Number(value || 0));
+const shiftMonth = (date: string, delta: number) => {
+  const [year, month] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+const daysInMonth = (yearMonth: string) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+};
 const initialFilters = () => {
   const now = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const defaults = { from: `${now.slice(0, 7)}-01`, to: now, channel: "", topN: 10 as AnalyticsTopN, rankBy: "revenue" as AnalyticsRankingMetric };
@@ -62,11 +70,11 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     return q.toString();
   }, [applied]);
 
-  const monthly = monthlyComparison(applied.from, applied.to);
-  const comparisonEligible = monthly !== null;
+  const comparisonEligible = applied.from === `${applied.to.slice(0, 7)}-01`;
   const previousYearMonth = shiftMonth(applied.to, -1);
-  const previousEnd = monthly?.full.to ?? `${previousYearMonth}-${String(daysInMonth(previousYearMonth)).padStart(2, "0")}`;
-  const previousComparableEnd = monthly?.comparable.to ?? previousEnd;
+  const previousEnd = `${previousYearMonth}-${String(daysInMonth(previousYearMonth)).padStart(2, "0")}`;
+  const comparableDay = Math.min(Number(applied.to.slice(8)), daysInMonth(previousYearMonth));
+  const previousComparableEnd = `${previousYearMonth}-${String(comparableDay).padStart(2, "0")}`;
   const comparison: MonthComparison | null = comparisonEligible && previousMonth ? {
     previous: previousMonth,
     comparableRevenue: (previousMonth.daily || []).filter((d) => d.date <= previousComparableEnd).reduce((sum, d) => sum + Number(d.revenue), 0),
@@ -141,7 +149,8 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
     ? Number(overview.revenue) - Number(products.reconciliation.allAllocatedRevenue) : null;
   const daily = overview?.daily || [];
   const maxRevenue = Math.max(1, ...daily.map((d) => Number(d.revenue)));
-  const maxUnits = Math.max(1, ...(products?.products || []).map((p) => Number(p.units)));
+  const maxProductMetric = Math.max(1, ...(products?.products || []).map((p) => Number(applied.rankBy === "revenue" ? p.allocatedRevenue : p.units)));
+  const catalogRevenue = Number(products?.reconciliation?.catalogAllocatedRevenue || 0);
   const maxFlavorUnits = Math.max(1, ...(flavors?.flavors || []).map((f) => Number(f.observedUnits)));
 
   return <main className={`${styles.workspace} ${dashboardFrame.frame}`}>
@@ -163,8 +172,6 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           <ExecutiveKpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} subtitle={overview.salesCount > 0 ? `${fmt(Number(overview.identifiedSalesCount) / Number(overview.salesCount) * 100)}% de las ventas` : "Sin ventas"} />
           <ExecutiveKpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} subtitle="Clientes únicos en el período" />
         </div>
-        {commercialDateStatus(applied.to, today()) === "in_progress" && <div className={styles.comparisonHint}>El período incluye hoy: los datos pueden estar incompletos. Comparación provisional, no cierre de caja.</div>}
-        {commercialDateStatus(applied.to, today()) === "future" && <div className={styles.comparisonHint}>El período incluye fechas futuras. Los días futuros no representan ventas cerradas.</div>}
         {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.executiveGrid}>
           <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
@@ -191,7 +198,31 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
       </div>}
       {!loading && !error && view === "productos" && <div className={styles.stack}>
         <div className={styles.kpis}><Kpi title="Ingresos catálogo (total)" value={clp(products?.reconciliation?.catalogAllocatedRevenue)} /><Kpi title="Otras líneas: ingresos" value={clp(products?.customLines?.allocatedRevenue)} /><Kpi title="Otras líneas: unidades" value={fmt(products?.customLines?.units)} /></div>
-        <section className={`${styles.card} ${styles.growCard}`}><div className={styles.cardHeader}><h2>Ranking de productos de catálogo</h2><span>Top {applied.topN} · {applied.rankBy === "revenue" ? "ingresos" : "unidades"}</span></div><div className={styles.scrollRegion}><table><thead><tr><th>Producto</th><th>Unidades</th><th>Ingresos asignados</th><th>Participación visual</th></tr></thead><tbody>{(products?.products || []).map((p, i) => <tr key={`${p.productId}-${i}`}><td>{p.name}<small>{p.sku || "Sin SKU"}</small></td><td>{fmt(p.units)}</td><td>{clp(p.allocatedRevenue)}</td><td><div className={styles.meter}><div style={{ width: `${Math.max(0, Math.min(100, Number(p.units) / maxUnits * 100))}%` }} /></div></td></tr>)}</tbody></table>{!products?.products?.length && <p>Sin productos para el período.</p>}</div></section>
+        <section className={`${styles.card} ${styles.growCard}`}>
+          <div className={styles.cardHeader}>
+            <h2>Ranking de productos de catálogo</h2>
+            <span>Top {applied.topN} · ordenado por {applied.rankBy === "revenue" ? "ingresos" : "unidades"}</span>
+          </div>
+          <div className={styles.productDashboard}>
+            <div className={styles.productRanking} aria-label="Comparación visual de productos">
+              {(products?.products || []).map((p, i) => {
+                const metric = Number(applied.rankBy === "revenue" ? p.allocatedRevenue : p.units);
+                return <div className={styles.productRankingRow} key={`${p.productId}-${i}`} title={`${p.name} · ${fmt(p.units)} unidades · ${clp(p.allocatedRevenue)} ingresos asignados`}>
+                  <span className={styles.productRankName}>{i + 1}. {p.name}</span>
+                  <div className={styles.productRankTrack}><div className={styles.productRankFill} style={{width: `${Math.max(0, Math.min(100, metric / maxProductMetric * 100))}%`}} /></div>
+                  <strong>{applied.rankBy === "revenue" ? clp(p.allocatedRevenue) : fmt(p.units)}</strong>
+                </div>;
+              })}
+              {!products?.products?.length && <p>Sin productos para el período.</p>}
+            </div>
+            <div className={styles.productTablePane}>
+              <div className={styles.productTableHeading}>Detalle y participación en ingresos del catálogo</div>
+              <div className={styles.scrollRegion}><table><thead><tr><th>Producto</th><th>Unidades</th><th>Ingresos</th><th>% catálogo</th></tr></thead>
+                <tbody>{(products?.products || []).map((p, i) => <tr key={`${p.productId}-${i}`} title={`${p.name} · ${p.sku || "Sin SKU"}`}><td>{p.name}<small>{p.sku || "Sin SKU"}</small></td><td>{fmt(p.units)}</td><td>{clp(p.allocatedRevenue)}</td><td>{catalogRevenue > 0 ? `${fmt(Number(p.allocatedRevenue) / catalogRevenue * 100)}%` : "—"}</td></tr>)}</tbody>
+              </table></div>
+            </div>
+          </div>
+        </section>
         <div className={styles.footerNote}>Las líneas personalizadas pueden contener productos no catalogados, despachos y ajustes. Se presentan separadamente y no se excluyen de los ingresos comerciales.</div>
       </div>}
       {!loading && !error && view === "sabores" && <div className={styles.stack}>
