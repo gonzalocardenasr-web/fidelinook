@@ -65,10 +65,10 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const query = useMemo(() => {
-    const q = new URLSearchParams({ from: applied.from, to: applied.to, topN: String(applied.topN), rankBy: applied.rankBy });
+    const q = new URLSearchParams({ from: applied.from, to: applied.to, topN: String(view === "sabores" ? 50 : applied.topN), rankBy: applied.rankBy });
     if (applied.channel) q.set("channel", applied.channel);
     return q.toString();
-  }, [applied]);
+  }, [applied, view]);
 
   const comparisonEligible = applied.from === `${applied.to.slice(0, 7)}-01`;
   const previousYearMonth = shiftMonth(applied.to, -1);
@@ -151,7 +151,11 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
   const maxRevenue = Math.max(1, ...daily.map((d) => Number(d.revenue)));
   const maxProductMetric = Math.max(1, ...(products?.products || []).map((p) => Number(applied.rankBy === "revenue" ? p.allocatedRevenue : p.units)));
   const catalogRevenue = Number(products?.reconciliation?.catalogAllocatedRevenue || 0);
-  const maxFlavorUnits = Math.max(1, ...(flavors?.flavors || []).map((f) => Number(f.observedUnits)));
+  const observedFlavors = flavors?.flavors || [];
+  const displayedFlavors = observedFlavors.slice(0, applied.topN);
+  const maxFlavorUnits = Math.max(1, ...displayedFlavors.map((f) => Number(f.observedUnits)));
+  const observedUnits = observedFlavors.reduce((sum, f) => sum + Number(f.observedUnits), 0);
+  const leadingFlavor = observedFlavors[0];
 
   return <main className={`${styles.workspace} ${dashboardFrame.frame}`}>
     <AnalyticsToolbar section="Analytics" from={from} to={to} channel={channel}
@@ -227,33 +231,36 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
         <div className={styles.footerNote}>Las líneas personalizadas pueden contener productos no catalogados, despachos y ajustes. Se presentan separadamente y no se excluyen de los ingresos comerciales.</div>
       </div>}
       {!loading && !error && view === "sabores" && <div className={styles.stack}>
-        <div className={styles.flavorScope}><strong>Sabores efectivamente registrados.</strong> {flavors?.scope || "Solo sabores observados en POT-16-LISTO."} No representa todos los sabores consumidos: simples, dobles y consumo de bachas no se infieren desde inventario.</div>
         <div className={styles.kpis}>
-          <Kpi title="Líneas elegibles" value={fmt(flavors?.coverage?.eligibleItemRows)} />
-          <Kpi title="Con sabor registrado" value={fmt(flavors?.coverage?.observedItemRows)} />
-          <Kpi title="Sin sabor registrado" value={fmt(flavors?.coverage?.unknownItemRows)} />
-          <Kpi title="Cobertura de registros" value={flavors?.coverage?.observedRowRate == null ? "Sin base" : `${fmt(flavors.coverage.observedRowRate * 100)}%`} />
+          <Kpi title="Unidades con sabor identificado" value={fmt(observedUnits)} />
+          <Kpi title="Sabores distintos observados" value={fmt(observedFlavors.length)} />
+          <Kpi title="Sabor líder" value={leadingFlavor?.flavorName || "Sin registros"} />
         </div>
         <section className={`${styles.card} ${styles.growCard}`}>
-          <div className={styles.cardHeader}><h2>Ranking de sabores observados</h2><span>Top {applied.topN} · unidades registradas</span></div>
-          <div className={styles.flavorDashboard}>
-            <div className={styles.flavorRanking} aria-label="Comparación visual de sabores observados">
-              {(flavors?.flavors || []).map((f, i) => <div className={styles.flavorRankingRow} key={`${f.flavorId}-${i}`} title={`${f.flavorName}: ${fmt(f.observedUnits)} unidades observadas`}>
-                <span className={styles.flavorRankName}>{i + 1}. {f.flavorName}</span>
-                <div className={styles.flavorRankTrack}><div className={styles.flavorRankFill} style={{width: `${Math.max(0, Math.min(100, Number(f.observedUnits) / maxFlavorUnits * 100))}%`}} /></div>
-                <strong>{fmt(f.observedUnits)}</strong>
-              </div>)}
-              {!flavors?.flavors?.length && <p>Sin sabores observados para el período seleccionado.</p>}
-            </div>
-            <div className={styles.flavorTablePane}>
-              <div className={styles.flavorTableHeading}>Detalle de sabores · el Top N no determina la cobertura global</div>
-              <div className={styles.scrollRegion}><table><thead><tr><th>#</th><th>Sabor</th><th>Unidades observadas</th></tr></thead><tbody>
-                {(flavors?.flavors || []).map((f, i) => <tr key={`${f.flavorId}-${i}`} title={`${f.flavorName}: ${fmt(f.observedUnits)} unidades`}><td>{i + 1}</td><td>{f.flavorName}</td><td>{fmt(f.observedUnits)}</td></tr>)}
-              </tbody></table>{!flavors?.flavors?.length && <p>Sin registros para el filtro aplicado.</p>}</div>
-            </div>
+          <div className={styles.cardHeader}>
+            <h2>Ranking de sabores registrados</h2>
+            <span>Top {applied.topN} · unidades observadas</span>
+          </div>
+          <div className={styles.scrollRegion} style={{flex:1, minHeight:0}}>
+            <table style={{width:"100%", borderCollapse:"collapse"}}>
+              <thead><tr><th style={{textAlign:"left"}}>Sabor</th><th style={{textAlign:"left"}}>Participación visual</th><th style={{textAlign:"right"}}>Unidades</th></tr></thead>
+              <tbody>{displayedFlavors.map((f, i) => <tr key={`${f.flavorId}-${i}`} title={`${f.flavorName}: ${fmt(f.observedUnits)} unidades observadas`}>
+                <td style={{width:"35%"}}>{i + 1}. {f.flavorName}</td>
+                <td style={{width:"48%"}}><div style={{height:12, background:"#f1f3f7", borderRadius:6, overflow:"hidden"}}>
+                  <div style={{height:"100%", width:`${Math.max(0, Math.min(100, Number(f.observedUnits) / maxFlavorUnits * 100))}%`, background:"#5651df", borderRadius:6}} />
+                </div></td>
+                <td style={{textAlign:"right", fontWeight:600}}>{fmt(f.observedUnits)}</td>
+              </tr>)}</tbody>
+            </table>
+            {!displayedFlavors.length && <p>Sin sabores observados para el período seleccionado.</p>}
           </div>
         </section>
-        <div className={styles.footerNote}>Cobertura calculada por líneas elegibles, no por unidades ni por todas las ventas. No se atribuyen sabores a ventas sin selección registrada.</div>
+        <div className={styles.footerNote}>
+          Fuente: {flavors?.scope || "sabores registrados en productos elegibles (POT-16-LISTO)"}. No se infieren sabores de conos, vasos, potes armados ni bachas.
+          {" "}Las unidades y los sabores distintos corresponden a los primeros 50 sabores devueltos por la consulta; no son totales globales si existen más de 50.
+          {" "}Cobertura de líneas: {fmt(flavors?.coverage?.observedItemRows)} con sabor / {fmt(flavors?.coverage?.eligibleItemRows)} elegibles ({flavors?.coverage?.observedRowRate == null ? "sin base" : `${fmt(flavors.coverage.observedRowRate * 100)}%`}).
+          {" "}Familias de productos y tendencias requieren una fuente verificable adicional.
+        </div>
       </div>}
     </div>
   </main>;
