@@ -172,3 +172,17 @@
 .productTableHeading{font-size:12px;color:#64748b;padding:8px 0 10px}
 .productTablePane .scrollRegion{overflow:auto;min-height:0}
 @media(max-width:1050px){.productDashboard{grid-template-columns:1fr;overflow:auto}.productRanking{max-height:240px;flex:none}.productTablePane{min-height:220px}.productRankingRow{grid-template-columns:minmax(120px,1fr) minmax(70px,1fr) minmax(80px,.5fr)}}
+
+/* DEV-ANL-02.4B: sabores observados, panel compacto y trazabilidad de cobertura */
+.flavorScope{font-size:11px;line-height:1.35;padding:7px 11px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;color:#1e40af}
+.flavorDashboard{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;flex:1;min-height:0;overflow:hidden}
+.flavorRanking{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:8px 4px 8px 0}
+.flavorRankingRow{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(70px,1.3fr) minmax(55px,.35fr);align-items:center;gap:10px;font-size:12px;min-height:24px}
+.flavorRankName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flavorRankTrack{height:11px;background:#e9edf7;border-radius:8px;overflow:hidden}
+.flavorRankFill{height:100%;background:#0891b2;border-radius:8px;transition:width .2s ease}
+.flavorRankingRow strong{text-align:right;font-variant-numeric:tabular-nums;color:#164e63}
+.flavorTablePane{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.flavorTableHeading{font-size:12px;color:#64748b;padding:8px 0 10px}
+.flavorTablePane .scrollRegion{overflow:auto;min-height:0}
+@media(max-width:1050px){.flavorDashboard{grid-template-columns:1fr;overflow:auto}.flavorRanking{max-height:240px;flex:none}.flavorTablePane{min-height:220px}.flavorRankingRow{grid-template-columns:minmax(120px,1fr) minmax(70px,1fr) minmax(55px,.3fr)}}
