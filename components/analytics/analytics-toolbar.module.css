@@ -12,3 +12,10 @@
 .filters button:disabled{opacity:.5}.action{margin-left:auto;white-space:nowrap;font-size:12px}.action a{color:#334155;text-decoration:none}
 @media(max-width:1380px){.identity{flex-basis:100%}.filters{flex:1 1 auto}.action{margin-left:auto}}
 @media(max-width:680px){.toolbar{align-items:stretch}.identity{flex-wrap:wrap}.nav{width:100%}.filters label span{display:none}.filters{gap:5px}.filters input{width:128px}}
+
+/* Navegación secundaria compartida: Ventas y Clientes. */
+.subnav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#fff;border-radius:10px;padding:7px 12px;min-height:43px}
+.subLink,.subActive{display:inline-flex;align-items:center;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap}
+.subLink{color:#475569;background:transparent}
+.subLink:hover{background:#fff1f5;color:#9d174d}
+.subActive{color:#9d174d;background:#fce7f3;border:1px solid #f9a8d4}

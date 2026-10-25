@@ -13,7 +13,13 @@ export async function GET(request: NextRequest) {
    .select("id,role,is_active").eq("id",authorization.session.userId).maybeSingle();
   if (userError||!user||!user.is_active||user.role!==authorization.session.role)
    return NextResponse.json({ok:false,message:"Sesión operacional no válida."},{status:403});
-  const parsed=parseAnalyticsFilters(request.nextUrl.searchParams);
+  // Los controles del ranking son parámetros propios de este endpoint.
+  // El parser compartido solo acepta filtros comerciales.
+  const filterParams = new URLSearchParams(request.nextUrl.searchParams);
+  filterParams.delete("sort");
+  filterParams.delete("search");
+  filterParams.delete("page");
+  const parsed=parseAnalyticsFilters(filterParams);
   if (!parsed.ok) return NextResponse.json({ok:false,message:parsed.message},{status:400});
   const f=parsed.filters;
   if (f.channel) {
