@@ -32,6 +32,7 @@ export default function AnalyticsToolbar(p: Props) {
   const subpages = inCustomers ? [
     { label: "Base", href: "/gestion/analytics/clientes" },
     { label: "Ranking", href: "/gestion/analytics/clientes/ranking" },
+    { label: "Segmentación", href: "/gestion/analytics/clientes/segmentacion" },
   ] : inSales ? [
     { label: "Evolución", href: "/gestion/analytics/comercial/ventas" },
     { label: "Temporalidad", href: "/gestion/analytics/comercial/ventas/temporalidad" },
