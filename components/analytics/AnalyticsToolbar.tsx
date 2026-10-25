@@ -15,10 +15,15 @@ type Props = {
   children?: ReactNode;
 };
 export default function AnalyticsToolbar(p: Props) {
+  // Navegación única: Clientes debe aparecer en todas las vistas de Analytics.
+  // Evita duplicarlo en las vistas que ya lo declaran explícitamente.
+  const items = p.items.some(item => item.href === "/gestion/analytics/clientes")
+    ? p.items
+    : [...p.items, { label: "Clientes", href: "/gestion/analytics/clientes" }];
   return <div className={s.toolbar}>
     <div className={s.identity}><span className={s.section}>{p.section}</span>
       <nav aria-label="Navegación Analytics" className={s.nav}>
-        {p.items.map((item, i) => item.href && !item.disabled
+        {items.map((item, i) => item.href && !item.disabled
           ? <Link key={i} href={item.href} aria-current={item.active ? "page" : undefined} className={item.active ? s.active : s.link}>{item.label}</Link>
           : <span key={i} className={s.disabled} title="Próximamente">{item.label}</span>)}
       </nav>
