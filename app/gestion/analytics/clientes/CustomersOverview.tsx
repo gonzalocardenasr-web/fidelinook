@@ -46,7 +46,7 @@ export default function CustomersOverview() {
  return <main className={s.page}>
   <AnalyticsToolbar section="Analytics" items={nav} from={from} to={to} channel={channel}
     onFrom={setFrom} onTo={setTo} onChannel={setChannel} onApply={apply} loading={loading}/>
-  <div className={s.notice}>Clientes registrados: universo global. Indicadores de compras: {applied.channel ? `canal ${applied.channel}` : "todos los canales"}. Corte: {applied.to}. La recurrencia se mide sobre compras observadas hasta el corte.</div>
+
   {error && <div role="alert" className={s.error}>{error}</div>}
   {loading && <div className={s.status}>Cargando indicadores de clientes…</div>}
   {!loading && data && <>
@@ -71,7 +71,7 @@ export default function CustomersOverview() {
      <div className={s.summary}><div>Tickets identificados del período <b>{fmt(data.identifiedTicketsPeriod)}</b></div><div>Ingresos identificados del período <b>{clp(data.identifiedRevenuePeriod)}</b></div></div>
     </article>
    </section>
-   <div className={s.foot}>Las ventanas de actividad son acumulativas (30 ⊆ 60 ⊆ 90). No se atribuyen ventas anónimas a clientes. Los datos no incluyen correcciones operativas pendientes de implementar.</div>
+   <div className={s.foot}>Clientes registrados: universo global · Compras: {applied.channel || "todos los canales"} · Corte: {applied.to} · Ventanas de actividad acumulativas (30 ⊆ 60 ⊆ 90). No se atribuyen ventas anónimas a clientes. Los datos no incluyen correcciones operativas pendientes de implementar.</div>
   </>}
  </main>;
 }

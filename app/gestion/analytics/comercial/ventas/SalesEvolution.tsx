@@ -85,8 +85,6 @@ export default function SalesEvolution() {
       items={[{ label: "Resumen", href: `/gestion/analytics?${qs}` }, { label: "Evolución", href: `/gestion/analytics/comercial/ventas?${qs}`, active: true }, { label: "Temporalidad", href: `/gestion/analytics/comercial/ventas/temporalidad?${qs}` }, { label: "Canales", href: `/gestion/analytics/comercial/ventas/canales?${qs}` }, { label: "Productos", href: `/gestion/analytics/comercial/productos?${qs}` }]}
       onApply={e => { e.preventDefault(); if (draft.from > draft.to) { setError("El inicio no puede superar el término."); return; } setFilter({ ...draft }); const q = new URLSearchParams({ from: draft.from, to: draft.to }); if (draft.channel) q.set("channel", draft.channel); window.history.replaceState(null, "", `${window.location.pathname}?${q}`); }} />
     {loading ? <section className={s.notice}>Cargando evolución comercial…</section> : error ? <section className={s.error}>{error}</section> : data && prev ? <div className={s.body}>
-      {commercialDateStatus(filter.to, localDate()) === "in_progress" && <section className={s.notice}>El período incluye hoy: información provisional, no representa un cierre comercial.</section>}
-      {commercialDateStatus(filter.to, localDate()) === "future" && <section className={s.notice}>El período incluye fechas futuras; no interpretar esos días como cierres sin ventas.</section>}
       <section className={s.kpis}>
         <article><small>Ingresos</small><strong>{money(data.revenue)}</strong><Trend current={data.revenue} previous={prev.revenue} /></article>
         <article><small>Transacciones</small><strong>{num(data.salesCount)}</strong><Trend current={data.salesCount} previous={prev.salesCount} /></article>
@@ -101,7 +99,7 @@ export default function SalesEvolution() {
 
       <section className={s.tableCard}><div className={s.cardHead}><h2>Detalle diario</h2><span>{rows.length} días · consulta completa</span></div><div className={s.tableScroll}><table><thead><tr><th>Fecha</th><th>Ventas</th><th>Ingresos</th><th>Ticket promedio</th></tr></thead><tbody>{rows.map(row => <tr key={row.date}><td>{dateLabel(row.date)}</td><td>{num(row.salesCount)}</td><td>{money(row.revenue)}</td><td>{row.salesCount ? money(row.revenue / row.salesCount) : "—"}</td></tr>)}</tbody></table></div></section>
       </section>
-      <footer>Ventas confirmadas y pagadas · Comparación entre períodos consecutivos de igual duración · Sin estimaciones</footer>
+      <footer>Ventas confirmadas y pagadas · Comparación entre períodos consecutivos de igual duración · Sin estimaciones{commercialDateStatus(filter.to, localDate()) === "in_progress" ? " · Período en curso: datos provisionales" : commercialDateStatus(filter.to, localDate()) === "future" ? " · El período incluye fechas futuras: no representan cierres sin ventas" : ""}</footer>
     </div> : null}
   </main>;
 }

@@ -172,7 +172,7 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           <ExecutiveKpi title="Ventas identificadas" value={fmt(overview.identifiedSalesCount)} subtitle={overview.salesCount > 0 ? `${fmt(Number(overview.identifiedSalesCount) / Number(overview.salesCount) * 100)}% de las ventas` : "Sin ventas"} />
           <ExecutiveKpi title="Compradores identificados" value={fmt(overview.identifiedCustomersCount)} subtitle="Clientes únicos en el período" />
         </div>
-        {!comparisonEligible && <div className={styles.comparisonHint}>Para comparar meses, selecciona desde el día 1 hasta una fecha del mismo mes.</div>}
+        
         <div className={styles.executiveGrid}>
           <section className={styles.card}><div className={styles.cardHeader}><h2>{comparison ? "Ingresos acumulados · mes a mes" : "Evolución diaria de ingresos"}</h2><Link href="/gestion/analytics/comercial/ventas">Ver ventas →</Link></div>
             {comparison ? <div className={styles.chartAndInsights}>
@@ -190,6 +190,7 @@ export default function AnalyticsCommercialWorkspace({ view }: { view: View }) {
           </section>
           <section className={`${styles.card} ${styles.productsCard}`}><div className={styles.cardHeader}><h2>Productos destacados</h2><Link href="/gestion/analytics/comercial/productos">Ver ranking →</Link></div><div className={styles.rows}>{(products?.products || []).slice(0, 5).map((p, i) => <div className={styles.compactRow} key={`${p.productId}-${i}`}><span>{p.name}</span><strong>{clp(p.allocatedRevenue)}</strong></div>)}{!products?.products?.length && <p>Sin productos para el período.</p>}</div></section>
         </div>
+        {!comparisonEligible && <div className={styles.footerNote}>Comparación mensual disponible al seleccionar desde el día 1 hasta una fecha del mismo mes.</div>}
         <div className={styles.footerNote}>{difference === null ? "Conciliación no disponible" : Math.abs(difference) < 0.02 ? "✓ Ingresos conciliados con las asignaciones de venta" : `⚠ Diferencia de conciliación: ${clp(difference)}`} · Ventas confirmadas y pagadas · Fecha comercial de Santiago</div>
       </div>}
       {!loading && !error && view === "ventas" && overview && <div className={styles.stack}>

@@ -30,8 +30,8 @@ export default function AnalyticsToolbar(p: Props) {
     { label: "Clientes", href: "/gestion/analytics/clientes" },
   ];
   const subpages = inCustomers ? [
-    { label: "Base y crecimiento", href: "/gestion/analytics/clientes" },
-    { label: "Ranking y valor", href: "/gestion/analytics/clientes/ranking" },
+    { label: "Base", href: "/gestion/analytics/clientes" },
+    { label: "Ranking", href: "/gestion/analytics/clientes/ranking" },
   ] : inSales ? [
     { label: "Evolución", href: "/gestion/analytics/comercial/ventas" },
     { label: "Temporalidad", href: "/gestion/analytics/comercial/ventas/temporalidad" },
@@ -43,9 +43,16 @@ export default function AnalyticsToolbar(p: Props) {
   <div className={s.toolbar}>
     <div className={s.identity}><span className={s.section}>{p.section}</span>
       <nav aria-label="Navegación Analytics" className={s.nav}>
-        {items.map((item, i) => item.href && !item.disabled
-          ? <Link key={i} href={`${item.href}?${query}`} aria-current={item.active ? "page" : undefined} className={item.active ? s.active : s.link}>{item.label}</Link>
-          : <span key={i} className={s.disabled} title="Próximamente">{item.label}</span>)}
+        {items.map((item, i) => <span key={item.label} className={s.navGroup}>
+          {item.href && !item.disabled
+            ? <Link href={`${item.href}?${query}`} aria-current={item.active && subpages.length === 0 ? "page" : undefined} className={item.active ? s.active : s.link}>{item.label}</Link>
+            : <span className={s.disabled} title="Próximamente">{item.label}</span>}
+          {item.active && subpages.length > 0 && <span className={s.childGroup} aria-label={`Vistas de ${item.label}`}>
+            {subpages.map(child => <Link key={child.href} href={`${child.href}?${query}`}
+              aria-current={pathname === child.href ? "page" : undefined}
+              className={pathname === child.href ? s.subActive : s.subLink}>{child.label}</Link>)}
+          </span>}
+        </span>)}
       </nav>
     </div>
     <form className={s.filters} onSubmit={p.onApply}>
@@ -60,10 +67,5 @@ export default function AnalyticsToolbar(p: Props) {
     {p.action && <div className={s.action}>{p.action}</div>}
     {p.children}
   </div>
-  {subpages.length > 0 && <nav aria-label="Subpáginas de Analytics" className={s.subnav}>
-    {subpages.map(item => <Link key={item.href} href={`${item.href}?${query}`}
-      aria-current={pathname === item.href ? "page" : undefined}
-      className={pathname === item.href ? s.subActive : s.subLink}>{item.label}</Link>)}
-  </nav>}
   </>;
 }
