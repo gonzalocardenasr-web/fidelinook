@@ -15,7 +15,11 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({ok:false,message:"Sesión operacional no válida."},{status:403});
   const mode=request.nextUrl.searchParams.get("mode")||"historical";
   if (!["historical","period"].includes(mode)) return NextResponse.json({ok:false,message:"Modalidad inválida."},{status:400});
-  const parsed=parseAnalyticsFilters(request.nextUrl.searchParams);
+  // El parser compartido valida solo los filtros comerciales.
+  // Los parámetros del ranking se validan por separado más abajo.
+  const filterParams = new URLSearchParams(request.nextUrl.searchParams);
+  for (const key of ["mode", "sort", "search", "page"]) filterParams.delete(key);
+  const parsed=parseAnalyticsFilters(filterParams);
   if (!parsed.ok) return NextResponse.json({ok:false,message:parsed.message},{status:400});
   const f=parsed.filters;
   if (f.channel) {
