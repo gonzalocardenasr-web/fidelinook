@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import AnalyticsToolbar from "@/components/analytics/AnalyticsToolbar";
 import s from "./customers-overview.module.css";
@@ -46,7 +47,7 @@ export default function CustomersOverview() {
  return <main className={s.page}>
   <AnalyticsToolbar section="Analytics" items={nav} from={from} to={to} channel={channel}
     onFrom={setFrom} onTo={setTo} onChannel={setChannel} onApply={apply} loading={loading}/>
-  <div className={s.notice}>Clientes registrados: universo global. Indicadores de compras: {applied.channel ? `canal ${applied.channel}` : "todos los canales"}. Corte: {applied.to}. La recurrencia se mide sobre compras observadas hasta el corte.</div>
+  <div className={s.notice}><Link href={`/gestion/analytics/clientes/ranking?from=${applied.from}&to=${applied.to}${applied.channel?`&channel=${applied.channel}`:""}`} style={{float:"right",fontWeight:700,marginLeft:12}}>Ver ranking de clientes →</Link>Clientes registrados: universo global. Indicadores de compras: {applied.channel ? `canal ${applied.channel}` : "todos los canales"}. Corte: {applied.to}. La recurrencia se mide sobre compras observadas hasta el corte.</div>
   {error && <div role="alert" className={s.error}>{error}</div>}
   {loading && <div className={s.status}>Cargando indicadores de clientes…</div>}
   {!loading && data && <>
