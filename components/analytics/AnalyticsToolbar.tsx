@@ -20,6 +20,7 @@ export default function AnalyticsToolbar(p: Props) {
   const qs = new URLSearchParams({ from: p.from, to: p.to });
   if (p.channel) qs.set("channel", p.channel);
   const query = qs.toString();
+  const inGlobal = pathname.startsWith("/gestion/analytics/global");
   const inCustomers = pathname.startsWith("/gestion/analytics/clientes");
   const inSales = pathname.startsWith("/gestion/analytics/comercial/ventas");
   const primary = [
@@ -38,9 +39,12 @@ export default function AnalyticsToolbar(p: Props) {
     { label: "Evolución", href: "/gestion/analytics/comercial/ventas" },
     { label: "Temporalidad", href: "/gestion/analytics/comercial/ventas/temporalidad" },
     { label: "Canales", href: "/gestion/analytics/comercial/ventas/canales" },
+  ] : inGlobal ? [
+    { label: "Evolución", href: "/gestion/analytics/global" },
+    { label: "Canales", href: "/gestion/analytics/global/canales" },
   ] : [];
   const items = primary.map(item => ({ ...item, active: pathname === item.href ||
-    (item.label === "Ventas" && inSales) || (item.label === "Clientes" && inCustomers) }));
+    (item.label === "Ventas" && inSales) || (item.label === "Clientes" && inCustomers) || (item.label === "Global" && inGlobal) }));
   return <>
   <div className={s.toolbar}>
     <div className={s.identity}><span className={s.section}>{p.section}</span>
