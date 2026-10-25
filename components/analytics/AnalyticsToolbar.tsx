@@ -28,6 +28,7 @@ export default function AnalyticsToolbar(p: Props) {
     { label: "Productos", href: "/gestion/analytics/comercial/productos" },
     { label: "Sabores", href: "/gestion/analytics/comercial/sabores" },
     { label: "Clientes", href: "/gestion/analytics/clientes" },
+    { label: "Global", href: "/gestion/analytics/global" },
   ];
   const subpages = inCustomers ? [
     { label: "Base", href: "/gestion/analytics/clientes" },
