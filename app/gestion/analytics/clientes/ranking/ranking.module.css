@@ -2,3 +2,5 @@
 
 /* Nota metodológica compacta al pie */
 .footer{padding:6px 10px;font-size:10px}.footer>span{max-width:75%;line-height:1.25}
+
+.modeSwitch{display:flex;gap:3px;background:#f1f5f9;padding:3px;border-radius:7px;flex:none}.modeSwitch button{background:transparent;border:0;color:#334155;padding:6px 10px}.modeSwitch .modeActive{background:#fce7f3;color:#9d174d;font-weight:700}.winner{display:flex;align-items:center;gap:14px;background:#fff;border-left:3px solid #db2777;border-radius:8px;padding:9px 14px;font-size:12px;flex-wrap:wrap}.winner>span:first-child{color:#9d174d;font-weight:700}.winner strong{font-size:14px}.winner>span:last-child{color:#475569}@media(max-width:1100px){.controls{flex-wrap:wrap}.controls form{min-width:220px}}

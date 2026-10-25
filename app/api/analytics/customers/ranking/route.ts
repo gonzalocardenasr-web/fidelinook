@@ -13,13 +13,9 @@ export async function GET(request: NextRequest) {
    .select("id,role,is_active").eq("id",authorization.session.userId).maybeSingle();
   if (userError||!user||!user.is_active||user.role!==authorization.session.role)
    return NextResponse.json({ok:false,message:"Sesión operacional no válida."},{status:403});
-  // Los controles del ranking son parámetros propios de este endpoint.
-  // El parser compartido solo acepta filtros comerciales.
-  const filterParams = new URLSearchParams(request.nextUrl.searchParams);
-  filterParams.delete("sort");
-  filterParams.delete("search");
-  filterParams.delete("page");
-  const parsed=parseAnalyticsFilters(filterParams);
+  const mode=request.nextUrl.searchParams.get("mode")||"historical";
+  if (!["historical","period"].includes(mode)) return NextResponse.json({ok:false,message:"Modalidad inválida."},{status:400});
+  const parsed=parseAnalyticsFilters(request.nextUrl.searchParams);
   if (!parsed.ok) return NextResponse.json({ok:false,message:parsed.message},{status:400});
   const f=parsed.filters;
   if (f.channel) {
@@ -36,9 +32,11 @@ export async function GET(request: NextRequest) {
   const page=Number(q.get("page")||"1");
   if (!Number.isSafeInteger(page)||page<1||page>100000)
    return NextResponse.json({ok:false,message:"Página inválida."},{status:400});
-  const {data,error}=await supabaseAdmin.rpc("nook_analytics_customer_ranking",{
-   p_cutoff:f.to,p_channel:f.channel,p_search:search||null,p_sort:sort,p_limit:30,p_offset:(page-1)*30
-  });
+  const rpcName=mode==="period" ? "nook_analytics_customer_ranking_period" : "nook_analytics_customer_ranking";
+  const args=mode==="period"
+   ? {p_from:f.from,p_cutoff:f.to,p_channel:f.channel,p_search:search||null,p_sort:sort,p_limit:30,p_offset:(page-1)*30}
+   : {p_cutoff:f.to,p_channel:f.channel,p_search:search||null,p_sort:sort,p_limit:30,p_offset:(page-1)*30};
+  const {data,error}=await supabaseAdmin.rpc(rpcName,args);
   if (error) {console.error("ANL_CUSTOMERS_RANKING_RPC",error.code);return NextResponse.json({ok:false,message:"No fue posible consultar el ranking."},{status:500});}
   return NextResponse.json({ok:true,data},{headers:{"Cache-Control":"private, no-store"}});
  } catch(e) {console.error("ANL_CUSTOMERS_RANKING",e);return NextResponse.json({ok:false,message:"Error interno de Analytics de Clientes."},{status:500});}

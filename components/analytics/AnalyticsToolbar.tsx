@@ -44,7 +44,7 @@ export default function AnalyticsToolbar(p: Props) {
     <div className={s.identity}><span className={s.section}>{p.section}</span>
       <nav aria-label="Navegación Analytics" className={s.nav}>
         {items.map((item, i) => <span key={item.label} className={s.navGroup}>
-          {item.href && !item.disabled
+          {item.href
             ? <Link href={`${item.href}?${query}`} aria-current={item.active && subpages.length === 0 ? "page" : undefined} className={item.active ? s.active : s.link}>{item.label}</Link>
             : <span className={s.disabled} title="Próximamente">{item.label}</span>}
           {item.active && subpages.length > 0 && <span className={s.childGroup} aria-label={`Vistas de ${item.label}`}>
