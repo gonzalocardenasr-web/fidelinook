@@ -70,6 +70,18 @@ type Sale = {
   sale_items?: SaleItem[];
 };
 
+type PaymentCorrection = {
+  id: number;
+  previous_payment_method: string;
+  new_payment_method: string;
+  cash_expected_delta: number;
+  reason: string;
+  actor_role: string | null;
+  created_at: string;
+};
+
+const PAYMENT_CORRECTION_OPTIONS = ["efectivo", "tarjeta", "debito", "credito", "transferencia"];
+
 type SortField = "date" | "total" | "customer" | "channel";
 type SortDirection = "asc" | "desc";
 
@@ -280,6 +292,14 @@ export default function HistorialVentasPage() {
   const canExportSales = hasPermission("sales.export");
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [paymentCorrections, setPaymentCorrections] = useState<PaymentCorrection[]>([]);
+  const [paymentCorrectionAuthorized, setPaymentCorrectionAuthorized] = useState(false);
+  const [paymentCorrectionLoading, setPaymentCorrectionLoading] = useState(false);
+  const [paymentCorrectionEditing, setPaymentCorrectionEditing] = useState(false);
+  const [paymentCorrectionMethod, setPaymentCorrectionMethod] = useState("");
+  const [paymentCorrectionReason, setPaymentCorrectionReason] = useState("");
+  const [paymentCorrectionSaving, setPaymentCorrectionSaving] = useState(false);
+  const [paymentCorrectionMessage, setPaymentCorrectionMessage] = useState("");
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [customerCandidate, setCustomerCandidate] =
     useState<ClienteSelectorValue | null>(null);
@@ -521,11 +541,78 @@ export default function HistorialVentasPage() {
       }
 
       setSelectedSale(data.sale);
+      setPaymentCorrectionEditing(false);
+      setPaymentCorrectionMethod("");
+      setPaymentCorrectionReason("");
+      setPaymentCorrectionMessage("");
+      void cargarRectificaciones(saleId);
     } catch (error) {
       console.error("Error cargando detalle de venta:", error);
       setMessage("Error inesperado al cargar el detalle de la venta.");
     } finally {
       setLoadingSaleId(null);
+    }
+  }
+
+  async function cargarRectificaciones(saleId: number) {
+    setPaymentCorrectionLoading(true);
+    setPaymentCorrectionAuthorized(false);
+    setPaymentCorrections([]);
+    try {
+      const response = await fetch(`/api/operacion/sales/${saleId}/payment-correction`, { cache: "no-store" });
+      if (response.status === 403 || response.status === 401) return;
+      const data = await response.json();
+      if (!response.ok) {
+        setPaymentCorrectionMessage(data.message || "No fue posible cargar las rectificaciones.");
+        return;
+      }
+      setPaymentCorrectionAuthorized(true);
+      setPaymentCorrections(Array.isArray(data.corrections) ? data.corrections : []);
+    } catch {
+      setPaymentCorrectionMessage("No fue posible consultar las rectificaciones.");
+    } finally {
+      setPaymentCorrectionLoading(false);
+    }
+  }
+
+  async function guardarRectificacionPago() {
+    if (!selectedSale || paymentCorrectionSaving) return;
+    setPaymentCorrectionMessage("");
+    const saleId = selectedSale.id;
+    if (!PAYMENT_CORRECTION_OPTIONS.includes(paymentCorrectionMethod) ||
+        paymentCorrectionMethod === selectedSale.payment_method?.toLowerCase()) {
+      setPaymentCorrectionMessage("Selecciona un medio de pago diferente y válido.");
+      return;
+    }
+    if (paymentCorrectionReason.trim().length < 10 || paymentCorrectionReason.trim().length > 500) {
+      setPaymentCorrectionMessage("El motivo debe contener entre 10 y 500 caracteres.");
+      return;
+    }
+    if (!window.confirm(`¿Confirmas corregir la venta #${saleId} de ${getPaymentMethodLabel(selectedSale.payment_method)} a ${getPaymentMethodLabel(paymentCorrectionMethod)}? La rectificación quedará auditada.`)) return;
+    setPaymentCorrectionSaving(true);
+    try {
+      const response = await fetch(`/api/operacion/sales/${saleId}/payment-correction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod: paymentCorrectionMethod, reason: paymentCorrectionReason.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPaymentCorrectionMessage(data.message || "No se pudo registrar la corrección.");
+        return;
+      }
+      const update = (sale: Sale): Sale => sale.id === saleId ? { ...sale, payment_method: paymentCorrectionMethod } : sale;
+      setSelectedSale((current) => current ? update(current) : current);
+      setSales((current) => current.map(update));
+      setPaymentCorrectionEditing(false);
+      setPaymentCorrectionReason("");
+      setPaymentCorrectionMethod("");
+      setPaymentCorrectionMessage("Medio de pago corregido. La rectificación quedó registrada en auditoría.");
+      await cargarRectificaciones(saleId);
+    } catch {
+      setPaymentCorrectionMessage("Error de conexión. Revisa el estado de la venta antes de reintentar.");
+    } finally {
+      setPaymentCorrectionSaving(false);
     }
   }
 
@@ -1408,6 +1495,49 @@ export default function HistorialVentasPage() {
                   </p>
                 </div>
               </section>
+
+              {paymentCorrectionAuthorized && (
+                <section className="mt-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-black text-neutral-900">Rectificaciones de pago</p>
+                      <p className="mt-0.5 text-[10px] text-neutral-500">Cada cambio queda auditado. No modifica el cierre original.</p>
+                    </div>
+                    {!paymentCorrectionEditing && selectedSale.channel === "local" && selectedSale.integration_source === "pos" && selectedSale.status === "confirmed" && selectedSale.payment_status === "paid" && (
+                      <button type="button" onClick={() => { setPaymentCorrectionEditing(true); setPaymentCorrectionMessage(""); }} className="rounded-lg border border-violet-300 bg-white px-2.5 py-2 text-[10px] font-bold text-violet-700">Corregir pago</button>
+                    )}
+                  </div>
+                  {paymentCorrectionEditing && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-[11px]">Actual: <strong>{getPaymentMethodLabel(selectedSale.payment_method)}</strong> · Venta #{selectedSale.id} · {formatMoney(selectedSale.total)}</p>
+                      <label className="block text-[10px] font-bold text-neutral-600" htmlFor="correction-method">Medio de pago correcto</label>
+                      <select id="correction-method" value={paymentCorrectionMethod} onChange={(event) => setPaymentCorrectionMethod(event.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white p-2 text-xs">
+                        <option value="">Seleccionar…</option>
+                        {PAYMENT_CORRECTION_OPTIONS.filter((method) => method !== selectedSale.payment_method?.toLowerCase()).map((method) => <option key={method} value={method}>{getPaymentMethodLabel(method)}</option>)}
+                      </select>
+                      <label className="block text-[10px] font-bold text-neutral-600" htmlFor="correction-reason">Motivo obligatorio (10 a 500 caracteres)</label>
+                      <textarea id="correction-reason" rows={3} maxLength={500} value={paymentCorrectionReason} onChange={(event) => setPaymentCorrectionReason(event.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white p-2 text-xs" placeholder="Indica qué ocurrió y cómo se verificó el pago." />
+                      <div className="flex gap-2">
+                        <button type="button" disabled={paymentCorrectionSaving} onClick={() => void guardarRectificacionPago()} className="rounded-lg bg-violet-700 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{paymentCorrectionSaving ? "Guardando…" : "Confirmar rectificación"}</button>
+                        <button type="button" disabled={paymentCorrectionSaving} onClick={() => { setPaymentCorrectionEditing(false); setPaymentCorrectionMessage(""); }} className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[11px] font-bold">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                  {paymentCorrectionMessage && <p role="status" className="mt-2 text-[11px] text-violet-800">{paymentCorrectionMessage}</p>}
+                  {paymentCorrectionLoading && <p className="mt-2 text-[10px] text-neutral-500">Cargando auditoría…</p>}
+                  {paymentCorrections.length > 0 && (
+                    <div className="mt-3 space-y-2 border-t border-violet-200 pt-2">
+                      {paymentCorrections.map((correction) => (
+                        <div key={correction.id} className="rounded-lg bg-white p-2 text-[10px] text-neutral-700">
+                          <p className="font-bold">{getPaymentMethodLabel(correction.previous_payment_method)} → {getPaymentMethodLabel(correction.new_payment_method)}</p>
+                          <p>{formatDateTime(correction.created_at)} · {correction.actor_role || "Administración"} · Efectivo: {correction.cash_expected_delta >= 0 ? "+" : ""}{formatMoney(correction.cash_expected_delta)}</p>
+                          <p className="mt-1 whitespace-pre-wrap">{correction.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
 
               <section className="mt-3 rounded-lg border border-neutral-200 px-3 py-2.5">
                 <div className="flex items-start justify-between gap-3">
