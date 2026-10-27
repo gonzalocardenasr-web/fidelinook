@@ -293,6 +293,7 @@ export default function HistorialVentasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [paymentCorrections, setPaymentCorrections] = useState<PaymentCorrection[]>([]);
+  // Autorización obtenida del GET protegido (solo admin/superadmin).
   const [paymentCorrectionAuthorized, setPaymentCorrectionAuthorized] = useState(false);
   const [paymentCorrectionLoading, setPaymentCorrectionLoading] = useState(false);
   const [paymentCorrectionEditing, setPaymentCorrectionEditing] = useState(false);
@@ -300,6 +301,7 @@ export default function HistorialVentasPage() {
   const [paymentCorrectionReason, setPaymentCorrectionReason] = useState("");
   const [paymentCorrectionSaving, setPaymentCorrectionSaving] = useState(false);
   const [paymentCorrectionMessage, setPaymentCorrectionMessage] = useState("");
+  const canCorrectPayment = paymentCorrectionAuthorized && selectedSale?.channel === "local" && selectedSale?.integration_source === "pos" && selectedSale?.status === "confirmed" && selectedSale?.payment_status === "paid";
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [customerCandidate, setCustomerCandidate] =
     useState<ClienteSelectorValue | null>(null);
@@ -557,6 +559,7 @@ export default function HistorialVentasPage() {
   async function cargarRectificaciones(saleId: number) {
     setPaymentCorrectionLoading(true);
     setPaymentCorrectionAuthorized(false);
+    setPaymentCorrectionEditing(false);
     setPaymentCorrections([]);
     try {
       const response = await fetch(`/api/operacion/sales/${saleId}/payment-correction`, { cache: "no-store" });
@@ -576,7 +579,7 @@ export default function HistorialVentasPage() {
   }
 
   async function guardarRectificacionPago() {
-    if (!selectedSale || paymentCorrectionSaving) return;
+    if (!selectedSale || !canCorrectPayment || paymentCorrectionSaving) return;
     setPaymentCorrectionMessage("");
     const saleId = selectedSale.id;
     if (!PAYMENT_CORRECTION_OPTIONS.includes(paymentCorrectionMethod) ||
@@ -1503,11 +1506,11 @@ export default function HistorialVentasPage() {
                       <p className="text-[11px] font-black text-neutral-900">Rectificaciones de pago</p>
                       <p className="mt-0.5 text-[10px] text-neutral-500">Cada cambio queda auditado. No modifica el cierre original.</p>
                     </div>
-                    {!paymentCorrectionEditing && selectedSale.channel === "local" && selectedSale.integration_source === "pos" && selectedSale.status === "confirmed" && selectedSale.payment_status === "paid" && (
+                    {canCorrectPayment && !paymentCorrectionEditing && (
                       <button type="button" onClick={() => { setPaymentCorrectionEditing(true); setPaymentCorrectionMessage(""); }} className="rounded-lg border border-violet-300 bg-white px-2.5 py-2 text-[10px] font-bold text-violet-700">Corregir pago</button>
                     )}
                   </div>
-                  {paymentCorrectionEditing && (
+                  {canCorrectPayment && paymentCorrectionEditing && (
                     <div className="mt-3 space-y-2">
                       <p className="text-[11px]">Actual: <strong>{getPaymentMethodLabel(selectedSale.payment_method)}</strong> · Venta #{selectedSale.id} · {formatMoney(selectedSale.total)}</p>
                       <label className="block text-[10px] font-bold text-neutral-600" htmlFor="correction-method">Medio de pago correcto</label>
