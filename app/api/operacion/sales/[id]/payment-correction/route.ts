@@ -3,7 +3,7 @@ import { getOperationSession } from "@/lib/operation-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 type Context = { params: Promise<{ id: string }> };
-const allowed = new Set(["efectivo", "tarjeta", "transferencia"]);
+const allowed = new Set(["efectivo", "tarjeta", "transferencia", "debito", "credito"]);
 
 export async function POST(req: Request, context: Context) {
   const session = await getOperationSession();
