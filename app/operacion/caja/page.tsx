@@ -599,7 +599,7 @@ function CashCountForm({
         <p className="mt-1 text-xs text-neutral-500">{description}</p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
         {groups.map((group) => (
           <div
             key={group.title}
@@ -1450,7 +1450,7 @@ export default function CashRegisterPage() {
           </div>
         )}
 
-        <div className={`grid min-h-0 flex-1 items-start gap-3 overflow-y-auto ${canAuditCash ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" : "grid-cols-1"}`}>
+        <div className={`grid min-h-0 flex-1 items-start gap-3 overflow-y-auto ${canAuditCash ? "xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]" : "grid-cols-1"}`}>
           {loading ? (
             <section className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
               <p className="text-sm text-neutral-600">
@@ -2663,7 +2663,7 @@ export default function CashRegisterPage() {
                 onSubmit={openCashRegister}
                 className="mt-3 grid gap-3"
               >
-                <div>
+                <div className="[&_input]:!h-7 [&_.grid]:!gap-1 [&_.grid]:!py-1">
                   <CashCountForm
                     title="Composición del fondo inicial"
                     description="Ingresa la cantidad física disponible de cada billete y moneda al iniciar la jornada."
@@ -2695,6 +2695,14 @@ export default function CashRegisterPage() {
                     </div>
                   </div>
 
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="mt-auto w-full cursor-pointer rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? "Abriendo caja..." : "Abrir caja"}
+                  </button>
+
                   <div className="rounded-xl border border-neutral-200 bg-white p-3">
                     <label
                       htmlFor="openingNotes"
@@ -2710,7 +2718,7 @@ export default function CashRegisterPage() {
                       id="openingNotes"
                       value={openingNotes}
                       onChange={(event) => setOpeningNotes(event.target.value)}
-                      rows={3}
+                      rows={1}
                       maxLength={500}
                       placeholder="Ejemplo: fondo inicial entregado por administración."
                       className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
@@ -2721,18 +2729,11 @@ export default function CashRegisterPage() {
                     </p>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="mt-auto w-full cursor-pointer rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? "Abriendo caja..." : "Abrir caja"}
-                  </button>
+
                 </div>
               </form>
             </section>
           )}
-        </div>
 
         {!loading && canAuditCash && (
           <div className="min-w-0 space-y-3">
@@ -3582,6 +3583,7 @@ export default function CashRegisterPage() {
                 )}
           </div>
         )}
+        </div>
       </div>
       {(selectedSaleDetail || loadingSaleDetail || saleDetailError) && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/20">
