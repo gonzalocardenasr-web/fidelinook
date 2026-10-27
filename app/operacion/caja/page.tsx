@@ -593,17 +593,17 @@ function CashCountForm({
 
   return (
     <div>
-      <div className="mb-3">
-        <p className="text-sm font-semibold text-neutral-800">{title}</p>
+      <div className="mb-2">
+        <p className="text-xs font-semibold text-neutral-800">{title}</p>
 
         <p className="mt-1 text-xs text-neutral-500">{description}</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         {groups.map((group) => (
           <div
             key={group.title}
-            className="overflow-hidden rounded-xl border border-neutral-200 bg-white"
+            className="overflow-hidden rounded-lg border border-neutral-200 bg-white"
           >
             <div className="border-b border-neutral-200 bg-neutral-50 px-3 py-2">
               <p className="text-xs font-bold text-neutral-800">
@@ -1450,9 +1450,9 @@ export default function CashRegisterPage() {
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        <div className={`grid min-h-0 flex-1 items-start gap-3 overflow-y-auto ${canAuditCash ? "xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" : "grid-cols-1"}`}>
           {loading ? (
-            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
               <p className="text-sm text-neutral-600">
                 Consultando estado de la caja...
               </p>
@@ -2625,14 +2625,14 @@ export default function CashRegisterPage() {
               </div>
             </section>
           ) : (
-            <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
+            <section className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
                     Caja cerrada
                   </span>
 
-                  <h2 className="mt-3 text-xl font-bold text-neutral-950">
+                  <h2 className="mt-1 text-lg font-bold text-neutral-950">
                     Abrir caja
                   </h2>
 
@@ -2661,7 +2661,7 @@ export default function CashRegisterPage() {
 
               <form
                 onSubmit={openCashRegister}
-                className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]"
+                className="mt-3 grid gap-3"
               >
                 <div>
                   <CashCountForm
@@ -2676,7 +2676,7 @@ export default function CashRegisterPage() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4">
+                  <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-3">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
@@ -2695,7 +2695,7 @@ export default function CashRegisterPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                  <div className="rounded-xl border border-neutral-200 bg-white p-3">
                     <label
                       htmlFor="openingNotes"
                       className="mb-2 block text-sm font-semibold text-neutral-800"
@@ -2724,7 +2724,7 @@ export default function CashRegisterPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="mt-auto w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-auto w-full cursor-pointer rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-xs font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? "Abriendo caja..." : "Abrir caja"}
                   </button>
@@ -2734,11 +2734,9 @@ export default function CashRegisterPage() {
           )}
         </div>
 
-        {!loading && (
-          <>
-            {canAuditCash && (
-              <>
-                <section className="mt-2 flex shrink-0 flex-col rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+        {!loading && canAuditCash && (
+          <div className="min-w-0 space-y-3">
+                <section className="flex min-w-0 flex-col rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
@@ -2793,35 +2791,35 @@ export default function CashRegisterPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-3 max-h-[420px] overflow-auto rounded-xl border border-neutral-200">
-                      <table className="min-w-full text-sm">
+                    <div className="mt-3 max-h-[520px] overflow-auto rounded-lg border border-neutral-200">
+                      <table className="min-w-[680px] w-full text-[11px]">
                         <thead className="sticky top-0 z-10 bg-neutral-50">
                           <tr>
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-neutral-600">
                               Sesión
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-neutral-600">
                               Cierre
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-neutral-600">
                               Responsable
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-right font-semibold text-neutral-600">
                               Esperado
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-right font-semibold text-neutral-600">
                               Contado
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-right font-semibold text-neutral-600">
                               Diferencia
                             </th>
 
-                            <th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-neutral-600">
+                            <th className="whitespace-nowrap px-2 py-2 text-right font-semibold text-neutral-600">
                               Detalle
                             </th>
                           </tr>
@@ -2837,28 +2835,28 @@ export default function CashRegisterPage() {
                                   : "bg-white"
                               }`}
                             >
-                              <td className="whitespace-nowrap px-4 py-3 font-semibold text-neutral-950">
+                              <td className="whitespace-nowrap px-2 py-2 font-semibold text-neutral-950">
                                 #{item.id}
                               </td>
 
-                              <td className="whitespace-nowrap px-4 py-3 text-neutral-700">
+                              <td className="whitespace-nowrap px-2 py-2 text-neutral-700">
                                 {formatDateTime(item.closed_at)}
                               </td>
 
-                              <td className="whitespace-nowrap px-4 py-3 capitalize text-neutral-700">
+                              <td className="whitespace-nowrap px-2 py-2 capitalize text-neutral-700">
                                 {item.closed_by_role}
                               </td>
 
-                              <td className="whitespace-nowrap px-4 py-3 text-right text-neutral-700">
+                              <td className="whitespace-nowrap px-2 py-2 text-right text-neutral-700">
                                 {formatCurrency(item.expected_cash_amount)}
                               </td>
 
-                              <td className="whitespace-nowrap px-4 py-3 text-right text-neutral-700">
+                              <td className="whitespace-nowrap px-2 py-2 text-right text-neutral-700">
                                 {formatCurrency(item.counted_cash_amount)}
                               </td>
 
                               <td
-                                className={`whitespace-nowrap px-4 py-3 text-right font-bold ${
+                                className={`whitespace-nowrap px-2 py-2 text-right font-bold ${
                                   item.cash_difference === 0
                                     ? "text-emerald-700"
                                     : "text-red-700"
@@ -2868,7 +2866,7 @@ export default function CashRegisterPage() {
                                 {formatCurrency(item.cash_difference)}
                               </td>
 
-                              <td className="whitespace-nowrap px-4 py-3 text-right">
+                              <td className="whitespace-nowrap px-2 py-2 text-right">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -2878,7 +2876,7 @@ export default function CashRegisterPage() {
                                     loadingClosingDetail &&
                                     selectedClosingId === item.id
                                   }
-                                  className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5 text-[11px] font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {loadingClosingDetail &&
                                   selectedClosingId === item.id
@@ -3582,9 +3580,7 @@ export default function CashRegisterPage() {
                     ) : null}
                   </section>
                 )}
-              </>
-            )}
-          </>
+          </div>
         )}
       </div>
       {(selectedSaleDetail || loadingSaleDetail || saleDetailError) && (
