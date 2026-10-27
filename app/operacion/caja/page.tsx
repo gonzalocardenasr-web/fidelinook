@@ -720,6 +720,8 @@ export default function CashRegisterPage() {
   >([]);
 
   const [loadingClosingHistory, setLoadingClosingHistory] = useState(false);
+  const [closingHistoryLimit, setClosingHistoryLimit] = useState<5 | 10 | 20 | 50 | 100>(20);
+  const [closingHistoryTotal, setClosingHistoryTotal] = useState(0);
 
   const [selectedClosingId, setSelectedClosingId] = useState<number | null>(
     null,
@@ -855,7 +857,7 @@ export default function CashRegisterPage() {
     try {
       setLoadingClosingHistory(true);
 
-      const response = await fetch("/api/operacion/caja/cierres?limit=10", {
+      const response = await fetch(`/api/operacion/caja/cierres?limit=${closingHistoryLimit}`, {
         cache: "no-store",
       });
 
@@ -867,6 +869,7 @@ export default function CashRegisterPage() {
       }
 
       setClosingHistory(data.closings ?? []);
+      setClosingHistoryTotal(data.total ?? (data.closings?.length ?? 0));
     } catch (error) {
       console.error("Error consultando historial de cierres:", error);
 
@@ -874,7 +877,7 @@ export default function CashRegisterPage() {
     } finally {
       setLoadingClosingHistory(false);
     }
-  }, []);
+  }, [closingHistoryLimit]);
 
   const loadClosingDetail = useCallback(async (closingId: number) => {
     try {
@@ -2735,7 +2738,7 @@ export default function CashRegisterPage() {
           <>
             {canAuditCash && (
               <>
-                <section className="mt-2 flex max-h-[240px] shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <section className="mt-2 flex shrink-0 flex-col rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
@@ -2751,10 +2754,23 @@ export default function CashRegisterPage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label htmlFor="closing-history-limit" className="text-xs font-medium text-neutral-600">
+                        Mostrar
+                      </label>
+                      <select
+                        id="closing-history-limit"
+                        value={closingHistoryLimit}
+                        onChange={(event) => setClosingHistoryLimit(Number(event.target.value) as 5 | 10 | 20 | 50 | 100)}
+                        className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold text-neutral-800 focus:border-violet-500 focus:outline-none"
+                        aria-label="Cantidad de cierres a mostrar"
+                      >
+                        {[5, 10, 20, 50, 100].map((limit) => (
+                          <option key={limit} value={limit}>{limit} cierres</option>
+                        ))}
+                      </select>
                       <span className="text-xs font-medium text-neutral-500">
-                        {closingHistory.length} registro
-                        {closingHistory.length === 1 ? "" : "s"}
+                        Mostrando {closingHistory.length} de {closingHistoryTotal}
                       </span>
                     </div>
                   </div>
@@ -2777,7 +2793,7 @@ export default function CashRegisterPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl border border-neutral-200">
+                    <div className="mt-3 max-h-[420px] overflow-auto rounded-xl border border-neutral-200">
                       <table className="min-w-full text-sm">
                         <thead className="sticky top-0 z-10 bg-neutral-50">
                           <tr>
