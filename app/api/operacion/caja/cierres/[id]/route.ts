@@ -310,6 +310,7 @@ export async function GET(
       movementsResult,
       cashSalesResult,
       cashCountsResult,
+      correctionsResult,
     ] = await Promise.all([
       supabaseAdmin.rpc("get_cash_register_expected_cash", {
         p_cash_register_session_id: cashRegisterSessionId,
@@ -379,6 +380,12 @@ export async function GET(
         .order("denomination", {
           ascending: false,
         }),
+
+      supabaseAdmin
+        .from("sale_payment_corrections")
+        .select("id,sale_id,previous_payment_method,new_payment_method,sale_total,cash_expected_delta,reason,actor_role,created_at")
+        .eq("cash_register_session_id", cashRegisterSessionId)
+        .order("created_at", { ascending: true }),
     ]);
 
     if (expectedCashResult.error) {
@@ -450,6 +457,23 @@ export async function GET(
         },
       );
     }
+
+    if (correctionsResult.error) {
+      console.error("Error consultando rectificaciones de caja:", correctionsResult.error);
+      return NextResponse.json({ ok: false, message: "No fue posible consultar las rectificaciones de caja." }, { status: 500 });
+    }
+
+    const corrections = (correctionsResult.data ?? []).map((row) => ({
+      id: Number(row.id),
+      saleId: Number(row.sale_id),
+      previousPaymentMethod: String(row.previous_payment_method),
+      newPaymentMethod: String(row.new_payment_method),
+      saleTotal: Number(row.sale_total),
+      cashExpectedDelta: Number(row.cash_expected_delta),
+      reason: String(row.reason),
+      actorRole: row.actor_role ? String(row.actor_role) : null,
+      createdAt: String(row.created_at),
+    }));
 
     const expectedCash = normalizeExpectedCash(
       expectedCashResult.data as ExpectedCashResult,
@@ -565,6 +589,9 @@ export async function GET(
       ),
       countedCashAmount: Number(session.counted_cash_amount ?? 0),
       cashDifference: Number(session.cash_difference ?? 0),
+      adjustedExpectedCashAmount: expectedCash.expected_cash_amount,
+      adjustedCashDifference: Number(session.counted_cash_amount ?? 0) - expectedCash.expected_cash_amount,
+      correctionNetDelta: corrections.reduce((sum, correction) => sum + correction.cashExpectedDelta, 0),
     };
 
     return NextResponse.json({
@@ -574,6 +601,7 @@ export async function GET(
         summary,
         movements,
         cashSales,
+        corrections,
         openingCashCount,
         closingCashCount,
       },

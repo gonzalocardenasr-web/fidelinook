@@ -159,6 +159,9 @@ type CashClosingDetailSummary = {
   expectedCashAmount: number;
   countedCashAmount: number;
   cashDifference: number;
+  adjustedExpectedCashAmount: number;
+  adjustedCashDifference: number;
+  correctionNetDelta: number;
 };
 
 type CashClosingSaleOrder = {
@@ -254,11 +257,24 @@ type SaleDetailResponse = {
   message?: string;
 };
 
+type CashPaymentCorrection = {
+  id: number;
+  saleId: number;
+  previousPaymentMethod: string;
+  newPaymentMethod: string;
+  saleTotal: number;
+  cashExpectedDelta: number;
+  reason: string;
+  actorRole: string | null;
+  createdAt: string;
+};
+
 type CashClosingDetail = {
   session: CashClosingHistoryItem;
   summary: CashClosingDetailSummary;
   movements: CashRegisterMovement[];
   cashSales: CashClosingCashSale[];
+  corrections: CashPaymentCorrection[];
   openingCashCount: Array<
     CashCountEntry & {
       subtotal: number;
@@ -3065,6 +3081,38 @@ export default function CashRegisterPage() {
                             </p>
                           </div>
                         </div>
+
+                        <section className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 sm:p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider text-violet-700">Conciliación posterior al cierre</p>
+                              <p className="mt-1 text-xs text-neutral-600">El arqueo original se conserva. Los importes ajustados se recalculan con los medios de pago actuales.</p>
+                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">{closingDetail.corrections.length} rectificación(es)</span>
+                          </div>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-xl bg-white p-3"><p className="text-xs text-neutral-500">Esperado original</p><p className="mt-1 text-lg font-bold">{formatCurrency(closingDetail.summary.expectedCashAmount)}</p></div>
+                            <div className="rounded-xl bg-white p-3"><p className="text-xs text-neutral-500">Esperado ajustado</p><p className="mt-1 text-lg font-bold">{formatCurrency(closingDetail.summary.adjustedExpectedCashAmount)}</p></div>
+                            <div className="rounded-xl bg-white p-3"><p className="text-xs text-neutral-500">Diferencia ajustada</p><p className={`mt-1 text-lg font-bold ${closingDetail.summary.adjustedCashDifference === 0 ? "text-emerald-700" : "text-amber-700"}`}>{closingDetail.summary.adjustedCashDifference > 0 ? "+" : ""}{formatCurrency(closingDetail.summary.adjustedCashDifference)}</p></div>
+                          </div>
+                          {closingDetail.corrections.length > 0 && (
+                            <div className="mt-4 overflow-x-auto rounded-xl border border-violet-100 bg-white">
+                              <table className="min-w-[680px] w-full text-left text-xs">
+                                <thead className="bg-violet-50 text-violet-800"><tr><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Venta</th><th className="px-3 py-2">Cambio</th><th className="px-3 py-2 text-right">Efecto en efectivo</th><th className="px-3 py-2">Motivo</th></tr></thead>
+                                <tbody>{closingDetail.corrections.map((correction) => (
+                                  <tr key={correction.id} className="border-t border-neutral-100 align-top">
+                                    <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(correction.createdAt)}</td>
+                                    <td className="px-3 py-2 font-semibold">#{correction.saleId}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{correction.previousPaymentMethod} → {correction.newPaymentMethod}</td>
+                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{correction.cashExpectedDelta > 0 ? "+" : ""}{formatCurrency(correction.cashExpectedDelta)}</td>
+                                    <td className="px-3 py-2">{correction.reason}</td>
+                                  </tr>
+                                ))}</tbody>
+                              </table>
+                            </div>
+                          )}
+                          <p className="mt-3 text-xs text-neutral-600">Efecto neto de rectificaciones: {closingDetail.summary.correctionNetDelta > 0 ? "+" : ""}{formatCurrency(closingDetail.summary.correctionNetDelta)}. El valor ajustado también puede variar por otras modificaciones posteriores; no se reescribe el cierre original.</p>
+                        </section>
 
                         {(closingDetail.openingCashCount.length > 0 ||
                           closingDetail.closingCashCount.length > 0) && (
