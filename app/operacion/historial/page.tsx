@@ -288,7 +288,7 @@ function getItemOptions(item: SaleItem) {
 }
 
 export default function HistorialVentasPage() {
-  const { hasPermission } = usePlatformSession();
+  const { hasPermission, role } = usePlatformSession();
   const canExportSales = hasPermission("sales.export");
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -318,6 +318,7 @@ export default function HistorialVentasPage() {
   const [totalSales, setTotalSales] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  const [historyDays, setHistoryDays] = useState<15 | 30 | 45>(15);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -375,6 +376,7 @@ export default function HistorialVentasPage() {
       paymentMethod?: string;
       orderStatus?: string;
       customerType?: string;
+      historyDays?: 15 | 30 | 45;
     },
   ) {
     try {
@@ -415,6 +417,7 @@ export default function HistorialVentasPage() {
       const params = new URLSearchParams({
         page: String(targetPage),
         pageSize: String(pageSize),
+        historyDays: String(role === "superadmin" ? (filterOverrides?.historyDays ?? historyDays) : 15),
       });
 
       if (effectiveDateFrom) {
@@ -732,6 +735,7 @@ export default function HistorialVentasPage() {
   }
 
   function clearFilters() {
+    setHistoryDays(15);
     setSearch("");
     setChannelFilter("all");
     setPaymentFilter("all");
@@ -752,6 +756,7 @@ export default function HistorialVentasPage() {
       paymentMethod: "all",
       orderStatus: "all",
       customerType: "all",
+      historyDays: 15,
     });
   }
 
@@ -977,6 +982,29 @@ export default function HistorialVentasPage() {
         <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3 shadow-sm">
           <div className="shrink-0">
             <div className="flex flex-wrap items-end gap-2">
+              {role === "superadmin" && (
+                <div className="w-30">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                    Período
+                  </label>
+                  <select
+                    value={historyDays}
+                    onChange={(event) => {
+                      const days = Number(event.target.value) as 15 | 30 | 45;
+                      setHistoryDays(days);
+                      setPage(1);
+                      setSelectedSale(null);
+                      cargarVentas(1, { historyDays: days });
+                    }}
+                    className="mt-1 h-9 w-full rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold outline-none focus:border-violet-400"
+                  >
+                    <option value={15}>15 días</option>
+                    <option value={30}>30 días</option>
+                    <option value={45}>45 días</option>
+                  </select>
+                </div>
+              )}
+
               <div className="w-30">
                 <label className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
                   Desde

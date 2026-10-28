@@ -122,7 +122,7 @@ function getItemFlavorIds(item: unknown): number[] {
 const OPERATIONAL_HISTORY_TIME_ZONE = "America/Santiago";
 const OPERATIONAL_HISTORY_DAYS_BACK = 14;
 
-function getOperationalHistoryStartIso(now = new Date()): string {
+function getOperationalHistoryStartIso(daysBack = OPERATIONAL_HISTORY_DAYS_BACK, now = new Date()): string {
   /*
    * Regla funcional:
    * - día calendario actual en Chile
@@ -163,7 +163,7 @@ function getOperationalHistoryStartIso(now = new Date()): string {
   const startCalendarDate = new Date(Date.UTC(year, month - 1, day));
 
   startCalendarDate.setUTCDate(
-    startCalendarDate.getUTCDate() - OPERATIONAL_HISTORY_DAYS_BACK,
+    startCalendarDate.getUTCDate() - daysBack,
   );
 
   const targetYear = startCalendarDate.getUTCFullYear();
@@ -238,6 +238,11 @@ export async function GET(req: Request) {
         ? Math.min(Math.floor(requestedPageSize), 100)
         : 50;
 
+    const requestedHistoryDays = Number(searchParams.get("historyDays") || 15);
+    const historyDays = session.role === "superadmin" &&
+      [15, 30, 45].includes(requestedHistoryDays)
+      ? requestedHistoryDays
+      : 15;
     const requestedDateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
 
@@ -248,7 +253,7 @@ export async function GET(req: Request) {
      * Si el usuario selecciona una fecha inicial más reciente,
      * respetamos ese filtro.
      */
-    const operationalHistoryStartIso = getOperationalHistoryStartIso();
+    const operationalHistoryStartIso = getOperationalHistoryStartIso(historyDays - 1);
 
     let dateFrom = operationalHistoryStartIso;
 
