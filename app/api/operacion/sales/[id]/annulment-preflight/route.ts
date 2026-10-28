@@ -18,7 +18,7 @@ export async function GET(_req: Request, context: RouteContext) {
 
   // Las anulaciones históricas no están cubiertas por sales.operate:
   // el permiso del cajero NO es suficiente.
-  if (session.role !== "admin" && session.role !== "superadmin") {
+  if (session.role !== "superadmin") {
     return NextResponse.json(
       { ok: false, code: "FORBIDDEN", message: "Sin permiso para evaluar anulaciones." },
       { status: 403 },
@@ -80,19 +80,12 @@ export async function GET(_req: Request, context: RouteContext) {
 
     const order = orders?.length === 1 ? orders[0] : null;
     const blockers: string[] = [];
-    if (sale.channel !== "local" || sale.external_order_id != null ||
-        (sale.integration_source != null && sale.integration_source !== "pos")) {
-      blockers.push("UNSUPPORTED_CHANNEL");
-    }
     if (orders?.length !== 1) blockers.push("ORDER_RELATION_INVALID");
     if (order && (order.status !== "delivered" || !order.delivered_at)) {
       blockers.push("ORDER_NOT_DELIVERED");
     }
     if (sale.status !== "confirmed" || sale.payment_status !== "paid") {
       blockers.push("SALE_NOT_CONFIRMED_PAID");
-    }
-    if ((redeemedRewards?.length ?? 0) > 0) {
-      blockers.push("REDEEMED_REWARD_REQUIRES_REVIEW");
     }
 
     return NextResponse.json({
@@ -111,8 +104,7 @@ export async function GET(_req: Request, context: RouteContext) {
         promotionalStamps: sale.promotional_stamps,
         blockers,
         structurallyEligible: blockers.length === 0,
-        // Importante: el diagnóstico NO habilita ejecución.
-        canExecuteAnnulment: false,
+        canExecuteAnnulment: blockers.length === 0,
         requiresFinancialTreatment: true,
         restockAutomatically: false,
       },

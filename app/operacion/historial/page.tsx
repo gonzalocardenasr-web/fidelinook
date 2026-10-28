@@ -292,6 +292,7 @@ export default function HistorialVentasPage() {
   const role = session.role;
   const canExportSales = hasPermission("sales.export");
   const [sales, setSales] = useState<Sale[]>([]);
+  const [restockOnAnnulment, setRestockOnAnnulment] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [paymentCorrections, setPaymentCorrections] = useState<PaymentCorrection[]>([]);
   // Autorización obtenida del GET protegido (solo admin/superadmin).
@@ -886,6 +887,42 @@ export default function HistorialVentasPage() {
     const cleanupTimeout = window.setTimeout(cleanup, 60000);
 
     window.document.body.appendChild(iframe);
+  }
+
+  async function anularVentaEntregada() {
+    if (!selectedSale || !selectedOrder || role !== "superadmin") return;
+    if (selectedOrder.status !== "delivered") return;
+    const reason = window.prompt(`Motivo de anulación de ${selectedOrder.display_order_code} (10 a 500 caracteres):`);
+    if (reason === null) return;
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length < 10 || normalizedReason.length > 500) {
+      setMessage("El motivo debe contener entre 10 y 500 caracteres.");
+      return;
+    }
+    const restockInventory = restockOnAnnulment;
+    try {
+      setCancellingOrderId(selectedOrder.id);
+      setMessage("");
+      const preflightRes = await fetch(`/api/operacion/sales/${selectedSale.id}/annulment-preflight`);
+      const preflightData = await preflightRes.json();
+      if (!preflightRes.ok || !preflightData?.preflight?.canExecuteAnnulment) {
+        setMessage(`No se puede anular esta venta: ${(preflightData?.preflight?.blockers || []).join(", ") || preflightData?.message || "validación pendiente"}.`);
+        return;
+      }
+      if (!window.confirm(`¿Confirmas anular la venta ${selectedSale.sale_number || selectedSale.id} por ${formatMoney(selectedSale.total)}?\n\nInventario: ${restockInventory ? "reincorporar productos con descuento de stock" : "sin reincorporación"}. No se modificará la caja cerrada. El reembolso quedará pendiente de resolución externa.\n\nMotivo: ${normalizedReason}`)) return;
+      const response = await fetch(`/api/operacion/sales/${selectedSale.id}/annul`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: normalizedReason, restockInventory }),
+      });
+      const data = await response.json();
+      if (!response.ok) { setMessage(data.message || `No se pudo anular la venta (${data.code || "error"}).`); return; }
+      setSelectedSale(null);
+      await cargarVentas(page);
+      setMessage(`Venta ${selectedSale.sale_number || selectedSale.id} anulada. Reembolso pendiente de resolución externa.`);
+    } catch (error) {
+      console.error("Error anulando venta entregada:", error);
+      setMessage("Ocurrió un error inesperado al anular la venta.");
+    } finally { setCancellingOrderId(null); }
   }
 
   async function cancelarPedidoSeleccionado() {
@@ -1890,6 +1927,23 @@ export default function HistorialVentasPage() {
                 Ticket atención
               </button>
 
+              {role === "superadmin" && selectedOrder?.status === "delivered" && selectedSale.status === "confirmed" && (
+                <button type="button" onClick={anularVentaEntregada}
+                  disabled={cancellingOrderId === selectedOrder.id}
+                  className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[10px] font-black text-red-700 disabled:opacity-50">
+                  {cancellingOrderId === selectedOrder.id ? "Procesando..." : "Anular venta entregada"}
+                </button>
+              )}
+              {role === "superadmin" && selectedOrder?.status === "delivered" && (
+                <label className="flex items-center gap-2 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={restockOnAnnulment}
+                    onChange={(event) => setRestockOnAnnulment(event.target.checked)}
+                  />
+                  Reincorporar productos al inventario (solo los que descontaron stock)
+                </label>
+              )}
               <button
                 type="button"
                 onClick={cancelarPedidoSeleccionado}
