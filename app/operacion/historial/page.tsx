@@ -288,7 +288,8 @@ function getItemOptions(item: SaleItem) {
 }
 
 export default function HistorialVentasPage() {
-  const { hasPermission, role } = usePlatformSession();
+  const { hasPermission, session } = usePlatformSession();
+  const role = session.role;
   const canExportSales = hasPermission("sales.export");
   const [sales, setSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
